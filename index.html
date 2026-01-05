@@ -840,36 +840,60 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
     // 2. 选中玩家后，加载详细信息
      // ================== 修复后的 DM 背包读取 ==================
     let selectedUserId = null;
-    // 1. 修改：加载玩家详情 (增加了删除按钮的渲染)
+    // --- 修复版 DM 玩家详情加载 ---
     async function loadUserDetail() {
-            const selectedId = document.getElementById('adm-user-list').value;
-            if (!selectedId) return;
-            viewingUserId = selectedId; 
-            await refreshAllData(); 
-    
-    document.getElementById('user-detail').style.display = 'block';
+        // 1. 获取选中的 ID
+        const selectedId = document.getElementById('adm-user-list').value;
+        const detailBox = document.getElementById('user-detail');
 
-        // 查金币
-        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
+        if (!selectedId) {
+            detailBox.style.display = 'none';
+            // 如果取消选人，视角切回自己
+            viewingUserId = myId;
+            refreshAllData();
+            return;
+        }
+
+        // 2. 显示面板
+        detailBox.style.display = 'block';
+
+        // 3. 【核心】切换全局视角到该玩家
+        viewingUserId = selectedId;
+        
+        // 4. 刷新主界面的所有数据 (这一步就能保证集市、背包、雇员全是那个玩家的)
+        await refreshAllData();
+
+        // 5. 单独填一下 DM 面板里的小输入框 (金币)
+        const { data: prof } = await supabaseClient
+            .from('profiles')
+            .select('gold_gp')
+            .eq('id', selectedId)
+            .single();
+            
         if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
 
-        // 查背包
-        const { data: inv } = await supabaseClient.from('user_inventory').select('*').eq('user_id', selectedUserId).order('item_name');
+        // 6. 【修复背包预览】
+        // 我们不再在这里手写 HTML，而是直接读取 user_inventory 表
+        // 但这次一定要带上 category，并且如果为空就显示空
+        const { data: inv } = await supabaseClient
+            .from('user_inventory')
+            .select('item_name, quantity, category')
+            .eq('user_id', selectedId)
+            .order('category');
+
         const invDiv = document.getElementById('adm-user-inv');
         
         if (inv && inv.length > 0) {
-            // 渲染成带操作按钮的列表
+            // 简单渲染一个紧凑的列表
             invDiv.innerHTML = inv.map(i => `
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:4px;">
-                    <span>${i.item_name} <strong style="color:#666">x${i.quantity}</strong></span>
-                    <button onclick="admRemoveInv(${i.id}, '${i.item_name}', ${i.quantity})" 
-                        style="background:#e74c3c; color:white; border:none; border-radius:4px; padding:2px 8px; font-size:0.8em; cursor:pointer;">
-                        - 删
-                    </button>
+                <div style="display:flex; justify-content:space-between; font-size:0.85em; border-bottom:1px dashed #eee; padding:2px;">
+                    <span>[${i.category||'杂'}] ${i.item_name}</span>
+                    <strong>x${i.quantity}</strong>
+                    <button onclick="admRemoveInv(${i.id}, '${i.item_name}', ${i.quantity})" style="border:none; background:none; color:red; cursor:pointer;">×</button>
                 </div>
             `).join('');
         } else {
-            invDiv.innerHTML = '<div style="color:#999; padding:5px;">背包空空如也</div>';
+            invDiv.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">(背包是空的)</div>';
         }
     }
 
