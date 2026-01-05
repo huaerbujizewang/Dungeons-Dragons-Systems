@@ -3,54 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 小队管理系统</title>
+    <title>D&D 小队管理系统 - 优化版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* CSS 保持不变 */
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
         body { font-family: "PingFang SC", sans-serif; background: #fff; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; }
+        
+        /* 导航与布局 */
         .nav { display: flex; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; align-items: center; }
         .tab-btn { padding: 8px 16px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 1em; color: #666; border-radius: 4px; }
         .tab-btn.active { background: #333; color: #fff; font-weight: bold; }
         .info-bar { margin-left: auto; text-align: right; font-size: 0.9em; }
         .section { display: none; }
         .section.active { display: block; }
+        
+        /* 队伍卡片 */
+        .team-section-title { margin: 30px 0 15px 0; border-left: 4px solid #333; padding-left: 10px; font-weight: bold; color: #555; }
         .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
-        .team-card { border: 1px solid var(--border); border-radius: 8px; padding: 15px; background: #fff; position: relative; }
+        .team-card { border: 1px solid var(--border); border-radius: 8px; padding: 15px; background: #fff; position: relative; transition: box-shadow 0.2s; }
+        .team-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .team-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         .team-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #eee; border: 1px solid #ddd; }
         .team-info h3 { margin: 0; font-size: 1.1em; }
         .team-info p { margin: 2px 0 0; font-size: 0.8em; color: #666; }
+        .btn-leave { position: absolute; top: 10px; right: 10px; font-size: 0.7em; color: #999; cursor: pointer; border: 1px solid #eee; padding: 2px 6px; border-radius: 4px; }
+        .btn-leave:hover { background: #eee; color: #333; }
+
+        /* 装备槽 */
         .slots-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
         .slot { aspect-ratio: 1; border: 1px dashed #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7em; text-align: center; cursor: pointer; background: #fafafa; padding: 2px; overflow: hidden; transition: 0.2s; }
         .slot:hover { border-color: #333; background: #f0f0f0; }
-        .slot.filled { border: 1px solid #999; background: #fff; border-style: solid; }
+        .slot.filled { border: 1px solid #999; background: #fff; border-style: solid; color: #333; font-weight: 500; }
         .slot-name { word-break: break-all; pointer-events: none; }
+        
+        /* 背包与商店 */
+        .inventory-category { margin-bottom: 25px; }
+        .inventory-category h3 { border-left: 4px solid #333; padding-left: 10px; margin-bottom: 15px; font-size: 1.1em; background: #f9f9f9; padding: 8px 10px; }
+        .inventory-grid, .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+        .inv-card, .card { background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .card { display: block; text-align: center; }
+        
+        /* 弹窗与加载 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
         .modal-box { background: #fff; padding: 20px; border-radius: 8px; width: 400px; max-height: 80vh; overflow-y: auto; }
         .item-select-list div { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; }
         .item-select-list div:hover { background: #f9f9f9; }
-        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .card { border: 1px solid #eee; padding: 15px; border-radius: 6px; }
-        .btn-buy { width: 100%; margin-top: 10px; padding: 6px; background: #fff; border: 1px solid #333; cursor: pointer; }
-        .btn-buy:hover { background: #333; color: #fff; }
-        #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: #fff; border: 2px solid #333; z-index: 3000; padding: 20px; overflow-y: auto; }
-        .btn-leave { position: absolute; top: 10px; right: 10px; font-size: 0.7em; color: #999; cursor: pointer; border: 1px solid #eee; padding: 2px 6px; border-radius: 4px; }
-        .btn-leave:hover { background: #eee; color: #333; }
-        .add-member-card { border: 2px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; cursor: pointer; min-height: 200px; }
-        .add-member-card:hover { border-color: #333; color: #333; }
-        .danger-btn { color: #e74c3c; border-color: #e74c3c; margin-top: 5px; width: 100%; padding: 5px; background: none; border: 1px solid; cursor: pointer; border-radius: 4px; }
-        .danger-btn:hover { background: #e74c3c; color: white; }
         
-        /* 修复背包样式 */
-        .inventory-category { margin-bottom: 25px; }
-        .inventory-category h3 { border-left: 4px solid #333; padding-left: 10px; margin-bottom: 15px; font-size: 1.1em; background: #f9f9f9; padding: 8px 10px; }
-        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-        .inv-card { background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        /* 加载动画遮罩 */
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 5000; align-items: center; justify-content: center; flex-direction: column; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #333; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* 按钮 */
+        button { cursor: pointer; }
+        .btn-buy { width: 100%; margin-top: 10px; padding: 6px; background: #fff; border: 1px solid #333; }
+        .btn-buy:hover { background: #333; color: #fff; }
+        .danger-btn { color: #e74c3c; border-color: #e74c3c; margin-top: 5px; width: 100%; padding: 5px; background: none; border: 1px solid; border-radius: 4px; }
+        .add-member-card { border: 2px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; cursor: pointer; min-height: 200px; grid-column: 1 / -1; margin-top: 20px; }
+        .add-member-card:hover { border-color: #333; color: #333; }
+
+        #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: #fff; border: 2px solid #333; z-index: 3000; padding: 20px; overflow-y: auto; }
     </style>
 </head>
 <body>
+
+<!-- 全局加载遮罩 -->
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="margin-top:15px; color:#555; font-weight:bold;">处理中...</div>
+</div>
 
 <div class="container">
     <div id="login-section" style="max-width:300px; margin:100px auto; text-align:center;">
@@ -77,10 +99,11 @@
 
         <div id="shop-section" class="section active"><div id="shop-grid" class="shop-grid"></div></div>
 
-        <!-- 队伍面板 -->
-        <div id="team-section" class="section"><div id="team-grid" class="team-grid"></div></div>
+        <!-- 队伍面板 (优化版) -->
+        <div id="team-section" class="section">
+            <div id="team-container"></div>
+        </div>
 
-        <!-- 背包 (修复分类) -->
         <div id="inventory-section" class="section"><div id="inventory-container"></div></div>
         
         <div id="employees-section" class="section"><div id="emp-list" class="shop-grid"></div></div>
@@ -98,7 +121,6 @@
 <div id="member-modal" class="modal">
     <div class="modal-box">
         <h3>选择加入队伍的成员</h3>
-        <p style="font-size:0.8em; color:#666;">仅显示在职且未入队的成员</p>
         <div id="member-select-list" class="item-select-list"></div>
         <button onclick="closeModal('member-modal')" style="width:100%; margin-top:15px; padding:10px;">取消</button>
     </div>
@@ -128,17 +150,34 @@
     let userProfile = null;
     let currentEquipTarget = { empId: null, slotIdx: null };
 
-    // --- 队伍管理 ---
+    // 全局 Loading 控制
+    function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
+    function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+    // --- 队伍管理 (分类显示优化) ---
     async function loadTeam() {
-        const grid = document.getElementById('team-grid');
-        grid.innerHTML = '加载中...';
+        const container = document.getElementById('team-container');
+        container.innerHTML = '加载中...';
         
         const { data: members } = await supabaseClient.from('employees').select('*').eq('is_in_party', true).order('id');
         const { data: equipped } = await supabaseClient.from('equipped_items').select('*');
 
-        grid.innerHTML = '';
-        if (members) {
-            members.forEach(m => {
+        container.innerHTML = '';
+
+        if (!members || members.length === 0) {
+            container.innerHTML = `<div class="team-card add-member-card" onclick="openMemberModal()"><div style="font-size:3em;">+</div><div>空无一人，点击组建小队</div></div>`;
+            return;
+        }
+
+        // 分组
+        const coreMembers = members.filter(m => m.role === '核心队友');
+        const hirelings = members.filter(m => m.role !== '核心队友');
+
+        // 渲染函数
+        const renderGrid = (list, title) => {
+            if (list.length === 0) return '';
+            let html = `<div class="team-section-title">${title}</div><div class="team-grid">`;
+            list.forEach(m => {
                 let slotsHtml = '';
                 for (let i = 0; i < 10; i++) {
                     const item = equipped.find(e => e.employee_id === m.id && e.slot_index === i);
@@ -148,161 +187,155 @@
                         slotsHtml += `<div class="slot" onclick="openEquipModal(${m.id}, ${i})">+</div>`;
                     }
                 }
-                grid.innerHTML += `
+                html += `
                     <div class="team-card">
                         <div class="btn-leave" onclick="removeFromParty(${m.id})">✕ 离队</div>
                         <div class="team-header">
                             <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
                             <div class="team-info">
                                 <h3>${m.name}</h3>
-                                <p>${m.role || '雇员'} | 薪资: ${m.salary} GP</p>
+                                <p>${m.role || '雇员'} | ${m.salary} GP</p>
                             </div>
                         </div>
                         <div class="slots-container">${slotsHtml}</div>
                     </div>`;
             });
-        }
-        if (!members || members.length < 8) {
-            grid.innerHTML += `<div class="team-card add-member-card" onclick="openMemberModal()"><div style="font-size:3em;">+</div><div>添加队员</div></div>`;
+            html += `</div>`;
+            return html;
+        };
+
+        container.innerHTML += renderGrid(coreMembers, '⚔️ 核心队友');
+        container.innerHTML += renderGrid(hirelings, '🛡️ 雇员 / 随从');
+
+        if (members.length < 8) {
+            container.innerHTML += `<div class="team-card add-member-card" onclick="openMemberModal()"><div style="font-size:2em;">+</div><div>添加队员 (${members.length}/8)</div></div>`;
         }
     }
 
-    async function removeFromParty(id) {
-        if (!confirm('确定让该成员离队？')) return;
-        await supabaseClient.from('employees').update({ is_in_party: false }).eq('id', id);
-        loadTeam();
+    // --- 装备逻辑 (加入 Loading) ---
+    async function equipItem(invId, itemName) {
+        showLoading(); // 开始转圈
+        try {
+            const { data: invItem } = await supabaseClient.from('user_inventory').select('quantity').eq('id', invId).single();
+            if (!invItem || invItem.quantity <= 0) {
+                alert('物品数量不足');
+                return;
+            }
+
+            // 扣库存
+            if (invItem.quantity > 1) {
+                await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
+            } else {
+                await supabaseClient.from('user_inventory').delete().eq('id', invId);
+            }
+
+            // 穿戴
+            await supabaseClient.from('equipped_items').insert([{ 
+                employee_id: currentEquipTarget.empId, 
+                slot_index: currentEquipTarget.slotIdx, 
+                item_name: itemName 
+            }]);
+
+            closeModal('equip-modal'); 
+            await loadTeam(); 
+            await loadInventory(); 
+        } catch (e) {
+            console.error(e);
+            alert('操作失败');
+        } finally {
+            hideLoading(); // 结束转圈
+        }
     }
 
+    async function unequipItem(equipId) {
+        if (!confirm('卸下该装备？')) return;
+        showLoading(); // 开始转圈
+        try {
+            const { data: eqItem } = await supabaseClient.from('equipped_items').select('*').eq('id', equipId).single();
+            const { data: exist } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).eq('item_name', eqItem.item_name).maybeSingle();
+            
+            if (exist) {
+                await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
+            } else {
+                await supabaseClient.from('user_inventory').insert([{ user_id: userProfile.id, item_name: eqItem.item_name, quantity: 1, category: '装备' }]);
+            }
+
+            await supabaseClient.from('equipped_items').delete().eq('id', equipId);
+            await loadTeam(); 
+            await loadInventory();
+        } catch (e) {
+            console.error(e);
+            alert('操作失败');
+        } finally {
+            hideLoading(); // 结束转圈
+        }
+    }
+
+    // --- 队伍成员操作 ---
     async function openMemberModal() {
         const list = document.getElementById('member-select-list');
         list.innerHTML = '加载中...';
         document.getElementById('member-modal').style.display = 'flex';
-        const { data: candidates } = await supabaseClient.from('employees').select('*').eq('status', '在职').eq('is_in_party', false);
+        const { data: candidates } = await supabaseClient.from('employees').select('*').eq('status', '在职').eq('is_in_party', false).order('id');
         list.innerHTML = '';
         if (!candidates || candidates.length === 0) return list.innerHTML = '<div style="padding:10px;text-align:center">无人可选</div>';
         candidates.forEach(c => {
-            list.innerHTML += `<div onclick="addToParty(${c.id})"><span><img src="${c.avatar_url||''}" style="width:24px;border-radius:50%;vertical-align:middle"> ${c.name}</span><span style="color:#999">${c.role||'雇员'}</span></div>`;
+            list.innerHTML += `<div onclick="addToParty(${c.id})"><span><img src="${c.avatar_url||''}" style="width:24px;border-radius:50%;vertical-align:middle;margin-right:8px;"> ${c.name}</span><span style="color:#999">${c.role||'雇员'}</span></div>`;
         });
     }
 
     async function addToParty(id) {
+        showLoading();
         await supabaseClient.from('employees').update({ is_in_party: true }).eq('id', id);
-        closeModal('member-modal'); loadTeam();
+        closeModal('member-modal'); 
+        await loadTeam();
+        hideLoading();
     }
 
-    // --- 装备逻辑 (加强扣库存逻辑) ---
+    async function removeFromParty(id) {
+        if (!confirm('确定让该成员离队？')) return;
+        showLoading();
+        await supabaseClient.from('employees').update({ is_in_party: false }).eq('id', id);
+        await loadTeam();
+        hideLoading();
+    }
+
+    // --- 其他辅助函数 (保持不变) ---
     async function openEquipModal(empId, slotIdx) {
         currentEquipTarget = { empId, slotIdx };
         const list = document.getElementById('equip-list');
         list.innerHTML = '读取背包...';
         document.getElementById('equip-modal').style.display = 'flex';
-        
-        // 只加载 装备 和 魔法物品
-        const { data: inv } = await supabaseClient.from('user_inventory')
-            .select('*')
-            .eq('user_id', userProfile.id)
-            .in('category', ['装备', '魔法物品'])
-            .gt('quantity', 0); // 确保有库存
-            
+        const { data: inv } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).in('category', ['装备', '魔法物品']).gt('quantity', 0);
         list.innerHTML = '';
         if (!inv || inv.length === 0) return list.innerHTML = '<div style="text-align:center; color:#999">没装备</div>';
         inv.forEach(item => {
             list.innerHTML += `<div onclick="equipItem(${item.id}, '${item.item_name}')"><span>${item.item_name}</span><span>x${item.quantity}</span></div>`;
         });
     }
-
-    async function equipItem(invId, itemName) {
-        // 1. 先检查并扣除背包
-        const { data: invItem } = await supabaseClient.from('user_inventory').select('quantity').eq('id', invId).single();
-        
-        if (!invItem || invItem.quantity <= 0) {
-            alert('物品不存在或数量不足！');
-            return;
-        }
-
-        if (invItem.quantity > 1) {
-            await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
-        } else {
-            await supabaseClient.from('user_inventory').delete().eq('id', invId);
-        }
-
-        // 2. 插入装备栏
-        await supabaseClient.from('equipped_items').insert([{ 
-            employee_id: currentEquipTarget.empId, 
-            slot_index: currentEquipTarget.slotIdx, 
-            item_name: itemName 
-        }]);
-
-        closeModal('equip-modal'); 
-        loadTeam(); 
-        loadInventory(); // 立即刷新背包，你会看到数量减少
-    }
-
-    async function unequipItem(equipId) {
-        if (!confirm('卸下该装备？')) return;
-        const { data: eqItem } = await supabaseClient.from('equipped_items').select('*').eq('id', equipId).single();
-        
-        // 返还到背包
-        const { data: exist } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).eq('item_name', eqItem.item_name).maybeSingle();
-        if (exist) {
-            await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
-        } else {
-            // 归类为“装备”
-            await supabaseClient.from('user_inventory').insert([{ user_id: userProfile.id, item_name: eqItem.item_name, quantity: 1, category: '装备' }]);
-        }
-
-        await supabaseClient.from('equipped_items').delete().eq('id', equipId);
-        loadTeam(); 
-        loadInventory();
-    }
-
-    // --- 背包逻辑 (修复分类) ---
+    
+    // 修复的 loadInventory 分类显示
     async function loadInventory() {
         const container = document.getElementById('inventory-container');
         container.innerHTML = '清点中...';
-        
         const { data: inv } = await supabaseClient.from('user_inventory').select('*').order('category');
         if (!inv) return;
-        
         container.innerHTML = '';
-        
-        // 提取所有分类
         const categories = [...new Set(inv.map(i => i.category || '杂项'))];
-        
         categories.forEach(cat => {
             const section = document.createElement('div');
             section.className = 'inventory-category';
             section.innerHTML = `<h3>${cat}</h3>`;
-            
             const grid = document.createElement('div');
             grid.className = 'inventory-grid';
-            
-            const itemsInCat = inv.filter(i => (i.category || '杂项') === cat);
-            itemsInCat.forEach(item => {
+            inv.filter(i => (i.category || '杂项') === cat).forEach(item => {
                 grid.innerHTML += `<div class="inv-card"><span>${item.item_name}</span><span style="font-weight:bold; color:#666">x${item.quantity}</span></div>`;
             });
-            
             section.appendChild(grid);
             container.appendChild(section);
         });
     }
 
-    // --- 雇员列表 (显示Role) ---
-    async function loadEmployees() {
-        const { data } = await supabaseClient.from('employees').select('*').order('id');
-        document.getElementById('emp-list').innerHTML = data.map(e => {
-            const showFire = e.role === '雇员' && e.status === '在职'; // 只有普通雇员可以申请解雇
-            return `<div class="card" style="text-align:center">
-                <img src="${e.avatar_url||''}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
-                <div style="font-weight:bold">${e.name}</div>
-                <div style="font-size:0.8em;color:#666">${e.role||'雇员'} | ${e.salary} GP</div>
-                <div style="font-size:0.8em;margin:5px 0;color:${e.status==='在职'?'green':'red'}">${e.status}</div>
-                ${showFire ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
-            </div>`
-        }).join('');
-    }
-
-    // --- 基础 & 通用 ---
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     async function login() {
         const email = document.getElementById('login-email').value;
@@ -311,7 +344,6 @@
         if(error) alert(error.message); else checkUser();
     }
     async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
-    
     async function checkUser() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) {
@@ -326,7 +358,7 @@
             document.getElementById('gold-amount').innerText = p.gold_gp;
             const { data: d } = await supabaseClient.from('global_settings').select('value').eq('key', 'current_date').single();
             if(d) document.getElementById('date-text').innerText = `FR${d.value.year} ${d.value.month}月${d.value.day}日`;
-            loadShop(); loadTeam(); loadInventory(); 
+            loadShop(); loadTeam(); loadInventory(); loadEmployees();
         }
     }
     function switchTab(tab) {
@@ -343,16 +375,24 @@
     }
     async function buy(id,p,n,c) {
         if(userProfile.gold_gp < p) return alert('没钱');
+        showLoading();
         await supabaseClient.from('profiles').update({gold_gp: userProfile.gold_gp-p}).eq('id', userProfile.id);
         const {data:inv} = await supabaseClient.from('user_inventory').select('id,quantity').eq('user_id',userProfile.id).eq('item_name',n).maybeSingle();
         if(inv) await supabaseClient.from('user_inventory').update({quantity:inv.quantity+1}).eq('id',inv.id);
         else await supabaseClient.from('user_inventory').insert([{user_id:userProfile.id,item_name:n,quantity:1,category:c}]);
+        hideLoading();
         alert('购买成功'); checkUser();
+    }
+    async function loadEmployees() {
+        const { data } = await supabaseClient.from('employees').select('*').order('id');
+        document.getElementById('emp-list').innerHTML = data.map(e => `<div class="card" style="text-align:center"><img src="${e.avatar_url||''}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:10px;"><div style="font-weight:bold">${e.name}</div><div style="font-size:0.8em;color:#666">${e.role||'雇员'} | ${e.salary} GP</div><div style="font-size:0.8em;margin:5px 0;color:${e.status==='在职'?'green':'red'}">${e.status}</div>${(!e.role || e.role==='雇员')&&e.status==='在职'?`<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>`:''}</div>`).join('');
     }
     async function requestFire(id) {
         if (!confirm('确定申请解雇？')) return;
+        showLoading();
         await supabaseClient.from('employees').update({ status: '申请解雇' }).eq('id', id);
-        loadEmployees();
+        await loadEmployees();
+        hideLoading();
     }
     async function loadAdminData() {
         const { data } = await supabaseClient.from('employees').select('id,name');
@@ -361,12 +401,14 @@
     async function uploadAvatar() {
         const f = document.getElementById('adm-emp-avatar').files[0];
         const id = document.getElementById('adm-emp-list').value;
+        showLoading();
         const { data } = await supabaseClient.storage.from('avatars').upload(`ava_${Date.now()}`, f);
         if(data) {
             const { data: u } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
             await supabaseClient.from('employees').update({avatar_url: u.publicUrl}).eq('id', id);
             alert('OK');
         }
+        hideLoading();
     }
     async function advanceTime() { alert('时间逻辑见之前版本'); }
     
