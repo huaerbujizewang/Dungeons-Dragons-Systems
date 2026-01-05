@@ -134,55 +134,71 @@
 
 <!-- DM后台 -->
 <div id="admin-panel">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
         <h2 style="margin:0">DM 上帝控制台</h2>
-        <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none;">关闭</button>
+        <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px;">关闭面板</button>
     </div>
     
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-        <!-- 时间控制 -->
-        <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
-            <h3>⏳ 时间流逝</h3>
-            <button onclick="advanceTime()" style="width:100%; padding:10px; background:#f1c40f; font-weight:bold;">推进一天 (Next Day)</button>
-        </div>
-
-        <!-- 雇员头像 -->
-        <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
-            <h3>👷 雇员头像</h3>
-            <select id="adm-emp-list" style="width:100%; margin-bottom:5px;"></select>
-            <input type="file" id="adm-emp-avatar" style="width:100%">
-            <button onclick="uploadAvatar()" style="width:100%; margin-top:5px;">上传</button>
-        </div>
-
-        <!-- 玩家资产管理 (找回的功能) -->
-        <div class="admin-box" style="grid-column: 1 / -1; border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
-            <h3>👤 玩家资产操控 (上帝之手)</h3>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <select id="adm-user-list" onchange="loadUserDetail()" style="flex:1; padding:8px;">
-                    <option value="">-- 选择玩家 --</option>
-                </select>
-                <button onclick="loadAdminData()">🔄 刷新列表</button>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; height: 85%;">
+        
+        <!-- 左侧：功能区 -->
+        <div style="display:flex; flex-direction:column; gap:20px; overflow-y:auto;">
+            <!-- 时间 -->
+            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0">⏳ 时间流逝</h3>
+                <button onclick="advanceTime()" style="width:100%; padding:10px; background:#f1c40f; font-weight:bold; border:none; border-radius:4px;">推进一天 (Next Day)</button>
             </div>
-            
-            <div id="user-detail" style="display:none; border-top:1px solid #ccc; padding-top:10px;">
-                <div style="margin-bottom:10px;">
-                    <label>💰 金币:</label>
-                    <input type="number" id="adm-user-gold" style="width:100px; padding:5px;">
-                    <button onclick="updateUserGold()" style="background:#2ecc71; color:white; border:none;">修改</button>
+
+            <!-- 玩家管理 -->
+            <div class="admin-box" style="border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
+                <h3 style="margin-top:0">👤 玩家资产操控</h3>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <select id="adm-user-list" onchange="loadUserDetail()" style="flex:1; padding:8px;">
+                        <option value="">-- 选择玩家 --</option>
+                    </select>
+                    <button onclick="loadAdminData()">🔄</button>
                 </div>
                 
-                <div style="margin-bottom:10px;">
-                    <label>🎁 发放物品:</label>
-                    <input type="text" id="adm-new-item" placeholder="物品名称" style="width:150px; padding:5px;">
-                    <button onclick="admAddInv()" style="background:#3498db; color:white; border:none;">塞入背包</button>
-                </div>
+                <div id="user-detail" style="display:none; border-top:1px solid #ccc; padding-top:10px;">
+                    <div style="margin-bottom:10px;">
+                        <label>💰 金币:</label>
+                        <input type="number" id="adm-user-gold" style="width:80px; padding:5px;">
+                        <button onclick="updateUserGold()" style="background:#2ecc71; color:white; border:none; padding:5px 10px; border-radius:4px;">改</button>
+                    </div>
+                    
+                    <div style="margin-bottom:10px;">
+                        <label>🎁 发放:</label>
+                        <input type="text" id="adm-new-item" placeholder="物品名" style="width:100px; padding:5px;">
+                        <button onclick="admAddInv()" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:4px;">给</button>
+                    </div>
 
-                <div style="font-size:0.8em; color:#666;">
-                    <strong>背包预览:</strong>
-                    <div id="adm-user-inv" style="margin-top:5px; max-height:60px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd;"></div>
+                    <div style="font-size:0.8em; color:#666;">
+                        <strong>🎒 背包预览:</strong>
+                        <div id="adm-user-inv" style="margin-top:5px; max-height:100px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd;"></div>
+                    </div>
                 </div>
             </div>
+
+            <!-- 头像 -->
+            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0">👷 雇员头像</h3>
+                <select id="adm-emp-list" style="width:100%; margin-bottom:5px; padding:5px;"></select>
+                <input type="file" id="adm-emp-avatar" style="width:100%">
+                <button onclick="uploadAvatar()" style="width:100%; margin-top:5px;">上传</button>
+            </div>
         </div>
+
+        <!-- 右侧：日志区 -->
+        <div style="border:1px solid #ddd; border-radius:8px; padding:15px; background:#f9f9f9; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0">📜 操作日志 (最近50条)</h3>
+                <button onclick="loadLogs()" style="font-size:0.8em;">刷新</button>
+            </div>
+            <div id="audit-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:10px;">
+                加载中...
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -282,72 +298,99 @@ async function loadEmployees() {
     `;
 }
 
-// 替换原有的 equipItem 函数
 async function equipItem(invId, itemName) {
-    showLoading(); // 保持转圈，防止连点
-    try {
-        // 1. 严格检查：去数据库查最新的库存，不要信前端缓存
-        const { data: invItem, error } = await supabaseClient
-            .from('user_inventory')
-            .select('id, quantity')
-            .eq('id', invId)
-            .single();
+        showLoading(); // 开启转圈
+        try {
+            // 1. 严格检查：去数据库查最新的库存
+            const { data: invItem, error } = await supabaseClient
+                .from('user_inventory')
+                .select('id, quantity')
+                .eq('id', invId)
+                .single();
 
-        // 如果数据库里没东西了，或者数量是0，直接报错并刷新
-        if (error || !invItem || invItem.quantity < 1) {
-            alert('装备失败：物品不存在或已被使用！');
-            closeModal('equip-modal');
-            await loadInventory(); // 强制刷新纠正前端显示
-            hideLoading();
-            return;
+            // 异常处理：如果库存也没了，或者报错
+            if (error || !invItem || invItem.quantity < 1) {
+                alert('装备失败：物品不存在或数量不足！');
+                closeModal('equip-modal');
+                await loadInventory(); // 强制刷新纠正前端显示
+                hideLoading();
+                return;
+            }
+
+            // 2. 扣库存
+            if (invItem.quantity > 1) {
+                await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
+            } else {
+                // 如果只剩1个，直接删除
+                await supabaseClient.from('user_inventory').delete().eq('id', invId);
+            }
+
+            // 3. 写入装备栏
+            const { error: equipError } = await supabaseClient.from('equipped_items').insert([{ 
+                employee_id: currentEquipTarget.empId, 
+                slot_index: currentEquipTarget.slotIdx, 
+                item_name: itemName 
+            }]);
+
+            if (equipError) throw equipError;
+
+            // 4. 【补回】记录操作日志
+            // 这样你在后台就能看到：“master@... 将 [贤者法杖] 装备给了 狐坂樱”
+            await logAction('装备物品', `将 [${itemName}] 装备给队员 (ID:${currentEquipTarget.empId})`);
+
+            closeModal('equip-modal'); 
+            
+            // 5. 刷新界面
+            await Promise.all([loadTeam(), loadInventory()]);
+
+        } catch (e) {
+            console.error("装备出错:", e);
+            alert('操作异常，请检查网络');
+        } finally {
+            hideLoading(); // 关闭转圈
         }
-
-        // 2. 扣库存 (原子操作)
-        if (invItem.quantity > 1) {
-            await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
-        } else {
-            // 如果只剩1个，直接删掉
-            await supabaseClient.from('user_inventory').delete().eq('id', invId);
-        }
-
-        // 3. 穿戴 (写入装备栏)
-        const { error: equipError } = await supabaseClient.from('equipped_items').insert([{ 
-            employee_id: currentEquipTarget.empId, 
-            slot_index: currentEquipTarget.slotIdx, 
-            item_name: itemName 
-        }]);
-
-        if (equipError) {
-            // 如果穿戴失败（极其罕见），这里应该有一个回滚逻辑，但在简单系统里，我们先报错
-            console.error(equipError);
-            alert('穿戴时发生错误，请检查网络');
-        }
-
-        closeModal('equip-modal'); 
-        
-        // 4. 并行刷新数据
-        await Promise.all([loadTeam(), loadInventory()]);
-
-    } catch (e) {
-        console.error(e);
-        alert('操作异常');
-    } finally {
-        hideLoading();
     }
-}
 
     async function unequipItem(equipId) {
-        if (!confirm('卸下该装备？')) return;
+        if (!confirm('确定卸下该装备？')) return;
         showLoading();
         try {
+            // 1. 获取装备信息
             const { data: eqItem } = await supabaseClient.from('equipped_items').select('*').eq('id', equipId).single();
-            const { data: exist } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).eq('item_name', eqItem.item_name).maybeSingle();
-            if (exist) await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
-            else await supabaseClient.from('user_inventory').insert([{ user_id: userProfile.id, item_name: eqItem.item_name, quantity: 1, category: '装备' }]);
+            if (!eqItem) throw new Error("装备不存在");
+
+            // 2. 尝试放回背包
+            const { data: exist } = await supabaseClient.from('user_inventory')
+                .select('*')
+                .eq('user_id', userProfile.id)
+                .eq('item_name', eqItem.item_name)
+                .maybeSingle();
+
+            if (exist) {
+                await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
+            } else {
+                await supabaseClient.from('user_inventory').insert([{ 
+                    user_id: userProfile.id, 
+                    item_name: eqItem.item_name, 
+                    quantity: 1, 
+                    category: '装备' // 默认归类
+                }]);
+            }
+
+            // 3. 从身上删除
             await supabaseClient.from('equipped_items').delete().eq('id', equipId);
-            await loadTeam(); await loadInventory();
-        } catch(e) { console.error(e); }
-        hideLoading();
+
+            // 4. 记录日志
+            await logAction('卸下装备', `卸下了 [${eqItem.item_name}] (队员ID:${eqItem.employee_id})`);
+
+            await loadTeam(); 
+            await loadInventory();
+        } catch(e) { 
+            console.error(e); 
+            alert('卸载失败');
+        } finally {
+            hideLoading();
+        }
     }
 
     async function openEquipModal(empId, slotIdx) {
@@ -451,15 +494,33 @@ async function equipItem(invId, itemName) {
         const { data } = await supabaseClient.from('shop_items').select('*');
         document.getElementById('shop-grid').innerHTML = data.map(i => `<div class="card"><b>${i.name}</b><br>${i.price} GP<br>库存:${i.stock}<button class="btn-buy" onclick="buy(${i.id},${i.price},'${i.name}','${i.category}')">购买</button></div>`).join('');
     }
-    async function buy(id,p,n,c) {
+    // 1. 购买 (增加日志)
+    async function buy(id, p, n, c) {
         if(userProfile.gold_gp < p) return alert('没钱');
         showLoading();
         await supabaseClient.from('profiles').update({gold_gp: userProfile.gold_gp-p}).eq('id', userProfile.id);
         const {data:inv} = await supabaseClient.from('user_inventory').select('id,quantity').eq('user_id',userProfile.id).eq('item_name',n).maybeSingle();
         if(inv) await supabaseClient.from('user_inventory').update({quantity:inv.quantity+1}).eq('id',inv.id);
         else await supabaseClient.from('user_inventory').insert([{user_id:userProfile.id,item_name:n,quantity:1,category:c}]);
+        
+        // 记录日志
+        await logAction('购买物品', `花费 ${p} GP 购买了 [${n}]`);
+        
         hideLoading(); alert('购买成功'); checkUser();
     }
+
+    // ================== 通用日志函数 ==================
+    async function logAction(actionType, details) {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) {
+            await supabaseClient.from('audit_logs').insert([{
+                user_email: user.email,
+                action_type: actionType,
+                details: details
+            }]);
+        }
+    }
+
 // --- DM 上帝模式逻辑 (修复版) ---
 
     // 1. 加载管理员所需数据
@@ -489,41 +550,67 @@ async function equipItem(invId, itemName) {
     }
 
     // 2. 选中玩家后，加载详细信息
+     // ================== 修复后的 DM 背包读取 ==================
     let selectedUserId = null;
     async function loadUserDetail() {
         selectedUserId = document.getElementById('adm-user-list').value;
         const detailBox = document.getElementById('user-detail');
-        
-        if (!selectedUserId) {
-            detailBox.style.display = 'none';
-            return;
-        }
+        if (!selectedUserId) { detailBox.style.display = 'none'; return; }
         detailBox.style.display = 'block';
 
         // 查金币
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
-        if (prof) {
-            document.getElementById('adm-user-gold').value = prof.gold_gp;
-        }
+        if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
 
-        // 查背包预览
-        const { data: inv } = await supabaseClient.from('user_inventory').select('item_name, quantity').eq('user_id', selectedUserId);
+        // 查背包 (因为加了 SQL policy，现在应该能查到了)
+        const { data: inv, error } = await supabaseClient.from('user_inventory').select('item_name, quantity').eq('user_id', selectedUserId);
         const invDiv = document.getElementById('adm-user-inv');
-        if (inv) {
-            invDiv.innerHTML = inv.map(i => `${i.item_name} x${i.quantity}`).join(' | ');
+        if (error) {
+            invDiv.innerHTML = '<span style="color:red">读取失败，权限不足</span>';
+        } else if (inv && inv.length > 0) {
+            invDiv.innerHTML = inv.map(i => `<span style="border:1px solid #eee; padding:2px 5px; margin:2px; display:inline-block;">${i.item_name} x${i.quantity}</span>`).join('');
         } else {
-            invDiv.innerHTML = '背包为空';
+            invDiv.innerHTML = '背包空空如也';
         }
     }
 
+    // ================== 新增：加载日志 ==================
+    async function loadLogs() {
+        const logBox = document.getElementById('audit-log-container');
+        logBox.innerHTML = '加载日志中...';
+        
+        const { data: logs } = await supabaseClient
+            .from('audit_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50); // 只看最近50条
+
+        if (!logs || logs.length === 0) {
+            logBox.innerHTML = '暂无操作记录';
+            return;
+        }
+
+        logBox.innerHTML = logs.map(log => {
+            const time = new Date(log.created_at).toLocaleString();
+            return `
+                <div style="border-bottom:1px solid #eee; padding:8px 0; font-size:0.9em;">
+                    <div style="color:#999; font-size:0.8em;">${time} - ${log.user_email}</div>
+                    <div><span style="font-weight:bold; color:#333">[${log.action_type}]</span> ${log.details}</div>
+                </div>`;
+        }).join('');
+    }
+
     // 3. 修改金币
-    async function updateUserGold() {
+async function updateUserGold() {
         if (!selectedUserId) return;
         const newGold = document.getElementById('adm-user-gold').value;
         showLoading();
         await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', selectedUserId);
-        hideLoading();
-        alert('金币已修改');
+        
+        // 记录日志
+        await logAction('DM操作', `修改了玩家(ID:${selectedUserId})的金币为 ${newGold}`);
+        
+        hideLoading(); alert('金币已修改');
     }
 
     // 4. 上帝发装备
@@ -573,5 +660,3 @@ async function equipItem(invId, itemName) {
 </script>
 </body>
 </html>
-
-
