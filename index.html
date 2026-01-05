@@ -3,106 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 系统 - 商店与资产</title>
+    <title>D&D 系统 - 完美版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: "PingFang SC", sans-serif; background: #fff; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        
-        /* 导航栏 */
+        .container { max-width: 1100px; margin: 0 auto; }
         .nav { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: none; font-size: 1.1em; }
-        .tab-btn.active { font-weight: bold; border-bottom: 3px solid #333; }
-        .user-assets { text-align: right; }
+        .tab-btn { padding: 10px 15px; cursor: pointer; border: none; background: none; font-size: 1em; opacity: 0.6; }
+        .tab-btn.active { font-weight: bold; border-bottom: 3px solid #333; opacity: 1; }
         .gold-display { color: #d35400; font-weight: bold; font-size: 1.2em; }
+        .date-display { background: #f1c40f; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
 
-        /* 内容区 */
         .section { display: none; }
         .section.active { display: block; }
 
-        /* 商店样式 */
-        .filter-bar { margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
-        .filter-btn { padding: 4px 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 0.85em; }
-        .filter-btn.active { background: #333; color: #fff; }
-        .item-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-        .item-card { border: 1px solid #eee; padding: 15px; border-radius: 4px; position: relative; }
-        .rarity-tag { font-size: 0.7em; padding: 2px 6px; color: #fff; border-radius: 2px; position: absolute; top: 10px; right: 10px; }
+        /* 雇员样式 */
+        .emp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .emp-card { border: 1px solid #eee; padding: 15px; text-align: center; border-radius: 8px; }
+        .emp-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background: #eee; margin-bottom: 10px; }
+        .status-tag { font-size: 0.7em; padding: 2px 5px; border-radius: 3px; background: #eee; }
 
-        /* 背包样式 */
-        .inventory-category { margin-top: 30px; }
-        .inventory-category h3 { border-left: 4px solid #333; padding-left: 10px; margin-bottom: 15px; }
-        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .inv-card { background: #f9f9f9; padding: 12px; border-radius: 4px; font-size: 0.9em; display: flex; justify-content: space-between; }
-        .inv-qty { font-weight: bold; color: #7f8c8d; }
-
-        /* 管理面板 */
-        #admin-panel { display: none; position: fixed; top: 10%; left: 10%; width: 80%; height: 80%; background: white; border: 2px solid #333; z-index: 100; padding: 20px; overflow-y: auto; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
-
-        button { cursor: pointer; }
-        .btn-main { background: #333; color: #fff; border: none; padding: 8px 15px; width: 100%; margin-top: 10px; }
-        .btn-main:disabled { background: #ccc; }
+        /* 管理面板样式 */
+        #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: white; border: 2px solid #333; z-index: 1000; padding: 20px; overflow-y: auto; box-shadow: 0 0 30px rgba(0,0,0,0.3); }
+        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .admin-box { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+        
+        button { cursor: pointer; border: 1px solid #333; background: #fff; padding: 5px 10px; }
+        button:hover { background: #333; color: #fff; }
+        .danger { border-color: #e74c3c; color: #e74c3c; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- 登录模块保持不变 -->
     <div id="login-section" style="max-width:300px; margin:100px auto; text-align:center;">
         <h2>D&D 资产管理系统</h2>
         <input type="email" id="login-email" placeholder="邮箱" style="width:100%; padding:10px; margin-bottom:10px;">
         <input type="password" id="login-password" placeholder="密码" style="width:100%; padding:10px; margin-bottom:10px;">
-        <button onclick="login()" class="btn-main">进入系统</button>
+        <button onclick="login()" style="width:100%; padding:10px;">登录</button>
     </div>
 
+    <!-- 主界面 -->
     <div id="main-section" style="display:none;">
         <div class="nav">
             <div>
                 <button class="tab-btn active" onclick="switchTab('shop')">集市</button>
                 <button class="tab-btn" onclick="switchTab('inventory')">我的背包</button>
-                <span id="admin-link" style="display:none; color:blue; cursor:pointer; margin-left:20px;" onclick="toggleAdmin()">⚙️ DM后台</span>
+                <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
+                <span id="admin-link" style="display:none; color:blue; cursor:pointer; margin-left:20px; font-weight:bold" onclick="toggleAdmin()">⚙️ DM上帝模式</span>
             </div>
-            <div class="user-assets">
-                <span class="gold-display">💰 <span id="gold-amount">0</span> GP</span>
-                <div style="font-size:0.7em; color:#999;" id="user-email-display"></div>
-                <button onclick="logout()" style="font-size:0.7em; border:none; background:none; text-decoration:underline; cursor:pointer;">退出</button>
+            <div style="text-align:right">
+                <div class="date-display" id="date-text">FR1494 2月12日</div>
+                <div class="gold-display">💰 <span id="gold-amount">0</span> GP</div>
+                <button onclick="logout()" style="font-size:0.7em; margin-top:5px;">退出</button>
             </div>
         </div>
 
-        <!-- 商店部分 -->
-        <div id="shop-section" class="section active">
-            <div class="filter-bar" id="filter-bar">
-                <!-- 动态生成过滤按钮 -->
-            </div>
-            <div id="shop-grid" class="item-list"></div>
-        </div>
-
-        <!-- 背包部分 -->
-        <div id="inventory-section" class="section">
-            <div id="inventory-container">
-                <!-- 动态生成分类背包装载 -->
-            </div>
+        <!-- 各个 Section -->
+        <div id="shop-section" class="section active"><div id="shop-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;"></div></div>
+        
+        <div id="inventory-section" class="section"><div id="inventory-container"></div></div>
+        
+        <div id="employees-section" class="section">
+            <h3 id="salary-info">每月总支出：1132 GP (每月1日自动扣除)</h3>
+            <div class="emp-grid" id="emp-grid"></div>
         </div>
     </div>
 </div>
 
-<!-- DM 管理面板 -->
+<!-- DM上帝模式面板 -->
 <div id="admin-panel">
-    <div style="display:flex; justify-content:space-between;"><h3>DM 物资补给管理</h3><button onclick="toggleAdmin()">关闭</button></div>
-    <hr>
-    <p>新增物品：</p>
-    <input type="text" id="adm-name" placeholder="名称">
-    <select id="adm-rarity">
-        <option value="普通">普通</option><option value="非普通">非普通</option>
-        <option value="珍稀">珍稀</option><option value="极珍稀">极珍稀</option>
-        <option value="传说">传说</option><option value="神器">神器</option>
-    </select>
-    <select id="adm-category">
-        <option value="装备">装备</option><option value="魔法物品">魔法物品</option>
-        <option value="药水">药水</option><option value="卷轴">卷轴</option>
-    </select>
-    <input type="number" id="adm-price" placeholder="价格 GP">
-    <input type="number" id="adm-stock" placeholder="数量" value="1">
-    <textarea id="adm-desc" placeholder="描述"></textarea>
-    <button onclick="adminAddItem()" class="btn-main" style="background:green">确认上架</button>
+    <div style="display:flex; justify-content:space-between;"><h2>DM 上帝管理后台</h2><button onclick="toggleAdmin()">关闭</button></div>
+    <div class="admin-grid">
+        <!-- 时间控制 -->
+        <div class="admin-box">
+            <h3>⏳ 时间流逝</h3>
+            <button onclick="advanceTime()" style="padding:15px; font-size:1.2em; background:#f1c40f">推进一天 (Next Day)</button>
+            <p>※ 若推进到1日，会自动扣除玩家雇员薪资。</p>
+        </div>
+        <!-- 玩家管理 -->
+        <div class="admin-box">
+            <h3>👤 玩家资产操控</h3>
+            <select id="adm-user-list" onchange="loadUserDetail()"><option value="">请选择玩家</option></select>
+            <div id="user-detail" style="margin-top:10px; display:none;">
+                <p>当前金币: <input type="number" id="adm-user-gold"> <button onclick="updateUserGold()">修改</button></p>
+                <p>增加物品: <input type="text" id="adm-new-item" placeholder="物品名"> <button onclick="admAddInv()">直接发放</button></p>
+                <div id="adm-user-inv" style="font-size:0.8em; color:#666"></div>
+            </div>
+        </div>
+        <!-- 审批中心 -->
+        <div class="admin-box">
+            <h3>⚖️ 审批中心</h3>
+            <div id="request-list">暂无待处理请求</div>
+        </div>
+        <!-- 雇员管理（头像上传） -->
+        <div class="admin-box">
+            <h3>👷 雇员信息修改</h3>
+            <select id="adm-emp-list"></select>
+            <input type="file" id="adm-emp-avatar" accept="image/*">
+            <button onclick="uploadAvatar()">上传并更新头像</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -110,130 +112,170 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let currentDate = { year: 1494, month: 2, day: 12 };
     let userProfile = null;
-    let shopItems = [];
     const DM_EMAIL = '739477825@qq.com';
-    const rarityColors = { '普通': '#95a5a6', '非普通': '#2ecc71', '珍稀': '#3498db', '极珍稀': '#9b59b6', '传说': '#f1c40f', '神器': '#e74c3c' };
 
-    async function login() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) alert(error.message); else checkUser();
-    }
-
-    async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
-
+    // 初始化
     async function checkUser() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) {
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-section').style.display = 'block';
-            document.getElementById('user-email-display').innerText = user.email;
-            if (user.email === DM_EMAIL) document.getElementById('admin-link').style.display = 'inline';
+            if (user.email === DM_EMAIL) {
+                document.getElementById('admin-link').style.display = 'inline';
+                loadAdminData();
+            }
+            loadGlobalDate();
             loadAllData();
         }
     }
 
-    async function loadAllData() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        // 加载金币
-        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-        userProfile = profile;
-        document.getElementById('gold-amount').innerText = profile ? profile.gold_gp : 0;
-        
-        loadShop();
-        loadInventory();
-    }
-
-    async function loadShop() {
-        const { data } = await supabaseClient.from('shop_items').select('*').order('rarity');
-        const grid = document.getElementById('shop-grid');
-        grid.innerHTML = '';
-        data.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'item-card';
-            const color = rarityColors[item.rarity];
-            card.innerHTML = `
-                <span class="rarity-tag" style="background:${color}">${item.rarity}</span>
-                <div style="font-weight:bold">${item.name}</div>
-                <div style="font-size:0.8em; color:#666; margin:5px 0">${item.description || ''}</div>
-                <div style="color:#d35400; font-weight:bold">${item.price} GP</div>
-                <div style="font-size:0.75em; color:#999">库存: ${item.stock}</div>
-                <button class="btn-main" onclick="buyItem(${item.id}, ${item.price}, '${item.name}', '${item.category}')" ${item.stock <= 0 ? 'disabled' : ''}>
-                    ${item.stock <= 0 ? '缺货' : '购买'}
-                </button>
-            `;
-            grid.appendChild(card);
-        });
-    }
-
-    async function loadInventory() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        const { data } = await supabaseClient.from('user_inventory').select('*').order('category');
-        const container = document.getElementById('inventory-container');
-        container.innerHTML = '';
-
-        const categories = [...new Set(data.map(i => i.category))];
-        categories.forEach(cat => {
-            const section = document.createElement('div');
-            section.className = 'inventory-category';
-            section.innerHTML = `<h3>${cat || '杂项'}</h3>`;
-            const grid = document.createElement('div');
-            grid.className = 'inventory-grid';
-            data.filter(i => i.category === cat).forEach(item => {
-                grid.innerHTML += `<div class="inv-card"><span>${item.item_name}</span> <span class="inv-qty">x${item.quantity}</span></div>`;
-            });
-            section.appendChild(grid);
-            container.appendChild(section);
-        });
-    }
-
-    async function buyItem(id, price, name, category) {
-        if (userProfile.gold_gp < price) { alert('金币不足！'); return; }
-        if (!confirm(`确定花费 ${price} GP 购买 ${name} 吗？`)) return;
-
-        // 1. 扣钱
-        const newGold = userProfile.gold_gp - price;
-        await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
-
-        // 2. 减库存
-        const { data: item } = await supabaseClient.from('shop_items').select('stock').eq('id', id).single();
-        await supabaseClient.from('shop_items').update({ stock: item.stock - 1 }).eq('id', id);
-
-        // 3. 进背包 (检查是否已有)
-        const { data: invItem } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).eq('item_name', name).maybeSingle();
-        if (invItem) {
-            await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity + 1 }).eq('id', invItem.id);
-        } else {
-            await supabaseClient.from('user_inventory').insert([{ user_id: userProfile.id, item_name: name, quantity: 1, category: category }]);
+    // --- 时间系统 ---
+    async function loadGlobalDate() {
+        const { data } = await supabaseClient.from('global_settings').select('value').eq('key', 'current_date').single();
+        if (data) {
+            currentDate = data.value;
+            document.getElementById('date-text').innerText = `FR${currentDate.year} ${currentDate.month}月${currentDate.day}日`;
         }
-
-        alert('购买成功！');
-        loadAllData();
     }
 
+    async function advanceTime() {
+        let { year, month, day } = currentDate;
+        day++;
+        if (day > 30) { day = 1; month++; } // DND简单历法：每月30天
+        if (month > 12) { month = 1; year++; }
+        
+        const nextDate = { year, month, day };
+        await supabaseClient.from('global_settings').update({ value: nextDate }).eq('key', 'current_date');
+        
+        // 如果是1号，自动扣工资
+        if (day === 1) {
+            const { data: emps } = await supabaseClient.from('employees').select('salary').eq('status', '在职');
+            const totalSalary = emps.reduce((sum, e) => sum + e.salary, 0);
+            
+            // 假设扣除 master@almorel.com 的钱
+            const { data: prof } = await supabaseClient.from('profiles').select('gold_gp, id').eq('email', 'master@almorel.com').single();
+            if (prof) {
+                await supabaseClient.from('profiles').update({ gold_gp: prof.gold_gp - totalSalary }).eq('id', prof.id);
+                alert(`新的一月开始了！已自动支付薪资：${totalSalary} GP`);
+            }
+        }
+        location.reload();
+    }
+
+    // --- 雇员系统 ---
+    async function loadEmployees() {
+        const { data } = await supabaseClient.from('employees').select('*');
+        const grid = document.getElementById('emp-grid');
+        grid.innerHTML = '';
+        let total = 0;
+        data.forEach(e => {
+            if (e.status === '在职') total += e.salary;
+            grid.innerHTML += `
+                <div class="emp-card">
+                    <img src="${e.avatar_url || 'https://via.placeholder.com/80'}" class="emp-avatar">
+                    <div style="font-weight:bold">${e.name}</div>
+                    <div style="color:#d35400">${e.salary} GP/月</div>
+                    <div class="status-tag">${e.status}</div>
+                    ${e.status === '在职' ? `<button class="danger" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
+                </div>`;
+        });
+        document.getElementById('salary-info').innerText = `每月总支出：${total} GP (每月1日自动扣除)`;
+    }
+
+    async function requestFire(id) {
+        if (confirm('确认申请解雇该雇员？需要DM审批。')) {
+            await supabaseClient.from('employees').update({ status: '申请解雇' }).eq('id', id);
+            loadEmployees();
+        }
+    }
+
+    // --- DM 上帝模式 ---
+    async function loadAdminData() {
+        const { data: users } = await supabaseClient.from('profiles').select('email, id');
+        const list = document.getElementById('adm-user-list');
+        users.forEach(u => list.innerHTML += `<option value="${u.id}">${u.email}</option>`);
+
+        const { data: emps } = await supabaseClient.from('employees').select('id, name');
+        const elist = document.getElementById('adm-emp-list');
+        emps.forEach(e => elist.innerHTML += `<option value="${e.id}">${e.name}</option>`);
+
+        const { data: reqs } = await supabaseClient.from('employees').select('*').eq('status', '申请解雇');
+        const rbox = document.getElementById('request-list');
+        if (reqs.length > 0) {
+            rbox.innerHTML = reqs.map(r => `<div>${r.name} 申请解雇 <button onclick="approveFire(${r.id}, true)">批准</button> <button onclick="approveFire(${r.id}, false)">拒绝</button></div>`).join('');
+        }
+    }
+
+    async function approveFire(id, ok) {
+        await supabaseClient.from('employees').update({ status: ok ? '已解雇' : '在职' }).eq('id', id);
+        alert('处理完成');
+        location.reload();
+    }
+
+    async function uploadAvatar() {
+        const file = document.getElementById('adm-emp-avatar').files[0];
+        const empId = document.getElementById('adm-emp-list').value;
+        if (!file) return;
+
+        const fileName = `${Date.now()}_${file.name}`;
+        const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+
+        if (data) {
+            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+            await supabaseClient.from('employees').update({ avatar_url: urlData.publicUrl }).eq('id', empId);
+            alert('头像更新成功');
+            location.reload();
+        }
+    }
+
+    // --- 玩家管理 ---
+    let selectedUserId = null;
+    async function loadUserDetail() {
+        selectedUserId = document.getElementById('adm-user-list').value;
+        if (!selectedUserId) return;
+        document.getElementById('user-detail').style.display = 'block';
+        const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', selectedUserId).single();
+        document.getElementById('adm-user-gold').value = prof.gold_gp;
+        
+        const { data: inv } = await supabaseClient.from('user_inventory').select('*').eq('user_id', selectedUserId);
+        document.getElementById('adm-user-inv').innerHTML = inv.map(i => `${i.item_name} x${i.quantity}`).join(' | ');
+    }
+
+    async function updateUserGold() {
+        const newGold = document.getElementById('adm-user-gold').value;
+        await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', selectedUserId);
+        alert('金币已修改');
+    }
+
+    async function admAddInv() {
+        const name = document.getElementById('adm-new-item').value;
+        await supabaseClient.from('user_inventory').insert([{ user_id: selectedUserId, item_name: name, quantity: 1, category: '魔法物品' }]);
+        alert('物品已发放');
+        loadUserDetail();
+    }
+
+    // --- 基础工具函数 ---
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
         document.getElementById(`${tab}-section`).classList.add('active');
+        if (tab === 'employees') loadEmployees();
     }
-
     function toggleAdmin() { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; }
-
-    async function adminAddItem() {
-        const name = document.getElementById('adm-name').value;
-        const rarity = document.getElementById('adm-rarity').value;
-        const category = document.getElementById('adm-category').value;
-        const price = document.getElementById('adm-price').value;
-        const stock = document.getElementById('adm-stock').value;
-        const desc = document.getElementById('adm-desc').value;
-
-        await supabaseClient.from('shop_items').insert([{ name, rarity, category, price, stock, description: desc }]);
-        alert('上架成功');
-        toggleAdmin();
-        loadShop();
+    async function login() {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        await supabaseClient.auth.signInWithPassword({ email, password });
+        checkUser();
+    }
+    async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
+    async function loadAllData() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        document.getElementById('gold-amount').innerText = profile ? profile.gold_gp : 0;
     }
 
     checkUser();
