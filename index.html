@@ -4,104 +4,237 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D 冒险者商店</title>
+    <!-- 引入 Supabase 官方库 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #ffffff; color: #2c3e50; margin: 0; padding: 40px 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        header { text-align: center; border-bottom: 1px solid #eee; margin-bottom: 40px; padding-bottom: 20px; }
-        h1 { font-weight: 300; letter-spacing: 2px; margin: 0; }
-        
-        #login-section { max-width: 300px; margin: 100px auto; text-align: center; }
-        input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        
+        /* 简约明亮风格 */
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #ffffff;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+        }
+        h1 {
+            font-weight: 400;
+            letter-spacing: 1px;
+            margin: 0;
+            color: #2c3e50;
+        }
+        .subtitle {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 8px;
+        }
+
+        /* 登录区域 */
+        #login-section {
+            max-width: 320px;
+            margin: 100px auto;
+            text-align: center;
+        }
+        .login-card {
+            padding: 30px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input:focus { border-color: #3498db; }
+
+        /* 商店区域 */
         #shop-section { display: none; }
-        .nav-bar { text-align: right; margin-bottom: 20px; font-size: 0.8em; color: #95a5a6; }
-        .logout-btn { border: none; color: #95a5a6; cursor: pointer; background: none; text-decoration: underline; margin-left: 10px; }
-        
-        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
-        .item-card { text-align: center; padding: 10px; border: 1px solid transparent; border-radius: 8px; transition: all 0.2s; }
-        .item-card:hover { border-color: #eee; }
-        .item-img { width: 70px; height: 70px; margin-bottom: 15px; }
-        .item-name { font-weight: 500; margin-bottom: 5px; }
-        .price-tag { font-weight: bold; color: #d35400; margin-bottom: 5px; }
-        .stock-tag { font-size: 0.75em; color: #95a5a6; margin-bottom: 10px; }
-        
-        button { background: transparent; border: 1px solid #2c3e50; color: #2c3e50; padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: all 0.2s; width: 100%; }
-        button:hover { background: #2c3e50; color: white; }
-        button:disabled { border-color: #eee; color: #ccc; cursor: not-allowed; }
-        
-        .loading-pulse { color: #95a5a6; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+            color: #666;
+        }
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            width: auto;
+        }
+
+        /* 商品卡片布局 */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 30px;
+        }
+        .item-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #fff;
+            transition: all 0.2s;
+        }
+        .item-card:hover {
+            border-color: #f0f0f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .item-img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+        }
+        .item-name {
+            font-size: 1.05em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .price-tag {
+            color: #d35400;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stock-tag {
+            font-size: 0.8em;
+            color: #999;
+            margin-bottom: 15px;
+        }
+
+        /* 通用按钮 */
+        button {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.9em;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled {
+            background-color: #f5f5f5;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading-text {
+            text-align: center;
+            color: #999;
+            grid-column: 1/-1;
+            padding: 40px;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- 登录 -->
+        <!-- 登录界面 -->
         <div id="login-section">
-            <h1>LOGIN</h1>
-            <p style="color: #95a5a6; font-size: 0.8em; margin-bottom: 30px;">TEAM PASSCODE</p>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="login()" id="login-btn">ENTER SHOP</button>
-            <p id="login-error" style="color: red; font-size: 0.8em; margin-top: 10px;"></p>
+            <div class="login-card">
+                <h1>团队登录</h1>
+                <p style="color: #999; font-size: 0.8em; margin: 20px 0;">请输入冒险者团队通行证</p>
+                <input type="email" id="email" placeholder="团队邮箱">
+                <input type="password" id="password" placeholder="通行密码">
+                <button onclick="login()" id="login-btn">进入商店</button>
+                <p id="login-error" style="color: #e74c3c; font-size: 0.8em; margin-top: 15px;"></p>
+            </div>
         </div>
 
-        <!-- 商店 -->
+        <!-- 商店界面 -->
         <div id="shop-section">
             <div class="nav-bar">
-                <span id="user-display"></span> 
-                <button class="logout-btn" onclick="logout()">Logout</button>
+                <span>当前团队：<strong id="user-display"></strong></span>
+                <button class="logout-btn" onclick="logout()">退出登录</button>
             </div>
             <header>
-                <h1>ADVENTURER'S SHOP</h1>
-                <div style="color: #95a5a6; font-size: 0.8em;">由 DM 实时管理的物资清单</div>
+                <h1>冒险者补给站</h1>
+                <div class="subtitle">—— 每一件装备都经过 DM 亲自鉴定 ——</div>
             </header>
-            <div id="shop-grid" class="shop-grid"></div>
+            <div id="shop-grid" class="shop-grid">
+                <!-- 商品内容由 JS 加载 -->
+            </div>
         </div>
     </div>
 
     <script>
+        // 配置信息（已修复 401 错误）
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3YzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         
+        // 初始化客户端
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // 登录逻辑
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const btn = document.getElementById('login-btn');
-            btn.innerText = 'Verifying...';
+            const errorP = document.getElementById('login-error');
+
+            if (!email || !password) {
+                errorP.innerText = '请填写完整的账号和密码';
+                return;
+            }
+
+            btn.innerText = '验证中...';
+            errorP.innerText = '';
+
             const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
             if (error) {
-                document.getElementById('login-error').innerText = error.message;
-                btn.innerText = 'ENTER SHOP';
+                errorP.innerText = '登录失败：' + error.message;
+                btn.innerText = '进入商店';
             } else {
                 checkUser();
             }
         }
 
+        // 登出逻辑
         async function logout() {
             await supabaseClient.auth.signOut();
             checkUser();
         }
 
+        // 检查状态
         async function checkUser() {
             const { data: { user } } = await supabaseClient.auth.getUser();
+            const loginSec = document.getElementById('login-section');
+            const shopSec = document.getElementById('shop-section');
+
             if (user) {
-                document.getElementById('login-section').style.display = 'none';
-                document.getElementById('shop-section').style.display = 'block';
+                loginSec.style.display = 'none';
+                shopSec.style.display = 'block';
                 document.getElementById('user-display').innerText = user.email;
                 loadShop();
             } else {
-                document.getElementById('login-section').style.display = 'block';
-                document.getElementById('shop-section').style.display = 'none';
+                loginSec.style.display = 'block';
+                shopSec.style.display = 'none';
             }
         }
 
+        // 加载商品列表
         async function loadShop() {
             const grid = document.getElementById('shop-grid');
-            grid.innerHTML = '<p class="loading-pulse">正在同步位面物资...</p>';
+            grid.innerHTML = '<div class="loading-text">正在从位面仓库调拨物资...</div>';
 
             const { data, error } = await supabaseClient
                 .from('shop_items')
@@ -109,57 +242,53 @@
                 .order('id', { ascending: true });
 
             if (error) {
-                grid.innerHTML = 'Error loading shop';
+                grid.innerHTML = '<div class="loading-text" style="color:red">仓库连接失败</div>';
                 return;
             }
 
             grid.innerHTML = '';
             data.forEach(item => {
+                const isOut = item.stock <= 0;
                 const card = document.createElement('div');
                 card.className = 'item-card';
-                const isOut = item.stock <= 0;
-
                 card.innerHTML = `
                     <img src="${item.image_url || 'https://img.icons8.com/dotty/80/000000/open-box.png'}" class="item-img">
                     <div class="item-name">${item.name}</div>
                     <div class="price-tag">${item.price} GP</div>
                     <div class="stock-tag">库存: ${item.stock}</div>
-                    <button id="btn-${item.id}" ${isOut ? 'disabled' : ''} 
-                        onclick="buy(${item.id}, ${item.stock}, '${item.name}')">
-                        ${isOut ? 'SOLD OUT' : 'PURCHASE'}
+                    <button id="btn-${item.id}" ${isOut ? 'disabled' : ''} onclick="buy(${item.id}, ${item.stock}, '${item.name}')">
+                        ${isOut ? '已售罄' : '购买'}
                     </button>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        // --- 核心购买逻辑 ---
-        async function buy(itemId, currentStock, itemName) {
-            const btn = document.getElementById(`btn-${itemId}`);
+        // 购买逻辑
+        async function buy(id, stock, name) {
+            const btn = document.getElementById(`btn-${id}`);
             
-            if (!confirm(`确认购买 [${itemName}] 吗？`)) return;
+            if (!confirm(`确认要购买 [${name}] 吗？`)) return;
 
-            // 1. 禁用按钮，防止连点
             btn.disabled = true;
-            btn.innerText = 'Processing...';
+            btn.innerText = '交易中...';
 
-            // 2. 更新数据库：库存减 1
             const { error } = await supabaseClient
                 .from('shop_items')
-                .update({ stock: currentStock - 1 })
-                .eq('id', itemId);
+                .update({ stock: stock - 1 })
+                .eq('id', id);
 
             if (error) {
-                alert('购买失败: ' + error.message);
+                alert('交易失败：' + error.message);
                 btn.disabled = false;
-                btn.innerText = 'PURCHASE';
+                btn.innerText = '购买';
             } else {
-                // 3. 购买成功，重新加载商店列表以显示新库存
-                console.log(`${itemName} 购买成功`);
-                loadShop(); 
+                // 刷新列表
+                loadShop();
             }
         }
 
+        // 初始化运行
         checkUser();
     </script>
 </body>
