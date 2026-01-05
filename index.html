@@ -167,9 +167,16 @@
                     </div>
                     
                     <div style="margin-bottom:10px;">
-                        <label>🎁 发放:</label>
-                        <input type="text" id="adm-new-item" placeholder="物品名" style="width:100px; padding:5px;">
-                        <button onclick="admAddInv()" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:4px;">给</button>
+                         <label>🎁 发放物品:</label><br>
+                         <input type="text" id="adm-new-item" placeholder="物品名称" style="width:120px; padding:5px;">
+                          <select id="adm-new-item-cat" style="padding:5px;">
+                           <option value="魔法物品">魔法物品</option>
+                           <option value="装备">装备</option>
+                           <option value="卷轴">卷轴</option>
+                           <option value="药水">药水</option>
+                           <option value="材料">材料</option>
+                         </select>
+                         <button onclick="admAddInv()" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:4px;">给</button>
                     </div>
 
                     <div style="font-size:0.8em; color:#666;">
@@ -186,6 +193,36 @@
                 <input type="file" id="adm-emp-avatar" style="width:100%">
                 <button onclick="uploadAvatar()" style="width:100%; margin-top:5px;">上传</button>
             </div>
+            <!-- DM 集市进货模块 -->
+<div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#fff;">
+    <h3 style="margin-top:0">🏬 集市进货 (摆摊)</h3>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+        <input type="text" id="adm-shop-name" placeholder="商品名称" style="grid-column: 1/3;">
+        
+        <select id="adm-shop-rarity">
+            <option value="普通">普通</option>
+            <option value="非普通">非普通</option>
+            <option value="珍稀">珍稀</option>
+            <option value="极珍稀">极珍稀</option>
+            <option value="传说">传说</option>
+            <option value="神器">神器</option>
+        </select>
+        
+        <select id="adm-shop-cat">
+            <option value="魔法物品">魔法物品</option>
+            <option value="装备">装备</option>
+            <option value="卷轴">卷轴</option>
+            <option value="药水">药水</option>
+            <option value="材料">材料</option>
+        </select>
+        
+        <input type="number" id="adm-shop-price" placeholder="价格 GP">
+        <input type="number" id="adm-shop-stock" placeholder="库存" value="1">
+        
+        <textarea id="adm-shop-desc" placeholder="物品描述..." style="grid-column: 1/3; height:40px;"></textarea>
+    </div>
+    <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:8px; border-radius:4px;">上架到集市</button>
+</div>
         </div>
 
 <!-- 右侧：日志区 (修改为上下结构) -->
@@ -770,33 +807,50 @@ async function updateUserGold() {
 
     // 4. 上帝发装备
     async function admAddInv() {
-        if (!selectedUserId) return;
+        if (!selectedUserId) return alert('请先选择一个玩家');
+        
         const itemName = document.getElementById('adm-new-item').value;
+        const itemCat = document.getElementById('adm-new-item-cat').value; // 获取选中的分类
+        
         if (!itemName) return alert('请输入物品名');
 
         showLoading();
-        // 检查玩家背包是否已有
-        const { data: exist } = await supabaseClient
-            .from('user_inventory')
-            .select('*')
-            .eq('user_id', selectedUserId)
-            .eq('item_name', itemName)
-            .maybeSingle();
+        try {
+            // 检查玩家背包是否已有 (同名且同类)
+            const { data: exist } = await supabaseClient
+                .from('user_inventory')
+                .select('*')
+                .eq('user_id', selectedUserId)
+                .eq('item_name', itemName)
+                .maybeSingle();
 
-        if (exist) {
-            await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
-        } else {
-            await supabaseClient.from('user_inventory').insert([{ 
-                user_id: selectedUserId, 
-                item_name: itemName, 
-                quantity: 1, 
-                category: '魔法物品' // 默认为魔法物品，反正玩家能用
-            }]);
+            if (exist) {
+                // 已有则数量+1
+                await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
+            } else {
+                // 没有则新增
+                await supabaseClient.from('user_inventory').insert([{ 
+                    user_id: selectedUserId, 
+                    item_name: itemName, 
+                    quantity: 1, 
+                    category: itemCat 
+                }]);
+            }
+
+            // 记录日志
+            await logAction('DM操作', `给玩家(ID:${selectedUserId}) 发放了 [${itemName}] (${itemCat})`);
+
+            hideLoading();
+            alert(`[${itemName}] 已成功塞入背包`);
+            document.getElementById('adm-new-item').value = ''; // 清空输入框
+            loadUserDetail(); // 刷新详情
+        } catch (e) {
+            console.error(e);
+            hideLoading();
+            alert('发放失败，请检查数据库连接');
         }
-        hideLoading();
-        alert(`[${itemName}] 已塞入玩家背包`);
-        loadUserDetail(); // 刷新预览
     }
+
     async function uploadAvatar() {
         const f = document.getElementById('adm-emp-avatar').files[0];
         const id = document.getElementById('adm-emp-list').value;
@@ -884,6 +938,52 @@ async function updateUserGold() {
             hideLoading();
         }
     }
+async function adminAddItem() {
+        const name = document.getElementById('adm-shop-name').value;
+        const rarity = document.getElementById('adm-shop-rarity').value;
+        const category = document.getElementById('adm-shop-cat').value;
+        const price = parseInt(document.getElementById('adm-shop-price').value);
+        const stock = parseInt(document.getElementById('adm-shop-stock').value);
+        const description = document.getElementById('adm-shop-desc').value;
+
+        if (!name || isNaN(price)) {
+            alert('名称和价格是必填项！');
+            return;
+        }
+
+        showLoading();
+        try {
+            const { error } = await supabaseClient.from('shop_items').insert([{
+                name,
+                rarity,
+                category,
+                price,
+                stock,
+                description
+            }]);
+
+            if (error) throw error;
+
+            // 记录日志
+            await logAction('DM进货', `在集市上架了 [${name}] (${rarity})，价格 ${price} GP`);
+
+            alert('商品上架成功！');
+            
+            // 清空输入框
+            document.getElementById('adm-shop-name').value = '';
+            document.getElementById('adm-shop-price').value = '';
+            document.getElementById('adm-shop-desc').value = '';
+
+            // 刷新集市显示
+            loadShop();
+        } catch (e) {
+            console.error(e);
+            alert('上架失败：' + e.message);
+        } finally {
+            hideLoading();
+        }
+    }
+
 
 async function loadLoginLogs() {
         const container = document.getElementById('login-log-container');
@@ -922,7 +1022,6 @@ async function loadLoginLogs() {
 </script>
 </body>
 </html>
-
 
 
 
