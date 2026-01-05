@@ -256,6 +256,7 @@
 </div>
 
 <script>
+    let currentUserEmail = ''; 
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -581,17 +582,27 @@ async function equipItem(invId, itemName) {
     async function checkUser() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) {
+            currentUserEmail = user.email; // 【新增】记录邮箱
+            
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-section').style.display = 'block';
-            if(user.email === DM_EMAIL) { document.getElementById('admin-link').style.display = 'inline'; loadAdminData(); }
+            
+            if(user.email === DM_EMAIL) {
+                document.getElementById('admin-link').style.display = 'inline';
+                loadAdminData();
+            }
+            
             const { data: p } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
             userProfile = p;
             document.getElementById('gold-amount').innerText = p.gold_gp;
+            
             const { data: d } = await supabaseClient.from('global_settings').select('value').eq('key', 'current_date').single();
             if(d) document.getElementById('date-text').innerText = `FR${d.value.year} ${d.value.month}月${d.value.day}日`;
-            loadShop(); loadTeam(); loadInventory(); loadEmployees();
+            
+            loadShop(); loadTeam(); loadInventory(); loadEmployees(); loadLoginLogs();
         }
     }
+
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -606,41 +617,62 @@ async function equipItem(invId, itemName) {
         if (error) return;
 
         const grid = document.getElementById('shop-grid');
+        const isDM = currentUserEmail === DM_EMAIL;
         
-        // 渲染每一张商品卡片
         grid.innerHTML = data.map(i => {
-            // 获取对应的颜色，如果没有定义则默认灰色
             const color = rarityColors[i.rarity] || '#ccc';
             const isOut = i.stock <= 0;
+            
+            // DM 特权按钮：下架
+            const deleteBtn = isDM 
+                ? `<button onclick="deleteShopItem(${i.id}, '${i.name}')" style="background:#e74c3c; color:white; border:none; margin-top:5px; font-size:0.8em; padding:4px;">🗑️ 下架</button>` 
+                : '';
+
+            // 如果没货了，卡片半透明
+            const opacityStyle = isOut ? 'opacity: 0.6; background:#f0f0f0;' : '';
 
             return `
-                <div class="card" style="position:relative; padding-top:25px;">
-                    <!-- 稀有度标签：绝对定位在右上角 -->
-                    <span class="rarity-tag" style="
-                        background:${color}; 
-                        color:white; 
-                        font-size:0.7em; 
-                        padding:2px 6px; 
-                        border-radius:2px; 
-                        position:absolute; 
-                        top:5px; 
-                        right:5px;
-                        font-weight:bold;
-                    ">${i.rarity || '普通'}</span>
+                <div class="card" style="position:relative; padding-top:25px; ${opacityStyle}">
+                    <span class="rarity-tag" style="background:${color}; color:white; font-size:0.7em; padding:2px 6px; border-radius:2px; position:absolute; top:5px; right:5px; font-weight:bold;">
+                        ${i.rarity || '普通'}
+                    </span>
 
                     <b>${i.name}</b>
-                    <div style="color:#d35400; font-weight:bold; margin:5px 0;">${i.price} GP</div>
-                    <div style="font-size:0.8em; color:#999; margin-bottom:10px;">库存: ${i.stock}</div>
+                    <div style="font-size:0.8em; color:#666; margin:5px 0;">${i.category || '杂项'}</div>
+                    <div style="color:#d35400; font-weight:bold;">${i.price} GP</div>
+                    <div style="font-size:0.8em; color:${isOut ? 'red' : '#999'}; margin-bottom:5px;">
+                        ${isOut ? '❌ 已售罄' : `库存: ${i.stock}`}
+                    </div>
                     
                     <button class="btn-buy" 
                         onclick="buy(${i.id}, ${i.price}, '${i.name}', '${i.category}')" 
                         ${isOut ? 'disabled' : ''}>
-                        ${isOut ? '已售罄' : '确认购买'}
+                        ${isOut ? '缺货' : '购买'}
                     </button>
+                    ${deleteBtn}
                 </div>
             `;
         }).join('');
     }
+
+    // 3. 新增：下架商品逻辑
+    async function deleteShopItem(id, name) {
+        if (!confirm(`确定要将 [${name}] 永久下架吗？`)) return;
+        
+        showLoading();
+        const { error } = await supabaseClient.from('shop_items').delete().eq('id', id);
+        
+        if (error) {
+            alert('下架失败：' + error.message);
+        } else {
+            await logAction('DM操作', `下架了集市商品 [${name}]`);
+            loadShop();
+        }
+        hideLoading();
+    }
+
+
+
     // 1. 购买 (增加日志)
     async function buy(id, p, n, c) {
         if(userProfile.gold_gp < p) return alert('没钱');
