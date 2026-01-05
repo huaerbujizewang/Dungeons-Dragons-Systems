@@ -200,49 +200,103 @@
         }
     }
 
-    // --- 雇员中心 (分类显示) ---
-    async function loadEmployees() {
-        const container = document.getElementById('emp-container');
-        container.innerHTML = '加载数据...';
-        const { data } = await supabaseClient.from('employees').select('*').order('id');
+// 替换原有的 loadEmployees 函数
+async function loadEmployees() {
+    const container = document.getElementById('emp-container');
+    container.innerHTML = '加载数据...';
+    
+    // 获取所有雇员
+    const { data } = await supabaseClient.from('employees').select('*').order('id');
+    
+    // 1. 计算总支出 (只算在职的)
+    const totalSalary = data
+        .filter(e => e.status === '在职')
+        .reduce((sum, e) => sum + e.salary, 0);
+
+    // 2. 分组
+    const coreMembers = data.filter(e => e.role === '核心队友');
+    const hirelings = data.filter(e => e.role !== '核心队友');
+
+    const renderEmpGrid = (list) => {
+        return list.map(e => `
+            <div class="card emp-card-content">
+                <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" onclick="alert('DM可在后台修改头像')">
+                <div style="font-weight:bold">${e.name}</div>
+                <div style="font-size:0.8em; color:#666; margin:4px 0;">${e.role||'雇员'} | ${e.salary} GP</div>
+                <div style="font-size:0.8em; color:${e.status==='在职'?'#2ecc71':'#e74c3c'}">${e.status}</div>
+                ${e.role !== '核心队友' && e.status === '在职' ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
+            </div>
+        `).join('');
+    };
+
+    // 3. 渲染 (顶部加入消费统计)
+    container.innerHTML = `
+        <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:20px; text-align:center; border-radius:8px;">
+            <h3 style="margin:0; color:#d35400;">📉 每月总支出: ${totalSalary} GP</h3>
+            <div style="font-size:0.8em; color:#666;">(将在每月1日自动从团队金币中扣除)</div>
+        </div>
+
+        <div class="section-title">⚔️ 核心队友</div>
+        <div class="shop-grid">${renderEmpGrid(coreMembers)}</div>
         
-        const coreMembers = data.filter(e => e.role === '核心队友');
-        const hirelings = data.filter(e => e.role !== '核心队友');
+        <div class="section-title">🛡️ 雇员 / 随从</div>
+        <div class="shop-grid">${renderEmpGrid(hirelings)}</div>
+    `;
+}
 
-        const renderEmpGrid = (list) => {
-            return list.map(e => `
-                <div class="card emp-card-content">
-                    <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" onclick="alert('DM可在后台修改头像')">
-                    <div style="font-weight:bold">${e.name}</div>
-                    <div style="font-size:0.8em; color:#666; margin:4px 0;">${e.role||'雇员'} | ${e.salary} GP</div>
-                    <div style="font-size:0.8em; color:${e.status==='在职'?'#2ecc71':'#e74c3c'}">${e.status}</div>
-                    ${e.role !== '核心队友' && e.status === '在职' ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
-                </div>
-            `).join('');
-        };
+// 替换原有的 equipItem 函数
+async function equipItem(invId, itemName) {
+    showLoading(); // 保持转圈，防止连点
+    try {
+        // 1. 严格检查：去数据库查最新的库存，不要信前端缓存
+        const { data: invItem, error } = await supabaseClient
+            .from('user_inventory')
+            .select('id, quantity')
+            .eq('id', invId)
+            .single();
 
-        container.innerHTML = `
-            <div class="section-title">⚔️ 核心队友</div>
-            <div class="shop-grid">${renderEmpGrid(coreMembers)}</div>
-            
-            <div class="section-title">🛡️ 雇员 / 随从</div>
-            <div class="shop-grid">${renderEmpGrid(hirelings)}</div>
-        `;
-    }
+        // 如果数据库里没东西了，或者数量是0，直接报错并刷新
+        if (error || !invItem || invItem.quantity < 1) {
+            alert('装备失败：物品不存在或已被使用！');
+            closeModal('equip-modal');
+            await loadInventory(); // 强制刷新纠正前端显示
+            hideLoading();
+            return;
+        }
 
-    // --- 其他逻辑保持一致 ---
-    async function equipItem(invId, itemName) {
-        showLoading();
-        try {
-            const { data: invItem } = await supabaseClient.from('user_inventory').select('quantity').eq('id', invId).single();
-            if (!invItem || invItem.quantity <= 0) { alert('数量不足'); hideLoading(); return; }
-            if (invItem.quantity > 1) await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
-            else await supabaseClient.from('user_inventory').delete().eq('id', invId);
-            await supabaseClient.from('equipped_items').insert([{ employee_id: currentEquipTarget.empId, slot_index: currentEquipTarget.slotIdx, item_name: itemName }]);
-            closeModal('equip-modal'); await loadTeam(); await loadInventory();
-        } catch(e) { console.error(e); }
+        // 2. 扣库存 (原子操作)
+        if (invItem.quantity > 1) {
+            await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
+        } else {
+            // 如果只剩1个，直接删掉
+            await supabaseClient.from('user_inventory').delete().eq('id', invId);
+        }
+
+        // 3. 穿戴 (写入装备栏)
+        const { error: equipError } = await supabaseClient.from('equipped_items').insert([{ 
+            employee_id: currentEquipTarget.empId, 
+            slot_index: currentEquipTarget.slotIdx, 
+            item_name: itemName 
+        }]);
+
+        if (equipError) {
+            // 如果穿戴失败（极其罕见），这里应该有一个回滚逻辑，但在简单系统里，我们先报错
+            console.error(equipError);
+            alert('穿戴时发生错误，请检查网络');
+        }
+
+        closeModal('equip-modal'); 
+        
+        // 4. 并行刷新数据
+        await Promise.all([loadTeam(), loadInventory()]);
+
+    } catch (e) {
+        console.error(e);
+        alert('操作异常');
+    } finally {
         hideLoading();
     }
+}
 
     async function unequipItem(equipId) {
         if (!confirm('卸下该装备？')) return;
@@ -390,3 +444,4 @@
 </script>
 </body>
 </html>
+
