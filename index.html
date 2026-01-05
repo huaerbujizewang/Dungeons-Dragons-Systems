@@ -842,49 +842,36 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
     let selectedUserId = null;
     // --- 修复版 DM 玩家详情加载 ---
     async function loadUserDetail() {
-        // 1. 获取选中的 ID
-        const selectedId = document.getElementById('adm-user-list').value;
+        // 【核心修复】直接更新全局变量，不要用 const selectedId
+        selectedUserId = document.getElementById('adm-user-list').value;
+        
         const detailBox = document.getElementById('user-detail');
 
-        if (!selectedId) {
+        if (!selectedUserId) {
             detailBox.style.display = 'none';
-            // 如果取消选人，视角切回自己
+            // 没选人，切回自己
             viewingUserId = myId;
             refreshAllData();
             return;
         }
 
-        // 2. 显示面板
         detailBox.style.display = 'block';
 
-        // 3. 【核心】切换全局视角到该玩家
-        viewingUserId = selectedId;
+        // 切换视角
+        viewingUserId = selectedUserId;
         
-        // 4. 刷新主界面的所有数据 (这一步就能保证集市、背包、雇员全是那个玩家的)
+        // 刷新全页数据
         await refreshAllData();
 
-        // 5. 单独填一下 DM 面板里的小输入框 (金币)
-        const { data: prof } = await supabaseClient
-            .from('profiles')
-            .select('gold_gp')
-            .eq('id', selectedId)
-            .single();
-            
+        // 填金币
+        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
         if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
 
-        // 6. 【修复背包预览】
-        // 我们不再在这里手写 HTML，而是直接读取 user_inventory 表
-        // 但这次一定要带上 category，并且如果为空就显示空
-        const { data: inv } = await supabaseClient
-            .from('user_inventory')
-            .select('item_name, quantity, category')
-            .eq('user_id', selectedId)
-            .order('category');
-
+        // 填背包预览
+        const { data: inv } = await supabaseClient.from('user_inventory').select('item_name, quantity, category').eq('user_id', selectedUserId).order('category');
         const invDiv = document.getElementById('adm-user-inv');
         
         if (inv && inv.length > 0) {
-            // 简单渲染一个紧凑的列表
             invDiv.innerHTML = inv.map(i => `
                 <div style="display:flex; justify-content:space-between; font-size:0.85em; border-bottom:1px dashed #eee; padding:2px;">
                     <span>[${i.category||'杂'}] ${i.item_name}</span>
@@ -1104,44 +1091,43 @@ async function adminAddItem() {
         const stock = parseInt(document.getElementById('adm-shop-stock').value);
         const description = document.getElementById('adm-shop-desc').value;
         const targetType = document.getElementById('adm-shop-target').value;
-        const targetUserId = (targetType === 'private' && selectedUserId) ? selectedUserId : null;
 
-        if (targetType === 'private' && !selectedUserId) return alert('请先在上方列表选择一个玩家，才能上架特供商品！');
+        if (!name || isNaN(price)) return alert('名称和价格必填');
 
-        if (!name || isNaN(price)) {
-            alert('名称和价格是必填项！');
-            return;
+        // 【核心修复】双重保险获取目标玩家ID
+        // 如果 selectedUserId 为空，尝试直接从下拉框再取一次
+        let targetUserId = selectedUserId;
+        if (!targetUserId) {
+            targetUserId = document.getElementById('adm-user-list').value;
+        }
+
+        // 如果选了 private 但没 ID，报错
+        if (targetType === 'private') {
+            if (!targetUserId) return alert('请先在上方 [玩家资产操控] 列表选择一个玩家！');
+        } else {
+            targetUserId = null; // 公共商品 user_id 为空
         }
 
         showLoading();
         try {
             const { error } = await supabaseClient.from('shop_items').insert([{
-                name,
-                rarity,
-                category,
-                price,
-                stock,
-                description,
-                user_id: targetUserId 
+                name, rarity, category, price, stock, description,
+                user_id: targetUserId // 写入归属
             }]);
 
             if (error) throw error;
 
-            // 记录日志
-            await logAction('DM进货', `在集市上架了 [${name}] (${rarity})，价格 ${price} GP`);
-
-            alert('商品上架成功！');
+            await logAction('DM进货', `上架了 [${name}] (${targetType === 'private' ? '特供' : '公开'})`);
+            alert('上架成功');
             
-            // 清空输入框
+            // 清空输入
             document.getElementById('adm-shop-name').value = '';
             document.getElementById('adm-shop-price').value = '';
             document.getElementById('adm-shop-desc').value = '';
-
-            // 刷新集市显示
             loadShop();
         } catch (e) {
             console.error(e);
-            alert('上架失败：' + e.message);
+            alert('失败：' + e.message);
         } finally {
             hideLoading();
         }
