@@ -259,17 +259,36 @@
         location.reload();
     }
 
-    // 上帝模式辅助
+    // 修改后的上帝模式数据加载
     async function loadAdminData() {
-        const { data: users } = await supabaseClient.from('profiles').select('email, id');
+        // 1. 加载玩家列表
+        const { data: users, error } = await supabaseClient.from('profiles').select('email, id');
         const ulist = document.getElementById('adm-user-list');
-        ulist.innerHTML = '<option value="">选择玩家...</option>';
-        users.forEach(u => ulist.innerHTML += `<option value="${u.id}">${u.email}</option>`);
+        
+        if (users) {
+            ulist.innerHTML = '<option value="">选择玩家...</option>';
+            users.forEach(u => {
+                ulist.innerHTML += `<option value="${u.id}">${u.email}</option>`;
+            });
+            console.log("已加载玩家列表:", users);
+        }
 
+        // 2. 加载雇员列表
         const { data: emps } = await supabaseClient.from('employees').select('id, name');
         const elist = document.getElementById('adm-emp-list');
-        elist.innerHTML = '';
-        emps.forEach(e => elist.innerHTML += `<option value="${e.id}">${e.name}</option>`);
+        if (emps) {
+            elist.innerHTML = '';
+            emps.forEach(e => elist.innerHTML += `<option value="${e.id}">${e.name}</option>`);
+        }
+
+        // 3. 加载审批请求
+        const { data: reqs } = await supabaseClient.from('employees').select('*').eq('status', '申请解雇');
+        const rbox = document.getElementById('request-list');
+        if (reqs && reqs.length > 0) {
+            rbox.innerHTML = reqs.map(r => `<div>${r.name} 申请解雇 <button onclick="approveFire(${r.id}, true)">批准</button></div>`).join('');
+        } else {
+            rbox.innerHTML = '暂无待处理请求';
+        }
     }
 
     let selectedUserId = null;
@@ -295,16 +314,31 @@
         alert('已存入该玩家背包'); loadUserDetail();
     }
 
+ // 修复后的上传函数：增加了报错详情
     async function uploadAvatar() {
         const file = document.getElementById('adm-emp-avatar').files[0];
         const empId = document.getElementById('adm-emp-list').value;
         if (!file || !empId) return alert('请选择雇员和图片');
-        const path = `avatar_${Date.now()}`;
-        const { data } = await supabaseClient.storage.from('avatars').upload(path, file);
+
+        // 生成唯一文件名防止覆盖
+        const fileExt = file.name.split('.').pop();
+        const fileName = `avatar_${empId}_${Date.now()}.${fileExt}`;
+
+        const { data, error } = await supabaseClient.storage
+            .from('avatars')
+            .upload(fileName, file);
+
+        if (error) {
+            console.error("上传失败详情:", error);
+            alert('上传失败：' + error.message);
+            return;
+        }
+
         if (data) {
-            const { data: url } = supabaseClient.storage.from('avatars').getPublicUrl(path);
-            await supabaseClient.from('employees').update({ avatar_url: url.publicUrl }).eq('id', empId);
-            alert('头像已更新');
+            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+            await supabaseClient.from('employees').update({ avatar_url: urlData.publicUrl }).eq('id', empId);
+            alert('头像已成功上传并关联！');
+            loadEmployees(); // 刷新雇员列表看效果
         }
     }
 
@@ -339,3 +373,4 @@
 </script>
 </body>
 </html>
+
