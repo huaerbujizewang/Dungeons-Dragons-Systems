@@ -256,6 +256,8 @@
 </div>
 
 <script>
+    let viewingUserId = null; // 当前正在查看谁的场景
+    let myId = null; // 登录者自己的 ID
     let currentUserEmail = ''; 
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
@@ -281,7 +283,10 @@
         const grid = document.getElementById('team-grid');
         grid.innerHTML = '加载中...';
         
-        const { data: members } = await supabaseClient.from('employees').select('*').eq('is_in_party', true).order('id');
+        const { data: members } = await supabaseClient.from('employees')
+        .select('*')
+        .eq('user_id', viewingUserId) // 关键：只查当前视图用户的
+        .eq('is_in_party', true);
         const { data: equipped } = await supabaseClient.from('equipped_items').select('*');
 
         grid.innerHTML = '';
@@ -494,7 +499,7 @@ async function equipItem(invId, itemName) {
     async function loadInventory() {
         const container = document.getElementById('inventory-container');
         container.innerHTML = '清点中...';
-        const { data: inv } = await supabaseClient.from('user_inventory').select('*').order('category');
+        const { data: inv } = await supabaseClient.from('user_inventory').select('*').eq('user_id', viewingUserId).order('category');
         if (!inv) return;
         container.innerHTML = '';
         const categories = [...new Set(inv.map(i => i.category || '杂项'))];
@@ -579,29 +584,42 @@ async function equipItem(invId, itemName) {
     }
 
     async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
+
     async function checkUser() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (user) {
-            currentUserEmail = user.email; // 【新增】记录邮箱
-            
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('main-section').style.display = 'block';
-            
-            if(user.email === DM_EMAIL) {
-                document.getElementById('admin-link').style.display = 'inline';
-                loadAdminData();
-            }
-            
-            const { data: p } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-            userProfile = p;
-            document.getElementById('gold-amount').innerText = p.gold_gp;
-            
-            const { data: d } = await supabaseClient.from('global_settings').select('value').eq('key', 'current_date').single();
-            if(d) document.getElementById('date-text').innerText = `FR${d.value.year} ${d.value.month}月${d.value.day}日`;
-            
-            loadShop(); loadTeam(); loadInventory(); loadEmployees(); loadLoginLogs();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (user) {
+        myId = user.id;
+        // 如果没有选人，默认看自己
+        if (!viewingUserId) viewingUserId = user.id; 
+        
+        currentUserEmail = user.email;
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('main-section').style.display = 'block';
+        
+        if(user.email === DM_EMAIL) {
+            document.getElementById('admin-link').style.display = 'inline';
+            loadAdminData();
         }
+        
+        // 所有加载函数现在都去读取 viewingUserId 的数据
+        refreshAllData();
     }
+}
+
+   // 封装一个刷新全页面的函数
+    async function refreshAllData() {
+        await loadGlobalDate(); // 日期是全局的
+        await loadGold();      // 加载 viewingUserId 的金币
+        loadShop();            // 商店是全局的
+        loadTeam();            // 加载 viewingUserId 的队伍
+        loadInventory();       // 加载 viewingUserId 的背包
+        loadEmployees();       // 加载 viewingUserId 的雇员中心
+    } 
+    async function loadGold() {
+    const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', viewingUserId).single();
+    document.getElementById('gold-amount').innerText = profile ? profile.gold_gp : 0;
+}
+
 
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -743,12 +761,14 @@ async function equipItem(invId, itemName) {
     // 2. 选中玩家后，加载详细信息
      // ================== 修复后的 DM 背包读取 ==================
     let selectedUserId = null;
-// 1. 修改：加载玩家详情 (增加了删除按钮的渲染)
+    // 1. 修改：加载玩家详情 (增加了删除按钮的渲染)
     async function loadUserDetail() {
-        selectedUserId = document.getElementById('adm-user-list').value;
-        const detailBox = document.getElementById('user-detail');
-        if (!selectedUserId) { detailBox.style.display = 'none'; return; }
-        detailBox.style.display = 'block';
+            const selectedId = document.getElementById('adm-user-list').value;
+            if (!selectedId) return;
+            viewingUserId = selectedId; 
+            await refreshAllData(); 
+    
+    document.getElementById('user-detail').style.display = 'block';
 
         // 查金币
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
