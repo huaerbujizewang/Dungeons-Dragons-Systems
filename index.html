@@ -324,47 +324,59 @@
 
 // 替换原有的 loadEmployees 函数
 async function loadEmployees() {
-    const container = document.getElementById('emp-container');
-    container.innerHTML = '加载数据...';
-    
-    // 获取所有雇员
-    const { data } = await supabaseClient.from('employees').select('*').order('id');
-    
-    // 1. 计算总支出 (只算在职的)
-    const totalSalary = data
-        .filter(e => e.status === '在职')
-        .reduce((sum, e) => sum + e.salary, 0);
-
-    // 2. 分组
-    const coreMembers = data.filter(e => e.role === '核心队友');
-    const hirelings = data.filter(e => e.role !== '核心队友');
-
-    const renderEmpGrid = (list) => {
-        return list.map(e => `
-            <div class="card emp-card-content">
-                <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" onclick="alert('DM可在后台修改头像')">
-                <div style="font-weight:bold">${e.name}</div>
-                <div style="font-size:0.8em; color:#666; margin:4px 0;">${e.role||'雇员'} | ${e.salary} GP</div>
-                <div style="font-size:0.8em; color:${e.status==='在职'?'#2ecc71':'#e74c3c'}">${e.status}</div>
-                ${e.role !== '核心队友' && e.status === '在职' ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
-            </div>
-        `).join('');
-    };
-
-    // 3. 渲染 (顶部加入消费统计)
-    container.innerHTML = `
-        <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:20px; text-align:center; border-radius:8px;">
-            <h3 style="margin:0; color:#d35400;">📉 每月总支出: ${totalSalary} GP</h3>
-            <div style="font-size:0.8em; color:#666;">(将在每月1日自动从团队金币中扣除)</div>
-        </div>
-
-        <div class="section-title">⚔️ 核心队友</div>
-        <div class="shop-grid">${renderEmpGrid(coreMembers)}</div>
+        const container = document.getElementById('emp-container');
+        container.innerHTML = '加载数据...';
         
-        <div class="section-title">🛡️ 雇员 / 随从</div>
-        <div class="shop-grid">${renderEmpGrid(hirelings)}</div>
-    `;
-}
+        // 【关键改动】：只查归属于 viewingUserId 的雇员
+        // 如果是 DM 选了 master，这里就会查到 master 的雇员
+        const { data, error } = await supabaseClient
+            .from('employees')
+            .select('*')
+            .eq('user_id', viewingUserId)
+            .order('id');
+        
+        if (error) {
+            container.innerHTML = '权限不足或加载失败';
+            return;
+        }
+
+        // --- 账单计算 (只算当前视角的) ---
+        const totalSalary = data
+            .filter(e => e.status === '在职')
+            .reduce((sum, e) => sum + e.salary, 0);
+
+        // 分组
+        const coreMembers = data.filter(e => e.role === '核心队友');
+        const hirelings = data.filter(e => e.role !== '核心队友');
+
+        const renderEmpGrid = (list) => {
+            if (list.length === 0) return '<div style="color:#999; padding:10px;">(暂无人员)</div>';
+            return list.map(e => `
+                <div class="card emp-card-content">
+                    <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" onclick="alert('头像ID: ${e.id}')">
+                    <div style="font-weight:bold">${e.name}</div>
+                    <div style="font-size:0.8em; color:#666; margin:4px 0;">${e.role||'雇员'} | ${e.salary} GP</div>
+                    <div style="font-size:0.8em; color:${e.status==='在职'?'#2ecc71':'#e74c3c'}">${e.status}</div>
+                    ${e.role !== '核心队友' && e.status === '在职' ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
+                </div>
+            `).join('');
+        };
+
+        // 渲染界面
+        // 注意：这里的账单显示的是“当前视角”的账单
+        container.innerHTML = `
+            <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:20px; text-align:center; border-radius:8px;">
+                <h3 style="margin:0; color:#d35400;">📉 本月总支出: ${totalSalary} GP</h3>
+                <div style="font-size:0.8em; color:#666;">(将在每月1日从 ${viewingUserId === myId ? '您的' : '该玩家的'} 账户中扣除)</div>
+            </div>
+
+            <div class="section-title">⚔️ 核心队友</div>
+            <div class="shop-grid">${renderEmpGrid(coreMembers)}</div>
+            
+            <div class="section-title">🛡️ 雇员 / 随从</div>
+            <div class="shop-grid">${renderEmpGrid(hirelings)}</div>
+        `;
+    }
 
 async function equipItem(invId, itemName) {
         showLoading(); // 开启转圈
@@ -606,15 +618,24 @@ async function equipItem(invId, itemName) {
     }
 }
 
-   // 封装一个刷新全页面的函数
-    async function refreshAllData() {
-        await loadGlobalDate(); // 日期是全局的
-        await loadGold();      // 加载 viewingUserId 的金币
-        loadShop();            // 商店是全局的
-        loadTeam();            // 加载 viewingUserId 的队伍
-        loadInventory();       // 加载 viewingUserId 的背包
-        loadEmployees();       // 加载 viewingUserId 的雇员中心
-    } 
+let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
+
+    // 改名：不再是 Global Date，而是 User Date
+    async function loadUserDate() {
+        const { data: prof } = await supabaseClient
+            .from('profiles')
+            .select('world_date')
+            .eq('id', viewingUserId) // 关键：只读当前视角的时间
+            .single();
+
+        if (prof && prof.world_date) {
+            currentDate = prof.world_date;
+            // 渲染到右上角
+            document.getElementById('date-text').innerText = `FR${currentDate.year} ${currentDate.month}月${currentDate.day}日`;
+        }
+    }
+
+
     async function loadGold() {
     const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', viewingUserId).single();
     document.getElementById('gold-amount').innerText = profile ? profile.gold_gp : 0;
@@ -829,6 +850,15 @@ async function equipItem(invId, itemName) {
         }
     }
 
+    async function refreshAllData() {
+        await loadUserDate();  // 【改动】
+        await loadGold();
+        loadShop();
+        loadTeam();
+        loadInventory();
+        loadEmployees();
+    }
+
     // ================== 新增：加载日志 ==================
     async function loadLogs() {
         const logBox = document.getElementById('audit-log-container');
@@ -927,80 +957,63 @@ async function updateUserGold() {
         hideLoading();
     }
 // --- 真正的推进时间逻辑 ---
-    async function advanceTime() {
-        if (!confirm('确定要推进到下一天吗？\n(如果到达1号，将自动扣除所有雇员薪资)')) return;
+async function advanceTime() {
+        if (!confirm(`确定推进 [当前视角] 的时间吗？\n(1号将自动扣除该玩家的薪资)`)) return;
 
-        showLoading(); // 开启转圈
+        showLoading();
         try {
-            // 1. 获取当前数据库里的日期
-            const { data: dateData, error: dateError } = await supabaseClient
-                .from('global_settings')
-                .select('value')
-                .eq('key', 'current_date')
-                .single();
-
-            if (dateError) throw dateError;
-
-            let { year, month, day } = dateData.value;
-
-            // 2. 逻辑：推进一天 (按照 DND 简单历法：每月30天)
+            // 1. 逻辑计算
+            let { year, month, day } = currentDate;
             day++;
-            if (day > 30) {
-                day = 1;
-                month++;
-            }
-            if (month > 12) {
-                month = 1;
-                year++;
-            }
-
+            if (day > 30) { day = 1; month++; }
+            if (month > 12) { month = 1; year++; }
+            
             const nextDate = { year, month, day };
 
-            // 3. 如果到了1号，自动扣除玩家金币作为薪资
+            // 2. 自动扣款逻辑 (只针对 viewingUserId)
             if (day === 1) {
-                // A. 计算所有“在职”雇员的总薪水
+                // 只查属于当前视角玩家的雇员
                 const { data: emps } = await supabaseClient
                     .from('employees')
                     .select('salary')
+                    .eq('user_id', viewingUserId)
                     .eq('status', '在职');
 
-                const totalSalary = emps.reduce((sum, e) => sum + e.salary, 0);
-
-                // B. 获取 master 账号的当前金币
-                const { data: prof } = await supabaseClient
-                    .from('profiles')
-                    .select('gold_gp, id')
-                    .eq('email', 'master@almorel.com')
-                    .single();
-
-                if (prof && totalSalary > 0) {
-                    const newGold = prof.gold_gp - totalSalary;
-                    // 执行扣款
-                    await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', prof.id);
-                    // 记录扣款日志
-                    await logAction('系统扣款', `新月开始，自动扣除 [master] 雇员薪资：${totalSalary} GP`);
+                if (emps && emps.length > 0) {
+                    const totalSalary = emps.reduce((sum, e) => sum + e.salary, 0);
+                    
+                    if (totalSalary > 0) {
+                        // 查钱
+                        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
+                        // 扣钱
+                        await supabaseClient.from('profiles').update({ gold_gp: prof.gold_gp - totalSalary }).eq('id', viewingUserId);
+                        // 记日志
+                        await logAction('系统扣款', `新月自动扣除玩家(ID:${viewingUserId}) 薪资：${totalSalary} GP`);
+                    }
                 }
             }
 
-            // 4. 更新数据库中的日期
+            // 3. 更新数据库 (只更新 viewingUserId 的时间)
             await supabaseClient
-                .from('global_settings')
-                .update({ value: nextDate })
-                .eq('key', 'current_date');
+                .from('profiles')
+                .update({ world_date: nextDate })
+                .eq('id', viewingUserId);
 
-            // 5. 记录 DM 的推进时间日志
-            await logAction('时间推进', `DM 将日期推进至 FR${year}年 ${month}月${day}日`);
-
-            // 6. 刷新页面以同步所有状态
-            location.reload();
-
+            // 4. 刷新
+            await logAction('时间推进', `时间变更为 FR${year}/${month}/${day} (User:${viewingUserId})`);
+            
+            // 局部刷新即可，不需要 reload 整个页面
+            await refreshAllData(); 
+            
         } catch (e) {
-            console.error("时间推进失败:", e);
-            alert('操作失败，请检查数据库设置');
+            console.error(e);
+            alert('操作失败');
         } finally {
             hideLoading();
         }
     }
+
+
 async function adminAddItem() {
         const name = document.getElementById('adm-shop-name').value;
         const rarity = document.getElementById('adm-shop-rarity').value;
