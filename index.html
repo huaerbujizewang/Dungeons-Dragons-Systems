@@ -552,6 +552,7 @@ async function equipItem(invId, itemName) {
     // 2. 选中玩家后，加载详细信息
      // ================== 修复后的 DM 背包读取 ==================
     let selectedUserId = null;
+// 1. 修改：加载玩家详情 (增加了删除按钮的渲染)
     async function loadUserDetail() {
         selectedUserId = document.getElementById('adm-user-list').value;
         const detailBox = document.getElementById('user-detail');
@@ -562,15 +563,58 @@ async function equipItem(invId, itemName) {
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
         if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
 
-        // 查背包 (因为加了 SQL policy，现在应该能查到了)
-        const { data: inv, error } = await supabaseClient.from('user_inventory').select('item_name, quantity').eq('user_id', selectedUserId);
+        // 查背包
+        const { data: inv } = await supabaseClient.from('user_inventory').select('*').eq('user_id', selectedUserId).order('item_name');
         const invDiv = document.getElementById('adm-user-inv');
-        if (error) {
-            invDiv.innerHTML = '<span style="color:red">读取失败，权限不足</span>';
-        } else if (inv && inv.length > 0) {
-            invDiv.innerHTML = inv.map(i => `<span style="border:1px solid #eee; padding:2px 5px; margin:2px; display:inline-block;">${i.item_name} x${i.quantity}</span>`).join('');
+        
+        if (inv && inv.length > 0) {
+            // 渲染成带操作按钮的列表
+            invDiv.innerHTML = inv.map(i => `
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:4px;">
+                    <span>${i.item_name} <strong style="color:#666">x${i.quantity}</strong></span>
+                    <button onclick="admRemoveInv(${i.id}, '${i.item_name}', ${i.quantity})" 
+                        style="background:#e74c3c; color:white; border:none; border-radius:4px; padding:2px 8px; font-size:0.8em; cursor:pointer;">
+                        - 删
+                    </button>
+                </div>
+            `).join('');
         } else {
-            invDiv.innerHTML = '背包空空如也';
+            invDiv.innerHTML = '<div style="color:#999; padding:5px;">背包空空如也</div>';
+        }
+    }
+
+    // 2. 新增：DM 删除玩家物品逻辑
+    async function admRemoveInv(itemId, itemName, currentQty) {
+        // 弹窗询问删除数量
+        let removeQty = prompt(`要把 [${itemName}] 删除多少个？\n(当前拥有: ${currentQty})\n输入 'all' 或数字`, "1");
+        
+        if (removeQty === null) return; // 取消
+        if (removeQty === 'all') removeQty = currentQty;
+        else removeQty = parseInt(removeQty);
+
+        if (isNaN(removeQty) || removeQty <= 0) return alert('无效的数量');
+        if (removeQty > currentQty) return alert('删的数量不能大于拥有的数量');
+
+        showLoading();
+
+        try {
+            if (removeQty >= currentQty) {
+                // 数量删光了，直接 Delete 这一行
+                await supabaseClient.from('user_inventory').delete().eq('id', itemId);
+                await logAction('DM操作', `移除了玩家(ID:${selectedUserId}) 的所有 [${itemName}]`);
+            } else {
+                // 数量没删光，Update 数量
+                await supabaseClient.from('user_inventory').update({ quantity: currentQty - removeQty }).eq('id', itemId);
+                await logAction('DM操作', `扣除了玩家(ID:${selectedUserId}) 的 [${itemName}] x${removeQty}`);
+            }
+
+            hideLoading();
+            alert('操作成功');
+            loadUserDetail(); // 刷新列表
+        } catch (e) {
+            console.error(e);
+            hideLoading();
+            alert('删除失败，请检查网络或权限');
         }
     }
 
@@ -660,3 +704,6 @@ async function updateUserGold() {
 </script>
 </body>
 </html>
+
+
+
