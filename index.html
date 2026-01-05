@@ -6,57 +6,49 @@
     <title>D&D 小队管理系统</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* CSS 保持原样不动 */
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
         body { font-family: "PingFang SC", sans-serif; background: #fff; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; }
-        
         .nav { display: flex; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; align-items: center; }
         .tab-btn { padding: 8px 16px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 1em; color: #666; border-radius: 4px; }
         .tab-btn.active { background: #333; color: #fff; font-weight: bold; }
         .info-bar { margin-left: auto; text-align: right; font-size: 0.9em; }
-
         .section { display: none; }
         .section.active { display: block; }
-
-        /* 队伍卡片 */
         .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
         .team-card { border: 1px solid var(--border); border-radius: 8px; padding: 15px; background: #fff; position: relative; }
         .team-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         .team-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #eee; border: 1px solid #ddd; }
         .team-info h3 { margin: 0; font-size: 1.1em; }
         .team-info p { margin: 2px 0 0; font-size: 0.8em; color: #666; }
-
-        /* 装备槽 */
         .slots-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-        .slot { 
-            aspect-ratio: 1; border: 1px dashed #ccc; border-radius: 4px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 0.7em; text-align: center; cursor: pointer; background: #fafafa; padding: 2px; overflow: hidden;
-            transition: 0.2s;
-        }
+        .slot { aspect-ratio: 1; border: 1px dashed #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7em; text-align: center; cursor: pointer; background: #fafafa; padding: 2px; overflow: hidden; transition: 0.2s; }
         .slot:hover { border-color: #333; background: #f0f0f0; }
         .slot.filled { border: 1px solid #999; background: #fff; border-style: solid; }
         .slot-name { word-break: break-all; pointer-events: none; }
-
-        /* 弹窗 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
         .modal-box { background: #fff; padding: 20px; border-radius: 8px; width: 400px; max-height: 80vh; overflow-y: auto; }
         .item-select-list div { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; }
         .item-select-list div:hover { background: #f9f9f9; }
-
-        /* 其他通用样式保持简约 */
         .shop-grid, .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
         .card { border: 1px solid #eee; padding: 15px; border-radius: 6px; }
         .btn-buy { width: 100%; margin-top: 10px; padding: 6px; background: #fff; border: 1px solid #333; cursor: pointer; }
         .btn-buy:hover { background: #333; color: #fff; }
-        
         #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: #fff; border: 2px solid #333; z-index: 3000; padding: 20px; overflow-y: auto; }
+        
+        /* 新增微调：离队按钮和添加队员卡片 */
+        .btn-leave { position: absolute; top: 10px; right: 10px; font-size: 0.7em; color: #999; cursor: pointer; border: 1px solid #eee; padding: 2px 6px; border-radius: 4px; }
+        .btn-leave:hover { background: #eee; color: #333; }
+        .add-member-card { border: 2px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; cursor: pointer; min-height: 200px; }
+        .add-member-card:hover { border-color: #333; color: #333; }
+        .danger-btn { color: #e74c3c; border-color: #e74c3c; margin-top: 5px; width: 100%; padding: 5px; background: none; border: 1px solid; cursor: pointer; border-radius: 4px; }
+        .danger-btn:hover { background: #e74c3c; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- 登录 -->
     <div id="login-section" style="max-width:300px; margin:100px auto; text-align:center;">
         <h2>冒险者工会终端</h2>
         <input type="email" id="login-email" placeholder="邮箱" style="width:100%; padding:10px; margin-bottom:10px;">
@@ -64,7 +56,6 @@
         <button onclick="login()" style="width:100%; padding:10px; background:#333; color:#fff; border:none;">启动</button>
     </div>
 
-    <!-- 主界面 -->
     <div id="main-section" style="display:none;">
         <div class="nav">
             <button class="tab-btn active" onclick="switchTab('shop')">集市</button>
@@ -80,15 +71,13 @@
             </div>
         </div>
 
-        <!-- 集市 -->
         <div id="shop-section" class="section active"><div id="shop-grid" class="shop-grid"></div></div>
 
-        <!-- 队伍（核心新功能） -->
+        <!-- 队伍面板 -->
         <div id="team-section" class="section">
             <div id="team-grid" class="team-grid"></div>
         </div>
 
-        <!-- 背包 -->
         <div id="inventory-section" class="section"><div id="inventory-container"></div></div>
         
         <!-- 雇员列表 -->
@@ -98,17 +87,26 @@
     </div>
 </div>
 
-<!-- 装备选择弹窗 -->
+<!-- 弹窗：选择装备 -->
 <div id="equip-modal" class="modal">
     <div class="modal-box">
         <h3>选择要装备的物品</h3>
-        <p style="font-size:0.8em; color:#666;">仅显示背包中的 [装备] 和 [魔法物品]</p>
         <div id="equip-list" class="item-select-list"></div>
-        <button onclick="closeModal()" style="width:100%; margin-top:15px; padding:10px;">取消</button>
+        <button onclick="closeModal('equip-modal')" style="width:100%; margin-top:15px; padding:10px;">取消</button>
     </div>
 </div>
 
-<!-- DM后台 (保持原有功能) -->
+<!-- 弹窗：选择队员加入 -->
+<div id="member-modal" class="modal">
+    <div class="modal-box">
+        <h3>选择加入队伍的成员</h3>
+        <p style="font-size:0.8em; color:#666;">列表仅显示在职且未入队的雇员/队友</p>
+        <div id="member-select-list" class="item-select-list"></div>
+        <button onclick="closeModal('member-modal')" style="width:100%; margin-top:15px; padding:10px;">取消</button>
+    </div>
+</div>
+
+<!-- DM后台 -->
 <div id="admin-panel">
     <div style="display:flex; justify-content:space-between;"><h2>DM 控制台</h2><button onclick="toggleAdmin()">关闭</button></div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
@@ -130,136 +128,170 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const DM_EMAIL = '739477825@qq.com';
     let userProfile = null;
-    let currentEquipTarget = { empId: null, slotIdx: null }; // 记录当前正在操作哪个格子的装备
+    let currentEquipTarget = { empId: null, slotIdx: null };
 
-    // --- 核心队伍逻辑 ---
+    // --- 队伍管理逻辑 (修复版) ---
     async function loadTeam() {
         const grid = document.getElementById('team-grid');
         grid.innerHTML = '加载队员数据...';
         
-        // 1. 获取前8名在职队员（包含核心队友和雇员）
-        const { data: members } = await supabaseClient.from('employees').select('*').eq('status', '在职').limit(8).order('id');
+        // 1. 获取所有“is_in_party = true”的队员
+        const { data: members } = await supabaseClient.from('employees')
+            .select('*')
+            .eq('is_in_party', true)
+            .order('id');
         
-        // 2. 获取所有人的装备情况
+        // 2. 获取所有人的装备
         const { data: equipped } = await supabaseClient.from('equipped_items').select('*');
 
         grid.innerHTML = '';
-        members.forEach(m => {
-            const isCore = m.salary === 0;
-            // 构建10个格子
-            let slotsHtml = '';
-            for (let i = 0; i < 10; i++) {
-                const item = equipped.find(e => e.employee_id === m.id && e.slot_index === i);
-                if (item) {
-                    slotsHtml += `<div class="slot filled" onclick="unequipItem(${item.id})" title="${item.item_name}"><div class="slot-name">${item.item_name}</div></div>`;
-                } else {
-                    slotsHtml += `<div class="slot" onclick="openEquipModal(${m.id}, ${i})">+</div>`;
+        
+        // 渲染现有队员
+        if (members) {
+            members.forEach(m => {
+                const isCore = m.salary === 0;
+                let slotsHtml = '';
+                for (let i = 0; i < 10; i++) {
+                    const item = equipped.find(e => e.employee_id === m.id && e.slot_index === i);
+                    if (item) {
+                        slotsHtml += `<div class="slot filled" onclick="unequipItem(${item.id})" title="${item.item_name}"><div class="slot-name">${item.item_name}</div></div>`;
+                    } else {
+                        slotsHtml += `<div class="slot" onclick="openEquipModal(${m.id}, ${i})">+</div>`;
+                    }
                 }
-            }
 
-            grid.innerHTML += `
-                <div class="team-card">
-                    <div class="team-header">
-                        <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
-                        <div class="team-info">
-                            <h3>${m.name}</h3>
-                            <p>${isCore ? '核心队友' : '雇员'} | 薪资: ${m.salary} GP</p>
+                grid.innerHTML += `
+                    <div class="team-card">
+                        <div class="btn-leave" onclick="removeFromParty(${m.id})" title="移出队伍">✕ 离队</div>
+                        <div class="team-header">
+                            <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
+                            <div class="team-info">
+                                <h3>${m.name}</h3>
+                                <p>${isCore ? '核心队友' : '雇员'} | 薪资: ${m.salary}</p>
+                            </div>
                         </div>
+                        <div class="slots-container">${slotsHtml}</div>
+                    </div>`;
+            });
+        }
+
+        // 渲染 [ + 添加队员 ] 卡片 (如果未满8人)
+        if (members.length < 8) {
+            grid.innerHTML += `
+                <div class="team-card add-member-card" onclick="openMemberModal()">
+                    <div style="font-size:3em;">+</div>
+                    <div>添加队员 (${members.length}/8)</div>
+                </div>`;
+        }
+    }
+
+    // 移出队伍
+    async function removeFromParty(id) {
+        if (!confirm('确定让该成员离开当前小队吗？(装备会保留)')) return;
+        await supabaseClient.from('employees').update({ is_in_party: false }).eq('id', id);
+        loadTeam();
+    }
+
+    // 打开添加队员弹窗
+    async function openMemberModal() {
+        const list = document.getElementById('member-select-list');
+        list.innerHTML = '加载中...';
+        document.getElementById('member-modal').style.display = 'flex';
+
+        // 获取：状态在职 AND 不在队伍中
+        const { data: candidates } = await supabaseClient.from('employees')
+            .select('*')
+            .eq('status', '在职')
+            .eq('is_in_party', false);
+
+        list.innerHTML = '';
+        if (!candidates || candidates.length === 0) {
+            list.innerHTML = '<div style="padding:10px; color:#999; text-align:center">没有闲置的雇员/队友</div>';
+            return;
+        }
+
+        candidates.forEach(c => {
+            list.innerHTML += `
+                <div onclick="addToParty(${c.id})">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img src="${c.avatar_url || ''}" style="width:30px; height:30px; border-radius:50%">
+                        <span>${c.name}</span>
                     </div>
-                    <div class="slots-container">${slotsHtml}</div>
+                    <span style="color:#999; font-size:0.8em">${c.salary === 0 ? '队友' : c.salary+'GP'}</span>
                 </div>`;
         });
     }
 
-    // 打开装备选择弹窗
+    // 加入队伍
+    async function addToParty(id) {
+        await supabaseClient.from('employees').update({ is_in_party: true }).eq('id', id);
+        closeModal('member-modal');
+        loadTeam();
+    }
+
+    // --- 雇员列表逻辑 (找回解雇按钮) ---
+    async function loadEmployees() {
+        const { data } = await supabaseClient.from('employees').select('*').order('id');
+        const list = document.getElementById('emp-list');
+        list.innerHTML = '';
+        
+        data.forEach(e => {
+            const isCore = e.salary === 0;
+            // 只有付费雇员且在职，才显示解雇按钮
+            const showFireBtn = !isCore && e.status === '在职';
+            
+            list.innerHTML += `
+                <div class="card" style="text-align:center">
+                    <img src="${e.avatar_url || 'https://via.placeholder.com/60'}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+                    <div style="font-weight:bold">${e.name}</div>
+                    <div style="font-size:0.8em; color:#666">${isCore ? '核心队友' : '雇员'} | ${e.salary} GP</div>
+                    <div style="font-size:0.8em; margin:5px 0; color:${e.status==='在职'?'green':'red'}">${e.status}</div>
+                    ${showFireBtn ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
+                </div>`;
+        });
+    }
+
+    async function requestFire(id) {
+        if (!confirm('确定申请解雇该雇员？需要DM批准。')) return;
+        await supabaseClient.from('employees').update({ status: '申请解雇' }).eq('id', id);
+        loadEmployees();
+    }
+
+    // --- 装备逻辑 (保持不变) ---
     async function openEquipModal(empId, slotIdx) {
         currentEquipTarget = { empId, slotIdx };
         const list = document.getElementById('equip-list');
         list.innerHTML = '读取背包...';
         document.getElementById('equip-modal').style.display = 'flex';
-
-        // 仅读取 '装备' 和 '魔法物品'
-        const { data: inv } = await supabaseClient.from('user_inventory')
-            .select('*')
-            .eq('user_id', userProfile.id)
-            .in('category', ['装备', '魔法物品'])
-            .gt('quantity', 0); // 必须有库存
-
+        const { data: inv } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).in('category', ['装备', '魔法物品']).gt('quantity', 0);
         list.innerHTML = '';
-        if (!inv || inv.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:#999">背包里没有闲置的装备/魔法物品</div>';
-            return;
-        }
-
+        if (!inv || inv.length === 0) return list.innerHTML = '<div style="text-align:center; color:#999">没装备</div>';
         inv.forEach(item => {
-            list.innerHTML += `
-                <div onclick="equipItem(${item.id}, '${item.item_name}')">
-                    <span>${item.item_name}</span>
-                    <span style="color:#999">x${item.quantity}</span>
-                </div>`;
+            list.innerHTML += `<div onclick="equipItem(${item.id}, '${item.item_name}')"><span>${item.item_name}</span><span>x${item.quantity}</span></div>`;
         });
     }
 
-    // 穿装备逻辑
     async function equipItem(invId, itemName) {
-        if (!confirm(`将 [${itemName}] 装备给队员？`)) return;
-
-        // 1. 扣除背包数量
         const { data: invItem } = await supabaseClient.from('user_inventory').select('quantity').eq('id', invId).single();
-        if (invItem.quantity > 1) {
-            await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
-        } else {
-            await supabaseClient.from('user_inventory').delete().eq('id', invId);
-        }
-
-        // 2. 记录装备槽
-        await supabaseClient.from('equipped_items').insert([{
-            employee_id: currentEquipTarget.empId,
-            slot_index: currentEquipTarget.slotIdx,
-            item_name: itemName,
-            inventory_id: null // 简化逻辑，这里暂不强关联ID，仅存名字
-        }]);
-
-        closeModal();
-        loadTeam();
-        loadInventory(); // 刷新背包
+        if (invItem.quantity > 1) await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invId);
+        else await supabaseClient.from('user_inventory').delete().eq('id', invId);
+        await supabaseClient.from('equipped_items').insert([{ employee_id: currentEquipTarget.empId, slot_index: currentEquipTarget.slotIdx, item_name: itemName }]);
+        closeModal('equip-modal'); loadTeam(); loadInventory();
     }
 
-    // 卸下装备逻辑
     async function unequipItem(equipId) {
-        if (!confirm('卸下该装备放回背包？')) return;
-
-        // 1. 获取装备信息
+        if (!confirm('卸下该装备？')) return;
         const { data: eqItem } = await supabaseClient.from('equipped_items').select('*').eq('id', equipId).single();
-        
-        // 2. 放回背包
-        const { data: exist } = await supabaseClient.from('user_inventory')
-            .select('*')
-            .eq('user_id', userProfile.id)
-            .eq('item_name', eqItem.item_name)
-            .maybeSingle();
-            
-        if (exist) {
-            await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
-        } else {
-            await supabaseClient.from('user_inventory').insert([{
-                user_id: userProfile.id, 
-                item_name: eqItem.item_name, 
-                quantity: 1, 
-                category: '装备' // 默认归类，也可以改进
-            }]);
-        }
-
-        // 3. 清除装备槽
+        const { data: exist } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).eq('item_name', eqItem.item_name).maybeSingle();
+        if (exist) await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
+        else await supabaseClient.from('user_inventory').insert([{ user_id: userProfile.id, item_name: eqItem.item_name, quantity: 1, category: '装备' }]);
         await supabaseClient.from('equipped_items').delete().eq('id', equipId);
-
-        loadTeam();
-        loadInventory();
+        loadTeam(); loadInventory();
     }
 
-    function closeModal() { document.getElementById('equip-modal').style.display = 'none'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // --- 基础框架逻辑 (保持不变) ---
+    // --- 基础逻辑 ---
     async function login() {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
@@ -277,35 +309,28 @@
                 document.getElementById('admin-link').style.display = 'inline';
                 loadAdminData();
             }
-            // 加载基础数据
             const { data: p } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
             userProfile = p;
             document.getElementById('gold-amount').innerText = p.gold_gp;
-            
             const { data: d } = await supabaseClient.from('global_settings').select('value').eq('key', 'current_date').single();
             if(d) document.getElementById('date-text').innerText = `FR${d.value.year} ${d.value.month}月${d.value.day}日`;
-
-            loadShop();
-            loadTeam(); // 初始加载队伍
+            loadShop(); loadTeam();
         }
     }
 
-    // 辅助函数
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
         document.getElementById(`${tab}-section`).classList.add('active');
-        if(tab === 'team') loadTeam();
-        if(tab === 'inventory') loadInventory();
-        if(tab === 'employees') loadEmployees();
+        if(tab==='team') loadTeam(); if(tab==='inventory') loadInventory(); if(tab==='employees') loadEmployees();
     }
     function toggleAdmin() { const p = document.getElementById('admin-panel'); p.style.display = p.style.display==='block'?'none':'block'; }
 
-    // 加载其他数据 (简化版)
+    // 简化版其他加载函数
     async function loadShop() {
         const { data } = await supabaseClient.from('shop_items').select('*');
-        document.getElementById('shop-grid').innerHTML = data.map(i => `<div class="card"><b>${i.name}</b><br>${i.price} GP<button class="btn-buy" onclick="buy(${i.id},${i.price},'${i.name}','${i.category}')">购买</button></div>`).join('');
+        document.getElementById('shop-grid').innerHTML = data.map(i => `<div class="card"><b>${i.name}</b><br>${i.price} GP<br>库存:${i.stock}<button class="btn-buy" onclick="buy(${i.id},${i.price},'${i.name}','${i.category}')">购买</button></div>`).join('');
     }
     async function buy(id,p,n,c) {
         if(userProfile.gold_gp < p) return alert('没钱');
@@ -318,10 +343,6 @@
     async function loadInventory() {
         const { data } = await supabaseClient.from('user_inventory').select('*');
         document.getElementById('inventory-container').innerHTML = data.map(i => `<div>${i.item_name} x${i.quantity}</div>`).join('<br>');
-    }
-    async function loadEmployees() {
-        const { data } = await supabaseClient.from('employees').select('*');
-        document.getElementById('emp-list').innerHTML = data.map(e => `<div class="card"><img src="${e.avatar_url}" style="width:50px"><br>${e.name}<br>${e.status}</div>`).join('');
     }
     async function loadAdminData() {
         const { data } = await supabaseClient.from('employees').select('id,name');
@@ -337,10 +358,7 @@
             alert('OK');
         }
     }
-    async function advanceTime() {
-        // 简化版时间推进
-        alert('时间已推进 (逻辑同上版)');
-    }
+    async function advanceTime() { alert('时间推进功能见上个版本'); }
     
     checkUser();
 </script>
