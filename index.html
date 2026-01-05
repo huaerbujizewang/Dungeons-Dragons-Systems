@@ -134,16 +134,54 @@
 
 <!-- DM后台 -->
 <div id="admin-panel">
-    <div style="display:flex; justify-content:space-between;"><h2>DM 控制台</h2><button onclick="toggleAdmin()">关闭</button></div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-        <div>
-            <h3>⏳ 时间</h3><button onclick="advanceTime()" style="padding:10px; background:#f1c40f;">推进一天</button>
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+        <h2 style="margin:0">DM 上帝控制台</h2>
+        <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none;">关闭</button>
+    </div>
+    
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+        <!-- 时间控制 -->
+        <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+            <h3>⏳ 时间流逝</h3>
+            <button onclick="advanceTime()" style="width:100%; padding:10px; background:#f1c40f; font-weight:bold;">推进一天 (Next Day)</button>
         </div>
-        <div>
-            <h3>👷 头像上传</h3>
-            <select id="adm-emp-list"></select>
-            <input type="file" id="adm-emp-avatar">
-            <button onclick="uploadAvatar()">上传</button>
+
+        <!-- 雇员头像 -->
+        <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+            <h3>👷 雇员头像</h3>
+            <select id="adm-emp-list" style="width:100%; margin-bottom:5px;"></select>
+            <input type="file" id="adm-emp-avatar" style="width:100%">
+            <button onclick="uploadAvatar()" style="width:100%; margin-top:5px;">上传</button>
+        </div>
+
+        <!-- 玩家资产管理 (找回的功能) -->
+        <div class="admin-box" style="grid-column: 1 / -1; border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
+            <h3>👤 玩家资产操控 (上帝之手)</h3>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <select id="adm-user-list" onchange="loadUserDetail()" style="flex:1; padding:8px;">
+                    <option value="">-- 选择玩家 --</option>
+                </select>
+                <button onclick="loadAdminData()">🔄 刷新列表</button>
+            </div>
+            
+            <div id="user-detail" style="display:none; border-top:1px solid #ccc; padding-top:10px;">
+                <div style="margin-bottom:10px;">
+                    <label>💰 金币:</label>
+                    <input type="number" id="adm-user-gold" style="width:100px; padding:5px;">
+                    <button onclick="updateUserGold()" style="background:#2ecc71; color:white; border:none;">修改</button>
+                </div>
+                
+                <div style="margin-bottom:10px;">
+                    <label>🎁 发放物品:</label>
+                    <input type="text" id="adm-new-item" placeholder="物品名称" style="width:150px; padding:5px;">
+                    <button onclick="admAddInv()" style="background:#3498db; color:white; border:none;">塞入背包</button>
+                </div>
+
+                <div style="font-size:0.8em; color:#666;">
+                    <strong>背包预览:</strong>
+                    <div id="adm-user-inv" style="margin-top:5px; max-height:60px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd;"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -422,9 +460,100 @@ async function equipItem(invId, itemName) {
         else await supabaseClient.from('user_inventory').insert([{user_id:userProfile.id,item_name:n,quantity:1,category:c}]);
         hideLoading(); alert('购买成功'); checkUser();
     }
+// --- DM 上帝模式逻辑 (修复版) ---
+
+    // 1. 加载管理员所需数据
     async function loadAdminData() {
-        const { data } = await supabaseClient.from('employees').select('id,name');
-        document.getElementById('adm-emp-list').innerHTML = data.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+        const ulist = document.getElementById('adm-user-list');
+        const elist = document.getElementById('adm-emp-list');
+        
+        ulist.innerHTML = '<option value="">加载中...</option>';
+        
+        // 加载所有玩家 (从 profiles 表)
+        const { data: users } = await supabaseClient.from('profiles').select('id, email');
+        if (users) {
+            ulist.innerHTML = '<option value="">-- 选择玩家 --</option>';
+            users.forEach(u => {
+                ulist.innerHTML += `<option value="${u.id}">${u.email}</option>`;
+            });
+        }
+
+        // 加载雇员
+        const { data: emps } = await supabaseClient.from('employees').select('id, name');
+        if (emps) {
+            elist.innerHTML = '';
+            emps.forEach(e => {
+                elist.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+            });
+        }
+    }
+
+    // 2. 选中玩家后，加载详细信息
+    let selectedUserId = null;
+    async function loadUserDetail() {
+        selectedUserId = document.getElementById('adm-user-list').value;
+        const detailBox = document.getElementById('user-detail');
+        
+        if (!selectedUserId) {
+            detailBox.style.display = 'none';
+            return;
+        }
+        detailBox.style.display = 'block';
+
+        // 查金币
+        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
+        if (prof) {
+            document.getElementById('adm-user-gold').value = prof.gold_gp;
+        }
+
+        // 查背包预览
+        const { data: inv } = await supabaseClient.from('user_inventory').select('item_name, quantity').eq('user_id', selectedUserId);
+        const invDiv = document.getElementById('adm-user-inv');
+        if (inv) {
+            invDiv.innerHTML = inv.map(i => `${i.item_name} x${i.quantity}`).join(' | ');
+        } else {
+            invDiv.innerHTML = '背包为空';
+        }
+    }
+
+    // 3. 修改金币
+    async function updateUserGold() {
+        if (!selectedUserId) return;
+        const newGold = document.getElementById('adm-user-gold').value;
+        showLoading();
+        await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', selectedUserId);
+        hideLoading();
+        alert('金币已修改');
+    }
+
+    // 4. 上帝发装备
+    async function admAddInv() {
+        if (!selectedUserId) return;
+        const itemName = document.getElementById('adm-new-item').value;
+        if (!itemName) return alert('请输入物品名');
+
+        showLoading();
+        // 检查玩家背包是否已有
+        const { data: exist } = await supabaseClient
+            .from('user_inventory')
+            .select('*')
+            .eq('user_id', selectedUserId)
+            .eq('item_name', itemName)
+            .maybeSingle();
+
+        if (exist) {
+            await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
+        } else {
+            await supabaseClient.from('user_inventory').insert([{ 
+                user_id: selectedUserId, 
+                item_name: itemName, 
+                quantity: 1, 
+                category: '魔法物品' // 默认为魔法物品，反正玩家能用
+            }]);
+        }
+        hideLoading();
+        alert(`[${itemName}] 已塞入玩家背包`);
+        loadUserDetail(); // 刷新预览
     }
     async function uploadAvatar() {
         const f = document.getElementById('adm-emp-avatar').files[0];
@@ -444,4 +573,5 @@ async function equipItem(invId, itemName) {
 </script>
 </body>
 </html>
+
 
