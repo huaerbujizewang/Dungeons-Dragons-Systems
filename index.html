@@ -638,6 +638,7 @@ async function equipItem(invId, itemName) {
                     </span>
 
                     <b>${i.name}</b>
+                    <div style="font-size:0.75em; color:#777; margin:3px 0; min-height:1em;">${i.description || ''}</div> 
                     <div style="font-size:0.8em; color:#666; margin:5px 0;">${i.category || '杂项'}</div>
                     <div style="color:#d35400; font-weight:bold;">${i.price} GP</div>
                     <div style="font-size:0.8em; color:${isOut ? 'red' : '#999'}; margin-bottom:5px;">
@@ -678,6 +679,16 @@ async function equipItem(invId, itemName) {
         if(userProfile.gold_gp < p) return alert('没钱');
         showLoading();
         await supabaseClient.from('profiles').update({gold_gp: userProfile.gold_gp-p}).eq('id', userProfile.id);
+
+        const { data: shopItem } = await supabaseClient.from('shop_items').select('stock').eq('id', id).single();
+        if (shopItem && shopItem.stock > 0) {
+        // 更新数据库，让库存减 1
+        await supabaseClient.from('shop_items').update({ stock: shopItem.stock - 1 }).eq('id', id);
+        } else {
+        hideLoading();
+        return alert('手慢了，东西卖完了！');
+        }
+        
         const {data:inv} = await supabaseClient.from('user_inventory').select('id,quantity').eq('user_id',userProfile.id).eq('item_name',n).maybeSingle();
         if(inv) await supabaseClient.from('user_inventory').update({quantity:inv.quantity+1}).eq('id',inv.id);
         else await supabaseClient.from('user_inventory').insert([{user_id:userProfile.id,item_name:n,quantity:1,category:c}]);
