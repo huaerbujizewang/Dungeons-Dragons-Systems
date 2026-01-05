@@ -2,136 +2,143 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>第五人格随机角色抽取</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D 冒险者商店</title>
+    <!-- 引入 Supabase 的官方工具包 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
-            font-family: 'Microsoft YaHei', sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2c2f33; /* 深色背景很有跑团氛围 */
+            color: #ffffff;
+            margin: 0;
             padding: 20px;
-            background-color: #f0f0f0;
         }
-
-        .container {
-            display: flex;
-            justify-content: space-around;
-        }
-
-        .column {
-            width: 45%;
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        h2 {
-            color: #333;
+        h1 {
             text-align: center;
+            color: #f1c40f; /* 金色标题 */
         }
-
+        .shop-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .item-card {
+            background-color: #23272a;
+            border: 1px solid #7289da;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .item-img {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 10px;
+        }
+        .price {
+            color: #f1c40f;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .stock {
+            font-size: 0.9em;
+            color: #99aab5;
+        }
         button {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 15px 0;
-            background-color: #4CAF50;
+            background-color: #7289da;
             color: white;
             border: none;
-            border-radius: 5px;
+            padding: 8px 16px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            margin-top: 10px;
         }
-
-            button:hover {
-                background-color: #45a049;
-            }
-
-        #survivorResult,
-        #hunterResult {
-            min-height: 150px;
-            padding: 15px;
-            background-color: #f8f8f8;
-            border-radius: 5px;
+        button:hover {
+            background-color: #5b6eae;
         }
-
-        .role-item {
-            padding: 8px;
-            margin: 5px 0;
-            background-color: #e0e0e0;
-            border-radius: 3px;
+        button:disabled {
+            background-color: #444;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="column">
-            <h2>抽取手法角色</h2>
-            <button onclick="randomSurvivors()">抽取求生者</button>
-            <div id="survivorResult"></div>
-        </div>
 
-        <div class="column">
-            <h2>监管者抽取</h2>
-            <button onclick="randomHunter()">抽取监管者</button>
-            <div id="hunterResult"></div>
-        </div>
+    <h1>🏰 冒险者物资补给站</h1>
+    <p style="text-align: center; color: #aaa;">DM后台直连 | 实时库存</p>
+    
+    <div id="shop-container" class="shop-container">
+        <!-- 商品会加载到这里 -->
+        <p>正在从异次元口袋（数据库）读取商品...</p>
     </div>
 
     <script>
-        // 求生者列表
-        const survivors = [
-            "医生", "律师", "慈善家", "园丁",
-            "魔术师", "冒险家", "佣兵", "空军",
-            "机械师", "前锋", "盲女", "祭司",
-            "调香师", "牛仔", "舞女", "先知",
-            "入殓师", "勘探员", "咒术师", "野人",
-            "杂技演员", "大副", "调香师", "邮差",
-            "守墓人", "囚徒", "昆虫学者", "画家",
-            "击球手", "玩具商", "病患", "心理学家",
-            "小说家", "小女孩", "哭泣小丑", "教授",
-            "古董商", "作曲家", "记者", "飞行家",
-            "拉拉队员", "木偶师", "火灾调查员", "法罗女士",
-            "骑士", "气象学家", "幸运儿", 
-        ];
+        // ================= 配置区域 =================
+        // ⚠️ 请把下面两行换成你自己的 Supabase 数据！
+        const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+        // ===========================================
 
-        // 监管者列表
-        const hunters = [
-            "厂长", "摄影师", "孽蜥", "小提琴家", "雕刻家", "博士", "噩梦", "记录员", "隐士", "守夜人", "歌剧演员", "愚人金", "时空之影", "跛脚羊", "喧嚣",
-            "杰克", "小丑", "鹿头", "蜘蛛",
-            "红蝶", "黄衣之主", "宿伞之魂", "疯眼",
-            "梦之女巫", "爱哭鬼", "红夫人", "26号守卫",
-            "使徒", "破轮", "渔女", "蜡像师"
-        ];
+        // 初始化 Supabase 客户端
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+        // 获取并显示商品的核心函数
+        async function fetchItems() {
+            const container = document.getElementById('shop-container');
+
+            // 1. 去数据库查表
+            const { data: items, error } = await supabase
+                .from('shop_items') // 表名
+                .select('*')        // 查所有字段
+                .order('id', { ascending: true }); // 按ID排序
+
+            if (error) {
+                console.error('出错了:', error);
+                container.innerHTML = `<p style="color:red">无法连接到商店后台: ${error.message}</p>`;
+                return;
             }
+
+            // 2. 清空加载提示
+            container.innerHTML = '';
+
+            // 3. 遍历数据，生成 HTML
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                
+                // 简单的库存逻辑判断
+                const isOutOfStock = item.stock <= 0;
+                const buttonHtml = isOutOfStock 
+                    ? `<button disabled>缺货</button>` 
+                    : `<button onclick="buyItem('${item.name}')">购买 (测试)</button>`;
+
+                card.innerHTML = `
+                    <img src="${item.image_url || 'https://via.placeholder.com/64'}" class="item-img" alt="${item.name}">
+                    <h3>${item.name}</h3>
+                    <p>${item.description}</p>
+                    <div class="price">💰 ${item.price} GP</div>
+                    <div class="stock">库存: ${item.stock}</div>
+                    ${buttonHtml}
+                `;
+                container.appendChild(card);
+            });
         }
 
-        function randomSurvivors() {
-            // 创建副本避免修改原数组
-            const shuffled = [...survivors];
-            shuffleArray(shuffled);
-            const selected = shuffled.slice(0, 4);
-
-            const resultDiv = document.getElementById('survivorResult');
-            resultDiv.innerHTML = selected.map(role =>
-                `<div class="role-item">${role}</div>`
-            ).join('');
+        // 测试购买按钮的功能（暂时只是弹窗）
+        function buyItem(itemName) {
+            alert(`你尝试购买了 [${itemName}]！\n\n下一步我们将实现：\n1. 玩家登录\n2. 点击购买后，数据库库存自动 -1`);
         }
 
-        function randomHunter() {
-            const hunter = hunters[Math.floor(Math.random() * hunters.length)];
-            const resultDiv = document.getElementById('hunterResult');
-            resultDiv.innerHTML = `<div class="role-item">${hunter}</div>`;
-        }
+        // 页面加载完毕后，自动执行
+        fetchItems();
 
-        // 初始加载时自动生成一次结果
-        randomSurvivors();
-        randomHunter();
     </script>
 </body>
 </html>
