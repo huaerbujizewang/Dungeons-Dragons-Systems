@@ -7,109 +7,93 @@
     <!-- 引入 Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 简洁白色风格 */
+        /* 清新白色简约风格 */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: #ffffff;
+            color: #2c3e50;
             margin: 0;
             padding: 40px 20px;
-            line-height: 1.6;
         }
         .container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
         }
         header {
             text-align: center;
+            border-bottom: 1px solid #eee;
             margin-bottom: 40px;
+            padding-bottom: 20px;
         }
         h1 {
             font-weight: 300;
-            color: #2c3e50;
-            margin-bottom: 10px;
+            letter-spacing: 2px;
+            margin: 0;
         }
         .subtitle {
-            color: #7f8c8d;
-            font-size: 0.9em;
+            color: #95a5a6;
+            font-size: 0.8em;
+            margin-top: 5px;
         }
-        /* 商品网格 */
+        /* 列表布局 */
         .shop-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 30px;
         }
-        /* 商品卡片 */
         .item-card {
-            background: #ffffff;
-            border: 1px solid #eaeaea;
-            border-radius: 12px;
-            padding: 20px;
+            border: none;
             text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .item-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-            border-color: #d1d1d1;
+            padding: 10px;
         }
         .item-img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
+            width: 70px;
+            height: 70px;
             margin-bottom: 15px;
+            filter: grayscale(20%); /* 稍微带点复古感 */
         }
         .item-name {
-            font-size: 1.2em;
-            font-weight: 600;
-            margin: 10px 0;
-            color: #2c3e50;
+            font-size: 1.1em;
+            font-weight: 500;
+            margin-bottom: 5px;
         }
         .item-desc {
             font-size: 0.85em;
             color: #7f8c8d;
-            height: 40px;
+            margin-bottom: 10px;
+            height: 2.4em;
+            line-height: 1.2em;
             overflow: hidden;
-            margin-bottom: 15px;
         }
         .price-tag {
-            font-size: 1.1em;
-            color: #e67e22;
             font-weight: bold;
+            color: #d35400;
             margin-bottom: 10px;
         }
-        .stock-tag {
-            font-size: 0.8em;
-            color: #bdc3c7;
-            margin-bottom: 15px;
-        }
-        /* 按钮 */
+        /* 细线条按钮风格 */
         button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            background: transparent;
+            border: 1px solid #2c3e50;
+            color: #2c3e50;
+            padding: 8px 15px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 0.85em;
+            transition: all 0.2s;
             width: 100%;
-            transition: background 0.2s;
         }
         button:hover {
-            background-color: #2980b9;
+            background: #2c3e50;
+            color: white;
         }
         button:disabled {
-            background-color: #ecf0f1;
-            color: #bdc3c7;
+            border-color: #eee;
+            color: #ccc;
             cursor: not-allowed;
         }
-        /* 错误提示 */
-        #error-msg {
-            color: #e74c3c;
+        #loading {
             text-align: center;
-            padding: 20px;
-            display: none;
+            color: #95a5a6;
         }
     </style>
 </head>
@@ -117,43 +101,36 @@
 
     <div class="container">
         <header>
-            <h1>冒险者商店</h1>
-            <div class="subtitle">—— 为勇者提供最好的装备 ——</div>
+            <h1>ADVENTURER'S SHOP</h1>
+            <div class="subtitle">龙与地下城 - 装备清单</div>
         </header>
 
-        <div id="error-msg"></div>
-
         <div id="shop-grid" class="shop-grid">
-            <p style="text-align: center; grid-column: 1/-1;">正在开启次元仓库...</p>
+            <div id="loading">正在连接位面仓库...</div>
         </div>
     </div>
 
     <script>
-        // 初始化 Supabase
+        // 你的配置信息
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 修复：将变量名改为 supabaseClient 以避免和库冲突
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function loadShop() {
             const grid = document.getElementById('shop-grid');
-            const errorDiv = document.getElementById('error-msg');
 
             try {
-                // 请求数据
-                const { data, error } = await supabase
+                // 从数据库读取
+                const { data, error } = await supabaseClient
                     .from('shop_items')
                     .select('*')
                     .order('id', { ascending: true });
 
                 if (error) throw error;
 
-                // 渲染页面
-                grid.innerHTML = '';
-                if (data.length === 0) {
-                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">货架是空的，请DM在后台添加商品。</p>';
-                    return;
-                }
+                grid.innerHTML = ''; // 清除加载状态
 
                 data.forEach(item => {
                     const card = document.createElement('div');
@@ -161,31 +138,27 @@
                     const isOut = item.stock <= 0;
 
                     card.innerHTML = `
-                        <img src="${item.image_url || 'https://img.icons8.com/fluency/96/box.png'}" class="item-img">
+                        <img src="${item.image_url || 'https://img.icons8.com/dotty/80/000000/open-box.png'}" class="item-img">
                         <div class="item-name">${item.name}</div>
-                        <div class="item-desc">${item.description || '暂无描述'}</div>
-                        <div class="price-tag">💰 ${item.price} GP</div>
-                        <div class="stock-tag">库存: ${item.stock}</div>
+                        <div class="item-desc">${item.description || ''}</div>
+                        <div class="price-tag">${item.price} GP</div>
                         <button ${isOut ? 'disabled' : ''} onclick="buy('${item.name}')">
-                            ${isOut ? '售罄' : '购买'}
+                            ${isOut ? 'SOLD OUT' : 'PURCHASE'}
                         </button>
                     `;
                     grid.appendChild(card);
                 });
 
             } catch (err) {
-                console.error(err);
-                grid.innerHTML = '';
-                errorDiv.style.display = 'block';
-                errorDiv.innerText = '加载失败: ' + (err.message || '请检查数据库表是否存在');
+                console.error('Error:', err);
+                grid.innerHTML = `<div style="color:red; text-align:center; width:100%;">无法加载商品: ${err.message}</div>`;
             }
         }
 
         function buy(name) {
-            alert('【' + name + '】购买成功！\n(这只是个演示，库存还没真的扣除)');
+            alert('你已选择购买: ' + name);
         }
 
-        // 启动
         loadShop();
     </script>
 </body>
