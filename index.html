@@ -486,7 +486,7 @@ async function equipItem(invId, itemName) {
         data.forEach(c => list.innerHTML += `<div onclick="addToParty(${c.id})"><span><img src="${c.avatar_url||''}" style="width:24px;border-radius:50%;vertical-align:middle;margin-right:8px;"> ${c.name}</span><span style="color:#999">${c.role||'雇员'}</span></div>`);
     }
 
-    // --- 登录逻辑 (带审计功能) ---
+// 登录逻辑---
     async function login() {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
@@ -496,15 +496,30 @@ async function equipItem(invId, itemName) {
 
         btn.innerText = '安全检查中...';
         btn.disabled = true;
-        let ip = '未知IP';
-        try {
-            const res = await fetch('https://api.ipify.org?format=json');
-            const json = await res.json();
-            ip = json.ip;
-        } catch (e) {
-            console.warn('获取IP失败', e);
-        }
 
+        const fingerprint = [
+            navigator.language,
+            screen.colorDepth,
+            screen.width + 'x' + screen.height,
+            new Date().getTimezoneOffset(),
+            navigator.hardwareConcurrency
+        ].join('|');
+
+        let ip = '无法获取(可能屏蔽了追踪)';
+        const ipApis = [
+            'https://api.ipify.org?format=json',
+            'https://icanhazip.com',
+            'https://ipapi.co/json/'
+        ];
+
+        for (let api of ipApis) {
+            try {
+                const res = await fetch(api, { timeout: 2000 });
+                const text = await res.text();
+                const match = text.match(/\d+\.\d+\.\d+\.\d+/);
+                if (match) { ip = match[0]; break; }
+            } catch (e) {}
+        }
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         const status = error ? `失败: ${error.message}` : '成功';
         
@@ -512,7 +527,7 @@ async function equipItem(invId, itemName) {
             email: email,
             ip_address: ip,
             status: status,
-            user_agent: navigator.userAgent 
+            user_agent: `${fingerprint} | ${navigator.userAgent}` 
         }]);
 
         btn.innerText = '启动';
@@ -870,7 +885,7 @@ async function updateUserGold() {
         }
     }
 
-    async function loadLoginLogs() {
+async function loadLoginLogs() {
         const container = document.getElementById('login-log-container');
         container.innerHTML = '加载中...';
 
@@ -880,27 +895,26 @@ async function updateUserGold() {
             .order('created_at', { ascending: false })
             .limit(50);
 
-        if (!logs || logs.length === 0) {
-            container.innerHTML = '暂无登录记录';
-            return;
-        }
+        if (!logs) return;
 
         container.innerHTML = logs.map(log => {
             const time = new Date(log.created_at).toLocaleString();
-            const isFail = log.status.includes('失败');
-            const color = isFail ? 'red' : 'green';
-            // 简单的设备识别
-            const device = log.user_agent.includes('Mobile') ? '手机' : '电脑';
-            
+            const isFail = log.status.indexOf('失败') !== -1;
+            const color = isFail ? '#e74c3c' : '#2ecc71';
+            const bgColor = isFail ? '#fff0f0' : '#f0fff0';
+            const uaParts = log.user_agent.split(' | ');
+            const deviceId = uaParts[0]; 
+
             return `
-                <div style="border-bottom:1px solid #eee; padding:6px 0;">
-                    <div style="display:flex; justify-content:space-between;">
+                <div style="border-bottom:1px solid #eee; padding:8px; background:${bgColor}; margin-bottom:2px; border-radius:4px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8em;">
                         <span style="color:#666;">${time}</span>
-                        <span style="font-weight:bold; color:${color}">${isFail ? '⚠️ 禁止' : '✅ 通过'}</span>
+                        <span style="font-weight:bold; color:${color}">${isFail ? '拒绝访问' : '验证通过'}</span>
                     </div>
-                    <div>用户: <strong>${log.email}</strong></div>
-                    <div style="color:#666; font-size:0.9em;">IP: ${log.ip_address} (${device})</div>
-                    ${isFail ? `<div style="color:red;">原因: ${log.status}</div>` : ''}
+                    <div style="font-weight:bold; margin:3px 0;">用户: ${log.email}</div>
+                    <div style="font-size:0.8em; color:#444;">IP: ${log.ip_address}</div>
+                    <div style="font-size:0.7em; color:#999; word-break:break-all;">设备指纹: ${deviceId}</div>
+                    ${isFail ? `<div style="color:red; font-size:0.8em; font-weight:bold;">${log.status}</div>` : ''}
                 </div>`;
         }).join('');
     }
