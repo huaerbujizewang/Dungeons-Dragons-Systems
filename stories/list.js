@@ -9,6 +9,14 @@ const storyList = [
         date: "FR1494 - 2月"
     },
     {
+        id: "misha_01",
+        title: "笼中鸟的自白",
+        description: "米沙在林间小路上的一番关于‘自由’与‘杀戮’的谈话。",
+        owner: "master@almorel.com",
+        tags: "米沙",
+        date: "FR1494 - 2月"
+    }
+    {
         id: "test_01",
         title: "牢玩家的故事",
         description: "这是一段只有 IDRotF 负责的玩家才能看到的剧情。",
