@@ -381,7 +381,7 @@
                             <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
                             <div class="team-info">
                                 <h3>${m.name}</h3>
-                                <p>${m.role || '雇员'} | ${m.salary} GP</p>
+                                <p>${m.role || '雇员'}${m.role === '核心队友' ? '' : ' | ' + m.salary + ' GP'}</p>
                             </div>
                         </div>
                         <div class="slots-container">${slotsHtml}</div>
@@ -434,7 +434,7 @@ async function loadEmployees() {
                 <div class="card emp-card-content">
                     <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" onclick="alert('头像ID: ${e.id}')">
                     <div style="font-weight:bold">${e.name}</div>
-                    <div style="font-size:0.8em; color:#666; margin:4px 0;">${e.role||'雇员'} | ${e.salary} GP</div>
+                    <div style="font-size:0.8em; color:#666; margin:4px 0;">${e.role||'雇员'}${e.role === '核心队友' ? '' : ' | ' + e.salary + ' GP'}</div>
                     <div style="font-size:0.8em; color:${e.status==='在职'?'#2ecc71':'#e74c3c'}">${e.status}</div>
                     ${e.role !== '核心队友' && e.status === '在职' ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
                 </div>
