@@ -357,17 +357,25 @@
 
     // --- 队伍管理 (统一显示，不隔开) ---
     async function loadTeam() {
-        const grid = document.getElementById('team-grid');
-        grid.innerHTML = '加载中...';
+        const container = document.getElementById('team-container');
+        if (!container) return; 
         
-        const { data: members } = await supabaseClient.from('employees')
-        .select('*')
-        .eq('user_id', viewingUserId) // 关键：只查当前视图用户的
-        .eq('is_in_party', true);
+        container.innerHTML = '加载队员数据...';
+        
+        // 查询数据
+        const { data: members } = await supabaseClient
+            .from('employees')
+            .select('*')
+            .eq('is_in_party', true)
+            .eq('user_id', viewingUserId) // 只看当前视角的
+            .order('id');
+            
         const { data: equipped } = await supabaseClient.from('equipped_items').select('*');
 
-        grid.innerHTML = '';
+        // 清空容器，准备重新渲染
+        container.innerHTML = '';
         
+        // 1. 渲染现有队员
         if (members && members.length > 0) {
             members.forEach(m => {
                 let slotsHtml = '';
@@ -379,7 +387,9 @@
                         slotsHtml += `<div class="slot" onclick="openEquipModal(${m.id}, ${i})">+</div>`;
                     }
                 }
-                grid.innerHTML += `
+                
+                // 将卡片加入容器
+                container.innerHTML += `
                     <div class="team-card">
                         <div class="btn-leave" onclick="removeFromParty(${m.id})" title="移出队伍">✕ 离队</div>
                         <div class="team-header">
@@ -394,9 +404,16 @@
             });
         }
 
+        // 2. 渲染添加按钮 (如果人数不满8人)
         if (!members || members.length < 8) {
-            grid.innerHTML += `<div class="team-card add-member-card" onclick="openMemberModal()"><div style="font-size:3em;">+</div><div>添加队员 (${members ? members.length : 0}/8)</div></div>`;
+            container.innerHTML += `
+                <div class="team-card add-member-card" onclick="openMemberModal()">
+                    <div style="font-size:3em;">+</div>
+                    <div>添加队员 (${members ? members.length : 0}/8)</div>
+                </div>`;
         }
+        
+        container.className = 'team-grid';
     }
 
 // 替换原有的 loadEmployees 函数
@@ -929,36 +946,36 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
 
     // 加载管理员所需数据
     async function loadAdminData() {
-         const ulist = document.getElementById('adm-user-list');
+        const ulist = document.getElementById('adm-user-list');
+        const elist = document.getElementById('adm-emp-list');
+        
         ulist.innerHTML = '<option value="">加载中...</option>';
-
+        
         let query = supabaseClient.from('profiles').select('id, email');
 
-        // 如果是普通 DM，只加载 assigned_dm_id = 自己的玩家
         if (currentUserRole === 'dm') {
             query = query.eq('assigned_dm_id', myId);
         }
-
-        const { data: users } = await query;
         
+        const { data: users, error } = await query;
+
+        if (error) {
+            console.error('加载玩家列表失败:', error);
+            ulist.innerHTML = '<option value="">加载失败</option>';
+            return;
+        }
+
         ulist.innerHTML = '<option value="">-- 选择玩家 --</option>';
         if (users && users.length > 0) {
             users.forEach(u => {
                 ulist.innerHTML += `<option value="${u.id}">${u.email}</option>`;
             });
         } else {
-            ulist.innerHTML = '<option value="">(名下无玩家)</option>';
+            ulist.innerHTML = '<option value="">(无关联玩家)</option>';
         }
 
-        // 加载雇员
-        const { data: emps } = await supabaseClient.from('employees').select('id, name');
-        if (emps) {
-            elist.innerHTML = '';
-            emps.forEach(e => {
-                elist.innerHTML += `<option value="${e.id}">${e.name}</option>`;
-            });
-        }
-        loadLoginLogs(); // 自动加载登录日志
+        // 加载雇员列表 (初始化为空，等选了人再加载)
+        if (elist) elist.innerHTML = '<option value="">请先选择玩家</option>';
     }
 
     // 2. 选中玩家后，加载详细信息
