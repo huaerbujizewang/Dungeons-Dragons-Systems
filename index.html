@@ -795,52 +795,44 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
             loadAllAccounts(); // 自动加载账号
         }
     }
-// --- 修复后的集市加载函数 ---
+// --- 集市加载函数 ---
     async function loadShop() {
-        const { data, error } = await supabaseClient
-        .from('shop_items')
-        .select('*')
-        .or(`user_id.is.null,user_id.eq.${viewingUserId}`)
-        .order('rarity');
+        const { data, error } = await supabaseClient.from('shop_items').select('*');
         if (error) return;
 
         const grid = document.getElementById('shop-grid');
-        const isDM = currentUserEmail === DM_EMAIL;
-        
+        const canManage = currentUserRole === 'root' || currentUserRole === 'dm';
+        const rarityWeight = { '神器': 6, '传说': 5, '极珍稀': 4, '珍稀': 3, '非普通': 2, '普通': 1 };
+
+        data.sort((a, b) => {
+            const weightA = rarityWeight[a.rarity] || 0;
+            const weightB = rarityWeight[b.rarity] || 0;
+            // 1. 先比稀有度 (大到小)
+            if (weightA !== weightB) return weightB - weightA;
+            // 2. 稀有度相同比价格 (高到低)
+            return b.price - a.price;
+        });
+
         grid.innerHTML = data.map(i => {
             const color = rarityColors[i.rarity] || '#ccc';
             const isOut = i.stock <= 0;
-            
-            // DM 特权按钮：下架
-            const deleteBtn = isDM 
-                ? `<button onclick="deleteShopItem(${i.id}, '${i.name}')" style="background:#e74c3c; color:white; border:none; margin-top:5px; font-size:0.8em; padding:4px;">🗑️ 下架</button>` 
-                : '';
-
-            // 如果没货了，卡片半透明
-            const opacityStyle = isOut ? 'opacity: 0.6; background:#f0f0f0;' : '';
+            const deleteBtn = canManage ? `<button onclick="deleteShopItem(${i.id}, '${i.name}')" style="background:#e74c3c; color:white; border:none; margin-top:5px; font-size:0.8em; padding:4px; width:100%; border-radius:4px;">🗑️ 下架商品</button>` : '';
 
             return `
-                <div class="card" style="position:relative; padding-top:25px; ${opacityStyle}">
+                <div class="card" style="position:relative; padding-top:25px; ${isOut ? 'opacity:0.6' : ''}">
                     <span class="rarity-tag" style="background:${color}; color:white; font-size:0.7em; padding:2px 6px; border-radius:2px; position:absolute; top:5px; right:5px; font-weight:bold;">
                         ${i.rarity || '普通'}
                     </span>
-
                     <b>${i.name}</b>
-                    <div style="font-size:0.75em; color:#777; margin:3px 0; min-height:1em;">${i.description || ''}</div> 
+                    <div style="font-size:0.75em; color:#777; margin:3px 0;">${i.description || ''}</div>
                     <div style="font-size:0.8em; color:#666; margin:5px 0;">${i.category || '杂项'}</div>
-                    <div style="color:#d35400; font-weight:bold;">${i.price} GP</div>
-                    <div style="font-size:0.8em; color:${isOut ? 'red' : '#999'}; margin-bottom:5px;">
-                        ${isOut ? '❌ 已售罄' : `库存: ${i.stock}`}
-                    </div>
-                    
-                    <button class="btn-buy" 
-                        onclick="buy(${i.id}, ${i.price}, '${i.name}', '${i.category}')" 
-                        ${isOut ? 'disabled' : ''}>
-                        ${isOut ? '缺货' : '购买'}
+                    <div style="color:#d35400; font-weight:bold;">💰 ${i.price} GP</div>
+                    <div style="font-size:0.8em; color:#999;">库存: ${i.stock}</div>
+                    <button class="btn-buy" onclick="buy(${i.id}, ${i.price}, '${i.name}', '${i.category}')" ${isOut ? 'disabled' : ''}>
+                        ${isOut ? '已售罄' : '确认购买'}
                     </button>
                     ${deleteBtn}
-                </div>
-            `;
+                </div>`;
         }).join('');
     }
 
@@ -1004,17 +996,35 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         
         // 如果是 Root，显示 DM 分配框
         if (currentUserRole === 'root') {
-            document.getElementById('root-assign-dm').style.display = 'block';
-            // 加载所有 DM 列表
-            const { data: dms } = await supabaseClient.from('admin_users').select('id, email').neq('role_level', 'player');
-            const assignList = document.getElementById('adm-assign-dm-list');
-            assignList.innerHTML = '<option value="">-- 未分配 --</option>';
-            dms.forEach(dm => assignList.innerHTML += `<option value="${dm.id}">${dm.email}</option>`);
-            
-            // 获取该玩家当前的负责DM
-            const { data: prof } = await supabaseClient.from('profiles').select('assigned_dm_id').eq('id', selectedUserId).single();
-            assignList.value = prof.assigned_dm_id || "";
+        document.getElementById('root-assign-dm').style.display = 'block';
+        
+        // 【核心修复】：联合查询，找出所有已设置权限的账号和邮箱
+        // 我们从 admin_users 拿权限，从 profiles 拿 email
+        const { data: adminList } = await supabaseClient
+            .from('admin_users')
+            .select(`
+                id,
+                role_level,
+                profiles:id ( email )
+            `);
+
+        const assignList = document.getElementById('adm-assign-dm-list');
+        assignList.innerHTML = '<option value="">-- 设置为未分配 (默认归Root) --</option>';
+        
+        if (adminList) {
+            adminList.forEach(admin => {
+                // 排除 Player 角色，只把 Root 和 DM 放进指派名单
+                if (admin.role_level !== 'player') {
+                    const email = admin.profiles ? admin.profiles.email : "未知用户";
+                    assignList.innerHTML += `<option value="${admin.id}">${email} [${admin.role_level.toUpperCase()}]</option>`;
+                }
+            });
         }
+        
+        // 获取该玩家目前的归属情况
+        const { data: prof } = await supabaseClient.from('profiles').select('assigned_dm_id').eq('id', selectedUserId).single();
+        assignList.value = prof.assigned_dm_id || "";
+    }
     }
 
     async function assignDM() {
