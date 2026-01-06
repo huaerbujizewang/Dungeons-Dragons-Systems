@@ -7,65 +7,106 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
-        body { font-family: "PingFang SC", sans-serif; background: #fff; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1100px; margin: 0 auto; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #fff; color: #333; margin: 0; padding: 0; height: 100vh; }
+    
+        #login-section {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: 360px;
+            padding: 40px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid #eee;
+            z-index: 100;
+        }
+        #login-section h2 { margin-top: 0; color: #2c3e50; font-weight: 300; margin-bottom: 25px; letter-spacing: 1px; }
+        #login-section input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; transition: 0.2s; }
+        #login-section input:focus { border-color: #333; outline: none; }
+        #login-section button { width: 100%; padding: 12px; background: #2c3e50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.2s; }
+        #login-section button:hover { background: #34495e; transform: translateY(-1px); }
+
+        /* --- 主界面布局 --- */
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
         
         /* 导航 */
-        .nav { display: flex; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; align-items: center; }
-        .tab-btn { padding: 8px 16px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 1em; color: #666; border-radius: 4px; }
-        .tab-btn.active { background: #333; color: #fff; font-weight: bold; }
-        .info-bar { margin-left: auto; text-align: right; font-size: 0.9em; }
-        .section { display: none; }
+        .nav { display: flex; gap: 15px; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 30px; align-items: center; }
+        .tab-btn { padding: 8px 16px; border: none; background: none; cursor: pointer; font-size: 1em; color: #7f8c8d; border-radius: 4px; font-weight: 500; transition: 0.2s; }
+        .tab-btn.active { background: #333; color: #fff; }
+        .tab-btn:hover:not(.active) { color: #333; background: #f0f0f0; }
+        
+        .info-bar { margin-left: auto; text-align: right; font-size: 0.9em; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        
+        /* 内容区 */
+        .section { display: none; animation: fadeIn 0.3s ease; }
         .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         /* 标题分割线 */
-        .section-title { margin: 30px 0 15px 0; border-left: 5px solid #333; padding-left: 10px; font-weight: bold; font-size: 1.1em; color: #444; background: #f9f9f9; padding-top: 5px; padding-bottom: 5px; }
+        .section-title { margin: 35px 0 20px 0; border-left: 5px solid #333; padding-left: 12px; font-weight: bold; font-size: 1.1em; color: #444; background: linear-gradient(90deg, #f9f9f9, #fff); padding-top: 8px; padding-bottom: 8px; }
         
         /* 网格布局 */
-        .team-grid, .shop-grid, .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .team-grid, .shop-grid, .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
         
         /* 卡片通用 */
-        .card, .team-card, .inv-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; position: relative; transition: 0.2s; }
-        .card:hover, .team-card:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-color: #ccc; }
+        .card, .team-card, .inv-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; position: relative; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .card:hover, .team-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.08); border-color: #bbb; transform: translateY(-2px); }
         
         /* 队伍卡片特有 */
         .team-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         .team-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #eee; border: 1px solid #ddd; }
         .team-info h3 { margin: 0; font-size: 1.1em; }
-        .team-info p { margin: 2px 0 0; font-size: 0.8em; color: #666; }
-        .btn-leave { position: absolute; top: 10px; right: 10px; font-size: 0.7em; color: #999; cursor: pointer; border: 1px solid #eee; padding: 2px 6px; border-radius: 4px; }
-        .btn-leave:hover { background: #eee; color: #333; }
+        .team-info p { margin: 4px 0 0; font-size: 0.8em; color: #666; }
+        .btn-leave { position: absolute; top: 10px; right: 10px; font-size: 0.7em; color: #999; cursor: pointer; border: 1px solid #eee; padding: 2px 8px; border-radius: 4px; background: #fff; }
+        .btn-leave:hover { background: #fee; color: #e74c3c; border-color: #e74c3c; }
 
         /* 装备槽 */
-        .slots-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-        .slot { aspect-ratio: 1; border: 1px dashed #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7em; text-align: center; cursor: pointer; background: #fafafa; padding: 2px; overflow: hidden; transition: 0.2s; }
-        .slot:hover { border-color: #333; background: #f0f0f0; }
-        .slot.filled { border: 1px solid #999; background: #fff; border-style: solid; color: #333; font-weight: 600; }
-        .slot-name { word-break: break-all; pointer-events: none; transform: scale(0.9); }
+        .slots-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .slot { aspect-ratio: 1; border: 1px dashed #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7em; text-align: center; cursor: pointer; background: #fafafa; padding: 2px; overflow: hidden; transition: 0.2s; color: #aaa; }
+        .slot:hover { border-color: #333; background: #fff; color: #333; }
+        .slot.filled { border: 1px solid #bbb; background: #fff; border-style: solid; color: #333; font-weight: 600; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
+        .slot-name { word-break: break-all; pointer-events: none; transform: scale(0.9); line-height: 1.1; }
         
         /* 雇员中心卡片 */
         .emp-card-content { text-align: center; }
         .emp-card-content img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 1px solid #eee; }
         
         /* 弹窗 & Loading */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-box { background: #fff; padding: 20px; border-radius: 8px; width: 400px; max-height: 80vh; overflow-y: auto; }
-        .item-select-list div { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; }
-        .item-select-list div:hover { background: #f9f9f9; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-box { background: #fff; padding: 25px; border-radius: 12px; width: 400px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .item-select-list div { padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; justify-content: space-between; transition: 0.1s; }
+        .item-select-list div:hover { background: #f8f9fa; padding-left: 15px; }
+        
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 5000; align-items: center; justify-content: center; flex-direction: column; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #333; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* 按钮 */
-        button { cursor: pointer; }
-        .btn-buy { width: 100%; margin-top: 10px; padding: 6px; background: #fff; border: 1px solid #333; }
+        /* 按钮与输入 */
+        button { cursor: pointer; font-family: inherit; }
+        input, select, textarea { font-family: inherit; border: 1px solid #ddd; border-radius: 4px; padding: 6px; }
+        .btn-buy { width: 100%; margin-top: 10px; padding: 8px; background: #fff; border: 1px solid #333; color: #333; border-radius: 4px; transition: 0.2s; }
         .btn-buy:hover { background: #333; color: #fff; }
-        .danger-btn { color: #e74c3c; border-color: #e74c3c; margin-top: 8px; width: 100%; padding: 4px; background: none; border: 1px solid; border-radius: 4px; font-size: 0.9em; }
+        .btn-buy:disabled { border-color: #eee; color: #ccc; background: #fafafa; cursor: not-allowed; }
+        
+        .danger-btn { color: #e74c3c; border-color: #e74c3c; margin-top: 8px; width: 100%; padding: 5px; background: none; border: 1px solid; border-radius: 4px; font-size: 0.85em; transition: 0.2s; }
         .danger-btn:hover { background: #e74c3c; color: white; }
-        .add-member-card { border: 2px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; cursor: pointer; min-height: 200px; }
-        .add-member-card:hover { border-color: #333; color: #333; }
+        
+        .add-member-card { border: 2px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; cursor: pointer; min-height: 200px; background: #fafafa; }
+        .add-member-card:hover { border-color: #333; color: #333; background: #fff; }
 
-        #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: #fff; border: 2px solid #333; z-index: 3000; padding: 20px; overflow-y: auto; }
+        /* 背包样式 */
+        .inventory-category { margin-bottom: 25px; }
+        .inventory-category h3 { border-left: 4px solid #333; padding-left: 10px; margin-bottom: 15px; font-size: 1.1em; background: #f9f9f9; padding: 8px 10px; border-radius: 0 4px 4px 0; }
+        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .inv-card { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.95em; }
+
+        /* DM 管理面板 */
+        #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: #fff; border: 2px solid #333; z-index: 3000; padding: 25px; overflow-y: auto; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); box-sizing: border-box; }
+        .admin-box { margin-bottom: 0; } /* Reset margin for grid */
     </style>
 </head>
 <body>
@@ -73,90 +114,99 @@
 <!-- Loading 遮罩 -->
 <div id="loading-overlay">
     <div class="spinner"></div>
-    <div style="margin-top:15px; color:#555; font-weight:bold;">同步中...</div>
+    <div style="margin-top:15px; color:#555; font-weight:bold;">正在同步位面数据...</div>
 </div>
 
-<div class="container">
-    <div id="login-section" style="max-width:300px; margin:100px auto; text-align:center;">
-        <h2>冒险者工会终端</h2>
-        <input type="email" id="login-email" placeholder="邮箱" style="width:100%; padding:10px; margin-bottom:10px;">
-        <input type="password" id="login-password" placeholder="密码" style="width:100%; padding:10px; margin-bottom:10px;">
-        <button onclick="login()" style="width:100%; padding:10px; background:#333; color:#fff; border:none;">启动</button>
-    </div>
+<!-- 登录界面 (独立居中) -->
+<div id="login-section">
+    <h2>冒险者工会终端</h2>
+    <input type="email" id="login-email" placeholder="邮箱地址">
+    <input type="password" id="login-password" placeholder="通行密码">
+    <button onclick="login()">连接节点</button>
+</div>
 
-    <div id="main-section" style="display:none;">
-        <div class="nav">
-            <button class="tab-btn active" onclick="switchTab('shop')">集市</button>
-            <button class="tab-btn" onclick="switchTab('team')">队伍</button>
-            <button class="tab-btn" onclick="switchTab('inventory')">背包</button>
-            <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
-            <span id="admin-link" style="display:none; color:#3498db; cursor:pointer; font-weight:bold" onclick="toggleAdmin()">⚙️ DM</span>
-            
-            <div class="info-bar">
-                <div id="date-text" style="font-weight:bold; background:#f1c40f; display:inline-block; padding:2px 6px; border-radius:4px;"></div>
-                <div style="color:#d35400; font-weight:bold; margin-top:4px;">💰 <span id="gold-amount">0</span> GP</div>
-                <a href="#" onclick="logout()" style="color:#999; font-size:0.8em;">退出</a>
-            </div>
-        </div>
-
-        <div id="shop-section" class="section active"><div id="shop-grid" class="shop-grid"></div></div>
-
-        <!-- 队伍面板 (统一显示) -->
-        <div id="team-section" class="section">
-            <div id="team-grid" class="team-grid"></div>
-        </div>
-
-        <div id="inventory-section" class="section"><div id="inventory-container"></div></div>
+<!-- 主界面 -->
+<div id="main-section" class="container" style="display:none;">
+    <div class="nav">
+        <button class="tab-btn active" onclick="switchTab('shop')">集市</button>
+        <button class="tab-btn" onclick="switchTab('team')">队伍</button>
+        <button class="tab-btn" onclick="switchTab('inventory')">背包</button>
+        <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
+        <span id="admin-link" style="display:none; color:#3498db; cursor:pointer; font-weight:bold; margin-left: 10px;" onclick="toggleAdmin()">⚙️ DM</span>
         
-        <!-- 雇员中心 (分类显示) -->
-        <div id="employees-section" class="section">
-            <div id="emp-container"></div>
+        <div class="info-bar">
+            <div id="date-text" style="font-weight:bold; background:#f1c40f; color:#333; padding:4px 10px; border-radius:4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">日期加载中...</div>
+            <div style="color:#d35400; font-weight:bold; margin-top:4px;">💰 <span id="gold-amount">0</span> GP</div>
+            <a href="#" onclick="logout()" style="color:#999; font-size:0.8em; text-decoration: underline;">退出登录</a>
         </div>
+    </div>
+
+    <!-- 集市 -->
+    <div id="shop-section" class="section active">
+        <div id="shop-grid" class="shop-grid"></div>
+    </div>
+
+    <!-- 队伍面板 -->
+    <div id="team-section" class="section">
+        <div id="team-container"></div>
+    </div>
+
+    <!-- 背包 -->
+    <div id="inventory-section" class="section">
+        <div id="inventory-container"></div>
+    </div>
+    
+    <!-- 雇员中心 -->
+    <div id="employees-section" class="section">
+        <div id="emp-container"></div>
     </div>
 </div>
 
-<!-- 弹窗 -->
+<!-- 弹窗：装备选择 -->
 <div id="equip-modal" class="modal">
     <div class="modal-box">
         <h3>选择要装备的物品</h3>
         <div id="equip-list" class="item-select-list"></div>
-        <button onclick="closeModal('equip-modal')" style="width:100%; margin-top:15px; padding:10px;">取消</button>
-    </div>
-</div>
-<div id="member-modal" class="modal">
-    <div class="modal-box">
-        <h3>选择加入队伍的成员</h3>
-        <p style="font-size:0.8em;color:#999">仅显示在职且未入队的人员</p>
-        <div id="member-select-list" class="item-select-list"></div>
-        <button onclick="closeModal('member-modal')" style="width:100%; margin-top:15px; padding:10px;">取消</button>
+        <button onclick="closeModal('equip-modal')" style="width:100%; margin-top:15px; padding:10px; background:#f5f5f5; border:1px solid #ddd; border-radius:4px;">取消</button>
     </div>
 </div>
 
-<!-- DM后台 -->
-<!-- DM 上帝控制台 -->
+<!-- 弹窗：成员选择 -->
+<div id="member-modal" class="modal">
+    <div class="modal-box">
+        <h3>选择加入队伍的成员</h3>
+        <p style="font-size:0.8em;color:#999; margin-bottom:10px;">仅显示在职且未入队的人员</p>
+        <div id="member-select-list" class="item-select-list"></div>
+        <button onclick="closeModal('member-modal')" style="width:100%; margin-top:15px; padding:10px; background:#f5f5f5; border:1px solid #ddd; border-radius:4px;">取消</button>
+    </div>
+</div>
+
+<!-- DM 上帝控制台 (修复版布局) -->
 <div id="admin-panel">
-    <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+    <!-- 顶部标题 -->
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
         <h2 style="margin:0; display:flex; align-items:center; gap:10px;">
             DM 控制台 
             <span id="role-badge" style="font-size:0.5em; background:#333; color:white; padding:2px 8px; border-radius:12px; font-weight:normal; vertical-align:middle;">Loading...</span>
         </h2>
-        <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">关闭面板</button>
+        <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">关闭面板</button>
     </div>
     
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; height: 88%;">
+    <!-- 主体左右分栏 -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:25px; height: 88%;">
         
         <!-- 左侧：常规运维 (DM & Root 可见) -->
-        <div style="display:flex; flex-direction:column; gap:15px; overflow-y:auto; padding-right:5px;">
+        <div style="display:flex; flex-direction:column; gap:20px; overflow-y:auto; padding-right:5px;">
             
             <!-- 时间控制 -->
             <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#fff;">
                 <h3 style="margin-top:0">⏳ 时间控制台</h3>
                 <div style="display:flex; gap:5px; margin-bottom:10px;">
-                    <input type="number" id="time-year" placeholder="年" style="width:60px; padding:5px;">
-                    <input type="number" id="time-month" placeholder="月" style="width:40px; padding:5px;">
-                    <input type="number" id="time-day" placeholder="日" style="width:40px; padding:5px;">
+                    <input type="number" id="time-year" placeholder="年" style="width:70px; padding:8px;">
+                    <input type="number" id="time-month" placeholder="月" style="width:50px; padding:8px;">
+                    <input type="number" id="time-day" placeholder="日" style="width:50px; padding:8px;">
                 </div>
-                <button onclick="updateTimeManual()" style="width:100%; padding:8px; background:#34495e; color:white; border:none; border-radius:4px;">🚀 跃迁至该日期</button>
+                <button onclick="updateTimeManual()" style="width:100%; padding:10px; background:#34495e; color:white; border:none; border-radius:4px;">🚀 跃迁至该日期</button>
             </div>
 
             <!-- 玩家资产 -->
@@ -166,32 +216,34 @@
                     <select id="adm-user-list" onchange="loadUserDetail()" style="flex:1; padding:8px;">
                         <option value="">-- 选择玩家 --</option>
                     </select>
-                    <button onclick="loadAdminData()" title="刷新列表">🔄</button>
+                    <button onclick="loadAdminData()" title="刷新列表" style="padding:0 15px;">🔄</button>
                 </div>
                 
-                <div id="user-detail" style="display:none; border-top:1px solid #ccc; padding-top:10px;">
-                    <div style="margin-bottom:10px;">
+                <div id="user-detail" style="display:none; border-top:1px solid #ccc; padding-top:15px;">
+                    <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center;">
                         <label>💰 金币:</label>
-                        <input type="number" id="adm-user-gold" style="width:80px; padding:5px;">
-                        <button onclick="updateUserGold()" style="background:#2ecc71; color:white; border:none; padding:5px 10px; border-radius:4px;">修改</button>
+                        <input type="number" id="adm-user-gold" style="width:100px; padding:5px;">
+                        <button onclick="updateUserGold()" style="background:#2ecc71; color:white; border:none; padding:6px 12px; border-radius:4px;">修改</button>
                     </div>
                     
-                    <div style="margin-bottom:10px;">
-                        <label>🎁 发放:</label>
-                        <input type="text" id="adm-new-item" placeholder="物品名" style="width:100px; padding:5px;">
-                        <select id="adm-new-item-cat" style="padding:5px;">
-                            <option value="魔法物品">魔法物品</option>
-                            <option value="装备">装备</option>
-                            <option value="卷轴">卷轴</option>
-                            <option value="药水">药水</option>
-                            <option value="材料">材料</option>
-                        </select>
-                        <button onclick="admAddInv()" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:4px;">给</button>
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:5px;">🎁 发放物品:</label>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                            <input type="text" id="adm-new-item" placeholder="物品名" style="flex:1; padding:5px; min-width:100px;">
+                            <select id="adm-new-item-cat" style="padding:5px;">
+                                <option value="魔法物品">魔法物品</option>
+                                <option value="装备">装备</option>
+                                <option value="卷轴">卷轴</option>
+                                <option value="药水">药水</option>
+                                <option value="材料">材料</option>
+                            </select>
+                            <button onclick="admAddInv()" style="background:#3498db; color:white; border:none; padding:5px 15px; border-radius:4px;">给</button>
+                        </div>
                     </div>
 
                     <div style="font-size:0.8em; color:#666;">
-                        <strong>🎒 背包预览:</strong>
-                        <div id="adm-user-inv" style="margin-top:5px; max-height:100px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd;"></div>
+                        <strong>🎒 背包预览 (点击红叉删除):</strong>
+                        <div id="adm-user-inv" style="margin-top:5px; max-height:120px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd; border-radius:4px;"></div>
                     </div>
                 </div>
             </div>
@@ -199,17 +251,19 @@
             <!-- 雇员头像 -->
             <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#fff;">
                 <h3 style="margin-top:0">👷 雇员头像</h3>
-                <select id="adm-emp-list" style="width:100%; margin-bottom:5px; padding:5px;"></select>
-                <input type="file" id="adm-emp-avatar" style="width:100%">
-                <button onclick="uploadAvatar()" style="width:100%; margin-top:5px; padding:5px;">上传头像</button>
+                <select id="adm-emp-list" style="width:100%; margin-bottom:10px; padding:8px;"></select>
+                <div style="display:flex; gap:10px;">
+                    <input type="file" id="adm-emp-avatar" style="flex:1">
+                    <button onclick="uploadAvatar()" style="padding:8px 15px;">上传</button>
+                </div>
             </div>
 
             <!-- 集市进货 -->
             <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#fff;">
                 <h3 style="margin-top:0">🏬 集市进货</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-                    <input type="text" id="adm-shop-name" placeholder="商品名称" style="grid-column: 1/3; padding:5px;">
-                    <select id="adm-shop-rarity" style="padding:5px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <input type="text" id="adm-shop-name" placeholder="商品名称" style="grid-column: 1/3; padding:8px;">
+                    <select id="adm-shop-rarity" style="padding:8px;">
                         <option value="普通">普通</option>
                         <option value="非普通">非普通</option>
                         <option value="珍稀">珍稀</option>
@@ -217,89 +271,59 @@
                         <option value="传说">传说</option>
                         <option value="神器">神器</option>
                     </select>
-                    <select id="adm-shop-cat" style="padding:5px;">
+                    <select id="adm-shop-cat" style="padding:8px;">
                         <option value="魔法物品">魔法物品</option>
                         <option value="装备">装备</option>
                         <option value="卷轴">卷轴</option>
                         <option value="药水">药水</option>
                         <option value="材料">材料</option>
                     </select>
-                    <input type="number" id="adm-shop-price" placeholder="价格 GP" style="padding:5px;">
-                    <input type="number" id="adm-shop-stock" placeholder="库存" value="1" style="padding:5px;">
-                    <select id="adm-shop-target" style="grid-column: 1/3; padding:5px;">
+                    <input type="number" id="adm-shop-price" placeholder="价格 GP" style="padding:8px;">
+                    <input type="number" id="adm-shop-stock" placeholder="库存" value="1" style="padding:8px;">
+                    <select id="adm-shop-target" style="grid-column: 1/3; padding:8px; background:#eaf2f8;">
                         <option value="public">🌐 全服公共可见</option>
-                        <option value="private">👤 仅限当前选中玩家可见</option>
+                        <option value="private">👤 仅限当前选中玩家可见 (特供)</option>
                     </select>
-                    <textarea id="adm-shop-desc" placeholder="物品描述..." style="grid-column: 1/3; height:40px; padding:5px;"></textarea>
+                    <textarea id="adm-shop-desc" placeholder="物品描述..." style="grid-column: 1/3; height:50px; padding:8px; font-family:inherit;"></textarea>
                 </div>
-                <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:8px; border-radius:4px;">上架</button>
+                <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">上架商品</button>
             </div>
         </div>
 
         <!-- 右侧：网安与账号 (仅 Root 可见) -->
-        <div id="security-panel-container" style="display:none; flex-direction:column; gap:15px; height:100%;">
+        <div id="security-panel-container" style="display:none; flex-direction:column; gap:20px; height:100%;">
             
-            <div style="background:#fffae6; padding:10px; border-left:4px solid #f1c40f; font-size:0.9em; color:#666;">
+            <div style="background:#fffae6; padding:12px; border-left:4px solid #f1c40f; font-size:0.9em; color:#666; border-radius:4px;">
                 🔒 <strong>Root 专属区域</strong>：账号权限管理与全服审计。
             </div>
 
-            <!-- 新增：账号权限管理 -->
-            <div style="border:1px solid #3498db; border-radius:8px; padding:10px; background:#f0f9ff; display:flex; flex-direction:column; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <!-- 1. 账号权限管理 -->
+            <div style="border:1px solid #3498db; border-radius:8px; padding:15px; background:#f0f9ff; display:flex; flex-direction:column; overflow:hidden; max-height: 250px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <h3 style="margin:0; font-size:1em; color:#2980b9;">🔑 账号与权限</h3>
-                    <button onclick="loadAllAccounts()" style="font-size:0.8em; padding:2px 8px;">刷新</button>
+                    <button onclick="loadAllAccounts()" style="font-size:0.8em; padding:2px 10px;">刷新</button>
                 </div>
-                <div id="account-list-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em; max-height:200px;">
+                <div id="account-list-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em; border-radius:4px;">
                     点击刷新加载全服账号...
                 </div>
             </div>
 
-            <!-- 操作日志 -->
-            <div style="border:1px solid #ddd; border-radius:8px; padding:10px; background:#f9f9f9; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <!-- 2. 操作日志 -->
+            <div style="border:1px solid #ddd; border-radius:8px; padding:15px; background:#f9f9f9; display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <h3 style="margin:0; font-size:1em;">📜 全服审计</h3>
-                    <button onclick="loadLogs()" style="font-size:0.8em; padding:2px 8px;">刷新</button>
+                    <button onclick="loadLogs()" style="font-size:0.8em; padding:2px 10px;">刷新</button>
                 </div>
-                <div id="audit-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em;"></div>
+                <div id="audit-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em; border-radius:4px;"></div>
             </div>
 
-            <!-- 登录日志 -->
-            <div style="border:1px solid #e74c3c; border-radius:8px; padding:10px; background:#fff0f0; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <!-- 3. 登录日志 -->
+            <div style="border:1px solid #e74c3c; border-radius:8px; padding:15px; background:#fff0f0; display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <h3 style="margin:0; font-size:1em; color:#c0392b;">🚨 登录监控</h3>
-                    <button onclick="loadLoginLogs()" style="font-size:0.8em; padding:2px 8px;">刷新</button>
+                    <button onclick="loadLoginLogs()" style="font-size:0.8em; padding:2px 10px;">刷新</button>
                 </div>
-                <div id="login-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em;"></div>
-            </div>
-
-        </div>
-
-    </div>
-</div>
-
-<!-- 右侧：日志区 (修改为上下结构) -->
-        <div style="display:flex; flex-direction:column; gap:15px; height:100%;">
-            
-            <!-- 上半部分：操作日志 -->
-            <div style="border:1px solid #ddd; border-radius:8px; padding:10px; background:#f9f9f9; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <h3 style="margin:0; font-size:1em;">📜 操作审计</h3>
-                    <button onclick="loadLogs()" style="font-size:0.8em; padding:2px 8px;">刷新</button>
-                </div>
-                <div id="audit-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em;">
-                    加载中...
-                </div>
-            </div>
-
-            <!-- 下半部分：登录日志 (新增) -->
-            <div style="border:1px solid #e74c3c; border-radius:8px; padding:10px; background:#fff0f0; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <h3 style="margin:0; font-size:1em; color:#c0392b;">🚨 登录监控</h3>
-                    <button onclick="loadLoginLogs()" style="font-size:0.8em; padding:2px 8px;">刷新</button>
-                </div>
-                <div id="login-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em;">
-                    等待加载...
-                </div>
+                <div id="login-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em; border-radius:4px;"></div>
             </div>
 
         </div>
