@@ -541,14 +541,36 @@ async function equipItem(invId, itemName) {
 
     // 辅助
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    //队员弹窗
     async function openMemberModal() {
         const list = document.getElementById('member-select-list');
         list.innerHTML = '加载中...';
         document.getElementById('member-modal').style.display = 'flex';
-        const { data } = await supabaseClient.from('employees').select('*').eq('status', '在职').eq('is_in_party', false).order('id');
+        
+        // 这样当前视角是谁，就只能看到谁的雇员
+        const { data: candidates } = await supabaseClient
+            .from('employees')
+            .select('*')
+            .eq('status', '在职')
+            .eq('is_in_party', false)
+            .eq('user_id', viewingUserId) 
+            .order('id');
+            
         list.innerHTML = '';
-        if(!data||data.length===0) return list.innerHTML = '<div style="padding:10px;text-align:center">无人可选</div>';
-        data.forEach(c => list.innerHTML += `<div onclick="addToParty(${c.id})"><span><img src="${c.avatar_url||''}" style="width:24px;border-radius:50%;vertical-align:middle;margin-right:8px;"> ${c.name}</span><span style="color:#999">${c.role||'雇员'}</span></div>`);
+        if (!candidates || candidates.length === 0) {
+            return list.innerHTML = '<div style="padding:10px;text-align:center;color:#999">没有可用的雇员</div>';
+        }
+        
+        candidates.forEach(c => {
+            list.innerHTML += `
+                <div onclick="addToParty(${c.id})">
+                    <span>
+                        <img src="${c.avatar_url||''}" style="width:24px;border-radius:50%;vertical-align:middle;margin-right:8px;"> 
+                        ${c.name}
+                    </span>
+                    <span style="color:#999">${c.role||'雇员'}</span>
+                </div>`;
+        });
     }
 
 // 登录逻辑---
@@ -842,35 +864,39 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
     let selectedUserId = null;
     // --- 修复版 DM 玩家详情加载 ---
     async function loadUserDetail() {
-        // 【核心修复】直接更新全局变量，不要用 const selectedId
+        // 1. 获取选中的 ID
         selectedUserId = document.getElementById('adm-user-list').value;
-        
         const detailBox = document.getElementById('user-detail');
 
         if (!selectedUserId) {
             detailBox.style.display = 'none';
-            // 没选人，切回自己
+            // 取消选择，切回自己
             viewingUserId = myId;
             refreshAllData();
+            // 清空头像列表
+            document.getElementById('adm-emp-list').innerHTML = '';
             return;
         }
 
+        // 2. 显示面板 & 切换视角
         detailBox.style.display = 'block';
-
-        // 切换视角
         viewingUserId = selectedUserId;
         
-        // 刷新全页数据
+        // 3. 刷新主界面数据
         await refreshAllData();
 
-        // 填金币
+        // 4. 填 DM 面板的小数据 (金币)
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
         if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
 
-        // 填背包预览
-        const { data: inv } = await supabaseClient.from('user_inventory').select('item_name, quantity, category').eq('user_id', selectedUserId).order('category');
+        // 5. 填 DM 面板的背包预览
+        const { data: inv } = await supabaseClient
+            .from('user_inventory')
+            .select('item_name, quantity, category')
+            .eq('user_id', selectedUserId)
+            .order('category');
+
         const invDiv = document.getElementById('adm-user-inv');
-        
         if (inv && inv.length > 0) {
             invDiv.innerHTML = inv.map(i => `
                 <div style="display:flex; justify-content:space-between; font-size:0.85em; border-bottom:1px dashed #eee; padding:2px;">
@@ -881,6 +907,23 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
             `).join('');
         } else {
             invDiv.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">(背包是空的)</div>';
+        }
+
+        // 6. 【新增】刷新 DM 面板里的“雇员头像列表”
+        // 这样你选了谁，就只能给谁的雇员上传头像
+        const { data: emps } = await supabaseClient
+            .from('employees')
+            .select('id, name')
+            .eq('user_id', selectedUserId); // 只查这个玩家的
+
+        const empSelect = document.getElementById('adm-emp-list');
+        empSelect.innerHTML = '';
+        if (emps && emps.length > 0) {
+            emps.forEach(e => {
+                empSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+            });
+        } else {
+            empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
         }
     }
 
