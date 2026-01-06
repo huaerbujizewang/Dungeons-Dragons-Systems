@@ -129,10 +129,11 @@
 <div id="main-section" class="container" style="display:none;">
     <div class="nav">
         <button class="tab-btn active" onclick="switchTab('shop')">集市</button>
-        <button class="tab-btn" onclick="switchTab('team')">队伍</button>
-        <button class="tab-btn" onclick="switchTab('inventory')">背包</button>
-        <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
-        <span id="admin-link" style="display:none; color:#3498db; cursor:pointer; font-weight:bold; margin-left: 10px;" onclick="toggleAdmin()">⚙️ DM</span>
+    <button class="tab-btn" onclick="switchTab('team')">队伍</button>
+    <button class="tab-btn" onclick="switchTab('inventory')">背包</button>
+    <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
+    <button id="security-tab-btn" class="tab-btn" onclick="switchTab('security')" style="display:none; color:#e74c3c; border:1px solid #ff000033;">🛡️ 安全与权限</button>
+    <span id="admin-link" style="display:none; color:#3498db; cursor:pointer; font-weight:bold; margin-left: 10px;" onclick="toggleAdmin()">⚙️ DM 控制台</span>
         
         <div class="info-bar">
             <div id="date-text" style="font-weight:bold; background:#f1c40f; color:#333; padding:4px 10px; border-radius:4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">日期加载中...</div>
@@ -160,6 +161,34 @@
     <div id="employees-section" class="section">
         <div id="emp-container"></div>
     </div>
+
+     <!-- 新增：安全与权限 Section (Root 专用) -->
+    <div id="security-section" class="section">
+        <div style="display:grid; grid-template-columns: 350px 1fr; gap:20px;">
+            <!-- 左侧：账号管理 -->
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                <div class="admin-box" style="border:1px solid #3498db; padding:15px; border-radius:8px; background:#f0f9ff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h3 style="margin:0; color:#2980b9;">🔑 账号权限管理</h3>
+                        <button onclick="loadAllAccounts()" style="font-size:0.8em;">刷新</button>
+                    </div>
+                    <div id="account-list-container" style="max-height:600px; overflow-y:auto; background:#fff; padding:10px; border-radius:4px; font-size:0.9em;"></div>
+                </div>
+            </div>
+            
+            <!-- 右侧：双日志 -->
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9; flex:1;">
+                    <h3 style="margin-top:0;">📜 全服操作审计</h3>
+                    <div id="audit-log-container" style="height:300px; overflow-y:auto; background:#fff; padding:10px; border:1px solid #eee;"></div>
+                </div>
+                <div class="admin-box" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fff0f0; flex:1;">
+                    <h3 style="margin-top:0; color:#c0392b;">🚨 登录监控日志</h3>
+                    <div id="login-log-container" style="height:300px; overflow-y:auto; background:#fff; padding:10px; border:1px solid #eee;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- 弹窗：装备选择 -->
@@ -181,153 +210,76 @@
     </div>
 </div>
 
-<!-- DM 上帝控制台 (修复版布局) -->
+<!-- DM 上帝控制台 -->
 <div id="admin-panel">
-    <!-- 顶部标题 -->
     <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
-        <h2 style="margin:0; display:flex; align-items:center; gap:10px;">
-            DM 控制台 
-            <span id="role-badge" style="font-size:0.5em; background:#333; color:white; padding:2px 8px; border-radius:12px; font-weight:normal; vertical-align:middle;">Loading...</span>
-        </h2>
-        <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">关闭面板</button>
+        <h2 style="margin:0;">DM 控制台 <span id="role-badge" style="font-size:0.5em; background:#333; color:white; padding:2px 8px; border-radius:12px; font-weight:normal;"></span></h2>
+        <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none; padding:8px 20px; border-radius:6px; font-weight:bold;">关闭</button>
     </div>
     
-    <!-- 主体左右分栏 -->
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:25px; height: 88%;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:25px; overflow-y:auto;">
         
-        <!-- 左侧：常规运维 (DM & Root 可见) -->
-        <div style="display:flex; flex-direction:column; gap:20px; overflow-y:auto; padding-right:5px;">
-            
+        <!-- 左侧列 -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
             <!-- 时间控制 -->
-            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#fff;">
-                <h3 style="margin-top:0">⏳ 时间控制台</h3>
+            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0">⏳ 时间线操控</h3>
                 <div style="display:flex; gap:5px; margin-bottom:10px;">
-                    <input type="number" id="time-year" placeholder="年" style="width:70px; padding:8px;">
-                    <input type="number" id="time-month" placeholder="月" style="width:50px; padding:8px;">
-                    <input type="number" id="time-day" placeholder="日" style="width:50px; padding:8px;">
+                    <input type="number" id="time-year" style="width:70px"> 年 
+                    <input type="number" id="time-month" style="width:50px"> 月 
+                    <input type="number" id="time-day" style="width:50px"> 日
                 </div>
-                <button onclick="updateTimeManual()" style="width:100%; padding:10px; background:#34495e; color:white; border:none; border-radius:4px;">🚀 跃迁至该日期</button>
+                <button onclick="updateTimeManual()" style="width:100%; padding:10px; background:#34495e; color:white; border:none;">同步时空</button>
             </div>
 
-            <!-- 玩家资产 -->
-            <div class="admin-box" style="border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
-                <h3 style="margin-top:0">👤 玩家资产操控</h3>
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <select id="adm-user-list" onchange="loadUserDetail()" style="flex:1; padding:8px;">
-                        <option value="">-- 选择玩家 --</option>
-                    </select>
-                    <button onclick="loadAdminData()" title="刷新列表" style="padding:0 15px;">🔄</button>
+            <!-- 集市进货 -->
+            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0">🏬 物资上架</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <input type="text" id="adm-shop-name" placeholder="商品名称" style="grid-column: 1/3;">
+                    <select id="adm-shop-rarity"><option>普通</option><option>非普通</option><option>珍稀</option><option>极珍稀</option><option>传说</option><option>神器</option></select>
+                    <select id="adm-shop-cat"><option>魔法物品</option><option>装备</option><option>卷轴</option><option>药水</option><option>材料</option></select>
+                    <input type="number" id="adm-shop-price" placeholder="价格">
+                    <input type="number" id="adm-shop-stock" placeholder="库存">
+                    <select id="adm-shop-target" style="grid-column: 1/3;"><option value="public">🌐 全服公共</option><option value="private">👤 仅当前选中的玩家</option></select>
+                    <textarea id="adm-shop-desc" placeholder="描述..." style="grid-column: 1/3; height:50px;"></textarea>
                 </div>
-                
-                <div id="user-detail" style="display:none; border-top:1px solid #ccc; padding-top:15px;">
-                    <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center;">
-                        <label>💰 金币:</label>
-                        <input type="number" id="adm-user-gold" style="width:100px; padding:5px;">
-                        <button onclick="updateUserGold()" style="background:#2ecc71; color:white; border:none; padding:6px 12px; border-radius:4px;">修改</button>
-                    </div>
-                    
-                    <div style="margin-bottom:15px;">
-                        <label style="display:block; margin-bottom:5px;">🎁 发放物品:</label>
-                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                            <input type="text" id="adm-new-item" placeholder="物品名" style="flex:1; padding:5px; min-width:100px;">
-                            <select id="adm-new-item-cat" style="padding:5px;">
-                                <option value="魔法物品">魔法物品</option>
-                                <option value="装备">装备</option>
-                                <option value="卷轴">卷轴</option>
-                                <option value="药水">药水</option>
-                                <option value="材料">材料</option>
-                            </select>
-                            <button onclick="admAddInv()" style="background:#3498db; color:white; border:none; padding:5px 15px; border-radius:4px;">给</button>
-                        </div>
-                    </div>
+                <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:10px;">确认上架</button>
+            </div>
+        </div>
 
-                    <div style="font-size:0.8em; color:#666;">
-                        <strong>🎒 背包预览 (点击红叉删除):</strong>
-                        <div id="adm-user-inv" style="margin-top:5px; max-height:120px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd; border-radius:4px;"></div>
+        <!-- 右侧列 -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+            <!-- 玩家资产控制 (上帝之手) -->
+            <div class="admin-box" style="border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
+                <h3 style="margin-top:0">👤 玩家资产操控 (视角切换)</h3>
+                <select id="adm-user-list" onchange="loadUserDetail()" style="width:100%; padding:10px; margin-bottom:10px; border:2px solid #333;"></select>
+                
+                <div id="user-detail" style="display:none;">
+                    <div style="margin-bottom:10px;">
+                        💰 金币: <input type="number" id="adm-user-gold" style="width:80px"> <button onclick="updateUserGold()">修改</button>
                     </div>
+                    <!-- Root 专用：分配负责 DM -->
+                    <div id="root-assign-dm" style="display:none; margin-bottom:10px; padding:10px; border:1px dashed #3498db;">
+                        🔗 指派负责 DM: <select id="adm-assign-dm-list"></select> <button onclick="assignDM()">保存</button>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        🎁 发放: <input type="text" id="adm-new-item" style="width:100px"> 
+                        <select id="adm-new-item-cat"><option>魔法物品</option><option>装备</option><option>卷轴</option><option>药水</option></select>
+                        <button onclick="admAddInv()">发放</button>
+                    </div>
+                    <div style="font-size:0.8em; color:#666;">背包预览:</div>
+                    <div id="adm-user-inv" style="max-height:150px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd; margin-top:5px;"></div>
                 </div>
             </div>
 
             <!-- 雇员头像 -->
-            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#fff;">
-                <h3 style="margin-top:0">👷 雇员头像</h3>
-                <select id="adm-emp-list" style="width:100%; margin-bottom:10px; padding:8px;"></select>
-                <div style="display:flex; gap:10px;">
-                    <input type="file" id="adm-emp-avatar" style="flex:1">
-                    <button onclick="uploadAvatar()" style="padding:8px 15px;">上传</button>
-                </div>
-            </div>
-
-            <!-- 集市进货 -->
-            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px; background:#fff;">
-                <h3 style="margin-top:0">🏬 集市进货</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <input type="text" id="adm-shop-name" placeholder="商品名称" style="grid-column: 1/3; padding:8px;">
-                    <select id="adm-shop-rarity" style="padding:8px;">
-                        <option value="普通">普通</option>
-                        <option value="非普通">非普通</option>
-                        <option value="珍稀">珍稀</option>
-                        <option value="极珍稀">极珍稀</option>
-                        <option value="传说">传说</option>
-                        <option value="神器">神器</option>
-                    </select>
-                    <select id="adm-shop-cat" style="padding:8px;">
-                        <option value="魔法物品">魔法物品</option>
-                        <option value="装备">装备</option>
-                        <option value="卷轴">卷轴</option>
-                        <option value="药水">药水</option>
-                        <option value="材料">材料</option>
-                    </select>
-                    <input type="number" id="adm-shop-price" placeholder="价格 GP" style="padding:8px;">
-                    <input type="number" id="adm-shop-stock" placeholder="库存" value="1" style="padding:8px;">
-                    <select id="adm-shop-target" style="grid-column: 1/3; padding:8px; background:#eaf2f8;">
-                        <option value="public">🌐 全服公共可见</option>
-                        <option value="private">👤 仅限当前选中玩家可见 (特供)</option>
-                    </select>
-                    <textarea id="adm-shop-desc" placeholder="物品描述..." style="grid-column: 1/3; height:50px; padding:8px; font-family:inherit;"></textarea>
-                </div>
-                <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">上架商品</button>
+            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0">👷 雇员头像更新</h3>
+                <select id="adm-emp-list" style="width:100%; margin-bottom:10px;"></select>
+                <div style="display:flex; gap:10px;"><input type="file" id="adm-emp-avatar" style="flex:1"><button onclick="uploadAvatar()">上传</button></div>
             </div>
         </div>
-
-        <!-- 右侧：网安与账号 (仅 Root 可见) -->
-        <div id="security-panel-container" style="display:none; flex-direction:column; gap:20px; height:100%;">
-            
-            <div style="background:#fffae6; padding:12px; border-left:4px solid #f1c40f; font-size:0.9em; color:#666; border-radius:4px;">
-                🔒 <strong>Root 专属区域</strong>：账号权限管理与全服审计。
-            </div>
-
-            <!-- 1. 账号权限管理 -->
-            <div style="border:1px solid #3498db; border-radius:8px; padding:15px; background:#f0f9ff; display:flex; flex-direction:column; overflow:hidden; max-height: 250px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <h3 style="margin:0; font-size:1em; color:#2980b9;">🔑 账号与权限</h3>
-                    <button onclick="loadAllAccounts()" style="font-size:0.8em; padding:2px 10px;">刷新</button>
-                </div>
-                <div id="account-list-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em; border-radius:4px;">
-                    点击刷新加载全服账号...
-                </div>
-            </div>
-
-            <!-- 2. 操作日志 -->
-            <div style="border:1px solid #ddd; border-radius:8px; padding:15px; background:#f9f9f9; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <h3 style="margin:0; font-size:1em;">📜 全服审计</h3>
-                    <button onclick="loadLogs()" style="font-size:0.8em; padding:2px 10px;">刷新</button>
-                </div>
-                <div id="audit-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em; border-radius:4px;"></div>
-            </div>
-
-            <!-- 3. 登录日志 -->
-            <div style="border:1px solid #e74c3c; border-radius:8px; padding:15px; background:#fff0f0; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <h3 style="margin:0; font-size:1em; color:#c0392b;">🚨 登录监控</h3>
-                    <button onclick="loadLoginLogs()" style="font-size:0.8em; padding:2px 10px;">刷新</button>
-                </div>
-                <div id="login-log-container" style="flex:1; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.85em; border-radius:4px;"></div>
-            </div>
-
-        </div>
-
     </div>
 </div>
 
@@ -720,28 +672,23 @@ async function equipItem(invId, itemName) {
             myId = user.id;
             currentUserEmail = user.email;
             
-            // 查一下是不是管理员，是什么级别的管理员
-            const { data: adminData } = await supabaseClient
-                .from('admin_users')
-                .select('role_level')
-                .eq('id', user.id)
-                .maybeSingle();
+            const { data: adminData } = await supabaseClient.from('admin_users').select('role_level').eq('id', user.id).maybeSingle();
 
             if (adminData) {
-                currentUserRole = adminData.role_level; // 'root' 或 'dm'
+                currentUserRole = adminData.role_level;
                 document.getElementById('admin-link').style.display = 'inline';
+                document.getElementById('role-badge').innerText = currentUserRole.toUpperCase();
+                
+                // 【Root 专享】：显示导航栏的安全标签
+                if (currentUserRole === 'root') {
+                    document.getElementById('security-tab-btn').style.display = 'inline-block';
+                }
                 loadAdminData();
-            } else {
-                currentUserRole = 'player';
             }
-
-            // 初始化视图
-            if (!viewingUserId) viewingUserId = user.id;
             
-            // 显示主界面
+            if (!viewingUserId) viewingUserId = user.id;
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-section').style.display = 'block';
-            
             refreshAllData();
         }
     }
@@ -818,9 +765,19 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
+        
+        // 找到点击的按钮并激活
+        const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(`'${tab}'`));
+        if (activeBtn) activeBtn.classList.add('active');
+        
         document.getElementById(`${tab}-section`).classList.add('active');
-        if(tab==='team') loadTeam(); if(tab==='inventory') loadInventory(); if(tab==='employees') loadEmployees();
+        
+        // 如果切到安全模块，自动加载日志
+        if (tab === 'security') {
+            loadAllAccounts();
+            loadLogs();
+            loadLoginLogs();
+        }
     }
 
     function toggleAdmin() {
@@ -1044,6 +1001,28 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         } else {
             empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
         }
+        
+        // 如果是 Root，显示 DM 分配框
+        if (currentUserRole === 'root') {
+            document.getElementById('root-assign-dm').style.display = 'block';
+            // 加载所有 DM 列表
+            const { data: dms } = await supabaseClient.from('admin_users').select('id, email').neq('role_level', 'player');
+            const assignList = document.getElementById('adm-assign-dm-list');
+            assignList.innerHTML = '<option value="">-- 未分配 --</option>';
+            dms.forEach(dm => assignList.innerHTML += `<option value="${dm.id}">${dm.email}</option>`);
+            
+            // 获取该玩家当前的负责DM
+            const { data: prof } = await supabaseClient.from('profiles').select('assigned_dm_id').eq('id', selectedUserId).single();
+            assignList.value = prof.assigned_dm_id || "";
+        }
+    }
+
+    async function assignDM() {
+        const dmId = document.getElementById('adm-assign-dm-list').value;
+        showLoading();
+        await supabaseClient.from('profiles').update({ assigned_dm_id: dmId || null }).eq('id', selectedUserId);
+        hideLoading();
+        alert('分配成功');
     }
 
     // 2. 新增：DM 删除玩家物品逻辑
@@ -1370,7 +1349,6 @@ async function loadLoginLogs() {
                             <option value="">-- 改权限 --</option>
                             <option value="player">设为 Player</option>
                             <option value="dm">设为 DM</option>
-                            <option value="root">设为 Root</option>
                         </select>` : '<span style="font-size:0.8em; color:#ccc;">(自己)</span>'}
                     </div>
                 </div>`;
