@@ -916,21 +916,29 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
     // 加载管理员所需数据
     async function loadAdminData() {
         const ulist = document.getElementById('adm-user-list');
-        const elist = document.getElementById('adm-emp-list');
-        
         ulist.innerHTML = '<option value="">加载中...</option>';
-        
+
+        // 基础查询
         let query = supabaseClient.from('profiles').select('id, email');
 
-        if (currentUserRole === 'dm') {
+        // --- 核心隔离逻辑 ---
+        if (currentUserRole === 'root') {
+            // Root 用户：不加任何 filter，直接查全表
+            console.log("Root 权限：加载全服玩家");
+        } else if (currentUserRole === 'dm') {
+            // 普通 DM：只查归属自己的玩家
+            console.log("DM 权限：加载名下玩家");
             query = query.eq('assigned_dm_id', myId);
+        } else {
+            // 玩家角色：没权看这个列表
+            ulist.innerHTML = '<option value="">权限不足</option>';
+            return;
         }
-        
-        const { data: users, error } = await query;
 
+        const { data: users, error } = await query;
+        
         if (error) {
-            console.error('加载玩家列表失败:', error);
-            ulist.innerHTML = '<option value="">加载失败</option>';
+            ulist.innerHTML = '<option value="">读取失败</option>';
             return;
         }
 
@@ -943,8 +951,11 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
             ulist.innerHTML = '<option value="">(无关联玩家)</option>';
         }
 
-        // 加载雇员列表 (初始化为空，等选了人再加载)
-        if (elist) elist.innerHTML = '<option value="">请先选择玩家</option>';
+        // 顺便刷新一下日志记录
+        if (currentUserRole === 'root') {
+            loadLogs();
+            loadLoginLogs();
+        }
     }
 
     // 2. 选中玩家后，加载详细信息
@@ -1015,35 +1026,34 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         }
         
         // 如果是 Root，显示 DM 分配框
-        if (currentUserRole === 'root') {
+    if (currentUserRole === 'root') {
         document.getElementById('root-assign-dm').style.display = 'block';
         
-        // 【核心修复】：联合查询，找出所有已设置权限的账号和邮箱
-        // 我们从 admin_users 拿权限，从 profiles 拿 email
-        const { data: adminList } = await supabaseClient
-            .from('admin_users')
-            .select(`
-                id,
-                role_level,
-                profiles:id ( email )
-            `);
+        // 1. 查出所有账号及其邮箱 (Root 有权看全表)
+        const { data: allProfiles } = await supabaseClient.from('profiles').select('id, email');
+        // 2. 查出所有管理员权限
+        const { data: allAdmins } = await supabaseClient.from('admin_users').select('id, role_level');
 
         const assignList = document.getElementById('adm-assign-dm-list');
-        assignList.innerHTML = '<option value="">-- 设置为未分配 (默认归Root) --</option>';
+        assignList.innerHTML = '<option value="">-- 设置为未分配 (归Root管) --</option>';
         
-        if (adminList) {
-            adminList.forEach(admin => {
-                // 排除 Player 角色，只把 Root 和 DM 放进指派名单
+        if (allAdmins && allProfiles) {
+            allAdmins.forEach(admin => {
+                // 只要级别不是 player，就是潜在的负责 DM
                 if (admin.role_level !== 'player') {
-                    const email = admin.profiles ? admin.profiles.email : "未知用户";
-                    assignList.innerHTML += `<option value="${admin.id}">${email} [${admin.role_level.toUpperCase()}]</option>`;
+                    // 匹配邮箱
+                    const userProfile = allProfiles.find(p => p.id === admin.id);
+                    if (userProfile) {
+                        const email = userProfile.email;
+                        assignList.innerHTML += `<option value="${admin.id}">${email} [${admin.role_level.toUpperCase()}]</option>`;
+                    }
                 }
             });
         }
         
-        // 获取该玩家目前的归属情况
-        const { data: prof } = await supabaseClient.from('profiles').select('assigned_dm_id').eq('id', selectedUserId).single();
-        assignList.value = prof.assigned_dm_id || "";
+        // 回显当前玩家的归属
+        const { data: currentProf } = await supabaseClient.from('profiles').select('assigned_dm_id').eq('id', selectedUserId).single();
+        assignList.value = currentProf.assigned_dm_id || "";
     }
     }
 
