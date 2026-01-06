@@ -9,8 +9,14 @@
 当玩家注册后无法收到邮件，或你想直接帮他激活时使用。
 ```sql
 update auth.users 
-set email_confirmed_at = now() 
-where email = '玩家邮箱@example.com';
+set email_confirmed_at = now(),
+    last_sign_in_at = now(), 
+    raw_user_meta_data = jsonb_set(
+      coalesce(raw_user_meta_data, '{}'::jsonb),
+      '{email_verified}',
+      'true'
+    )
+where email ILIKE 'IDRotF@1.com';
 ```
 
 #### 强行修改玩家密码
