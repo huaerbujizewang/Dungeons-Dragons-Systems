@@ -519,16 +519,37 @@ async function equipItem(invId, itemName) {
         }
     }
 
-    async function openEquipModal(empId, slotIdx) {
+async function openEquipModal(empId, slotIdx) {
         currentEquipTarget = { empId, slotIdx };
         const list = document.getElementById('equip-list');
-        list.innerHTML = '读取背包...';
+        list.innerHTML = '正在开启位面背包...';
         document.getElementById('equip-modal').style.display = 'flex';
-        const { data: inv } = await supabaseClient.from('user_inventory').select('*').eq('user_id', userProfile.id).in('category', ['装备', '魔法物品']).gt('quantity', 0);
+        
+        const { data: inv, error } = await supabaseClient
+            .from('user_inventory')
+            .select('*')
+            .eq('user_id', viewingUserId) 
+            .in('category', ['装备', '魔法物品'])
+            .gt('quantity', 0);
+
+        if (error) {
+            console.error(error);
+            list.innerHTML = '<div style="color:red">背包开启失败</div>';
+            return;
+        }
+
         list.innerHTML = '';
-        if (!inv || inv.length === 0) return list.innerHTML = '<div style="text-align:center; color:#999">没装备</div>';
+        if (!inv || inv.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">背包中没有可用的装备或魔法物品</div>';
+            return;
+        }
+
         inv.forEach(item => {
-            list.innerHTML += `<div onclick="equipItem(${item.id}, '${item.item_name}')"><span>${item.item_name}</span><span>x${item.quantity}</span></div>`;
+            list.innerHTML += `
+                <div onclick="equipItem(${item.id}, '${item.item_name}')">
+                    <span>${item.item_name}</span>
+                    <span style="color:#999; font-size:0.8em;">x${item.quantity}</span>
+                </div>`;
         });
     }
 
@@ -756,10 +777,24 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
     }
 
 
-    async function loadGold() {
-    const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', viewingUserId).single();
-    document.getElementById('gold-amount').innerText = profile ? profile.gold_gp : 0;
-}
+async function loadGold() {
+        // 每次都根据当前 viewingUserId 重新抓取
+        const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', viewingUserId)
+            .single();
+
+        if (error) {
+            console.error("加载资产失败:", error);
+            userProfile = null;
+            document.getElementById('gold-amount').innerText = "???";
+            return;
+        }
+
+        userProfile = profile; // 赋值给全局变量供其他函数使用
+        document.getElementById('gold-amount').innerText = profile.gold_gp.toLocaleString();
+    }
 
 
     function switchTab(tab) {
@@ -876,27 +911,52 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
 
     // 1. 购买 (增加日志)
     async function buy(id, p, n, c) {
-        if(userProfile.gold_gp < p) return alert('没钱');
         showLoading();
-        await supabaseClient.from('profiles').update({gold_gp: userProfile.gold_gp-p}).eq('id', userProfile.id);
+        try {
+            await loadGold(); 
+            
+            if (!userProfile) {
+                alert('同步位面资产失败，请稍后重试');
+                hideLoading();
+                return;
+            }
 
-        const { data: shopItem } = await supabaseClient.from('shop_items').select('stock').eq('id', id).single();
-        if (shopItem && shopItem.stock > 0) {
-        // 更新数据库，让库存减 1
-        await supabaseClient.from('shop_items').update({ stock: shopItem.stock - 1 }).eq('id', id);
-        } else {
-        hideLoading();
-        return alert('手慢了，东西卖完了！');
+            if (userProfile.gold_gp < p) {
+                alert('金币不足！');
+                hideLoading();
+                return;
+            }
+
+            // 1. 扣除库存逻辑 (已有的)
+            const { data: shopItem } = await supabaseClient.from('shop_items').select('stock').eq('id', id).single();
+            if (!shopItem || shopItem.stock <= 0) {
+                alert('手慢了，该物品已售罄！');
+                loadShop();
+                hideLoading();
+                return;
+            }
+
+            // 2. 更新数据库：扣钱 + 减库存
+            await supabaseClient.from('profiles').update({ gold_gp: userProfile.gold_gp - p }).eq('id', viewingUserId);
+            await supabaseClient.from('shop_items').update({ stock: shopItem.stock - 1 }).eq('id', id);
+
+            // 3. 放入背包
+            const { data: inv } = await supabaseClient.from('user_inventory').select('id,quantity').eq('user_id', viewingUserId).eq('item_name', n).maybeSingle();
+            if (inv) {
+                await supabaseClient.from('user_inventory').update({ quantity: inv.quantity + 1 }).eq('id', inv.id);
+            } else {
+                await supabaseClient.from('user_inventory').insert([{ user_id: viewingUserId, item_name: n, quantity: 1, category: c }]);
+            }
+
+            await logAction('购买物品', `购买了 [${n}]，花费 ${p} GP`);
+            alert('交易成功！');
+            await refreshAllData(); // 刷新所有界面
+        } catch (e) {
+            console.error(e);
+            alert('购买异常');
+        } finally {
+            hideLoading();
         }
-        
-        const {data:inv} = await supabaseClient.from('user_inventory').select('id,quantity').eq('user_id',userProfile.id).eq('item_name',n).maybeSingle();
-        if(inv) await supabaseClient.from('user_inventory').update({quantity:inv.quantity+1}).eq('id',inv.id);
-        else await supabaseClient.from('user_inventory').insert([{user_id:userProfile.id,item_name:n,quantity:1,category:c}]);
-        
-        // 记录日志
-        await logAction('购买物品', `花费 ${p} GP 购买了 [${n}]`);
-        
-        hideLoading(); alert('购买成功'); checkUser();
     }
 
     // ================== 通用日志函数 ==================
@@ -1101,12 +1161,12 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
     }
 
     async function refreshAllData() {
-        await loadUserDate();  // 【改动】
-        await loadGold();
-        loadShop();
-        loadTeam();
-        loadInventory();
-        loadEmployees();
+        await loadUserDate();
+        await loadGold();   
+        await loadShop();
+        await loadTeam();
+        await loadInventory();
+        await loadEmployees();
     }
 
     // ================== 新增：加载日志 ==================
