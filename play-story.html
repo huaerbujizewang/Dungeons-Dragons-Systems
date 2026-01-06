@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>剧场播放中...</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* ... 之前的 CSS 保持不变 (头像左侧，对话框样式等) ... */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: "PingFang SC", sans-serif; background: #000; }
+        #stage { width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: flex-end; justify-content: center; position: relative; }
+        #stage::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); pointer-events: none; }
+        #avatar-container { position: absolute; bottom: 50px; left: 5%; z-index: 10; transition: all 0.3s ease; }
+        .avatar { width: 220px; height: 220px; border-radius: 50%; border: 4px solid #fff; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #dialogue-box { position: relative; z-index: 20; width: 90%; max-width: 900px; background: rgba(255,255,255,0.92); padding: 25px 30px 25px 150px; margin-bottom: 40px; border-radius: 12px; cursor: pointer; min-height: 100px; box-sizing: border-box; }
+        #speaker-name { position: absolute; top: -15px; left: 150px; background: #2c3e50; color: #fff; padding: 4px 20px; border-radius: 4px; font-weight: bold; font-size: 0.9em; }
+        #text-content { line-height: 1.8; font-size: 1.15em; color: #2c3e50; }
+        .controls { position: absolute; top: 20px; right: 20px; z-index: 100; }
+        .btn { background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="stage" onclick="nextLine()">
+    <div class="controls"><button class="btn" onclick="location.href='lore.html'">退出</button></div>
+    <div id="avatar-container"><img id="main-avatar" src="" class="avatar"></div>
+    <div id="dialogue-box"><div id="speaker-name">...</div><div id="text-content">正在载入记忆碎片...</div></div>
+</div>
+
+<script>
+    let currentLine = 0;
+
+    async function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const storyId = urlParams.get('id');
+
+        if (!storyId) { window.location.href = 'lore.html'; return; }
+
+        // --- 动态加载故事内容脚本 ---
+        const script = document.createElement('script');
+        script.src = `stories/content/${storyId}.js`;
+        script.onload = () => {
+            // 当脚本加载完，storyContent 变量就可用了
+            document.getElementById('stage').style.backgroundImage = `url('${storyContent.bg}')`;
+            renderLine();
+        };
+        script.onerror = () => alert("无法加载故事内容");
+        document.body.appendChild(script);
+    }
+
+    function renderLine() {
+        if (currentLine >= storyContent.lines.length) {
+            alert("故事结束。");
+            window.location.href = 'lore.html';
+            return;
+        }
+
+        const data = storyContent.lines[currentLine];
+        document.getElementById('speaker-name').innerText = data.speaker;
+        document.getElementById('text-content').innerText = data.text;
+        document.getElementById('main-avatar').src = storyContent.assets[data.emotion];
+    }
+
+    function nextLine() {
+        currentLine++;
+        renderLine();
+    }
+
+    init();
+</script>
+</body>
+</html>
