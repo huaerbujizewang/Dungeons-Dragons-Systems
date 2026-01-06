@@ -128,10 +128,11 @@
 <!-- 主界面 -->
 <div id="main-section" class="container" style="display:none;">
     <div class="nav">
-        <button class="tab-btn active" onclick="switchTab('shop')">集市</button>
+        <button class="tab-btn active" onclick="switchTab('shop')">商城</button>
     <button class="tab-btn" onclick="switchTab('team')">队伍</button>
     <button class="tab-btn" onclick="switchTab('inventory')">背包</button>
     <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
+    <button class="tab-btn" onclick="switchTab('others')">其他内容</button>
     <button id="security-tab-btn" class="tab-btn" onclick="switchTab('security')" style="display:none; color:#e74c3c; border:1px solid #ff000033;">🛡️ 安全与权限</button>
     <span id="admin-link" style="display:none; color:#3498db; cursor:pointer; font-weight:bold; margin-left: 10px;" onclick="toggleAdmin()">⚙️ DM 控制台</span>
         
@@ -162,6 +163,36 @@
         <div id="emp-container"></div>
     </div>
 
+    <!-- 其他内容板块 -->
+    <div id="others-section" class="section">
+        <div class="section-title">🌍 世界观与记录</div>
+        <div class="shop-grid"> <!-- 复用集市网格样式 -->
+        
+        <!-- 卡片 1：时间线 -->
+        <div class="card emp-card-content" onclick="window.location.href='timeline.html'" style="cursor:pointer;">
+            <div style="font-size: 2.5em; margin-bottom:10px;">⏳</div>
+            <div style="font-weight:bold; font-size:1.1em;">编年史 / 时间线</div>
+            <p style="font-size:0.8em; color:#666;">记录费伦大陆及团队大事件</p>
+        </div>
+
+        <!-- 卡片 2：国家与组织 -->
+        <div class="card emp-card-content" onclick="window.location.href='world.html'" style="cursor:pointer;">
+            <div style="font-size: 2.5em; margin-bottom:10px;">🏰</div>
+            <div style="font-weight:bold; font-size:1.1em;">地理 / 组织</div>
+            <p style="font-size:0.8em; color:#666;">国家背景、势力范围与关系图</p>
+        </div>
+
+        <!-- 卡片 3：传记与间章 -->
+        <div class="card emp-card-content" onclick="window.location.href='lore.html'" style="cursor:pointer;">
+            <div style="font-size: 2.5em; margin-bottom:10px;">📜</div>
+            <div style="font-weight:bold; font-size:1.1em;">人物志 / 间章</div>
+            <p style="font-size:0.8em; color:#666;">NPC 对话、背景故事与交流记录</p>
+        </div>
+
+        <!-- 可以根据需要继续添加卡片 -->
+        </div>
+    </div>
+
      <!-- 新增：安全与权限 Section (Root 专用) -->
     <div id="security-section" class="section">
         <div style="display:grid; grid-template-columns: 350px 1fr; gap:20px;">
@@ -189,6 +220,8 @@
             </div>
         </div>
     </div>
+
+
 </div>
 
 <!-- 弹窗：装备选择 -->
