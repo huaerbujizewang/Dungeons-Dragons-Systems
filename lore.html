@@ -2,33 +2,35 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>D&D 系统 - 编年史</title>
+    <title>人物志</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: "PingFang SC", sans-serif; background: #fff; padding: 40px; color: #333; }
-        .back-nav { margin-bottom: 30px; }
-        .back-btn { padding: 8px 15px; border: 1px solid #333; background: none; cursor: pointer; text-decoration: none; color: #333; border-radius: 4px; }
-        .content-box { max-width: 800px; margin: 0 auto; line-height: 1.8; }
-        .wip-tag { text-align: center; margin-top: 100px; color: #999; }
+        .back-btn { padding: 8px 15px; border: 1px solid #333; text-decoration: none; color: #333; border-radius: 4px; }
+        .story-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
+        .story-card { border: 1px solid #eee; padding: 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; position: relative; }
+        .story-card:hover { border-color: #333; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .time-tag { font-size: 0.7em; color: #999; margin-bottom: 5px; }
+        .status-tag { position: absolute; top: 10px; right: 10px; font-size: 0.7em; background: #f1c40f; padding: 2px 5px; border-radius: 3px; }
     </style>
 </head>
 <body>
+    <a href="index.html" class="back-btn">⬅ 返回主界面</a>
+    <h1>📜 人物志 / 互动间章</h1>
+    <p style="color: #666;">点击卡片查看那些发生过的故事。</p>
 
-    <div class="back-nav">
-        <a href="index.html" class="back-btn">⬅ 返回主界面</a>
-    </div>
-
-    <div id="page-content" class="content-box" style="display:none;">
-        <h1>📜 人物志 / 间章</h1>
-        <hr>
-        <div class="wip-tag">
-            <div style="font-size: 3em;">🏗️</div>
-            <h2>正在同步多元宇宙数据...</h2>
-            <p>该模块尚在施工中，DM 正在拼命码字。</p>
+    <div class="story-grid">
+        <!-- 故事卡片：克莱门汀 -->
+        <div class="story-card" onclick="window.location.href='play-story.html?id=clem_01'">
+            <div class="time-tag">FR1494 - 2月</div>
+            <div class="status-tag">已解锁</div>
+            <div style="font-weight:bold; font-size:1.1em;">承诺的重量</div>
+            <p style="font-size:0.85em; color:#666;">关于克莱门汀、权力与那一栋尚未交付的宅邸。</p>
+            <div style="font-size:0.75em; color: #3498db;">角色：克莱门汀·瓦勒留斯</div>
         </div>
     </div>
 
-    <script>
+<script>
         // 初始化同样的 Supabase
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
@@ -50,5 +52,4 @@
         checkAccess();
     </script>
 </body>
-
 </html>
