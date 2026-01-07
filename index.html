@@ -1534,39 +1534,43 @@ async function loadLoginLogs() {
                 </div>`;
         }).join('');
     }
-    // --- 新增：加载所有账号 (Root专用) ---
+    // --- 加载所有账号 (查 profiles 表) ---
     async function loadAllAccounts() {
         const container = document.getElementById('account-list-container');
         container.innerHTML = '正在拉取全服名单...';
 
-        // 1. 获取所有用户 (从我们刚才建的 View 查)
-        const { data: users, error } = await supabaseClient.from('admin_users_view').select('*').order('created_at', {ascending:false});
+        // profiles 表里有 id, email, assigned_dm_id 
+        const { data: users, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .order('email'); 
         
         if (error) {
             container.innerHTML = `<span style="color:red">加载失败: ${error.message}</span>`;
             return;
         }
 
-        // 2. 获取当前的权限表
+        // 获取权限表
         const { data: roles } = await supabaseClient.from('admin_users').select('*');
         
-        // 映射辅助函数
         const getRole = (id) => {
             const r = roles.find(x => x.id === id);
             return r ? r.role_level : 'player';
         };
 
-        // 3. 渲染列表
+        // 渲染列表
         container.innerHTML = users.map(u => {
             const role = getRole(u.id);
             const roleColor = role === 'root' ? 'red' : (role === 'dm' ? 'blue' : 'green');
             const isMe = u.id === myId;
+            // 因为 profiles 表可能没有 created_at，我们暂时不显示注册时间，或者显示 "已激活"
+            const statusText = u.assigned_dm_id ? "已分配DM" : "未分配";
 
             return `
                 <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="overflow:hidden; text-overflow:ellipsis;">
                         <div style="font-weight:bold;">${u.email}</div>
-                        <div style="font-size:0.8em; color:#999;">${new Date(u.created_at).toLocaleDateString()} 注册</div>
+                        <div style="font-size:0.8em; color:#999;">${statusText}</div>
                     </div>
                     <div style="text-align:right;">
                         <span style="font-size:0.8em; color:${roleColor}; font-weight:bold; margin-right:5px;">${role.toUpperCase()}</span>
@@ -1581,7 +1585,7 @@ async function loadLoginLogs() {
         }).join('');
     }
 
-    // --- 新增：修改用户权限 ---
+    // --- 修改用户权限 ---
     async function changeUserRole(targetId, newRole) {
         if (!newRole) return;
         if (!confirm(`确定要将该用户的权限修改为 [${newRole.toUpperCase()}] 吗？`)) return;
