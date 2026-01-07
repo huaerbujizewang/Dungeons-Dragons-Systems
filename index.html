@@ -781,32 +781,61 @@ async function openEquipModal(empId, slotIdx) {
 
      // checkUser：获取管理员等级
     async function checkUser() {
+        // 1. 【必须最先执行】从 Supabase 获取当前登录用户
         const { data: { user } } = await supabaseClient.auth.getUser();
+
+        // 2. 只有获取到了 user，才能进行后续操作
         if (user) {
+            // 初始化全局变量
             myId = user.id;
             currentUserEmail = user.email;
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (user) {
-            myId = user.id;
-            currentUserEmail = user.email;
-            const { data: adminData } = await supabaseClient.from('admin_users').select('role_level').eq('id', user.id).maybeSingle();
+            
+            // 3. 检查管理员权限
+            const { data: adminData } = await supabaseClient
+                .from('admin_users')
+                .select('role_level')
+                .eq('id', user.id)
+                .maybeSingle();
 
             if (adminData) {
                 currentUserRole = adminData.role_level;
-                document.getElementById('admin-link').style.display = 'inline';
-                document.getElementById('role-badge').innerText = currentUserRole.toUpperCase();
                 
-                // 【Root 专享】：显示导航栏的安全标签
+                // 显示 DM 入口
+                document.getElementById('admin-link').style.display = 'inline';
+                
+                // 显示角色徽章
+                const badge = document.getElementById('role-badge');
+                if (badge) badge.innerText = currentUserRole.toUpperCase();
+                
+                // 【Root 专属】显示安全标签页 & 开启监听
                 if (currentUserRole === 'root') {
-                    document.getElementById('security-tab-btn').style.display = 'inline-block';
-                    setupPresenceListener();
+                    const secBtn = document.getElementById('security-tab-btn');
+                    if (secBtn) secBtn.style.display = 'inline-block';
+                    
+                    // 确保 setupPresenceListener 函数存在再调用
+                    if (typeof setupPresenceListener === 'function') {
+                        setupPresenceListener();
+                    }
                 }
+                
                 loadAdminData();
+            } else {
+                currentUserRole = 'player';
             }
-            joinPresenceChannel();
+            
+            // 4. 初始化视图 ID (如果没有选人，默认看自己)
             if (!viewingUserId) viewingUserId = user.id;
+
+            // 5. 切换界面显示
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-section').style.display = 'block';
+            
+            // 6. 加入在线状态频道 (让自己上线)
+            if (typeof joinPresenceChannel === 'function') {
+                joinPresenceChannel();
+            }
+
+            // 7. 加载所有业务数据
             refreshAllData();
         }
     }
@@ -1802,7 +1831,7 @@ async function loadLoginLogs() {
     }
 
 
-    }
+    
     checkUser();
 </script>
 </body>
