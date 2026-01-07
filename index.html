@@ -1305,10 +1305,10 @@ async function loadGold() {
 
     // 2. ：DM 删除玩家物品逻辑
     async function admRemoveInv(itemId, itemName, currentQty) {
-        // 弹窗询问删除数量
+        // 1. 获取删除数量
         let removeQty = prompt(`要把 [${itemName}] 删除多少个？\n(当前拥有: ${currentQty})\n输入 'all' 或数字`, "1");
         
-        if (removeQty === null) return; // 取消
+        if (removeQty === null) return;
         if (removeQty === 'all') removeQty = currentQty;
         else removeQty = parseInt(removeQty);
 
@@ -1318,23 +1318,41 @@ async function loadGold() {
         showLoading();
 
         try {
-            if (removeQty >= currentQty) {
-                // 数量删光了，直接 Delete 这一行
-                await supabaseClient.from('user_inventory').delete().eq('id', itemId);
-                await logAction('DM操作', `移除了玩家(ID:${selectedUserId}) 的所有 [${itemName}]`);
+            // 2. 执行删除逻辑
+            let error;
+            
+            // 【核心修复】：只要删除数量等于当前库存，直接执行 DELETE
+            // 不再去算减法，避免浮点数或逻辑漏洞
+            if (removeQty === currentQty) {
+                console.log(`执行彻底删除: ID ${itemId}`);
+                const res = await supabaseClient
+                    .from('user_inventory')
+                    .delete()
+                    .eq('id', itemId);
+                error = res.error;
             } else {
-                // 数量没删光，Update 数量
-                await supabaseClient.from('user_inventory').update({ quantity: currentQty - removeQty }).eq('id', itemId);
-                await logAction('DM操作', `扣除了玩家(ID:${selectedUserId}) 的 [${itemName}] x${removeQty}`);
+                console.log(`执行部分扣除: ID ${itemId}, 减去 ${removeQty}`);
+                const res = await supabaseClient
+                    .from('user_inventory')
+                    .update({ quantity: currentQty - removeQty })
+                    .eq('id', itemId);
+                error = res.error;
             }
+
+            if (error) throw error;
+
+            await logAction('DM操作', `移除了玩家(ID:${selectedUserId}) 的 [${itemName}] x${removeQty}`);
 
             hideLoading();
             alert('操作成功');
-            loadUserDetail(); // 刷新列表
+            
+            // 3. 刷新列表 (稍微延时一下，防止数据库同步慢)
+            setTimeout(() => loadUserDetail(), 300);
+            
         } catch (e) {
-            console.error(e);
+            console.error("删除失败:", e);
             hideLoading();
-            alert('删除失败，请检查网络或权限');
+            alert('删除失败，请检查控制台 (F12)');
         }
     }
 
