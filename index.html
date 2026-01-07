@@ -145,6 +145,10 @@
 
     <!-- 集市 -->
     <div id="shop-section" class="section active">
+        <!-- 搜索条 -->
+        <div style="margin-bottom:20px; display:flex; gap:10px;">
+            <input type="text" id="shop-search-input" placeholder="🔍 搜索集市商品..." oninput="loadShop()" style="width:100%; padding:10px; font-size:1em; border:1px solid #ccc; border-radius:6px;">
+        </div>
         <div id="shop-grid" class="shop-grid"></div>
     </div>
 
@@ -268,6 +272,14 @@
             <!-- 集市进货 -->
             <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
                 <h3 style="margin-top:0">🏬 物资上架</h3>
+            <!-- 查库区域 -->
+                <div style="background:#f0f8ff; padding:10px; border-radius:4px; margin-bottom:15px; border:1px dashed #3498db;">
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" id="compendium-search" placeholder="🔍 搜索图鉴库..." style="flex:1; padding:6px;">
+                        <button onclick="searchCompendium()" style="padding:6px 12px;">查找</button>
+                    </div>
+                    <div id="compendium-results" style="max-height:100px; overflow-y:auto; margin-top:5px; background:#fff; border:1px solid #eee;"></div>
+                </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                     <input type="text" id="adm-shop-name" placeholder="商品名称" style="grid-column: 1/3;">
                     <select id="adm-shop-rarity"><option>普通</option><option>非普通</option><option>珍稀</option><option>极珍稀</option><option>传说</option><option>神器</option></select>
@@ -283,7 +295,7 @@
 
         <!-- 右侧列 -->
         <div style="display:flex; flex-direction:column; gap:20px;">
-            <!-- 玩家资产控制 (上帝之手) -->
+            <!-- 玩家资产控制 -->
             <div class="admin-box" style="border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
                 <h3 style="margin-top:0">👤 玩家资产操控 (视角切换)</h3>
                 <select id="adm-user-list" onchange="loadUserDetail()" style="width:100%; padding:10px; margin-bottom:10px; border:2px solid #333;"></select>
@@ -890,62 +902,116 @@ async function loadGold() {
             loadAllAccounts(); // 自动加载账号
         }
     }
-// --- 集市加载函数 ---
+// --- 集市加载 ---
     async function loadShop() {
         const grid = document.getElementById('shop-grid');
-        grid.innerHTML = '正在连接集市...';
+        const searchInput = document.getElementById('shop-search-input');
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        
+        grid.innerHTML = '正在连接位面集市...';
 
-        // --- 核心修复：隔离查询 ---
-        // 逻辑：查询 (user_id 为空) 或者 (user_id 等于当前正在查看的视角ID)
+        // 1. 数据库查询 (隔离逻辑)
+        // 查询条件：(user_id 为空) OR (user_id 等于当前视角)
         const { data, error } = await supabaseClient
             .from('shop_items')
             .select('*')
             .or(`user_id.is.null,user_id.eq.${viewingUserId}`);
 
         if (error) {
-            console.error(error);
-            grid.innerHTML = '集市加载失败';
+            console.error('集市加载失败:', error);
+            grid.innerHTML = '<div style="color:red; padding:20px;">集市连接中断</div>';
             return;
         }
 
-        const canManage = currentUserRole === 'root' || currentUserRole === 'dm';
-        const rarityWeight = { '神器': 6, '传说': 5, '极珍稀': 4, '珍稀': 3, '非普通': 2, '普通': 1 };
+        // 2. 前端过滤 (搜索框)
+        const filteredData = data.filter(i => {
+            if (!searchTerm) return true;
+            return (i.name && i.name.toLowerCase().includes(searchTerm)) || 
+                   (i.category && i.category.toLowerCase().includes(searchTerm));
+        });
 
-        // --- 权重排序 ---
-        data.sort((a, b) => {
+        if (filteredData.length === 0) {
+            grid.innerHTML = '<div style="color:#999; padding:20px; grid-column:1/-1; text-align:center;">暂无符合条件的商品</div>';
+            return;
+        }
+
+        // 3. 权重排序 (稀有度 > 价格)
+        const rarityWeight = { '神器': 6, '传说': 5, '极珍稀': 4, '珍稀': 3, '非普通': 2, '普通': 1 };
+        
+        filteredData.sort((a, b) => {
             const weightA = rarityWeight[a.rarity] || 0;
             const weightB = rarityWeight[b.rarity] || 0;
+            // 先比稀有度 (大到小)
             if (weightA !== weightB) return weightB - weightA;
+            // 再比价格 (高到低)
             return b.price - a.price;
         });
 
-        grid.innerHTML = '';
-        if (data.length === 0) {
-            grid.innerHTML = '<div style="color:#999; padding:20px; grid-column:1/-1; text-align:center;">此位面集市空空如也...</div>';
-            return;
-        }
-
-        grid.innerHTML = data.map(i => {
+        // 4. 渲染卡片
+        const canManage = currentUserRole === 'root' || currentUserRole === 'dm';
+        
+        grid.innerHTML = filteredData.map(i => {
             const color = rarityColors[i.rarity] || '#ccc';
             const isOut = i.stock <= 0;
-            const deleteBtn = canManage ? `<button onclick="deleteShopItem(${i.id}, '${i.name}')" style="background:#e74c3c; color:white; border:none; margin-top:8px; font-size:0.8em; padding:5px; width:100%; border-radius:4px;">🗑️ 下架商品</button>` : '';
+            
+            // 下架按钮 (仅管理员可见)
+            const deleteBtn = canManage ? 
+                `<button onclick="deleteShopItem(${i.id}, '${i.name}')" 
+                    style="background:#e74c3c; color:white; border:none; margin-top:8px; font-size:0.8em; padding:5px; width:100%; border-radius:4px; opacity:0.8;">
+                    🗑️ 下架商品
+                </button>` : '';
+
+            // 特供标识
+            const specialTag = i.user_id ? 
+                `<div style="font-size:0.7em; color:#3498db; margin-bottom:4px; font-weight:bold;">👤 特供物资</div>` : 
+                `<div style="font-size:0.7em; color:#999; margin-bottom:4px;">🌐 公共物资</div>`;
+
+            // 卡片样式 (售罄变灰)
+            const cardStyle = `position:relative; padding-top:25px; ${isOut ? 'opacity:0.6; background:#f9f9f9;' : ''}`;
 
             return `
-                <div class="card" style="position:relative; padding-top:25px; ${isOut ? 'opacity:0.6; background:#f9f9f9;' : ''}">
-                    <span class="rarity-tag" style="background:${color}; color:white; font-size:0.7em; padding:2px 6px; border-radius:2px; position:absolute; top:8px; right:8px; font-weight:bold;">
+                <div class="card" style="${cardStyle}">
+                    <!-- 右上角稀有度标签 -->
+                    <span class="rarity-tag" style="
+                        background:${color}; 
+                        color:white; 
+                        font-size:0.7em; 
+                        padding:2px 8px; 
+                        border-radius:2px; 
+                        position:absolute; 
+                        top:8px; 
+                        right:8px; 
+                        font-weight:bold; 
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         ${i.rarity || '普通'}
                     </span>
-                    <div style="font-size:0.7em; color:#3498db; margin-bottom:2px;">${i.user_id ? '👤 特供' : '🌐 公共'}</div>
-                    <b>${i.name}</b>
-                    <div style="font-size:0.75em; color:#777; margin:5px 0; line-height:1.4;">${i.description || ''}</div>
-                    <div style="font-size:0.8em; color:#666; margin:5px 0;">分类: ${i.category || '杂项'}</div>
-                    <div style="color:#d35400; font-weight:bold; font-size:1.1em; margin:8px 0;">💰 ${i.price} GP</div>
-                    <div style="font-size:0.8em; color:${isOut ? 'red' : '#999'}; margin-bottom:8px;">
-                        ${isOut ? '❌ 已售罄' : `库存: ${i.stock}`}
+
+                    ${specialTag}
+                    
+                    <b style="font-size:1.1em;">${i.name}</b>
+                    
+                    <div style="font-size:0.8em; color:#666; margin:5px 0;">
+                        [${i.category || '杂项'}]
                     </div>
-                    <button class="btn-buy" onclick="buy(${i.id}, ${i.price}, '${i.name}', '${i.category}')" ${isOut ? 'disabled' : ''}>
+                    
+                    <div style="font-size:0.75em; color:#777; margin:5px 0; line-height:1.4; min-height:2.8em;">
+                        ${i.description || '暂无描述'}
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                        <span style="color:#d35400; font-weight:bold; font-size:1.1em;">💰 ${i.price}</span>
+                        <span style="font-size:0.8em; color:${isOut ? 'red' : '#27ae60'};">
+                            ${isOut ? '❌ 售罄' : `库存: ${i.stock}`}
+                        </span>
+                    </div>
+                    
+                    <button class="btn-buy" 
+                        onclick="buy(${i.id}, ${i.price}, '${i.name}', '${i.category}')" 
+                        ${isOut ? 'disabled' : ''}
+                        style="margin-top:10px;">
                         ${isOut ? '缺货' : '确认购买'}
                     </button>
+                    
                     ${deleteBtn}
                 </div>`;
         }).join('');
@@ -1537,6 +1603,59 @@ async function loadLoginLogs() {
             alert('修改失败: ' + e.message);
         } finally {
             hideLoading();
+        }
+    }
+    // --- 图鉴搜索功能 ---
+    async function searchCompendium() {
+        const query = document.getElementById('compendium-search').value;
+        const resultBox = document.getElementById('compendium-results');
+        
+        if (!query) return;
+        resultBox.innerHTML = '查找中...';
+
+        // 使用 ilike 进行模糊搜索
+        const { data } = await supabaseClient
+            .from('compendium_items')
+            .select('*')
+            .ilike('name', `%${query}%`)
+            .limit(10);
+
+        if (!data || data.length === 0) {
+            resultBox.innerHTML = '<div style="padding:5px; color:#999">未找到相关物品</div>';
+            return;
+        }
+
+        resultBox.innerHTML = data.map(item => `
+            <div onclick='fillShopForm(${JSON.stringify(item)})' 
+                 style="padding:5px; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9em; display:flex; justify-content:space-between;">
+                <span>${item.name}</span>
+                <span style="color:#666">${item.price} GP</span>
+            </div>
+        `).join('');
+    }
+
+    // 选中后自动填表
+    function fillShopForm(item) {
+        document.getElementById('adm-shop-name').value = item.name;
+        document.getElementById('adm-shop-price').value = item.price;
+        document.getElementById('adm-shop-desc').value = item.description || '';
+        
+        // 尝试自动匹配下拉框
+        setSelect('adm-shop-rarity', item.rarity);
+        setSelect('adm-shop-cat', item.category);
+        
+        document.getElementById('compendium-results').innerHTML = ''; // 清空结果
+    }
+
+    // 辅助函数：设置下拉框的值
+    function setSelect(id, value) {
+        const select = document.getElementById(id);
+        if(!value) return;
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === value) {
+                select.selectedIndex = i;
+                break;
+            }
         }
     }
 
