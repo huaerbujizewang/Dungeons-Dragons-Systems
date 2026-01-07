@@ -401,13 +401,12 @@
         container.className = 'team-grid';
     }
 
-// 替换原有的 loadEmployees 函数
+//员工系统
 async function loadEmployees() {
         const container = document.getElementById('emp-container');
-        container.innerHTML = '加载数据...';
+        container.innerHTML = '正在读取位面名单...';
         
-        // 【关键改动】：只查归属于 viewingUserId 的雇员
-        // 如果是 DM 选了 master，这里就会查到 master 的雇员
+        // 1. 拉取当前视角下的所有雇员
         const { data, error } = await supabaseClient
             .from('employees')
             .select('*')
@@ -415,45 +414,73 @@ async function loadEmployees() {
             .order('id');
         
         if (error) {
-            container.innerHTML = '权限不足或加载失败';
+            container.innerHTML = '<div style="color:red; padding:20px;">因果律连接失败，无法加载名单。</div>';
             return;
         }
 
-        // --- 账单计算 (只算当前视角的) ---
+        // 2. 状态与颜色映射表
+        const statusConfig = {
+            '在职': { color: '#2ecc71', needPay: true },
+            '休假': { color: '#3498db', needPay: false },
+            '离职': { color: '#95a5a6', needPay: false },
+            '特殊状态': { color: '#9b59b6', needPay: false },
+            '申请解雇': { color: '#e67e22', needPay: false }
+        };
+
+        // 3. 计算账单 (核心修复：只计算“在职”人员的薪水)
         const totalSalary = data
             .filter(e => e.status === '在职')
             .reduce((sum, e) => sum + e.salary, 0);
 
-        // 分组
+        // 4. 定义卡片渲染逻辑 (为了复用)
+        const renderGrid = (list) => {
+            if (list.length === 0) return '<div style="color:#999; padding:20px; grid-column:1/-1;">(此处暂无因果记录)</div>';
+            return list.map(e => {
+                const config = statusConfig[e.status] || { color: '#666', needPay: false };
+                const isCore = e.role === '核心队友';
+                const canFire = !isCore && e.status === '在职'; // 只有非核心且在职的能点解雇
+
+                return `
+                <div class="card emp-card-content" style="border-top: 4px solid ${config.color};">
+                    <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" 
+                         style="width:70px; height:70px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:1px solid #eee;">
+                    <div style="font-weight:bold; font-size:1.1em;">${e.name}</div>
+                    
+                    <div style="font-size:0.8em; color:#666; margin:5px 0;">
+                        ${e.role || '雇员'}${isCore ? '' : ' | ' + e.salary + ' GP'}
+                    </div>
+
+                    <!-- 状态标签 -->
+                    <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold;">
+                        ${e.status}
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        };
+
+        // 5. 按身份分组
         const coreMembers = data.filter(e => e.role === '核心队友');
         const hirelings = data.filter(e => e.role !== '核心队友');
 
-        const renderEmpGrid = (list) => {
-            if (list.length === 0) return '<div style="color:#999; padding:10px;">(暂无人员)</div>';
-            return list.map(e => `
-                <div class="card emp-card-content">
-                    <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" onclick="alert('头像ID: ${e.id}')">
-                    <div style="font-weight:bold">${e.name}</div>
-                    <div style="font-size:0.8em; color:#666; margin:4px 0;">${e.role||'雇员'}${e.role === '核心队友' ? '' : ' | ' + e.salary + ' GP'}</div>
-                    <div style="font-size:0.8em; color:${e.status==='在职'?'#2ecc71':'#e74c3c'}">${e.status}</div>
-                    ${e.role !== '核心队友' && e.status === '在职' ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
-                </div>
-            `).join('');
-        };
-
-        // 渲染界面
-        // 注意：这里的账单显示的是“当前视角”的账单
+        // 6. 渲染最终界面
         container.innerHTML = `
-            <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:20px; text-align:center; border-radius:8px;">
-                <h3 style="margin:0; color:#d35400;">📉 本月总支出: ${totalSalary} GP</h3>
-                <div style="font-size:0.8em; color:#666;">(将在每月1日从 ${viewingUserId === myId ? '您的' : '该玩家的'} 账户中扣除)</div>
+            <!-- 账单统计区 -->
+            <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:30px; text-align:center; border-radius:8px;">
+                <h3 style="margin:0; color:#d35400;">📉 当前本月总支出: ${totalSalary} GP</h3>
+                <div style="font-size:0.85em; color:#666; margin-top:5px;">
+                    (将在每月1日从 ${viewingUserId === myId ? '您' : '该玩家'} 的账户中扣除。注：休假/离职不计入账单)
+                </div>
             </div>
 
             <div class="section-title">⚔️ 核心队友</div>
-            <div class="shop-grid">${renderEmpGrid(coreMembers)}</div>
+            <div class="shop-grid" style="margin-bottom:40px;">${renderGrid(coreMembers)}</div>
             
             <div class="section-title">🛡️ 雇员 / 随从</div>
-            <div class="shop-grid">${renderEmpGrid(hirelings)}</div>
+            <div class="shop-grid">${renderGrid(hirelings)}</div>
         `;
     }
 
