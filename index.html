@@ -144,10 +144,10 @@
     </div>
 
     <!-- 集市 -->
-    <div id="shop-section" class="section active">
-        <!-- 搜索条 -->
-        <div style="margin-bottom:20px; display:flex; gap:10px;">
-            <input type="text" id="shop-search-input" placeholder="🔍 搜索集市商品..." oninput="loadShop()" style="width:100%; padding:10px; font-size:1em; border:1px solid #ccc; border-radius:6px;">
+     <div id="shop-section" class="section active">
+        <div style="margin-bottom:20px; display:flex; gap:10px; align-items:center; background:#f8f9fa; padding:10px; border-radius:8px;">
+            <button id="shop-mode-btn" onclick="toggleShopMode()" style="padding:10px 20px; background:#333; color:#fff; border:none; border-radius:4px; white-space:nowrap;">🔄 切换：我要出售</button>
+            <input type="text" id="shop-search-input" placeholder="🔍 搜索..." oninput="refreshShopView()" style="width:100%; padding:10px; font-size:1em; border:1px solid #ccc; border-radius:6px;">
         </div>
         <div id="shop-grid" class="shop-grid"></div>
     </div>
@@ -346,6 +346,7 @@
     let presenceChannel = null;
     let currentUserRole = 'player'; //权限划分
     let currentUserEmail = ''; 
+    let isSellMode = false;
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1865,6 +1866,182 @@ async function loadLoginLogs() {
             </div>
             `;
         }).join('');
+    }
+
+    // --- 根据日期和物品名生成固定的随机折扣 ---
+    function getDailySellRatio(itemName) {
+        // 1. 获取游戏内日期字符串 (如 "1494-2-12")
+        const dateStr = `${currentDate.year}-${currentDate.month}-${currentDate.day}`;
+        
+        // 2. 组合种子：日期 + 玩家ID + 物品名
+        // 这样每个人、每天、每件物品的折扣都是独立的，且全天固定
+        const seedString = `${dateStr}-${viewingUserId}-${itemName}`;
+
+        // 3. 简单的哈希算法 (将字符串转为数字)
+        let hash = 0;
+        for (let i = 0; i < seedString.length; i++) {
+            const char = seedString.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; 
+        }
+
+        // 4. 归一化到 0 ~ 1 之间
+        const random = Math.abs(hash) / 2147483647;
+
+        // 5. 映射到 0.6 ~ 0.9 之间
+        return 0.6 + (random * 0.3);
+    }
+
+    function toggleShopMode() {
+        isSellMode = !isSellMode;
+        const btn = document.getElementById('shop-mode-btn');
+        const input = document.getElementById('shop-search-input');
+        
+        if (isSellMode) {
+            btn.innerText = "🔙 返回：我要购买";
+            btn.style.background = "#e67e22"; // 橙色表示出售状态
+            input.placeholder = "🔍 搜索背包里的物品...";
+        } else {
+            btn.innerText = "🔄 切换：我要出售";
+            btn.style.background = "#333";
+            input.placeholder = "🔍 搜索集市商品...";
+        }
+        refreshShopView(); // 刷新显示
+    }
+
+    // 统一的刷新入口
+    function refreshShopView() {
+        if (isSellMode) {
+            loadSellShop();
+        } else {
+            loadShop();
+        }
+    }
+
+    // --- 加载出售界面 ---
+    async function loadSellShop() {
+        const grid = document.getElementById('shop-grid');
+        const searchTerm = document.getElementById('shop-search-input').value.toLowerCase();
+        grid.innerHTML = '正在估价中...';
+
+        // 1. 获取玩家背包
+        const { data: inventory } = await supabaseClient
+            .from('user_inventory')
+            .select('*')
+            .eq('user_id', viewingUserId);
+
+        if (!inventory || inventory.length === 0) {
+            grid.innerHTML = '<div style="color:#999; padding:20px;">背包里空空如也，没东西可卖。</div>';
+            return;
+        }
+
+        // 2. 提取物品名字列表，去 compendium_items (图鉴) 查基础价格
+        const itemNames = inventory.map(i => i.item_name);
+        const { data: prices } = await supabaseClient
+            .from('compendium_items')
+            .select('name, price, rarity')
+            .in('name', itemNames);
+
+        // 3. 构建价格字典 (名字 -> 价格对象)
+        const priceMap = {};
+        if (prices) {
+            prices.forEach(p => priceMap[p.name] = p);
+        }
+
+        grid.innerHTML = '';
+
+        // 4. 渲染卡片
+        inventory.forEach(item => {
+            // 搜索过滤
+            if (searchTerm && !item.item_name.toLowerCase().includes(searchTerm)) return;
+
+            const baseInfo = priceMap[item.item_name];
+            let sellHtml = '';
+            let cardStyle = '';
+
+            if (baseInfo && baseInfo.price) {
+                // --- 有图鉴数据，可以卖 ---
+                const ratio = getDailySellRatio(item.item_name); // 获取今日折扣
+                const sellPrice = Math.floor(baseInfo.price * ratio); // 最终回收价
+                const discount = Math.round(ratio * 100); // 显示百分比
+
+                sellHtml = `
+                    <div style="font-size:0.8em; color:#999;">原价: ${baseInfo.price} GP</div>
+                    <div style="color:#e67e22; font-weight:bold; font-size:1.1em; margin:5px 0;">
+                        回收价: ${sellPrice} GP <span style="font-size:0.7em; color:#666;">(${discount}%)</span>
+                    </div>
+                    <div style="font-size:0.75em; color:#aaa; margin-bottom:5px;">今日汇率已锁定</div>
+                    <button class="btn-buy" onclick="sellItem(${item.id}, '${item.item_name}', ${sellPrice}, ${item.quantity})" style="border-color:#e67e22; color:#e67e22;">
+                        出售
+                    </button>
+                `;
+            } else {
+                // --- 无图鉴数据，不可卖 ---
+                cardStyle = 'opacity: 0.6; background:#f9f9f9;';
+                sellHtml = `
+                    <div style="color:#999; margin:10px 0; font-size:0.9em;">
+                        无法估价<br>
+                        <span style="font-size:0.8em">(图鉴中未收录此物品)</span>
+                    </div>
+                    <button disabled style="width:100%; padding:8px; border:1px solid #ddd; background:#eee; color:#aaa; border-radius:4px; cursor:not-allowed;">
+                        不可出售
+                    </button>
+                `;
+            }
+
+            // 渲染
+            grid.innerHTML += `
+                <div class="card" style="text-align:center; ${cardStyle}">
+                    <div style="font-weight:bold; font-size:1.1em;">${item.item_name}</div>
+                    <div style="color:#666; font-size:0.9em;">库存: ${item.quantity}</div>
+                    <hr style="margin:10px 0; border:0; border-top:1px dashed #eee;">
+                    ${sellHtml}
+                </div>
+            `;
+        });
+    }
+
+    // --- 执行出售 ---
+    async function sellItem(invId, itemName, unitPrice, maxQty) {
+        const qtyStr = prompt(`出售 [${itemName}] (单价: ${unitPrice} GP)\n当前拥有: ${maxQty}\n\n请输入出售数量:`, "1");
+        if (qtyStr === null) return;
+        const qty = parseInt(qtyStr);
+
+        if (isNaN(qty) || qty <= 0) return alert("数量无效");
+        if (qty > maxQty) return alert("库存不足");
+
+        showLoading();
+        try {
+            // 1. 再次确认金币 (防止 userProfile 没加载)
+            if (!userProfile) await loadGold();
+
+            const totalPrice = unitPrice * qty;
+
+            // 2. 扣除背包物品
+            if (qty === maxQty) {
+                await supabaseClient.from('user_inventory').delete().eq('id', invId);
+            } else {
+                await supabaseClient.from('user_inventory').update({ quantity: maxQty - qty }).eq('id', invId);
+            }
+
+            // 3. 增加玩家金币
+            const newGold = userProfile.gold_gp + totalPrice;
+            await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
+
+            // 4. 记录日志
+            await logAction('出售物品', `以 ${unitPrice} GP 的单价出售了 [${itemName}] x${qty}，获利 ${totalPrice} GP`);
+
+            alert(`出售成功！获得 ${totalPrice} GP`);
+            
+            // 刷新
+            await loadGold(); // 更新右上角金币
+            loadSellShop();   // 刷新列表状态
+        } catch (e) {
+            console.error(e);
+            alert("交易失败，请稍后重试");
+        } finally {
+            hideLoading();
+        }
     }
 
 
