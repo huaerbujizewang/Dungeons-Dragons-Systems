@@ -197,7 +197,7 @@
         </div>
     </div>
 
-     <!-- 新增：安全与权限 Section (Root 专用) -->
+     <!-- ：安全与权限 Section (Root 专用) -->
     <div id="security-section" class="section">
         <div style="display:grid; grid-template-columns: 350px 1fr; gap:20px;">
             <!-- 左侧：账号管理 -->
@@ -208,6 +208,15 @@
                         <button onclick="loadAllAccounts()" style="font-size:0.8em;">刷新</button>
                     </div>
                     <div id="account-list-container" style="max-height:600px; overflow-y:auto; background:#fff; padding:10px; border-radius:4px; font-size:0.9em;"></div>
+                </div>
+            </div>
+            <!-- 在线状态监控 -->
+            <div class="admin-box" style="border:1px solid #2ecc71; padding:15px; border-radius:8px; background:#f0fff4;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="margin:0; color:#27ae60;">📡 在线状态监控</h3>
+                </div>
+                <div id="online-users-container" style="max-height:600px; overflow-y:auto; background:#fff; padding:10px; border-radius:4px; font-size:0.9em;">
+                    正在连接...
                 </div>
             </div>
             
@@ -334,6 +343,7 @@
 <script>
     let viewingUserId = null; // 当前正在查看谁的场景
     let myId = null; // 登录者自己的 ID
+    let presenceChannel = null;
     let currentUserRole = 'player'; //权限划分
     let currentUserEmail = ''; 
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
@@ -759,7 +769,15 @@ async function openEquipModal(empId, slotIdx) {
         }
     }
 
-    async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
+    async function logout() {
+        // 离开频道
+        if (presenceChannel) {
+            await presenceChannel.untrack();
+            await supabaseClient.removeChannel(presenceChannel);
+        }
+        await supabaseClient.auth.signOut();
+        location.reload();
+    }
 
      // checkUser：获取管理员等级
     async function checkUser() {
@@ -767,7 +785,10 @@ async function openEquipModal(empId, slotIdx) {
         if (user) {
             myId = user.id;
             currentUserEmail = user.email;
-            
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (user) {
+            myId = user.id;
+            currentUserEmail = user.email;
             const { data: adminData } = await supabaseClient.from('admin_users').select('role_level').eq('id', user.id).maybeSingle();
 
             if (adminData) {
@@ -778,10 +799,11 @@ async function openEquipModal(empId, slotIdx) {
                 // 【Root 专享】：显示导航栏的安全标签
                 if (currentUserRole === 'root') {
                     document.getElementById('security-tab-btn').style.display = 'inline-block';
+                    setupPresenceListener();
                 }
                 loadAdminData();
             }
-            
+            joinPresenceChannel();
             if (!viewingUserId) viewingUserId = user.id;
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-section').style.display = 'block';
@@ -792,7 +814,6 @@ async function openEquipModal(empId, slotIdx) {
 
 let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
 
-    // 改名：不再是 Global Date，而是 User Date
     // 1. 修改加载时间函数：顺便把时间填入输入框
     async function loadUserDate() {
         const { data: prof } = await supabaseClient.from('profiles').select('world_date').eq('id', viewingUserId).single();
@@ -800,7 +821,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
             currentDate = prof.world_date;
             document.getElementById('date-text').innerText = `FR${currentDate.year} ${currentDate.month}月${currentDate.day}日`;
             
-            // 【新增】回显到 DM 后台输入框
+            // 【】回显到 DM 后台输入框
             if(document.getElementById('time-year')) {
                 document.getElementById('time-year').value = currentDate.year;
                 document.getElementById('time-month').value = currentDate.month;
@@ -809,7 +830,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         }
     }
 
-    // 2. 新增：任意修改时间逻辑
+    // 2. ：任意修改时间逻辑
     async function updateTimeManual() {
         if (!viewingUserId) return alert('请先选择一个视角');
 
@@ -1020,7 +1041,7 @@ async function loadGold() {
         }).join('');
     }
 
-    // 3. 新增：下架商品逻辑
+    // 3. ：下架商品逻辑
     async function deleteShopItem(id, name) {
         if (!confirm(`确定要将 [${name}] 永久下架吗？`)) return;
         
@@ -1197,7 +1218,7 @@ async function loadGold() {
             invDiv.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">(背包是空的)</div>';
         }
 
-        // 6. 【新增】刷新 DM 面板里的“雇员头像列表”
+        // 6. 【】刷新 DM 面板里的“雇员头像列表”
         // 这样你选了谁，就只能给谁的雇员上传头像
         const { data: emps } = await supabaseClient
             .from('employees')
@@ -1254,7 +1275,7 @@ async function loadGold() {
         alert('分配成功');
     }
 
-    // 2. 新增：DM 删除玩家物品逻辑
+    // 2. ：DM 删除玩家物品逻辑
     async function admRemoveInv(itemId, itemName, currentQty) {
         // 弹窗询问删除数量
         let removeQty = prompt(`要把 [${itemName}] 删除多少个？\n(当前拥有: ${currentQty})\n输入 'all' 或数字`, "1");
@@ -1298,7 +1319,7 @@ async function loadGold() {
         await loadEmployees();
     }
 
-    // ================== 新增：加载日志 ==================
+    // ================== ：加载日志 ==================
     async function loadLogs() {
         const logBox = document.getElementById('audit-log-container');
         logBox.innerHTML = '加载日志中...';
@@ -1360,7 +1381,7 @@ async function updateUserGold() {
                 // 已有则数量+1
                 await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
             } else {
-                // 没有则新增
+                // 没有则
                 await supabaseClient.from('user_inventory').insert([{ 
                     user_id: selectedUserId, 
                     item_name: itemName, 
@@ -1695,6 +1716,89 @@ async function loadLoginLogs() {
         } finally {
             hideLoading();
         }
+    }
+    // --- 在线状态频道 ---
+    function joinPresenceChannel() {
+        if (presenceChannel) {
+            supabaseClient.removeChannel(presenceChannel);
+        }
+
+        // 创建一个频道，所有在线用户都会加入
+        presenceChannel = supabaseClient.channel('online-users', {
+            config: {
+                presence: {
+                    key: currentUserEmail, // 用邮箱作为唯一标识
+                },
+            },
+        });
+
+        // 订阅频道
+        presenceChannel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await presenceChannel.track({ 
+                    online_at: new Date().toISOString(),
+                    role: currentUserRole 
+                });
+            }
+        });
+    }
+    // --- 为 Root 设置在线状态监听器 ---
+    function setupPresenceListener() {
+        const container = document.getElementById('online-users-container');
+        if (!presenceChannel) return;
+
+        // 监听 'sync' 事件，当第一次连接时触发，获取当前所有在线用户
+        presenceChannel.on('presence', { event: 'sync' }, () => {
+            const presences = presenceChannel.presenceState();
+            renderOnlineList(presences);
+        });
+
+        // 监听 'join' 事件，当有新用户上线时触发
+        presenceChannel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
+            const presences = presenceChannel.presenceState();
+            renderOnlineList(presences);
+        });
+
+        // 监听 'leave' 事件，当有用户下线时触发
+        presenceChannel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+            const presences = presenceChannel.presenceState();
+            renderOnlineList(presences);
+        });
+    }
+
+    // 辅助函数：渲染在线列表
+    function renderOnlineList(presences) {
+        const container = document.getElementById('online-users-container');
+        if (!container) return;
+
+        const onlineUsers = Object.keys(presences).map(key => {
+            const user = presences[key][0]; // presenceState 返回的是一个数组
+            return {
+                email: key,
+                role: user.role,
+                online_at: user.online_at
+            };
+        });
+
+        if (onlineUsers.length === 0) {
+            container.innerHTML = '<div style="color:#999; text-align:center;">当前位面空无一人...</div>';
+            return;
+        }
+
+        container.innerHTML = onlineUsers.map(user => {
+            const roleColor = user.role === 'root' ? 'red' : (user.role === 'dm' ? 'blue' : 'green');
+            return `
+            <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-weight:bold; display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:8px; height:8px; background-color:${roleColor}; border-radius:50%;"></span>
+                        ${user.email}
+                    </div>
+                </div>
+                <span style="font-size:0.8em; color:${roleColor}; font-weight:bold;">${user.role.toUpperCase()}</span>
+            </div>
+            `;
+        }).join('');
     }
 
 
