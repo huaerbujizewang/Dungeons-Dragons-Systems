@@ -781,16 +781,15 @@ async function openEquipModal(empId, slotIdx) {
 
      // checkUser：获取管理员等级
     async function checkUser() {
-        // 1. 【必须最先执行】从 Supabase 获取当前登录用户
+        // 1. 获取当前登录用户
         const { data: { user } } = await supabaseClient.auth.getUser();
 
-        // 2. 只有获取到了 user，才能进行后续操作
         if (user) {
             // 初始化全局变量
             myId = user.id;
             currentUserEmail = user.email;
             
-            // 3. 检查管理员权限
+            // 2. 检查管理员权限
             const { data: adminData } = await supabaseClient
                 .from('admin_users')
                 .select('role_level')
@@ -807,15 +806,11 @@ async function openEquipModal(empId, slotIdx) {
                 const badge = document.getElementById('role-badge');
                 if (badge) badge.innerText = currentUserRole.toUpperCase();
                 
-                // 【Root 专属】显示安全标签页 & 开启监听
+                // 【Root 专属】显示安全标签页
                 if (currentUserRole === 'root') {
                     const secBtn = document.getElementById('security-tab-btn');
                     if (secBtn) secBtn.style.display = 'inline-block';
                     
-                    // 确保 setupPresenceListener 函数存在再调用
-                    if (typeof setupPresenceListener === 'function') {
-                        setupPresenceListener();
-                    }
                 }
                 
                 loadAdminData();
@@ -823,20 +818,23 @@ async function openEquipModal(empId, slotIdx) {
                 currentUserRole = 'player';
             }
             
-            // 4. 初始化视图 ID (如果没有选人，默认看自己)
+            // 3. 初始化视图 ID
             if (!viewingUserId) viewingUserId = user.id;
 
-            // 5. 切换界面显示
+            // 4. 切换界面显示
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-section').style.display = 'block';
             
-            // 6. 加入在线状态频道 (让自己上线)
-            if (typeof joinPresenceChannel === 'function') {
-                joinPresenceChannel();
-            }
+            // 5. 加载所有业务数据
+            await refreshAllData();
 
-            // 7. 加载所有业务数据
-            refreshAllData();
+            // 6. 启动在线系统 (监听+广播)
+            // 必须放在最后，且必须确保你已经把 initPresenceSystem 函数复制到了 script 里
+            if (typeof initPresenceSystem === 'function') {
+                initPresenceSystem();
+            } else {
+                console.error("未找到 initPresenceSystem 函数，请检查代码粘贴是否完整");
+            }
         }
     }
 
@@ -1703,6 +1701,92 @@ async function loadLoginLogs() {
         
         document.getElementById('compendium-results').innerHTML = ''; // 清空结果
     }
+    // --- 【修复版】在线状态系统 (合并逻辑) ---//
+    function initPresenceSystem() {
+        // 防止重复连接
+        if (presenceChannel) {
+            supabaseClient.removeChannel(presenceChannel);
+        }
+
+        // 1. 创建频道
+        presenceChannel = supabaseClient.channel('online-users', {
+            config: {
+                presence: {
+                    key: currentUserEmail, // 唯一标识
+                },
+            },
+        });
+
+        // 2. 【关键】如果是 Root，先挂载监听器 (必须在 subscribe 之前！)
+        if (currentUserRole === 'root') {
+            presenceChannel
+                .on('presence', { event: 'sync' }, () => {
+                    const newState = presenceChannel.presenceState();
+                    renderOnlineList(newState);
+                })
+                .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+                    const newState = presenceChannel.presenceState();
+                    renderOnlineList(newState);
+                })
+                .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+                    const newState = presenceChannel.presenceState();
+                    renderOnlineList(newState);
+                });
+        }
+
+        // 3. 开始订阅
+        presenceChannel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                // 4. 订阅成功后，广播自己的存在
+                const trackStatus = await presenceChannel.track({ 
+                    email: currentUserEmail,
+                    role: currentUserRole,
+                    online_at: new Date().toISOString()
+                });
+                
+                if (trackStatus !== 'ok') {
+                    console.error("在线状态广播失败");
+                }
+            }
+        });
+    }
+
+    // --- 渲染在线列表 ---
+    function renderOnlineList(presences) {
+        const container = document.getElementById('online-users-container');
+        if (!container) return;
+
+        // 将 Presence 对象转换为数组
+        const onlineUsers = [];
+        for (const key in presences) {
+            // 每个 key 可能对应多个连接（多设备登录），我们取第一个
+            const userState = presences[key][0]; 
+            onlineUsers.push({
+                email: key, // key 就是我们设置的 email
+                ...userState // 展开 role 和 online_at
+            });
+        }
+
+        if (onlineUsers.length === 0) {
+            container.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">当前位面空无一人...</div>';
+            return;
+        }
+
+        container.innerHTML = onlineUsers.map(user => {
+            const roleColor = user.role === 'root' ? '#e74c3c' : (user.role === 'dm' ? '#3498db' : '#2ecc71');
+            const roleName = user.role ? user.role.toUpperCase() : 'PLAYER';
+            
+            return `
+            <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-block; width:8px; height:8px; background-color:${roleColor}; border-radius:50%; box-shadow: 0 0 5px ${roleColor};"></span>
+                    <span style="font-weight:bold; font-size:0.9em;">${user.email}</span>
+                </div>
+                <span style="font-size:0.75em; color:${roleColor}; font-weight:bold; border:1px solid ${roleColor}; padding:1px 4px; border-radius:4px;">${roleName}</span>
+            </div>
+            `;
+        }).join('');
+    }
 
     // 辅助函数：设置下拉框的值
     function setSelect(id, value) {
@@ -1746,54 +1830,7 @@ async function loadLoginLogs() {
             hideLoading();
         }
     }
-    // --- 在线状态频道 ---
-    function joinPresenceChannel() {
-        if (presenceChannel) {
-            supabaseClient.removeChannel(presenceChannel);
-        }
-
-        // 创建一个频道，所有在线用户都会加入
-        presenceChannel = supabaseClient.channel('online-users', {
-            config: {
-                presence: {
-                    key: currentUserEmail, // 用邮箱作为唯一标识
-                },
-            },
-        });
-
-        // 订阅频道
-        presenceChannel.subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-                await presenceChannel.track({ 
-                    online_at: new Date().toISOString(),
-                    role: currentUserRole 
-                });
-            }
-        });
-    }
-    // --- 为 Root 设置在线状态监听器 ---
-    function setupPresenceListener() {
-        const container = document.getElementById('online-users-container');
-        if (!presenceChannel) return;
-
-        // 监听 'sync' 事件，当第一次连接时触发，获取当前所有在线用户
-        presenceChannel.on('presence', { event: 'sync' }, () => {
-            const presences = presenceChannel.presenceState();
-            renderOnlineList(presences);
-        });
-
-        // 监听 'join' 事件，当有新用户上线时触发
-        presenceChannel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
-            const presences = presenceChannel.presenceState();
-            renderOnlineList(presences);
-        });
-
-        // 监听 'leave' 事件，当有用户下线时触发
-        presenceChannel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-            const presences = presenceChannel.presenceState();
-            renderOnlineList(presences);
-        });
-    }
+    
 
     // 辅助函数：渲染在线列表
     function renderOnlineList(presences) {
