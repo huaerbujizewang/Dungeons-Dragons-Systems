@@ -1199,100 +1199,62 @@ async function loadGold() {
     // 2. 选中玩家后，加载详细信息
      // ================== 修复后的 DM 背包读取 ==================
     let selectedUserId = null;
-    // --- 修复版 DM 玩家详情加载 ---
+// --- 加载玩家详情 ---
     async function loadUserDetail() {
-        // 1. 获取选中的 ID
         selectedUserId = document.getElementById('adm-user-list').value;
         const detailBox = document.getElementById('user-detail');
 
         if (!selectedUserId) {
             detailBox.style.display = 'none';
-            // 取消选择，切回自己
-            viewingUserId = selectedUserId || myId; 
-            await refreshAllData(); 
-            // 清空头像列表
+            viewingUserId = myId;
+            refreshAllData();
             document.getElementById('adm-emp-list').innerHTML = '';
             return;
         }
 
-        // 2. 显示面板 & 切换视角
         detailBox.style.display = 'block';
         viewingUserId = selectedUserId;
-        
-        // 3. 刷新主界面数据
         await refreshAllData();
 
-        // 4. 填 DM 面板的小数据 (金币)
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
         if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
 
-        // 5. 填 DM 面板的背包预览
+        // 【核心修复】：在 select 里加上 'id'
         const { data: inv } = await supabaseClient
             .from('user_inventory')
-            .select('item_name, quantity, category')
+            .select('id, item_name, quantity, category') // <--- 这里加了 id
             .eq('user_id', selectedUserId)
             .order('category');
 
         const invDiv = document.getElementById('adm-user-inv');
+        
         if (inv && inv.length > 0) {
             invDiv.innerHTML = inv.map(i => `
-                <div style="display:flex; justify-content:space-between; font-size:0.85em; border-bottom:1px dashed #eee; padding:2px;">
-                    <span>[${i.category||'杂'}] ${i.item_name}</span>
-                    <strong>x${i.quantity}</strong>
-                    <button onclick="admRemoveInv(${i.id}, '${i.item_name}', ${i.quantity})" style="border:none; background:none; color:red; cursor:pointer;">×</button>
+                <div style="display:flex; justify-content:space-between; font-size:0.85em; border-bottom:1px dashed #eee; padding:2px; align-items:center;">
+                    <span>
+                        <span style="color:#999; font-size:0.8em;">[${i.category||'杂'}]</span> 
+                        ${i.item_name} 
+                    </span>
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <strong>x${i.quantity}</strong>
+                        <button onclick="admRemoveInv(${i.id}, '${i.item_name}', ${i.quantity})" 
+                            style="border:none; background:#e74c3c; color:white; cursor:pointer; border-radius:3px; padding:0 5px;">×</button>
+                    </div>
                 </div>
             `).join('');
         } else {
             invDiv.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">(背包是空的)</div>';
         }
 
-        // 6. 【】刷新 DM 面板里的“雇员头像列表”
-        // 这样你选了谁，就只能给谁的雇员上传头像
-        const { data: emps } = await supabaseClient
-            .from('employees')
-            .select('id, name')
-            .eq('user_id', selectedUserId); // 只查这个玩家的
-
+        // 刷新雇员头像列表
+        const { data: emps } = await supabaseClient.from('employees').select('id, name').eq('user_id', selectedUserId);
         const empSelect = document.getElementById('adm-emp-list');
         empSelect.innerHTML = '';
         if (emps && emps.length > 0) {
-            emps.forEach(e => {
-                empSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`;
-            });
+            emps.forEach(e => empSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`);
         } else {
             empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
         }
-        
-        // 如果是 Root，显示 DM 分配框
-    if (currentUserRole === 'root') {
-        document.getElementById('root-assign-dm').style.display = 'block';
-        
-        // 1. 查出所有账号及其邮箱 (Root 有权看全表)
-        const { data: allProfiles } = await supabaseClient.from('profiles').select('id, email');
-        // 2. 查出所有管理员权限
-        const { data: allAdmins } = await supabaseClient.from('admin_users').select('id, role_level');
-
-        const assignList = document.getElementById('adm-assign-dm-list');
-        assignList.innerHTML = '<option value="">-- 设置为未分配 (归Root管) --</option>';
-        
-        if (allAdmins && allProfiles) {
-            allAdmins.forEach(admin => {
-                // 只要级别不是 player，就是潜在的负责 DM
-                if (admin.role_level !== 'player') {
-                    // 匹配邮箱
-                    const userProfile = allProfiles.find(p => p.id === admin.id);
-                    if (userProfile) {
-                        const email = userProfile.email;
-                        assignList.innerHTML += `<option value="${admin.id}">${email} [${admin.role_level.toUpperCase()}]</option>`;
-                    }
-                }
-            });
-        }
-        
-        // 回显当前玩家的归属
-        const { data: currentProf } = await supabaseClient.from('profiles').select('assigned_dm_id').eq('id', selectedUserId).single();
-        assignList.value = currentProf.assigned_dm_id || "";
-    }
     }
 
     async function assignDM() {
