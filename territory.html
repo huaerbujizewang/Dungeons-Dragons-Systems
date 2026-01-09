@@ -178,49 +178,12 @@
 </div>
 
 <script>
+    // --- 配置 Supabase ---
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ================== 基础数据库 ==================
-    
-    // 1. 城市基础数据
-    const cityStats = {
-        population: 6109,
-        subsidy: 800, 
-        employee_expense: 0 // ⏳ 待同步...
-    };
-
-    // 2. 职员表 - 城市固定编制
-    const staffData = [
-        { role: "城卫队 (老兵)", count: 18, wage: 60 },
-        { role: "城卫队 (卫兵)", count: 106, wage: 30 },
-        { role: "市政文职人员", count: 40, wage: 60 },
-        { role: "市政杂工", count: 50, wage: 10 }
-    ];
-
-    // 3. 建筑维护表 - 城市固定设施
-    const buildingData = [
-        { name: "公告栏", cost: 1 },
-        { name: "中央塔楼", cost: 100 },
-        { name: "克莱门汀府邸", cost: 150 },
-        { name: "市政仓库", cost: 50 },
-        { name: "种植园", cost: 50 },
-        { name: "通用工坊", cost: 50 },
-        { name: "铁匠铺", cost: 50 },
-        { name: "奥术研究室", cost: 50 },
-        { name: "军械库", cost: 50 },
-        { name: "城防兵营", cost: 50 },
-        { name: "冒险者公会", cost: 100 },
-        { name: "城墙维护", cost: 100 },
-        { name: "道路维护", cost: 50 },
-        { name: "下水道与供水系统", cost: 150 },
-        { name: "武备维护", cost: 30 },
-        { name: "艾琳的工坊", cost: 50 },
-        { name: "员工宿舍", cost: 100 },
-        { name: "杂项采购备用金", cost: 500 }
-    ];
-
+    // --- 静态描述性文本---
     const dataStore = {
         'military': {
             title: "MILITARY / 军事概况",
@@ -269,84 +232,95 @@
         }
     };
 
-    // ================== 核心逻辑 ==================
-
+    // --- 初始化函数 ---
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
-        renderCharts();
-        
-        // 同步雇员数据
-        await syncEmployeeData(user.id);
-        
-        // 计算经济
-        calculateEconomy();
-    }
-
-    // 同步核心团队支出
-    async function syncEmployeeData(userId) {
-        // 去 employees 表查询该用户下所有“在职”的雇员
-        const { data, error } = await supabaseClient
-            .from('employees')
-            .select('salary')
-            .eq('user_id', userId)
-            .eq('status', '在职'); // 只有在职的才发工资
-
-        if (error) {
-            console.error("无法同步雇员数据:", error);
-            // 如果出错，保持为 0 或者提示
+        if (!user) {
+            alert('请先登录');
+            window.location.href = 'index.html';
             return;
         }
-
-        // 计算总和
-        const totalSalary = data.reduce((sum, emp) => sum + emp.salary, 0);
         
-        // 更新全局配置
-        cityStats.employee_expense = totalSalary;
+        // 1. 渲染图表 (目前是静态数据，未来也可以读数据库)
+        renderCharts();
         
-        console.log(`已同步核心团队支出: ${totalSalary} GP`);
+        // 2. 加载并渲染财务数据 (从数据库读取)
+        await loadAndRenderFinance(user.id);
     }
 
-    // 计算并渲染所有财务数据
-    function calculateEconomy() {
-        const taxIncome = Math.ceil(cityStats.population * 1.2);
-        const subsidyIncome = cityStats.subsidy;
-        const totalIncome = taxIncome + subsidyIncome;
+    // --- 核心：从数据库加载并计算财务 ---
+    async function loadAndRenderFinance(userId) {
+        // 并行抓取三张表的数据
+        const [statsRes, expensesRes, employeesRes] = await Promise.all([
+            // 1. 城市概况 (人口、税率、补贴)
+            supabaseClient.from('city_stats').select('*').eq('user_id', userId).single(),
+            // 2. 城市固定支出 (卫兵、建筑)
+            supabaseClient.from('city_expenses').select('*').eq('user_id', userId),
+            // 3. 特殊雇员 (只算在职的)
+            supabaseClient.from('employees').select('salary').eq('user_id', userId).eq('status', '在职')
+        ]);
 
-        let staffExpense = 0;
-        const staffTbody = document.getElementById('staff-table-body');
-        staffTbody.innerHTML = '';
-        
-        staffData.forEach(s => {
-            const subTotal = s.count * s.wage;
-            staffExpense += subTotal;
-            staffTbody.innerHTML += `
-                <tr>
-                    <td>${s.role}</td>
-                    <td>${s.count} 人</td>
-                    <td>${s.wage} GP</td>
-                    <td class="amount-col expense-text">-${subTotal}</td>
-                </tr>`;
+        // 数据容错处理
+        const stats = statsRes.data || { population: 0, subsidy: 0, tax_rate: 1.2 };
+        const expenses = expensesRes.data || [];
+        const employees = employeesRes.data || [];
+
+        // --- 计算收入 ---
+        const taxIncome = Math.ceil(stats.population * stats.tax_rate);
+        const totalIncome = taxIncome + stats.subsidy;
+
+        // --- 计算支出 ---
+        let staffCost = 0;
+        let buildingCost = 0;
+        let staffHtml = '';
+
+        expenses.forEach(e => {
+            const cost = e.count * e.unit_cost;
+            if (e.category === 'staff') {
+                // 渲染职员表行
+                staffCost += cost;
+                staffHtml += `
+                    <tr>
+                        <td>${e.name}</td>
+                        <td>${e.count} 人</td>
+                        <td>${e.unit_cost} GP</td>
+                        <td class="amount-col expense-text">-${cost}</td>
+                    </tr>`;
+            } else if (e.category === 'building') {
+                // 建筑维护费只统计总数，不在职员表显示
+                buildingCost += cost;
+            }
         });
 
-        let buildingExpense = 0;
-        buildingData.forEach(b => buildingExpense += b.cost);
-
-        //  cityStats.employee_expense 是实时同步过来的数据
-        const totalExpense = staffExpense + buildingExpense + cityStats.employee_expense;
+        const empCost = employees.reduce((sum, e) => sum + e.salary, 0);
+        const totalExpense = staffCost + buildingCost + empCost;
         const netIncome = totalIncome - totalExpense;
 
-        const financeTbody = document.getElementById('finance-table-body');
-        financeTbody.innerHTML = `
+        // --- 渲染页面 ---
+        
+        // 1. 更新顶部 KPI
+        document.getElementById('kpi-pop').innerText = stats.population.toLocaleString();
+        
+        const kpiIncome = document.getElementById('kpi-income');
+        kpiIncome.innerText = `${netIncome} GP`;
+        kpiIncome.style.color = netIncome >= 0 ? '#27ae60' : '#c0392b';
+        
+        document.getElementById('kpi-income-sub').innerText = netIncome < 0 ? '⚠️ 财政赤字' : '✅ 财政健康';
+
+        // 2. 更新职员表
+        document.getElementById('staff-table-body').innerHTML = staffHtml;
+
+        // 3. 更新总账单表
+        document.getElementById('finance-table-body').innerHTML = `
             <tr>
                 <td>税收收入</td>
-                <td>人口 ${cityStats.population} * 1.2</td>
+                <td>人口 ${stats.population.toLocaleString()} * ${stats.tax_rate}</td>
                 <td class="amount-col income-text">+${taxIncome}</td>
             </tr>
             <tr>
-                <td>莱瑟曼补贴</td>
-                <td>外交援助</td>
-                <td class="amount-col income-text">+${subsidyIncome}</td>
+                <td>外交补贴</td>
+                <td>莱瑟曼援助</td>
+                <td class="amount-col income-text">+${stats.subsidy}</td>
             </tr>
             <tr style="background:#f0f9f0; font-weight:bold;">
                 <td colspan="2">收入小计</td>
@@ -355,17 +329,17 @@
             <tr>
                 <td>城市职员薪资</td>
                 <td>卫兵/文职/杂工</td>
-                <td class="amount-col expense-text">-${staffExpense}</td>
+                <td class="amount-col expense-text">-${staffCost}</td>
             </tr>
             <tr>
                 <td>基础设施维护</td>
-                <td>含 ${buildingData.length} 项建筑设施</td>
-                <td class="amount-col expense-text">-${buildingExpense}</td>
+                <td>含 ${expenses.filter(e => e.category === 'building').length} 项建筑设施</td>
+                <td class="amount-col expense-text">-${buildingCost}</td>
             </tr>
             <tr>
-                <td>核心团队支出</td>
-                <td>雇员中心 (实时同步)</td> <!-- 提示文本更新 -->
-                <td class="amount-col expense-text">-${cityStats.employee_expense}</td>
+                <td>特殊雇员支出</td>
+                <td>核心团队</td>
+                <td class="amount-col expense-text">-${empCost}</td>
             </tr>
             <tr style="background:#fff0f0; font-weight:bold;">
                 <td colspan="2">支出小计</td>
@@ -378,23 +352,9 @@
                 </td>
             </tr>
         `;
-
-        const kpiIncomeEl = document.getElementById('kpi-income');
-        const kpiSubEl = document.getElementById('kpi-income-sub');
-        
-        kpiIncomeEl.innerText = `${netIncome} GP`;
-        kpiIncomeEl.style.color = netIncome >= 0 ? '#27ae60' : '#c0392b';
-        
-        if (netIncome < 0) {
-            kpiSubEl.innerText = '⚠️ 财政赤字';
-            kpiSubEl.style.color = '#c0392b';
-        } else {
-            kpiSubEl.innerText = '✅ 财政健康';
-            kpiSubEl.style.color = '#27ae60';
-        }
     }
 
-    // UI 切换与 renderCharts 函数
+    // --- UI 交互逻辑 ---
     function showOverview() {
         document.getElementById('overview-panel').style.display = 'block';
         document.getElementById('detail-panel').style.display = 'none';
@@ -434,7 +394,9 @@
         if(activeBtn) activeBtn.classList.add('active');
     }
 
+    // --- 图表渲染 ---
     function renderCharts() {
+        // 种族图表
         new Chart(document.getElementById('raceChart'), {
             type: 'doughnut',
             data: {
@@ -445,9 +407,14 @@
                     borderWidth: 0
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }
+            }
         });
 
+        // 宗教图表
         new Chart(document.getElementById('faithChart'), {
             type: 'pie',
             data: {
@@ -458,12 +425,16 @@
                     borderWidth: 0
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
+            }
         });
     }
 
+    // 启动初始化
     init();
 </script>
 </body>
 </html>
-
