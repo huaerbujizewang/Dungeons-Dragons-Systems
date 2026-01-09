@@ -2,53 +2,153 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>D&D 系统 - 编年史</title>
+    <title>D&D 系统 - 地理志</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: "PingFang SC", sans-serif; background: #fff; padding: 40px; color: #333; }
-        .back-nav { margin-bottom: 30px; }
-        .back-btn { padding: 8px 15px; border: 1px solid #333; background: none; cursor: pointer; text-decoration: none; color: #333; border-radius: 4px; }
-        .content-box { max-width: 800px; margin: 0 auto; line-height: 1.8; }
-        .wip-tag { text-align: center; margin-top: 100px; color: #999; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #fff; padding: 40px; color: #333; margin: 0; }
+        
+        /* 顶部导航 */
+        .back-nav { margin-bottom: 40px; }
+        .back-btn { 
+            padding: 8px 16px; 
+            border: 1px solid #ddd; 
+            background: #f9f9f9; 
+            cursor: pointer; 
+            text-decoration: none; 
+            color: #555; 
+            border-radius: 6px; 
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: #eee; color: #000; border-color: #ccc; }
+
+        .content-box { max-width: 1000px; margin: 0 auto; }
+        
+        h1 { font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+        .subtitle { color: #666; font-size: 0.9em; margin-bottom: 40px; }
+
+        /* --- 卡片网格布局 --- */
+        .maps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        /* 区域卡片样式 */
+        .region-card {
+            display: block; /* 让a标签充满 */
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .region-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            border-color: #ddd;
+        }
+
+        /* 卡片顶部：可以放缩略图或者色块 */
+        .card-header {
+            height: 140px;
+            background-color: #2c3e50; /* 默认深色背景 */
+            background-image: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%); /* 渐变色 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+            font-size: 4em;
+        }
+
+        /* 针对不同区域的卡片配色 */
+        .region-card[data-type="east"] .card-header {
+            background-image: linear-gradient(135deg, #434343 0%, #000000 100%); /* 奥法帝国用黑金/深色 */
+        }
+
+        .card-body { padding: 20px; }
+        
+        .card-title { font-size: 1.2em; font-weight: bold; margin-bottom: 8px; color: #222; }
+        .card-desc { font-size: 0.85em; color: #666; line-height: 1.5; }
+        
+        .card-meta { 
+            margin-top: 15px; 
+            padding-top: 15px; 
+            border-top: 1px dashed #eee; 
+            font-size: 0.75em; 
+            color: #999; 
+            display: flex; 
+            justify-content: space-between;
+        }
+
     </style>
 </head>
 <body>
 
-    <div class="back-nav">
-        <a href="index.html" class="back-btn">⬅ 返回主界面</a>
-    </div>
+    <div class="content-box">
+        <div class="back-nav">
+            <a href="index.html" class="back-btn">⬅ 返回主界面</a>
+        </div>
 
-    <div id="page-content" class="content-box" style="display:none;">
-        <h1>🏰 地理 / 组织</h1>
-        <hr>
-        <div class="wip-tag">
-            <div style="font-size: 3em;">🏗️</div>
-            <h2>正在同步多元宇宙数据...</h2>
-            <p>该模块尚在施工中，DM 正在拼命码字。</p>
+        <div id="page-content" style="display:none;">
+            <h1>🏰 费伦地理志</h1>
+            <p class="subtitle">选择一个区域以查阅详细的地缘政治情报与势力分布。</p>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:30px;">
+
+            <div class="maps-grid">
+                
+                <!-- 卡片 1：远东/奥法帝国 -->
+                <a href="maps/far_east.html" class="region-card" data-type="east">
+                    <div class="card-header">
+                        🌋
+                    </div>
+                    <div class="card-body">
+                        <div class="card-title">不可接近的东方 (The Unapproachable East)</div>
+                        <div class="card-desc">
+                            包含塞尔帝国、莱瑟曼王国、阿拉格隆等古老国度。目前正处于大瘟疫后的地缘政治剧变期。
+                        </div>
+                        <div class="card-meta">
+                            <span>FR 1494 DR</span>
+                            <span>包含 7 个势力</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 未来可以添加更多卡片 -->
+                <!-- 
+                <a href="#" class="region-card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">🌊</div>
+                    <div class="card-body">
+                        <div class="card-title">剑湾与北地 (The Sword Coast)</div>
+                        <div class="card-desc">从深水城到冰风谷的广阔区域。</div>
+                    </div>
+                </a> 
+                -->
+
+            </div>
         </div>
     </div>
 
     <script>
-        // 初始化同样的 Supabase
+        // Supabase 初始化
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 核心：安全性检查
         async function checkAccess() {
             const { data: { user } } = await supabaseClient.auth.getUser();
-            
             if (!user) {
-                alert('检测到位面波动（未登录），请先进行身份验证');
+                alert('需登录以查阅皇家地理档案');
                 window.location.href = 'index.html';
             } else {
-                // 已登录，显示内容
                 document.getElementById('page-content').style.display = 'block';
             }
         }
-
         checkAccess();
     </script>
 </body>
-
 </html>
