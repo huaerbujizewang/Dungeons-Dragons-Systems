@@ -252,11 +252,9 @@
     async function loadAndRenderFinance(userId) {
         // 并行抓取三张表的数据
         const [statsRes, expensesRes, employeesRes] = await Promise.all([
-            // 1. 城市概况 (人口、税率、补贴)
-            supabaseClient.from('city_stats').select('*').eq('user_id', userId).single(),
-            // 2. 城市固定支出 (卫兵、建筑)
+            // 把 .single() 改为 .maybeSingle()
+            supabaseClient.from('city_stats').select('*').eq('user_id', userId).maybeSingle(),
             supabaseClient.from('city_expenses').select('*').eq('user_id', userId),
-            // 3. 特殊雇员 (只算在职的)
             supabaseClient.from('employees').select('salary').eq('user_id', userId).eq('status', '在职')
         ]);
 
