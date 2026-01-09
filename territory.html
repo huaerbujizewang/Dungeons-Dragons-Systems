@@ -235,17 +235,19 @@
     // --- 初始化函数 ---
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) {
-            alert('请先登录');
-            window.location.href = 'index.html';
-            return;
-        }
+        if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
         
-        // 1. 渲染图表 (目前是静态数据，未来也可以读数据库)
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('uid');
+        
+        const viewingId = targetId || user.id;
+
+        console.log("当前查看的领地归属 ID:", viewingId);
+
         renderCharts();
         
-        // 2. 加载并渲染财务数据 (从数据库读取)
-        await loadAndRenderFinance(user.id);
+        await syncEmployeeData(viewingId); 
+        await loadAndRenderFinance(viewingId); 
     }
 
     // --- 核心：从数据库加载并计算财务 ---
