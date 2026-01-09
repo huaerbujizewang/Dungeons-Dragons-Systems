@@ -152,6 +152,21 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- 设施详情 -->
+            <div class="data-section">
+                <div class="section-header">
+                    <span>🏗️ 城市基础设施维护详单</span>
+                </div>
+                <table class="finance-table">
+                    <thead>
+                        <tr><th>设施名称</th><th>数量</th><th>单项维护费</th><th class="amount-col">月度总支出</th></tr>
+                    </thead>
+                    <tbody id="building-table-body">
+                        <!-- JS 填充 -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 详情面板 -->
@@ -279,6 +294,7 @@
         let staffCost = 0;
         let buildingCost = 0;
         let staffHtml = '';
+        let buildingHtml = '';
 
         expenses.forEach(e => {
             const cost = e.count * e.unit_cost;
@@ -293,8 +309,14 @@
                         <td class="amount-col expense-text">-${cost}</td>
                     </tr>`;
             } else if (e.category === 'building') {
-                // 建筑维护费只统计总数，不在职员表显示
                 buildingCost += cost;
+                buildingHtml += `
+                    <tr>
+                        <td>${e.name}</td>
+                        <td>${e.count}</td>
+                        <td>${e.unit_cost} GP</td>
+                        <td class="amount-col expense-text">-${cost}</td>
+                    </tr>`;
             }
         });
 
@@ -316,7 +338,10 @@
         // 2. 更新职员表
         document.getElementById('staff-table-body').innerHTML = staffHtml;
 
-        // 3. 更新总账单表
+        // 3.更新设施表
+        document.getElementById('building-table-body').innerHTML = buildingHtml;
+
+        // 4. 更新总账单表
         document.getElementById('finance-table-body').innerHTML = `
             <tr>
                 <td>税收收入</td>
