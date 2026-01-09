@@ -353,6 +353,28 @@
             </tr>
         `;
     }
+    // 同步核心团队支出
+    async function syncEmployeeData(userId) {
+        // 去 employees 表查询该用户下所有“在职”的雇员
+        const { data, error } = await supabaseClient
+            .from('employees')
+            .select('salary')
+            .eq('user_id', userId)
+            .eq('status', '在职'); 
+
+        if (error) {
+            console.error("无法同步雇员数据:", error);
+            return;
+        }
+
+        // 计算总和
+        const totalSalary = data.reduce((sum, emp) => sum + emp.salary, 0);
+        
+        // 更新全局配置
+        cityStats.employee_expense = totalSalary;
+        
+        console.log(`已同步核心团队支出: ${totalSalary} GP`);
+    }
 
     // --- UI 交互逻辑 ---
     function showOverview() {
