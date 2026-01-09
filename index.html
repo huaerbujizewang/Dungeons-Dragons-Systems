@@ -503,7 +503,7 @@ async function loadEmployees() {
         container.innerHTML = `
             <!-- 账单统计区 -->
             <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:30px; text-align:center; border-radius:8px;">
-                <h3 style="margin:0; color:#d35400;">📉 当前本月总支出: ${totalSalary} GP</h3>
+                <h3 style="margin:0; color:#d35400;">当前特殊雇员总支出: ${totalSalary} GP</h3>
                 <div style="font-size:0.85em; color:#666; margin-top:5px;">
                     (将在每月1日从 ${viewingUserId === myId ? '您' : '该玩家'} 的账户中扣除。注：休假/离职不计入账单)
                 </div>
@@ -1447,24 +1447,22 @@ async function advanceTime() {
 
             // 2. 自动扣款逻辑 (只针对 viewingUserId)
             if (day === 1) {
-                // 只查属于当前视角玩家的雇员
-                const { data: emps } = await supabaseClient
-                    .from('employees')
-                    .select('salary')
-                    .eq('user_id', viewingUserId)
-                    .eq('status', '在职');
+                // 【核心修改】调用通用算账函数
+                const netIncome = await calculateCityNetIncome(viewingUserId);
+                
 
-                if (emps && emps.length > 0) {
-                    const totalSalary = emps.reduce((sum, e) => sum + e.salary, 0);
+                if (netIncome !== 0) {
+                    const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
+                    const newGold = prof.gold_gp + netIncome; 
                     
-                    if (totalSalary > 0) {
-                        // 查钱
-                        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
-                        // 扣钱
-                        await supabaseClient.from('profiles').update({ gold_gp: prof.gold_gp - totalSalary }).eq('id', viewingUserId);
-                        // 记日志
-                        await logAction('系统扣款', `新月自动扣除玩家(ID:${viewingUserId}) 薪资：${totalSalary} GP`);
-                    }
+                    await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
+                    
+                    const logMsg = netIncome > 0 
+                        ? `新月结算：城市盈利，国库增加 ${netIncome} GP` 
+                        : `新月结算：城市赤字，国库扣除 ${Math.abs(netIncome)} GP`;
+                        
+                    await logAction('系统结算', logMsg);
+                    alert(logMsg);
                 }
             }
 
@@ -1486,6 +1484,52 @@ async function advanceTime() {
         } finally {
             hideLoading();
         }
+    }
+
+    // --- 计算城市月度净收支 (单一数据源) ---
+    async function calculateCityNetIncome(targetUserId) {
+        // 1. 获取城市基础数据
+        const { data: stats } = await supabaseClient
+            .from('city_stats')
+            .select('*')
+            .eq('user_id', targetUserId)
+            .single();
+
+        if (!stats) return 0; // 如果还没建立城市，收入为0
+
+        // 2. 获取城市固定支出 (卫兵、建筑)
+        const { data: expenses } = await supabaseClient
+            .from('city_expenses')
+            .select('*')
+            .eq('user_id', targetUserId);
+
+        // 3. 获取特殊雇员支出 (Employees 表)
+        const { data: employees } = await supabaseClient
+            .from('employees')
+            .select('salary')
+            .eq('user_id', targetUserId)
+            .eq('status', '在职');
+
+        // --- 开始计算 ---
+        const taxIncome = Math.ceil(stats.population * stats.tax_rate);
+        const totalIncome = taxIncome + stats.subsidy;
+
+        let totalExpense = 0;
+        
+        // 累加固定支出
+        if (expenses) {
+            expenses.forEach(e => totalExpense += (e.count * e.unit_cost));
+        }
+        
+        // 累加特殊雇员
+        if (employees) {
+            totalExpense += employees.reduce((sum, e) => sum + e.salary, 0);
+        }
+
+        const netIncome = totalIncome - totalExpense;
+        console.log(`[财务核算] 收入:${totalIncome} - 支出:${totalExpense} = 净利:${netIncome}`);
+        
+        return netIncome;
     }
 
 
