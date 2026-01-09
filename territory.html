@@ -274,16 +274,16 @@
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
+        renderCharts();
         
-        initCharts();
-        
-        // 【新增步骤】先去数据库拉取最新的雇员开销，再计算经济
+        // 同步雇员数据
         await syncEmployeeData(user.id);
         
+        // 计算经济
         calculateEconomy();
     }
 
-    // 【新增函数】同步核心团队支出
+    // 同步核心团队支出
     async function syncEmployeeData(userId) {
         // 去 employees 表查询该用户下所有“在职”的雇员
         const { data, error } = await supabaseClient
