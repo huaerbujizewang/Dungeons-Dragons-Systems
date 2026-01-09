@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奥法帝国疆域 - 战略视图</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Serif+SC:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- 核心配色 --- */
+        :root {
+            --suz-bg: #1a1b20;
+            --suz-card-bg: #25262c;
+            --suz-gold: #cba052;
+            --suz-red: #d9534f;          /* 极度危险/敌对 */
+            --suz-orange: #f0ad4e;       /* 警告/不信任 */
+            --suz-yellow: #f7e96b;       /* 中立 */
+            --suz-cyan: #5bc0de;         /* 友好 */
+            --suz-green: #5cb85c;        /* 同盟/安全 */
+            --suz-gray: #888;
+            --suz-border: #444;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: #111;
+            font-family: "PingFang SC", "Roboto", sans-serif;
+            color: #e0e0e0;
+            overflow: hidden; 
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- 悬浮返回按钮 --- */
+        .floating-back-btn {
+            position: fixed;
+            top: 20px; left: 20px; z-index: 100;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--suz-gold);
+            color: var(--suz-gold);
+            padding: 10px 20px;
+            text-decoration: none;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 1px;
+            font-size: 14px;
+            transition: 0.3s;
+            backdrop-filter: blur(4px);
+        }
+        .floating-back-btn:hover { background: var(--suz-gold); color: #000; }
+
+        /* --- 地图容器 --- */
+        .map-container { position: relative; max-width: 100%; max-height: 100vh; overflow: auto; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .map-image { display: block; max-width: 100%; height: auto; filter: brightness(0.85) contrast(1.1); }
+        area { cursor: pointer; outline: none; }
+
+        /* --- 弹窗与卡片 --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        
+        .suz-card { width: 420px; background-color: var(--suz-card-bg); border: 1px solid var(--suz-border); border-top: 4px solid var(--suz-gold); box-shadow: 0 20px 60px rgba(0,0,0,0.8); transform: translateY(20px); transition: transform 0.3s ease; position: relative; }
+        .modal-overlay.active .suz-card { transform: translateY(0); }
+        
+        .close-btn { position: absolute; top: 10px; right: 15px; color: var(--suz-gray); font-size: 24px; cursor: pointer; z-index: 10; }
+        .close-btn:hover { color: #fff; }
+        
+        .suz-header { background: linear-gradient(180deg, #2f3036 0%, #25262c 100%); padding: 25px 20px; text-align: center; border-bottom: 1px solid var(--suz-border); }
+        .suz-country-name { font-family: 'Noto Serif SC', 'Playfair Display', serif; font-size: 28px; color: var(--suz-gold); letter-spacing: 1px; margin-bottom: 8px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .suz-motto { font-size: 13px; color: var(--suz-gray); font-style: italic; font-family: 'Playfair Display', serif; }
+        
+        .suz-visuals { display: flex; padding: 20px; gap: 15px; align-items: flex-start; background: rgba(0,0,0,0.2); }
+        
+        /* 国旗样式优化：支持图片 */
+        .suz-flag-container {
+            width: 100px; height: 66px;
+            background-color: #000;
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .suz-flag-img { width: 100%; height: 100%; object-fit: cover; display: none; } /* 默认隐藏图片 */
+        .suz-flag-text { color: #555; font-size: 10px; display: block; } /* 默认显示文字 */
+
+        .suz-desc { font-size: 13px; line-height: 1.5; color: #ccc; flex: 1; }
+        
+        .suz-data-grid { padding: 10px 25px 25px 25px; }
+        .suz-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        .suz-row:last-child { border-bottom: none; }
+        .suz-label { color: var(--suz-gray); font-weight: 500;}
+        .suz-value { font-weight: bold; text-align: right; }
+        
+        /* 颜色类 */
+        .color-red { color: var(--suz-red); }
+        .color-orange { color: var(--suz-orange); }
+        .color-yellow { color: var(--suz-yellow); }
+        .color-cyan { color: var(--suz-cyan); }
+        .color-green { color: var(--suz-green); }
+        .color-gold { color: var(--suz-gold); }
+        
+        .suz-action-btn { width: 100%; padding: 15px; background: #2f3036; border: none; border-top: 1px solid var(--suz-border); color: var(--suz-gray); cursor: pointer; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; transition: 0.2s; }
+        .suz-action-btn:hover { background: #383940; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <a href="../world.html" class="floating-back-btn">⬅ RETURN TO ARCHIVE</a>
+
+    <div class="map-container">
+        <!-- 引用 images 文件夹下的地图 -->
+        <img src="images/far_east_map.png" usemap="#image-map" class="map-image" alt="费伦远东地图">
+        
+        <map name="image-map">
+            <!-- 坐标区域保持不变 -->
+            <area target="" alt="塞尔" title="塞尔" href="javascript:void(0)" onclick="openCard('thay')" coords="941,1427,999,1416,992,1386,1040,1362,1105,1355,1130,1370,1164,1413,1271,1433,1285,1392,1336,1404,1380,1370,1358,1335,1370,1306,1408,1297,1440,1295,1466,1309,1483,1330,1495,1336,1508,1355,1530,1355,1551,1357,1583,1341,1609,1340,1617,1375,1653,1375,1672,1352,1745,1328,1787,1295,1837,1273,1856,1232,1849,1214,1852,1154,1876,1118,1851,1052,1839,1033,1845,982,1791,906,1796,877,1811,824,1830,814,1844,780,1886,747,1900,710,1866,691,1852,654,1823,615,1851,555,1862,495,1825,490,1801,465,1769,478,1723,468,1626,487,1556,483,1537,465,1488,436,1447,451,1391,426,1346,443,1268,463,1251,502,1283,550,1258,582,1215,599,1188,616,1152,640,1128,769,1150,838,1157,887,1128,911,1082,941,1077,992,1006,1021,985,1044,1024,1103,1059,1149,1093,1180,1098,1209,1081,1241,1055,1255,1004,1292,963,1357" shape="poly">
+            <area target="" alt="阿戈拉隆" title="阿戈拉隆" href="javascript:void(0)" onclick="openCard('aglarond')" coords="956,1009,982,1037,1024,1117,1082,1176,1094,1207,1076,1239,950,1362,924,1353,902,1341,873,1353,830,1360,820,1382,803,1379,796,1353,725,1353,728,1377,713,1379,699,1365,634,1362,611,1352,600,1370,553,1381,525,1386,515,1418,495,1428,474,1415,439,1406,439,1382,427,1365,403,1360,393,1392,362,1391,353,1382,333,1374,316,1377,301,1379,285,1365,306,1270,341,1222,362,1198,372,1180,420,1183,473,1147,469,1095,457,1081,471,1052,503,1072,537,1083,559,1069,590,1076,604,1055,645,1076,677,1076,699,1095,743,1088,783,1103,846,1047,895,1025" shape="poly">
+            <area target="" alt="奥屯贝尔" title="奥屯贝尔" href="javascript:void(0)" onclick="openCard('altumbel')" coords="1,1473,287,1187" shape="rect">
+            <area target="" alt="莱瑟曼" title="莱瑟曼" href="javascript:void(0)" onclick="openCard('rashemen')" coords="1215,3,1203,15,1212,36,1171,95,1166,126,1185,150,1188,175,1200,184,1188,201,1195,233,1200,255,1195,277,1202,293,1202,315,1227,323,1258,342,1283,349,1292,356,1304,344,1319,349,1333,332,1350,327,1365,335,1379,335,1399,354,1413,356,1423,369,1457,356,1483,339,1508,363,1523,392,1522,420,1488,427,1546,468,1614,480,1699,463,1728,434,1724,393,1716,298,1634,245,1622,208,1632,184,1636,172,1650,157,1641,134,1612,133,1576,99,1568,65,1529,75,1503,37,1484,0" shape="poly">
+            <area target="" alt="安劳特区" title="安劳特区" href="javascript:void(0)" onclick="openCard('alaor')" coords="1271,1454,1435,1542" shape="rect">
+            <area target="" alt="塞斯克" title="塞斯克" href="javascript:void(0)" onclick="openCard('thesk')" coords="1036,172,1084,167,1118,192,1145,243,1164,260,1149,295,1224,368,1283,376,1305,381,1305,434,1270,458,1248,504,1277,543,1237,587,1176,616,1147,642,1123,771,1150,880,1081,938,1069,987,987,1033,956,1006,892,1021,849,1040,781,1096,738,1078,738,1055,737,1018,704,986,643,970,605,1015,582,1018,573,994,554,979,524,965,478,970,461,967,459,946,433,935,389,899,398,884,428,899,466,904,491,890,507,863,483,838,456,797,456,783,399,749,444,722,466,678,430,671,399,628,422,604,483,599,495,613,519,609,525,586,558,572,558,598,568,613,536,647,524,681,544,689,570,667,582,664,559,708,580,718,595,723,602,693,623,708,645,708,668,703,668,676,694,662,720,633,737,609,735,575,732,548,714,548,692,540,682,524,686,509,708,526,743,535,759,516,759,500,742,489,742,473,730,460,718,456,701,444,699,420,730,434,750,431,762,417,783,444,805,458,817,460,827,451,851,451,864,427,864,410,864,388,881,407,898,398,919,398,919,376,927,356,941,340" shape="poly">
+            <area target="" alt="巨谷" title="巨谷" href="javascript:void(0)" onclick="openCard('greatdale')" coords="164,0,161,46,164,73,180,82,207,83,186,109,209,121,204,136,222,153,260,187,302,209,328,260,369,306,355,344,365,381,359,412,405,432,439,465,415,504,405,565,416,598,481,596,493,609,517,609,520,584,563,570,568,609,556,638,537,655,529,684,544,684,571,662,587,664,568,695,583,710,604,684,629,696,648,700,660,678,675,664,699,643,725,618,733,609,728,572,726,557,694,540,675,511,691,502,711,514,726,526,745,521,752,506,737,495,735,482,732,472,708,460,692,437,696,422,708,420,723,420,735,426,757,420,778,420,795,441,810,455,825,443,844,446,861,393,866,376,883,390,905,386,924,352,1028,174,1081,160,1057,66,996,51,939,5,895,7,835,7,774,0,650,92,517,65,423,22,353,5" shape="poly">
+        </map>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="suz-card">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <div class="suz-header">
+                <div class="suz-country-name" id="c-name">国家名称</div>
+                <div class="suz-motto" id="c-motto">"国家格言"</div>
+            </div>
+            <div class="suz-visuals">
+                <div class="suz-flag-container">
+                    <img id="c-flag-img" src="" alt="Flag" class="suz-flag-img">
+                    <span id="c-flag-text" class="suz-flag-text">FLAG</span>
+                </div>
+                <div class="suz-desc" id="c-desc">国家简述...</div>
+            </div>
+            <div class="suz-data-grid">
+                <!-- 关系：根据文字变色 -->
+                <div class="suz-row"><span class="suz-label">外交关系</span><span class="suz-value" id="c-relation">中立</span></div>
+                <!-- 军事：根据文字变色 -->
+                <div class="suz-row"><span class="suz-label">军事实力</span><span class="suz-value" id="c-military">未知</span></div>
+                <div class="suz-row"><span class="suz-label">统治者</span><span class="suz-value" id="c-leader">未知</span></div>
+                <div class="suz-row"><span class="suz-label">政治体制</span><span class="suz-value" id="c-gov">未知</span></div>
+                <div class="suz-row"><span class="suz-label">主要出口</span><span class="suz-value color-gold" id="c-export">无</span></div>
+                <div class="suz-row"><span class="suz-label">首府</span><span class="suz-value" id="c-capital">未知</span></div>
+            </div>
+            <button class="suz-action-btn">查看完整情报档案</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心数据配置区 ---
+        // 提示：把国旗图片放在 maps/images/flags/ 文件夹下，例如 thay.png
+        const countryData = {
+            "thay": {
+                name: "塞尔帝国",
+                motto: "\"秩序即永恒，死亡即仆从\"",
+                desc: "古老而强大的法师帝国，正处于剧烈的社会与经济转型期。在摄政王的铁腕与新派总督的改革之间，一个恐怖的现代化机器正在苏醒。",
+                relation: "不信任",
+                military: "压倒性",
+                leader: "摄政王 萨扎斯坦",
+                gov: "法师精英独裁",
+                export: "魔法物品, 奴隶, 谷物，水果，木材",
+                capital: "艾尔塔柏",
+                flagText: "THAY",
+                flagFile: "images/flags/thay.png" // 记得创建这个图片
+            },
+            "alaor": {
+                name: "安劳特区",
+                motto: "\"金币不问出身\"",
+                desc: "塞尔最南端的岛屿省份，唯一的对外开放窗口。废除奴隶制，建立了更高效的契约劳工体系。",
+                relation: "极度不信任",
+                military: "旗鼓相当",
+                leader: "总督 德蒂娜雷亚",
+                gov: "特区军管政府",
+                export: "奢侈品, 魔法服务, 航运",
+                capital: "安劳",
+                flagText: "ALAOR",
+                flagFile: "images/flags/alaor.png"
+            },
+            "aglarond": {
+                name: "阿戈拉隆",
+                motto: "\"守护古老的誓约\"",
+                desc: "位于半岛上的魔法王国。黄金之路的断绝重创了其经济，内部对欣布离去后的权力真空感到迷茫。",
+                relation: "中立", 
+                military: "压倒性", 
+                leader: "欣布奇议会",
+                gov: "立宪议会制",
+                export: "谷物，木材, 宝石, 铜矿，葡萄酒",
+                capital: "威普林塔拉",
+                flagText: "AGLR",
+                flagFile: "images/flags/aglarond.png"
+            },
+            "rashemen": {
+                name: "莱瑟曼",
+                motto: "\"风雪锻造灵魂\"",
+                desc: "由神秘女巫和狂战士守护的苦寒之地。封闭排外，个体战力惊人。",
+                relation: "同盟",
+                military: "压倒性",
+                leader: "铁王 曼甘·乌鲁克",
+                gov: "君主制/女权统治",
+                export: "毛皮, 烈酒, 雕刻品",
+                capital: "依米尔玛",
+                flagText: "RASH",
+                flagFile: "images/flags/rashemen.png"
+            },
+            "thesk": {
+                name: "塞斯克",
+                motto: "\"万物皆有价\"",
+                desc: "曾经繁荣的贸易联邦，黄金之路的终点。现因商路断绝而濒临破产，秩序崩溃中。",
+                relation: "中立",
+                military: "更胜一筹",
+                leader: "宗主 泰誓",
+                gov: "寡头政治",
+                export: "食物，钢铁，异国商品",
+                capital: "泰夫岚姆",
+                flagText: "THSK",
+                flagFile: "images/flags/thesk.png"
+            },
+            "greatdale": {
+                name: "巨谷",
+                motto: "\"旧路不通\"",
+                desc: "夹在强权间的古老森林。德鲁伊维持着平衡。",
+                relation: "中立",
+                military: "更胜一筹",
+                leader: "未知",
+                gov: "德鲁伊等级制",
+                export: "木雕，草药，魔法物品",
+                capital: "无",
+                flagText: "DALE",
+                flagFile: "images/flags/greatdale.png"
+            },
+            "altumbel": {
+                name: "奥屯贝尔",
+                motto: "\"海浪知晓一切\"",
+                desc: "海盗猎人与排外渔民的半岛。孤立和封闭的代言人。",
+                relation: "不信任",
+                military: "略逊一筹",
+                leader: "统治委员会",
+                gov: "寡头政治",
+                export: "饮食",
+                capital: "斯潘德利永",
+                flagText: "ALTM",
+                flagFile: "images/flags/altumbel.png"
+            }
+        };
+
+        const modal = document.getElementById('modal');
+
+        // 军事实力颜色逻辑
+        function getMilitaryColorClass(text) {
+            if (text.includes("压倒性")) return "color-red";
+            if (text.includes("更胜一筹")) return "color-orange";
+            if (text.includes("旗鼓相当")) return "color-yellow";
+            if (text.includes("略逊一筹")) return "color-green"; // 弱是绿色(安全)
+            if (text.includes("卑如蝼蚁")) return "color-gray";
+            return "";
+        }
+
+        // 外交关系颜色逻辑 (从红到绿)
+        function getRelationColorClass(text) {
+            if (text.includes("极度不信任")) return "color-red";
+            if (text === "不信任") return "color-orange";
+            if (text.includes("中立")) return "color-yellow";
+            if (text.includes("友好")) return "color-cyan";
+            if (text.includes("同盟")) return "color-green";
+            return "";
+        }
+
+        function openCard(key) {
+            const data = countryData[key];
+            if (!data) return;
+
+            document.getElementById('c-name').innerText = data.name;
+            document.getElementById('c-motto').innerText = data.motto;
+            document.getElementById('c-desc').innerText = data.desc;
+            
+            // 国旗逻辑：有图显示图，没图显示字
+            const flagImg = document.getElementById('c-flag-img');
+            const flagText = document.getElementById('c-flag-text');
+            
+            // 这里我们假设图片路径总是存在的（你在data里配了）
+            // 如果你想严谨一点，可以加个 image.onerror 隐藏图片显示文字
+            // 但为了简单，我们直接设置
+            if (data.flagFile) {
+                flagImg.src = data.flagFile;
+                flagImg.style.display = "block";
+                flagText.style.display = "none";
+            } else {
+                flagImg.style.display = "none";
+                flagText.innerText = data.flagText;
+                flagText.style.display = "block";
+            }
+
+            // 关系着色
+            const relEl = document.getElementById('c-relation');
+            relEl.innerText = data.relation;
+            relEl.className = "suz-value " + getRelationColorClass(data.relation);
+
+            // 军事着色
+            const milEl = document.getElementById('c-military');
+            milEl.innerText = data.military;
+            milEl.className = "suz-value " + getMilitaryColorClass(data.military);
+
+            document.getElementById('c-leader').innerText = data.leader;
+            document.getElementById('c-gov').innerText = data.gov;
+            document.getElementById('c-export').innerText = data.export;
+            document.getElementById('c-capital').innerText = data.capital;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeModal();
+        });
+    </script>
+</body>
+</html>
