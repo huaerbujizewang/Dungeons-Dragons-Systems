@@ -1486,37 +1486,32 @@ async function advanceTime() {
         }
     }
 
-    // --- 计算城市月度净收支 (单一数据源) ---
+    // --- 计算城市月度净收支 ---
     async function calculateCityNetIncome(targetUserId) {
-        // 1. 获取城市基础数据
-        const { data: stats } = await supabaseClient
-            .from('city_stats')
-            .select('*')
-            .eq('user_id', targetUserId)
-            .single();
+        // 1. 获取城市基础数据 & 收入明细
+        const [statsRes, expensesRes, incomeRes, empRes] = await Promise.all([
+            supabaseClient.from('city_stats').select('*').eq('user_id', targetUserId).single(),
+            supabaseClient.from('city_expenses').select('*').eq('user_id', targetUserId),
+            supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId), // 新增
+            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('status', '在职')
+        ]);
 
-        if (!stats) return 0; // 如果还没建立城市，收入为0
+        const stats = statsRes.data || { population: 0, subsidy: 0, tax_rate: 1.2 };
+        const expenses = expensesRes.data || [];
+        const incomes = incomeRes.data || []; // 新增
+        const employees = empRes.data || [];
 
-        // 2. 获取城市固定支出 (卫兵、建筑)
-        const { data: expenses } = await supabaseClient
-            .from('city_expenses')
-            .select('*')
-            .eq('user_id', targetUserId);
-
-        // 3. 获取特殊雇员支出 (Employees 表)
-        const { data: employees } = await supabaseClient
-            .from('employees')
-            .select('salary')
-            .eq('user_id', targetUserId)
-            .eq('status', '在职');
-
-        // --- 开始计算 ---
+        // --- 收入计算 ---
         const taxIncome = Math.ceil(stats.population * stats.tax_rate);
-        const totalIncome = taxIncome + stats.subsidy;
+        // 累加所有额外收入项 (如贸易)
+        const otherIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+        
+        const totalIncome = taxIncome + stats.subsidy + otherIncome;
 
+        // --- 支出计算 ---
         let totalExpense = 0;
         
-        // 累加固定支出
+        // 累加固定支出 (包含 staff, building, trade_cost)
         if (expenses) {
             expenses.forEach(e => totalExpense += (e.count * e.unit_cost));
         }
@@ -1527,7 +1522,7 @@ async function advanceTime() {
         }
 
         const netIncome = totalIncome - totalExpense;
-        console.log(`[财务核算] 收入:${totalIncome} - 支出:${totalExpense} = 净利:${netIncome}`);
+        console.log(`[财务核算] 收入:${totalIncome} (含贸易${otherIncome}) - 支出:${totalExpense} = 净利:${netIncome}`);
         
         return netIncome;
     }
