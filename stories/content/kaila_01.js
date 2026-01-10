@@ -4,7 +4,7 @@ const storyContent = {
         "困惑": "assets/stories/kaila/confused1.png",
         "自信": "assets/stories/kaila/confident.png", 
         "抓狂": "assets/stories/kaila/frustrated.png",
-        "迷糊": "assets/stories/kaila/confused2.png"
+        "迷糊": "assets/stories/kaila/confused2.png",
         "摆手": "assets/stories/kaila/hands.png"
     },
     lines: [
