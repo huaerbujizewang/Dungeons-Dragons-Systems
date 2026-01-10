@@ -1488,47 +1488,52 @@ async function advanceTime() {
 
     // --- 计算城市月度净收支 ---
     async function calculateCityNetIncome(targetUserId) {
-        // 1. 获取城市基础数据 & 收入明细
+        // 1. 获取所有数据
         const [statsRes, expensesRes, incomeRes, empRes] = await Promise.all([
-            supabaseClient.from('city_stats').select('*').eq('user_id', targetUserId).single(),
+            supabaseClient.from('city_stats').select('*').eq('user_id', targetUserId).maybeSingle(),
             supabaseClient.from('city_expenses').select('*').eq('user_id', targetUserId),
-            supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId), // 新增
+            supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId),
             supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('status', '在职')
         ]);
 
         const stats = statsRes.data || { population: 0, subsidy: 0, tax_rate: 1.2 };
         const expenses = expensesRes.data || [];
-        const incomes = incomeRes.data || []; // 新增
+        const incomes = incomeRes.data || [];
         const employees = empRes.data || [];
 
         // --- 收入计算 ---
         const taxIncome = Math.ceil(stats.population * stats.tax_rate);
-        // 累加所有额外收入项 (如贸易)
-        const otherIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
         
-        const totalIncome = taxIncome + stats.subsidy + otherIncome;
+        // 贸易收入 (count * unit_price)
+        const tradeIncome = incomes.reduce((sum, item) => {
+            const count = item.count || 1;
+            const price = item.unit_price || item.amount;
+            return sum + (count * price);
+        }, 0);
+        
+        const totalIncome = taxIncome + stats.subsidy + tradeIncome;
 
         // --- 支出计算 ---
         let totalExpense = 0;
         
-        // 累加固定支出 (包含 staff, building, trade_cost)
+        // 固定支出 (含 staff, building, trade_cost)
         if (expenses) {
             expenses.forEach(e => totalExpense += (e.count * e.unit_cost));
         }
         
-        // 累加特殊雇员
+        // 特殊雇员支出
         if (employees) {
             totalExpense += employees.reduce((sum, e) => sum + e.salary, 0);
         }
 
         const netIncome = totalIncome - totalExpense;
-        console.log(`[财务核算] 收入:${totalIncome} (含贸易${otherIncome}) - 支出:${totalExpense} = 净利:${netIncome}`);
+        console.log(`[财务核算] User:${targetUserId} | 收入:${totalIncome} - 支出:${totalExpense} = 净利:${netIncome}`);
         
         return netIncome;
     }
 
 
-async function adminAddItem() {
+    async function adminAddItem() {
         const name = document.getElementById('adm-shop-name').value;
         const rarity = document.getElementById('adm-shop-rarity').value;
         const category = document.getElementById('adm-shop-cat').value;
