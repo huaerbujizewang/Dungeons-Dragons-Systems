@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <title>人物志 - 往昔回响</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="stories/list.js"></script> <!-- 引入故事列表 -->
+    <script>
+    document.write('<script src="stories/list.js?v=' + new Date().getTime() + '"><\/script>');
+    </script>
     <style>
         body { font-family: "PingFang SC", sans-serif; background: #fff; padding: 40px; color: #333; }
         .back-btn { padding: 8px 15px; border: 1px solid #333; text-decoration: none; color: #333; border-radius: 4px; }
