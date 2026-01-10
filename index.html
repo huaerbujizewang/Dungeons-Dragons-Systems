@@ -274,6 +274,17 @@
         
         <!-- 左侧列 -->
         <div style="display:flex; flex-direction:column; gap:20px;">
+
+            <!-- 事务审批中心 -->
+            <div id="approval-box" class="admin-box" style="border:1px solid #e67e22; padding:15px; border-radius:8px; background:#fffcf0; display:none;">
+                <h3 style="margin-top:0; color:#d35400;">⚖️ 待办审批</h3>
+                <div id="approval-list" style="font-size:0.9em;">
+                    正在加载请求...
+                </div>
+            </div>
+
+            <!-- 原有的时间控制台 (保持在下面) -->
+            <div class="admin-box" ...>
             <!-- 时间控制 -->
             <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
                 <h3 style="margin-top:0">⏳ 时间线操控</h3>
@@ -952,6 +963,7 @@ async function loadGold() {
 
         if (p.style.display === 'block') {
             const securityPanel = document.getElementById('security-panel-container');
+            loadPendingRequests(); 
             if (securityPanel) {
                 // 只有 Root 能看网安
                 securityPanel.style.display = (currentUserRole === 'root') ? 'flex' : 'none';
@@ -1090,6 +1102,75 @@ async function loadGold() {
             loadShop();
         }
         hideLoading();
+    }
+
+    // --- 加载待审批请求 ---
+    async function loadPendingRequests() {
+        const box = document.getElementById('approval-box');
+        const list = document.getElementById('approval-list');
+        
+        // 1. 查询所有状态为 '申请解雇' 的雇员
+        // 如果是 Root，查所有；如果是 DM，查自己负责玩家的 (利用 RLS 或筛选)
+        let query = supabaseClient.from('employees').select('*, profiles:user_id(email)').eq('status', '申请解雇');
+        
+        if (currentUserRole === 'dm') {
+            // 这里依赖 profiles 表的 RLS 或者我们手动过滤
+            // 简单起见，我们假设 RLS 已经配置好，DM 只能读到自己负责的玩家的雇员
+        }
+
+        const { data: requests, error } = await query;
+
+        // 2. 控制盒子显隐
+        if (!requests || requests.length === 0) {
+            box.style.display = 'none'; // 没有请求就隐藏盒子，保持界面清爽
+            return;
+        }
+        
+        box.style.display = 'block'; // 有请求才显示
+        list.innerHTML = '';
+
+        // 3. 渲染列表
+        requests.forEach(req => {
+            const ownerEmail = req.profiles ? req.profiles.email : '未知买家';
+            list.innerHTML += `
+                <div style="border-bottom:1px dashed #eca; padding:8px 0; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>${req.name}</strong> <span style="font-size:0.8em; color:#666;">(${req.salary} GP)</span><br>
+                        <span style="font-size:0.75em; color:#999;">雇主: ${ownerEmail}</span>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <button onclick="approveFire(${req.id}, true)" style="background:#2ecc71; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">批准</button>
+                        <button onclick="approveFire(${req.id}, false)" style="background:#e74c3c; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">驳回</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // --- 处理审批 ---
+    async function approveFire(empId, isApproved) {
+        showLoading();
+        try {
+            // 如果批准，状态改为 '离职' (这样就不扣钱了，但也还在列表里)
+            // 如果驳回，状态改回 '在职'
+            const newStatus = isApproved ? '离职' : '在职';
+            
+            await supabaseClient
+                .from('employees')
+                .update({ status: newStatus })
+                .eq('id', empId);
+
+            await logAction('审批操作', `${isApproved ? '批准' : '驳回'}了雇员(ID:${empId}) 的解雇申请`);
+            
+            alert('处理完成');
+            loadPendingRequests(); // 刷新审批列表
+            loadEmployees();       // 刷新雇员显示
+        } catch (e) {
+            console.error(e);
+            alert('操作失败');
+        } finally {
+            hideLoading();
+        }
     }
 
 
