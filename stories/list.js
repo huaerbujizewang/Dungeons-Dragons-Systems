@@ -17,6 +17,14 @@ const storyList = [
         date: "FR1494 - 2月"
     },
     {
+    id: "kaila_01",
+    title: "不存在的败北",
+    description: "凯拉的战术复盘与逻辑重构。",
+    owner: "master@almorel.com",
+    tags: "凯拉",
+    date: "FR1494 - 2月"
+    },
+    {
         id: "test_01",
         title: "牢玩家的故事",
         description: "这是一段只有 IDRotF 负责的玩家才能看到的剧情。",
