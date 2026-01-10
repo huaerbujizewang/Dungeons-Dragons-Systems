@@ -5,64 +5,195 @@
     <title>剧场播放中...</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ... 之前的 CSS 保持不变 (头像左侧，对话框样式等) ... */
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: "PingFang SC", sans-serif; background: #000; }
-        #stage { width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: flex-end; justify-content: center; position: relative; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: "PingFang SC", sans-serif; background: #000; user-select: none; }
+        
+        #stage { width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: flex-end; justify-content: center; position: relative; transition: background-image 0.5s ease; }
         #stage::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); pointer-events: none; }
-        #avatar-container { position: absolute; bottom: 50px; left: 5%; z-index: 10; transition: all 0.3s ease; }
-        .avatar { width: 220px; height: 220px; border-radius: 50%; border: 4px solid #fff; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        #dialogue-box { position: relative; z-index: 20; width: 90%; max-width: 900px; background: rgba(255,255,255,0.92); padding: 25px 30px 25px 150px; margin-bottom: 40px; border-radius: 12px; cursor: pointer; min-height: 100px; box-sizing: border-box; }
-        #speaker-name { position: absolute; top: -15px; left: 150px; background: #2c3e50; color: #fff; padding: 4px 20px; border-radius: 4px; font-weight: bold; font-size: 0.9em; }
-        #text-content { line-height: 1.8; font-size: 1.15em; color: #2c3e50; }
+        
+        #avatar-container { position: absolute; bottom: 50px; left: 5%; z-index: 10; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .avatar { width: 220px; height: 220px; border-radius: 50%; border: 4px solid #fff; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: opacity 0.2s; }
+        
+        #dialogue-box { position: relative; z-index: 20; width: 90%; max-width: 900px; background: rgba(255,255,255,0.92); padding: 25px 30px 25px 150px; margin-bottom: 40px; border-radius: 12px; cursor: pointer; min-height: 120px; box-sizing: border-box; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        #speaker-name { position: absolute; top: -15px; left: 150px; background: #2c3e50; color: #fff; padding: 4px 20px; border-radius: 4px; font-weight: bold; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        #text-content { line-height: 1.8; font-size: 1.15em; color: #2c3e50; min-height: 1.8em; }
+        
+        /* 闪烁的光标提示 */
+        #cursor-indicator { display: inline-block; width: 10px; height: 18px; background: #2c3e50; margin-left: 5px; animation: blink 0.8s infinite; vertical-align: sub; opacity: 0; }
+        @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
         .controls { position: absolute; top: 20px; right: 20px; z-index: 100; }
-        .btn { background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .btn { background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 15px; border-radius: 5px; cursor: pointer; backdrop-filter: blur(2px); transition: 0.2s; }
+        .btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* Loading */
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; display: flex; align-items: center; justify-content: center; color: #fff; flex-direction: column; transition: opacity 0.5s; }
     </style>
 </head>
 <body>
 
-<div id="stage" onclick="nextLine()">
-    <div class="controls"><button class="btn" onclick="location.href='lore.html'">退出</button></div>
-    <div id="avatar-container"><img id="main-avatar" src="" class="avatar"></div>
-    <div id="dialogue-box"><div id="speaker-name">...</div><div id="text-content">正在载入记忆碎片...</div></div>
+<div id="loading-screen">
+    <div style="margin-bottom:10px;">正在从位面读取记忆...</div>
+    <div style="font-size:0.8em; color:#666;" id="preload-status">0%</div>
+</div>
+
+<div id="stage" onclick="handleTap()">
+    <div class="controls"><button class="btn" onclick="location.href='lore.html'">退出回想</button></div>
+    
+    <div id="avatar-container">
+        <img id="main-avatar" src="" class="avatar" style="opacity:0"> <!-- 初始隐藏 -->
+    </div>
+
+    <div id="dialogue-box">
+        <div id="speaker-name">...</div>
+        <div id="text-content"></div>
+        <span id="cursor-indicator"></span>
+    </div>
 </div>
 
 <script>
-    let currentLine = 0;
+    // 配置 Supabase
+    const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let currentLine = 0;
+    let isTyping = false; // 是否正在打字
+    let typeInterval = null; // 打字定时器
+    let currentText = ""; // 当前句子的完整文本
+
+    // 1. 初始化逻辑
     async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         const storyId = urlParams.get('id');
 
         if (!storyId) { window.location.href = 'lore.html'; return; }
 
-        // --- 动态加载故事内容脚本 ---
+        // 鉴权检查 (保持你原来的逻辑)
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { alert("请先登录。"); window.location.href = 'index.html'; return; }
+        // ... (此处省略详细的 Admin 检查代码，建议保留你之前写的权限逻辑) ...
+
+        // --- 核心修复：添加随机数 ?v=timestamp 强制刷新缓存 ---
         const script = document.createElement('script');
-        script.src = `stories/content/${storyId}.js`;
-        script.onload = () => {
-            // 当脚本加载完，storyContent 变量就可用了
-            document.getElementById('stage').style.backgroundImage = `url('${storyContent.bg}')`;
-            renderLine();
+        script.src = `stories/content/${storyId}.js?v=${new Date().getTime()}`;
+        
+        script.onload = async () => {
+            // 脚本加载完后，先预加载图片
+            await preloadAssets();
+            // 图片预加载完，隐藏 Loading，开始演出
+            document.getElementById('loading-screen').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('stage').style.backgroundImage = `url('${storyContent.bg}')`;
+                renderLine();
+            }, 500);
         };
         script.onerror = () => alert("无法加载故事内容");
         document.body.appendChild(script);
     }
 
+    // 2. 图片预加载 (解决卡顿)
+    function preloadAssets() {
+        return new Promise((resolve) => {
+            const assets = Object.values(storyContent.assets);
+            if (storyContent.bg) assets.push(storyContent.bg);
+            
+            let loaded = 0;
+            const total = assets.length;
+            const status = document.getElementById('preload-status');
+
+            if (total === 0) resolve();
+
+            assets.forEach(src => {
+                const img = new Image();
+                img.src = src;
+                img.onload = img.onerror = () => {
+                    loaded++;
+                    status.innerText = Math.floor((loaded / total) * 100) + "%";
+                    if (loaded === total) resolve();
+                };
+            });
+        });
+    }
+
+    // 3. 渲染行逻辑
     function renderLine() {
         if (currentLine >= storyContent.lines.length) {
-            alert("故事结束。");
-            window.location.href = 'lore.html';
+            document.getElementById('text-content').innerText = "（故事结束）";
+            setTimeout(() => {
+                if(confirm("重读一遍？")) location.reload();
+                else location.href = 'lore.html';
+            }, 500);
             return;
         }
 
         const data = storyContent.lines[currentLine];
+        const avatarPath = storyContent.assets[data.emotion];
+
+        // 设置名字
         document.getElementById('speaker-name').innerText = data.speaker;
-        document.getElementById('text-content').innerText = data.text;
-        document.getElementById('main-avatar').src = storyContent.assets[data.emotion];
+        
+        // 设置图片 (因为已预加载，这里是瞬时的)
+        const img = document.getElementById('main-avatar');
+        img.style.opacity = 1;
+        if (img.src !== new URL(avatarPath, document.baseURI).href) {
+            // 只有当图片变了才做切换动画
+            img.style.opacity = 0.8;
+            setTimeout(() => { img.src = avatarPath; img.style.opacity = 1; }, 50);
+            // 角色跳动
+            document.getElementById('avatar-container').style.transform = "translateY(-5px)";
+            setTimeout(() => document.getElementById('avatar-container').style.transform = "translateY(0)", 200);
+        } else {
+            img.src = avatarPath;
+        }
+
+        // --- 核心：打字机效果 ---
+        startTypewriter(data.text);
     }
 
-    function nextLine() {
-        currentLine++;
-        renderLine();
+    // 打字机核心
+    function startTypewriter(text) {
+        const textEl = document.getElementById('text-content');
+        const cursor = document.getElementById('cursor-indicator');
+        
+        textEl.innerText = ""; // 清空
+        currentText = text;
+        isTyping = true;
+        cursor.style.opacity = 0; // 打字时隐藏光标
+
+        let index = 0;
+        clearInterval(typeInterval); // 清除旧计时器
+
+        typeInterval = setInterval(() => {
+            textEl.innerText += text.charAt(index);
+            index++;
+            
+            if (index >= text.length) {
+                // 打完字了
+                finishTyping();
+            }
+        }, 30); // 打字速度：30ms/字 (你可以调快慢)
+    }
+
+    // 瞬间完成打字
+    function finishTyping() {
+        clearInterval(typeInterval);
+        document.getElementById('text-content').innerText = currentText;
+        isTyping = false;
+        document.getElementById('cursor-indicator').style.opacity = 1; // 显示等待光标
+    }
+
+    // 4. 点击处理 (控制流)
+    function handleTap() {
+        if (isTyping) {
+            // 如果正在打字，点击瞬间显示全句
+            finishTyping();
+        } else {
+            // 如果字已打完，点击进入下一句
+            currentLine++;
+            renderLine();
+        }
     }
 
     init();
