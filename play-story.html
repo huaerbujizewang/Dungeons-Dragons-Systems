@@ -18,9 +18,6 @@
         
         #text-content { line-height: 1.8; font-size: 1.15em; color: #2c3e50; min-height: 1.8em; }
         
-        /* 闪烁的光标提示 */
-        #cursor-indicator { display: inline-block; width: 10px; height: 18px; background: #2c3e50; margin-left: 5px; animation: blink 0.8s infinite; vertical-align: sub; opacity: 0; }
-        @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 
         .controls { position: absolute; top: 20px; right: 20px; z-index: 100; }
         .btn { background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 15px; border-radius: 5px; cursor: pointer; backdrop-filter: blur(2px); transition: 0.2s; }
@@ -47,7 +44,6 @@
     <div id="dialogue-box">
         <div id="speaker-name">...</div>
         <div id="text-content"></div>
-        <span id="cursor-indicator"></span>
     </div>
 </div>
 
@@ -155,12 +151,10 @@
     // 打字机核心
     function startTypewriter(text) {
         const textEl = document.getElementById('text-content');
-        const cursor = document.getElementById('cursor-indicator');
         
         textEl.innerText = ""; // 清空
         currentText = text;
         isTyping = true;
-        cursor.style.opacity = 0; // 打字时隐藏光标
 
         let index = 0;
         clearInterval(typeInterval); // 清除旧计时器
@@ -181,7 +175,6 @@
         clearInterval(typeInterval);
         document.getElementById('text-content').innerText = currentText;
         isTyping = false;
-        document.getElementById('cursor-indicator').style.opacity = 1; // 显示等待光标
     }
 
     // 4. 点击处理 (控制流)
