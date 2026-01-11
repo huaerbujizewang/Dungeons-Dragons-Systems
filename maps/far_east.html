@@ -100,11 +100,12 @@
         .suz-row:last-child { border-bottom: none; }
         .suz-label { color: var(--suz-gray); font-weight: 500;}
         .suz-value { font-weight: bold; text-align: right; }
-        .color-red { color: var(--suz-red); }
-        .color-orange { color: var(--suz-orange); }
-        .color-yellow { color: var(--suz-yellow); }
-        .color-cyan { color: var(--suz-cyan); }
-        .color-green { color: var(--suz-green); }
+        .color-red { color: var(--suz-red) !important; }
+        .color-orange { color: var(--suz-orange) !important; }
+        .color-yellow { color: var(--suz-yellow) !important; }
+        .color-cyan { color: var(--suz-cyan) !important; }
+        .color-green { color: var(--suz-green) !important; }
+        .color-gray { color: var(--suz-gray) !important; }
         .color-gold { color: var(--suz-gold); }
         .suz-action-btn { width: 100%; padding: 15px; background: #2f3036; border: none; border-top: 1px solid var(--suz-border); color: var(--suz-gray); cursor: pointer; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; transition: 0.2s; }
         .suz-action-btn:hover { background: #383940; color: #fff; }
@@ -277,58 +278,69 @@
 
         const modal = document.getElementById('modal');
 
+         // 军事实力
         function getMilitaryColorClass(text) {
             if (text.includes("压倒性")) return "color-red";
             if (text.includes("更胜一筹")) return "color-orange";
             if (text.includes("旗鼓相当")) return "color-yellow";
-            if (text.includes("略逊一筹")) return "color-green";
-            if (text.includes("卑如蝼蚁")) return "color-gray";
-            return "";
+            if (text.includes("略逊一筹")) return "color-cyan";
+            if (text.includes("卑如蝼蚁")) return "color-green";
+            return "color-gray";
         }
 
+        // 外交关系
         function getRelationColorClass(text) {
             if (text.includes("极度不信任")) return "color-red";
             if (text === "不信任") return "color-orange";
             if (text.includes("中立")) return "color-yellow";
             if (text.includes("友好")) return "color-cyan";
             if (text.includes("同盟")) return "color-green";
-            return "";
+            return "color-gray";
         }
 
-        function openCard(key) {
-            const data = countryData[key];
-            if (!data) return;
+        // --- 2. 国旗预加载逻辑 ---
 
-            document.getElementById('c-name').innerText = data.name;
-            document.getElementById('c-motto').innerText = data.motto;
-            document.getElementById('c-desc').innerText = data.desc;
-            
-            const flagImg = document.getElementById('c-flag-img');
-            const flagText = document.getElementById('c-flag-text');
-            if (data.flagFile) {
-                flagImg.src = data.flagFile;
-                flagImg.style.display = "block";
-                flagText.style.display = "none";
-            } else {
-                flagImg.style.display = "none";
-                flagText.innerText = data.flagText;
-                flagText.style.display = "block";
+        function preloadFlags() {
+            console.log("正在同步位面旗帜数据...");
+            for (let key in countryData) {
+                if (countryData[key].flagFile) {
+                    const img = new Image();
+                    img.src = countryData[key].flagFile;
+                }
             }
+        }
 
+        // --- 3. 初始化 ---
+
+        // 页面加载完成后执行预加载
+        window.onload = preloadFlags;
+
+
+          // 修改后的 openCard 函数内相关着色调用
+        function openCard(key) {
+            const d = countryData[key];
+            if (!d) return;
+
+            document.getElementById('c-name').innerText = d.name;
+            document.getElementById('c-motto').innerText = d.motto;
+            document.getElementById('c-desc').innerText = d.desc;
+            document.getElementById('c-flag-img').src = d.flagFile;
+            
             const relEl = document.getElementById('c-relation');
-            relEl.innerText = data.relation;
-            relEl.className = "suz-value " + getRelationColorClass(data.relation);
+            relEl.innerText = d.relation;
+            relEl.className = "suz-value " + getRelationColorClass(d.relation);
 
             const milEl = document.getElementById('c-military');
-            milEl.innerText = data.military;
-            milEl.className = "suz-value " + getMilitaryColorClass(data.military);
+            milEl.innerText = d.military;
+            milEl.className = "suz-value " + getMilitaryColorClass(d.military);
 
-            document.getElementById('c-leader').innerText = data.leader;
-            document.getElementById('c-gov').innerText = data.gov;
-            document.getElementById('c-export').innerText = data.export;
-            document.getElementById('c-capital').innerText = data.capital;
+            document.getElementById('c-leader').innerText = d.leader;
+            document.getElementById('c-gov').innerText = d.gov;
+            document.getElementById('c-export').innerText = d.export;
+            document.getElementById('c-capital').innerText = d.capital;
 
-            modal.classList.add('active');
+            modal.style.display = 'flex';
+            setTimeout(() => { modal.classList.add('active'); }, 10);
         }
 
         function closeModal() {
