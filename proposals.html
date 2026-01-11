@@ -110,6 +110,8 @@
 
         // 加载目标用户的议案
         loadProposals(targetId);
+
+        setupRealtime(targetId);
     }
 
     async function loadProposals(userId) {
@@ -200,7 +202,7 @@
         if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
     }
 
-    // --- 决策逻辑 (升级版) ---
+    // --- 决策逻辑 ---
     async function handleDecision(id, decision, cost, title) {
         // 1. 弹出输入框询问理由
         const actionName = decision === 'approved' ? '批准' : '否决';
@@ -237,6 +239,38 @@
         } else {
             alert('公文已归档。');
             location.reload(); 
+        }
+    }
+
+    function setupRealtime(targetId) {
+        // 创建一个实时频道
+        const proposalChannel = supabaseClient
+            .channel('proposal_realtime')
+            .on(
+                'postgres_changes', 
+                { 
+                    event: '*', // 监听所有变动：新增、修改、删除
+                    schema: 'public', 
+                    table: 'city_proposals',
+                    filter: `user_id=eq.${targetId}` // 关键：只监听当前正在看的那个玩家的变动
+                }, 
+                (payload) => {
+                    console.log('检测到位面波动，提案表已更新:', payload);
+                    // 只要数据库变了，就重新加载列表和金币
+                    loadProposals(targetId); 
+                    // 顺便刷新一下金币显示，防止钱扣了这边不知道
+                    refreshGoldDisplay(targetId);
+                }
+            )
+            .subscribe();
+    }
+
+    // 单独刷新金币显示
+    async function refreshGoldDisplay(userId) {
+        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userId).single();
+        if (prof) {
+            document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
+            userProfile.gold_gp = prof.gold_gp; // 更新本地缓存
         }
     }
 
