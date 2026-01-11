@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剑湾势力分布 - 战略视图</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Serif+SC:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --suz-bg: #1a1b20; --suz-card-bg: #25262c; --suz-gold: #cba052;
+            --suz-red: #d9534f; --suz-orange: #f0ad4e; --suz-yellow: #f7e96b;
+            --suz-cyan: #5bc0de; --suz-green: #5cb85c; --suz-gray: #888;
+        }
+
+        body { margin: 0; background: #111; font-family: "PingFang SC", sans-serif; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; }
+
+        .floating-back-btn { position: fixed; top: 20px; left: 20px; z-index: 100; background: rgba(0,0,0,0.6); border: 1px solid var(--suz-gold); color: var(--suz-gold); padding: 10px 20px; text-decoration: none; font-size: 14px; transition: 0.3s; backdrop-filter: blur(4px); }
+        .floating-back-btn:hover { background: var(--suz-gold); color: #000; }
+
+        .map-container { position: relative; width: 100%; height: 100vh; background: #000; display: flex; justify-content: center; align-items: center; }
+        svg { width: 100%; height: 100%; max-height: 100vh; display: block; }
+
+        .region-poly { fill: transparent; stroke: none; cursor: pointer; transition: all 0.3s; }
+        .region-poly:hover { fill: rgba(203, 160, 82, 0.25); stroke: var(--suz-gold); stroke-width: 2px; }
+
+        /* 弹窗样式 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .suz-card { width: 420px; background: var(--suz-card-bg); border: 1px solid #444; border-top: 4px solid var(--suz-gold); position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; color: var(--suz-gray); font-size: 24px; cursor: pointer; }
+        .suz-header { background: linear-gradient(180deg, #2f3036 0%, #25262c 100%); padding: 25px 20px; text-align: center; border-bottom: 1px solid #333; }
+        .suz-country-name { font-family: 'Noto Serif SC', serif; font-size: 26px; color: var(--suz-gold); margin-bottom: 8px; }
+        .suz-motto { font-size: 12px; color: var(--suz-gray); font-style: italic; }
+        .suz-visuals { display: flex; padding: 20px; gap: 15px; background: rgba(0,0,0,0.2); }
+        .suz-flag-container { width: 100px; height: 66px; background: #000; border: 1px solid #555; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .suz-flag-img { width: 100%; height: 100%; object-fit: cover; }
+        .suz-desc { font-size: 13px; line-height: 1.5; color: #ccc; flex: 1; }
+        .suz-data-grid { padding: 10px 25px 25px 25px; }
+        .suz-row { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        .suz-label { color: var(--suz-gray); }
+        .suz-value { font-weight: bold; }
+        .suz-action-btn { width: 100%; padding: 15px; background: #2f3036; border: none; color: var(--suz-gray); cursor: pointer; text-transform: uppercase; font-size: 11px; }
+        
+        .color-red { color: var(--suz-red); }
+        .color-orange { color: var(--suz-orange); }
+        .color-yellow { color: var(--suz-yellow); }
+        .color-cyan { color: var(--suz-cyan); }
+        .color-green { color: var(--suz-green); }
+    </style>
+</head>
+<body>
+
+    <a href="../world.html" class="floating-back-btn">⬅ RETURN TO ARCHIVE</a>
+
+    <div class="map-container">
+        <!-- viewBox 已经设置为 1448 1442 -->
+        <svg viewBox="0 0 1448 1442" preserveAspectRatio="xMidYMid meet">
+            <image href="images/sword_coast_map.png" width="1448" height="1442" />
+
+            <!-- 艾弗瑞斯卡 Evereska -->
+            <polygon class="region-poly" onclick="openCard('evereska')" points="1247,9 1248,20 1239,31 1236,40 1229,46 1213,75 1211,100 1213,118 1209,133 1181,138 1174,147 1148,159 1134,180 1129,225 1125,239 1138,246 1143,271 1144,283 1158,285 1170,310 1185,317 1198,324 1204,348 1211,368 1230,394 1261,406 1291,411 1317,404 1334,400 1357,394 1385,388 1409,381 1426,365 1431,299 1432,262 1410,194 1405,171 1381,105 1359,79 1332,47 1309,20 1281,6" />
+
+            <!-- 纳迦拉 Najara -->
+            <polygon class="region-poly" onclick="openCard('najara')" points="1129,243 1139,246 1144,282 1158,287 1198,324 1226,392 1221,408 1239,438 1239,451 1226,461 1228,474 1223,497 1212,510 1194,504 1185,504 1175,493 1163,510 1184,527 1187,549 1168,557 1150,548 1140,533 1129,516 1116,529 1109,544 1097,548 1094,556 1112,559 1121,567 1117,576 1098,582 1086,585 1088,597 1109,600 1125,609 1127,626 1129,648 1113,654 1084,654 1074,676 1063,691 1074,703 1084,708 1081,718 1070,723 1071,733 1077,737 1067,751 1061,765 1043,772 1031,774 1026,786 1025,797 1016,799 1008,808 1013,818 1019,829 1020,837 1002,843 1002,863 990,864 974,856 964,843 962,833 962,823 952,828 947,836 929,833 912,827 920,817 914,805 907,818 892,818 889,804 878,809 856,804 856,786 859,760 871,758 874,749 869,741 846,735 828,732 815,736 806,749 788,733 769,728 759,716 745,707 729,700 714,704 682,704 673,689 676,668 686,649 696,620 699,593 706,553 718,502 722,456 732,437 749,394 769,370 801,347 848,324 851,309 893,292 958,288 985,300 1008,289 1029,284 1057,278 1086,273 1111,266 1123,263" />
+
+            <!-- 埃尔图迦德 Elturgard -->
+            <polygon class="region-poly" onclick="openCard('elturgard')" points="769,731 801,745 814,737 833,734 865,742 868,757 855,770 858,807 870,812 883,809 901,819 913,811 927,834 938,834 960,827 970,853 982,864 996,866 1003,875 998,892 1009,902 1032,907 1050,901 1065,884 1082,879 1096,874 1102,862 1102,844 1120,838 1140,829 1144,846 1153,850 1160,834 1174,827 1192,816 1206,815 1212,821 1220,819 1227,805 1238,796 1253,793 1262,787 1276,787 1289,795 1295,804 1308,801 1317,800 1322,812 1327,821 1316,830 1330,837 1322,847 1303,847 1296,842 1290,851 1296,862 1286,865 1289,875 1281,892 1272,898 1262,902 1262,914 1258,923 1240,923 1254,931 1264,942 1259,949 1252,958 1250,970 1241,979 1238,986 1243,993 1241,1008 1238,1022 1241,1034 1254,1036 1262,1048 1258,1062 1250,1066 1249,1081 1239,1085 1232,1088 1230,1103 1245,1112 1289,1168 1290,1191 1262,1219 1232,1208 1207,1222 1170,1246 1128,1231 1106,1224 1037,1214 975,1214 920,1237 896,1241 890,1219 892,1200 899,1192 892,1181 877,1171 869,1162 860,1162 854,1172 836,1180 822,1181 815,1173 824,1162 840,1157 851,1149 845,1130 831,1117 815,1112 803,1109 794,1113 791,1127 789,1136 783,1145 780,1153 769,1155 757,1153 767,1144 762,1127 755,1126 745,1121 734,1116 722,1116 712,1107 691,1022 686,975 679,955 681,931 700,925 725,924 744,910 748,888 732,873 727,838 731,787 763,769" />
+
+            <!-- 博德之门 Baldur's Gate -->
+            <circle class="region-poly" onclick="openCard('baldursgate')" cx="451" cy="1108" r="33" />
+
+            <!-- 烛堡 Candlekeep -->
+            <circle class="region-poly" onclick="openCard('candlekeep')" cx="432" cy="1428" r="32" />
+
+            <!-- 欧伦伯 Orlumbor -->
+            <polygon class="region-poly" onclick="openCard('orlumbor')" points="67,685 90,690 104,708 113,731 125,755 135,786 135,816 125,848 108,830 94,814 83,770 68,745 65,718" />
+        </svg>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="modal-overlay" id="modal">
+        <div class="suz-card">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <div class="suz-header">
+                <div class="suz-country-name" id="c-name">名称</div>
+                <div class="suz-motto" id="c-motto">"格言"</div>
+            </div>
+            <div class="suz-visuals">
+                <div class="suz-flag-container"><img id="c-flag-img" src="" class="suz-flag-img"></div>
+                <div class="suz-desc" id="c-desc">描述</div>
+            </div>
+            <div class="suz-data-grid">
+                <div class="suz-row"><span class="suz-label">外交关系</span><span class="suz-value" id="c-relation">中立</span></div>
+                <div class="suz-row"><span class="suz-label">军事实力</span><span class="suz-value" id="c-military">未知</span></div>
+                <div class="suz-row"><span class="suz-label">统治者</span><span class="suz-value" id="c-leader">未知</span></div>
+                <div class="suz-row"><span class="suz-label">政治体制</span><span class="suz-value" id="c-gov">未知</span></div>
+                <div class="suz-row"><span class="suz-label">主要出口</span><span class="suz-value color-gold" id="c-export">无</span></div>
+                <div class="suz-row"><span class="suz-label">首府</span><span class="suz-value" id="c-capital">未知</span></div>
+            </div>
+            <button class="suz-action-btn">查看完整情报档案</button>
+        </div>
+    </div>
+
+    <script>
+        const countryData = {
+            "evereska": {
+                name: "艾弗瑞斯卡", motto: "\"堡垒之家，永恒之秘\"",
+                desc: "北方精灵最后的避难所，坐落在秘密山谷中的美丽国度。这里是精灵文化的缩影，几乎没有外来者能够获准进入。",
+                relation: "不信任", military: "更胜一筹", leader: "未知",
+                gov: "长老议会", export: "无", capital: "艾弗瑞斯卡",
+                flagFile: "images/flags/evereska.png"
+            },
+            "najara": {
+                name: "纳迦拉", motto: "\"阴影中的鳞之主\"",
+                desc: "蛇人与纳迦的国度。曾经不为人知，但在蛇王贾兰特的统治下，这个冷酷算计的王国正逐渐显露出其领土野心。",
+                relation: "中立", military: "压倒性", leader: "蛇王 贾兰特",
+                gov: "君主制", export: "毒药, 蛇制品, 古董", capital: "沙纳迦",
+                flagFile: "images/flags/najara.png"
+            },
+            "elturgard": {
+                name: "埃尔图迦德", motto: "\"光芒虽逝，信仰犹存\"",
+                desc: "曾被称为双日王国。在首都从地狱归来后陷入权力动荡。目前正通过严厉的神权法治和地狱骑士的威慑力来维持破碎的秩序。",
+                relation: "中立", military: "更胜一筹", leader: "至高监察者 克劳德·英格索尔",
+                gov: "神权政治", export: "马匹, 谷物, 宗教圣物", capital: "埃尔托瑞尔",
+                flagFile: "images/flags/elturgard.png"
+            },
+            "baldursgate": {
+                name: "博德之门", motto: "\"财富之地\"",
+                desc: "剑湾最繁忙的港口城市，是费伦最重要的商贸中心之一，以处理各国货币和自由贸易闻名。这里不问出身，只论金钱。",
+                relation: "中立", military: "压倒性", leader: "四人议会",
+                gov: "财阀政治", export: "染料, 鱼, 灯油, 货币", capital: "博德之门",
+                flagFile: "images/flags/baldurs_gate.png"
+            },
+            "candlekeep": {
+                name: "烛堡", motto: "\"知识驱散黑暗\"",
+                desc: "伟大的图书馆要塞。它不属于任何国家，独立于纷争之外。这里保存着费伦最庞大的文献收藏，是所有学者的圣地。",
+                relation: "中立", military: "压倒性", leader: "书卷守护者 贾努西",
+                gov: "学术自由市", export: "知识, 书籍, 魔法书", capital: "烛堡",
+                flagFile: "images/flags/candlekeep.png"
+            },
+            "orlumbor": {
+                name: "欧伦伯", motto: "\"坚船即是国土\"",
+                desc: "拥有全费伦最顶尖的造船匠。在经历了深水城的政治动荡后，这座岛屿定居点正逐渐恢复往昔的繁荣。",
+                relation: "中立", military: "卑如蝼蚁", leader: "埃德里奇·莱特森",
+                gov: "行会自治领", export: "船只, 山羊, 渔获", capital: "欧伦伯",
+                flagFile: "images/flags/orlumbor.png"
+            }
+        };
+
+        const modal = document.getElementById('modal');
+
+        function getMilitaryColorClass(text) {
+            if (text.includes("压倒性")) return "color-red";
+            if (text.includes("更胜一筹")) return "color-orange";
+            if (text.includes("旗鼓相当")) return "color-yellow";
+            if (text.includes("略逊一筹")) return "color-green";
+            if (text.includes("卑如蝼蚁")) return "color-gray";
+            return "";
+        }
+
+        function getRelationColorClass(text) {
+            if (text.includes("极度不信任")) return "color-red";
+            if (text === "不信任") return "color-orange";
+            if (text.includes("中立")) return "color-yellow";
+            if (text.includes("友好")) return "color-cyan";
+            if (text.includes("同盟")) return "color-green";
+            return "";
+        }
+
+        function openCard(key) {
+            const d = countryData[key];
+            if(!d) return;
+            document.getElementById('c-name').innerText = d.name;
+            document.getElementById('c-motto').innerText = d.motto;
+            document.getElementById('c-desc').innerText = d.desc;
+            document.getElementById('c-flag-img').src = d.flagFile;
+            
+            const relEl = document.getElementById('c-relation');
+            relEl.innerText = d.relation;
+            relEl.className = "suz-value " + getRelColor(d.relation);
+
+            const milEl = document.getElementById('c-military');
+            milEl.innerText = d.military;
+            milEl.className = "suz-value " + getMilitaryColor(d.military);
+
+            document.getElementById('c-leader').innerText = d.leader;
+            document.getElementById('c-gov').innerText = d.gov;
+            document.getElementById('c-export').innerText = d.export;
+            document.getElementById('c-capital').innerText = d.capital;
+            modal.classList.add('active');
+        }
+
+        function closeModal() { modal.classList.remove('active'); }
+        modal.addEventListener('click', (e) => { if(e.target===modal) closeModal(); });
+    </script>
+</body>
+</html>
