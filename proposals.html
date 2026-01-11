@@ -93,14 +93,23 @@
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
 
-        const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-        userProfile = prof;
-        document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
+        // --- 支持从 URL 获取 ID  ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('uid') || user.id;
 
-        const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', user.id);
+        // 获取目标用户的金币
+        const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', targetId).single();
+        if (prof) {
+            userProfile = prof;
+            document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
+        }
+
+        // 获取目标用户的雇员头像
+        const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         if (emps) { emps.forEach(e => employeeMap[e.name] = e.avatar_url); }
 
-        loadProposals(user.id);
+        // 加载目标用户的议案
+        loadProposals(targetId);
     }
 
     async function loadProposals(userId) {
