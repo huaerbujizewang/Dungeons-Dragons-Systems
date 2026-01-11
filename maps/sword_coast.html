@@ -3,50 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>剑湾势力分布 - 战略视图</title>
+    <title>剑湾势力分布 - FR1494</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Serif+SC:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --suz-bg: #1a1b20; --suz-card-bg: #25262c; --suz-gold: #cba052;
-            --suz-red: #d9534f; --suz-orange: #f0ad4e; --suz-yellow: #f7e96b;
-            --suz-cyan: #5bc0de; --suz-green: #5cb85c; --suz-gray: #888;
+            --suz-bg: #1a1b20;
+            --suz-card-bg: #25262c;
+            --suz-gold: #cba052;
+            --suz-red: #d9534f;          /* 极度不信任 / 压倒性 */
+            --suz-orange: #f0ad4e;       /* 不信任 / 更胜一筹 */
+            --suz-yellow: #f7e96b;       /* 中立 / 旗鼓相当 */
+            --suz-cyan: #5bc0de;         /* 友好 / 略逊一筹 */
+            --suz-green: #5cb85c;        /* 同盟 / 卑如蝼蚁 */
+            --suz-gray: #888;
+            --suz-border: #444;
         }
 
-        body { margin: 0; background: #111; font-family: "PingFang SC", sans-serif; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body {
+            margin: 0; padding: 0;
+            background-color: #111;
+            font-family: "PingFang SC", "Roboto", sans-serif;
+            color: #e0e0e0;
+            overflow: hidden; 
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-        .floating-back-btn { position: fixed; top: 20px; left: 20px; z-index: 100; background: rgba(0,0,0,0.6); border: 1px solid var(--suz-gold); color: var(--suz-gold); padding: 10px 20px; text-decoration: none; font-size: 14px; transition: 0.3s; backdrop-filter: blur(4px); }
+        /* 悬浮返回按钮 */
+        .floating-back-btn {
+            position: fixed;
+            top: 20px; left: 20px; z-index: 100;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--suz-gold);
+            color: var(--suz-gold);
+            padding: 10px 20px;
+            text-decoration: none;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 1px;
+            font-size: 14px;
+            transition: 0.3s;
+            backdrop-filter: blur(4px);
+        }
         .floating-back-btn:hover { background: var(--suz-gold); color: #000; }
 
-        .map-container { position: relative; width: 100%; height: 100vh; background: #000; display: flex; justify-content: center; align-items: center; }
+        /* 地图容器 */
+        .map-container { 
+            position: relative; 
+            width: 100%; height: 100vh; 
+            background: #000;
+            display: flex; justify-content: center; align-items: center;
+        }
+
         svg { width: 100%; height: 100%; max-height: 100vh; display: block; }
 
-        .region-poly { fill: transparent; stroke: none; cursor: pointer; transition: all 0.3s; }
-        .region-poly:hover { fill: rgba(203, 160, 82, 0.25); stroke: var(--suz-gold); stroke-width: 2px; }
+        /* 区域交互效果 */
+        .region-poly {
+            fill: transparent;
+            stroke: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .region-poly:hover {
+            fill: rgba(203, 160, 82, 0.25);
+            stroke: var(--suz-gold);
+            stroke-width: 2px;
+        }
 
-        /* 弹窗样式 */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
+        /* 弹窗模态框 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
+            z-index: 1000; display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
         .modal-overlay.active { display: flex; opacity: 1; }
-        .suz-card { width: 420px; background: var(--suz-card-bg); border: 1px solid #444; border-top: 4px solid var(--suz-gold); position: relative; }
-        .close-btn { position: absolute; top: 10px; right: 15px; color: var(--suz-gray); font-size: 24px; cursor: pointer; }
-        .suz-header { background: linear-gradient(180deg, #2f3036 0%, #25262c 100%); padding: 25px 20px; text-align: center; border-bottom: 1px solid #333; }
-        .suz-country-name { font-family: 'Noto Serif SC', serif; font-size: 26px; color: var(--suz-gold); margin-bottom: 8px; }
+
+        /* 宗主国风格卡片 */
+        .suz-card {
+            width: 420px;
+            background-color: var(--suz-card-bg);
+            border: 1px solid var(--suz-border);
+            border-top: 4px solid var(--suz-gold);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        .modal-overlay.active .suz-card { transform: translateY(0); }
+
+        .close-btn { position: absolute; top: 10px; right: 15px; color: var(--suz-gray); font-size: 24px; cursor: pointer; z-index: 10; }
+        .close-btn:hover { color: #fff; }
+
+        .suz-header { background: linear-gradient(180deg, #2f3036 0%, #25262c 100%); padding: 25px 20px; text-align: center; border-bottom: 1px solid var(--suz-border); }
+        .suz-country-name { font-family: 'Noto Serif SC', serif; font-size: 26px; color: var(--suz-gold); letter-spacing: 1px; margin-bottom: 8px; }
         .suz-motto { font-size: 12px; color: var(--suz-gray); font-style: italic; }
-        .suz-visuals { display: flex; padding: 20px; gap: 15px; background: rgba(0,0,0,0.2); }
+
+        .suz-visuals { display: flex; padding: 20px; gap: 15px; background: rgba(0,0,0,0.2); align-items: flex-start; }
         .suz-flag-container { width: 100px; height: 66px; background: #000; border: 1px solid #555; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .suz-flag-img { width: 100%; height: 100%; object-fit: cover; }
+
         .suz-desc { font-size: 13px; line-height: 1.5; color: #ccc; flex: 1; }
+
         .suz-data-grid { padding: 10px 25px 25px 25px; }
-        .suz-row { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        .suz-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        .suz-row:last-child { border-bottom: none; }
         .suz-label { color: var(--suz-gray); }
         .suz-value { font-weight: bold; }
-        .suz-action-btn { width: 100%; padding: 15px; background: #2f3036; border: none; color: var(--suz-gray); cursor: pointer; text-transform: uppercase; font-size: 11px; }
-        
+
+        .suz-action-btn { width: 100%; padding: 15px; background: #2f3036; border: none; border-top: 1px solid var(--suz-border); color: var(--suz-gray); cursor: pointer; text-transform: uppercase; font-size: 11px; transition: 0.2s; }
+        .suz-action-btn:hover { background: #383940; color: #fff; }
+
+        /* 颜色类映射 */
         .color-red { color: var(--suz-red); }
         .color-orange { color: var(--suz-orange); }
         .color-yellow { color: var(--suz-yellow); }
         .color-cyan { color: var(--suz-cyan); }
         .color-green { color: var(--suz-green); }
+        .color-gray { color: var(--suz-gray); }
+        .color-gold { color: var(--suz-gold); }
     </style>
 </head>
 <body>
@@ -54,7 +131,7 @@
     <a href="../world.html" class="floating-back-btn">⬅ RETURN TO ARCHIVE</a>
 
     <div class="map-container">
-        <!-- viewBox 已经设置为 1448 1442 -->
+        <!-- viewBox: 1448 1442 -->
         <svg viewBox="0 0 1448 1442" preserveAspectRatio="xMidYMid meet">
             <image href="images/sword_coast_map.png" width="1448" height="1442" />
 
@@ -83,12 +160,12 @@
         <div class="suz-card">
             <span class="close-btn" onclick="closeModal()">×</span>
             <div class="suz-header">
-                <div class="suz-country-name" id="c-name">名称</div>
-                <div class="suz-motto" id="c-motto">"格言"</div>
+                <div class="suz-country-name" id="c-name">加载中...</div>
+                <div class="suz-motto" id="c-motto">"探索未知"</div>
             </div>
             <div class="suz-visuals">
                 <div class="suz-flag-container"><img id="c-flag-img" src="" class="suz-flag-img"></div>
-                <div class="suz-desc" id="c-desc">描述</div>
+                <div class="suz-desc" id="c-desc">描述信息...</div>
             </div>
             <div class="suz-data-grid">
                 <div class="suz-row"><span class="suz-label">外交关系</span><span class="suz-value" id="c-relation">中立</span></div>
@@ -106,42 +183,42 @@
         const countryData = {
             "evereska": {
                 name: "艾弗瑞斯卡", motto: "\"堡垒之家，永恒之秘\"",
-                desc: "北方精灵最后的避难所，坐落在秘密山谷中的美丽国度。这里是精灵文化的缩影，几乎没有外来者能够获准进入。",
+                desc: "北方精灵最后的避难所，建于秘密山谷中。它是精灵文化和美丽的缩影，由于其严格的防御和地理位置，外人几乎无法进入。",
                 relation: "不信任", military: "更胜一筹", leader: "未知",
                 gov: "长老议会", export: "无", capital: "艾弗瑞斯卡",
                 flagFile: "images/flags/evereska.png"
             },
             "najara": {
                 name: "纳迦拉", motto: "\"阴影中的鳞之主\"",
-                desc: "蛇人与纳迦的国度。曾经不为人知，但在蛇王贾兰特的统治下，这个冷酷算计的王国正逐渐显露出其领土野心。",
+                desc: "一个蛇人与纳迦统治的冷酷国度，跨越蛇山与飞龙森林。在蛇王贾兰特的阴谋下，这个精于算计的王国正逐渐扩大其在地缘上的影响力。",
                 relation: "中立", military: "压倒性", leader: "蛇王 贾兰特",
-                gov: "君主制", export: "毒药, 蛇制品, 古董", capital: "沙纳迦",
+                gov: "君主制", export: "毒药, 蛇类物资, 异国遗物", capital: "沙纳迦",
                 flagFile: "images/flags/najara.png"
             },
             "elturgard": {
                 name: "埃尔图迦德", motto: "\"光芒虽逝，信仰犹存\"",
-                desc: "曾被称为双日王国。在首都从地狱归来后陷入权力动荡。目前正通过严厉的神权法治和地狱骑士的威慑力来维持破碎的秩序。",
+                desc: "在经历了首都回归地狱的动荡后，埃尔图加德正试图重建其日益神权化的统治。地狱骑士的威慑力是其维持周边城镇忠诚的最后筹码。",
                 relation: "中立", military: "更胜一筹", leader: "至高监察者 克劳德·英格索尔",
                 gov: "神权政治", export: "马匹, 谷物, 宗教圣物", capital: "埃尔托瑞尔",
                 flagFile: "images/flags/elturgard.png"
             },
             "baldursgate": {
-                name: "博德之门", motto: "\"财富之地\"",
-                desc: "剑湾最繁忙的港口城市，是费伦最重要的商贸中心之一，以处理各国货币和自由贸易闻名。这里不问出身，只论金钱。",
+                name: "博德之门", motto: "\"黄金不问出处\"",
+                desc: "剑湾最繁忙的财阀港口，这里是全世界金钱的汇聚地。其独特的货币本地化处理能力使其商贸活动连接了内陆与海洋的所有重要据点。",
                 relation: "中立", military: "压倒性", leader: "四人议会",
                 gov: "财阀政治", export: "染料, 鱼, 灯油, 货币", capital: "博德之门",
                 flagFile: "images/flags/baldurs_gate.png"
             },
             "candlekeep": {
-                name: "烛堡", motto: "\"知识驱散黑暗\"",
-                desc: "伟大的图书馆要塞。它不属于任何国家，独立于纷争之外。这里保存着费伦最庞大的文献收藏，是所有学者的圣地。",
+                name: "烛堡", motto: "\"知识是黑暗中的唯一火光\"",
+                desc: "独立于世的文献要塞，保存着费伦最伟大的智慧收藏。这里没有国家的界限，只有对启蒙与真理的绝对守护。",
                 relation: "中立", military: "压倒性", leader: "书卷守护者 贾努西",
                 gov: "学术自由市", export: "知识, 书籍, 魔法书", capital: "烛堡",
                 flagFile: "images/flags/candlekeep.png"
             },
             "orlumbor": {
                 name: "欧伦伯", motto: "\"坚船即是国土\"",
-                desc: "拥有全费伦最顶尖的造船匠。在经历了深水城的政治动荡后，这座岛屿定居点正逐渐恢复往昔的繁荣。",
+                desc: "由世上最优秀的造船匠建立的岛屿，是深水城海洋霸权的重要支柱。在经历了无烬领主的勒索后，这里正通过深水城的贸易重现昔日繁荣。",
                 relation: "中立", military: "卑如蝼蚁", leader: "埃德里奇·莱特森",
                 gov: "行会自治领", export: "船只, 山羊, 渔获", capital: "欧伦伯",
                 flagFile: "images/flags/orlumbor.png"
@@ -150,6 +227,9 @@
 
         const modal = document.getElementById('modal');
 
+        // --- 完整颜色矩阵函数 ---
+
+        // 军事实力矩阵：卑如蝼蚁 -> 略逊一筹 -> 旗鼓相当 -> 更胜一筹 -> 压倒性
         function getMilitaryColorClass(text) {
             if (text.includes("压倒性")) return "color-red";
             if (text.includes("更胜一筹")) return "color-orange";
@@ -159,40 +239,58 @@
             return "";
         }
 
+        // 外交关系矩阵：极度不信任 -> 不信任 -> 中立 -> 友好 -> 同盟
         function getRelationColorClass(text) {
             if (text.includes("极度不信任")) return "color-red";
             if (text === "不信任") return "color-orange";
             if (text.includes("中立")) return "color-yellow";
             if (text.includes("友好")) return "color-cyan";
-            if (text.includes("同盟")) return "color-green";
+            if (text.includes("同盟") || text.includes("盟友")) return "color-green";
             return "";
         }
 
+        // 打开卡片主函数
         function openCard(key) {
             const d = countryData[key];
-            if(!d) return;
+            if (!d) return;
+
+            // 填充文字内容
             document.getElementById('c-name').innerText = d.name;
             document.getElementById('c-motto').innerText = d.motto;
             document.getElementById('c-desc').innerText = d.desc;
+            
+            // 填充国旗图 (注意 GitHub 对后缀名大小写敏感)
             document.getElementById('c-flag-img').src = d.flagFile;
             
+            // 处理外交关系并着色
             const relEl = document.getElementById('c-relation');
             relEl.innerText = d.relation;
-            relEl.className = "suz-value " + getRelColor(d.relation);
+            relEl.className = "suz-value " + getRelationColorClass(d.relation);
 
+            // 处理军事实力并着色
             const milEl = document.getElementById('c-military');
             milEl.innerText = d.military;
-            milEl.className = "suz-value " + getMilitaryColor(d.military);
+            milEl.className = "suz-value " + getMilitaryColorClass(d.military);
 
+            // 填充其余数据
             document.getElementById('c-leader').innerText = d.leader;
             document.getElementById('c-gov').innerText = d.gov;
             document.getElementById('c-export').innerText = d.export;
             document.getElementById('c-capital').innerText = d.capital;
-            modal.classList.add('active');
+
+            // 激活显示
+            modal.style.display = 'flex';
+            setTimeout(() => { modal.classList.add('active'); }, 10);
         }
 
-        function closeModal() { modal.classList.remove('active'); }
-        modal.addEventListener('click', (e) => { if(e.target===modal) closeModal(); });
+        // 关闭卡片函数
+        function closeModal() {
+            modal.classList.remove('active');
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
+        }
+
+        // 事件监听
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     </script>
 </body>
 </html>
