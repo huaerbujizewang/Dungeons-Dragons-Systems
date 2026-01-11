@@ -18,6 +18,7 @@
             --suz-green: #5cb85c;
             --suz-gray: #888;
             --suz-border: #444;
+            --suz-light-green: #90ee90;
         }
 
         body { margin: 0; padding: 0; background-color: #111; font-family: "PingFang SC", "Roboto", sans-serif; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; }
@@ -62,6 +63,7 @@
         .color-cyan { color: var(--suz-cyan) !important; }
         .color-green { color: var(--suz-green) !important; }
         .color-gray { color: var(--suz-gray) !important; }
+        .color-light-green { color: var(--suz-light-green) !important; }
         
         .suz-action-btn { width: 100%; padding: 15px; background: #2f3036; border: none; border-top: 1px solid var(--suz-border); color: var(--suz-gray); cursor: pointer; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; transition: 0.2s; }
         .suz-action-btn:hover { background: #383940; color: #fff; }
@@ -208,23 +210,23 @@
 
         const modal = document.getElementById('modal');
 
-        // 军事实力：红(强) -> 绿(弱)
+        // 军事实力矩阵：
         function getMilitaryColorClass(text) {
             if (text.includes("压倒性")) return "color-red";
             if (text.includes("更胜一筹")) return "color-orange";
             if (text.includes("旗鼓相当")) return "color-yellow";
-            if (text.includes("略逊一筹")) return "color-cyan";
-            if (text.includes("卑如蝼蚁")) return "color-green";
+            if (text.includes("略逊一筹")) return "color-light-green"; 
+            if (text.includes("卑如蝼蚁")) return "color-green";      
             return "color-gray";
         }
 
-        // 外交关系：红(恶) -> 绿(善)
+        // 外交关系矩阵：
         function getRelationColorClass(text) {
             if (text.includes("极度不信任")) return "color-red";
             if (text === "不信任") return "color-orange";
             if (text.includes("中立")) return "color-yellow";
-            if (text.includes("友好")) return "color-cyan";
-            if (text.includes("同盟")) return "color-green";
+            if (text.includes("友好")) return "color-light-green"; 
+            if (text.includes("同盟")) return "color-green";       
             return "color-gray";
         }
 
