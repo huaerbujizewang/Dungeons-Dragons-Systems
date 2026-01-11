@@ -117,12 +117,12 @@
         .suz-action-btn:hover { background: #383940; color: #fff; }
 
         /* 颜色类映射 */
-        .color-red { color: var(--suz-red); }
-        .color-orange { color: var(--suz-orange); }
-        .color-yellow { color: var(--suz-yellow); }
-        .color-cyan { color: var(--suz-cyan); }
-        .color-green { color: var(--suz-green); }
-        .color-gray { color: var(--suz-gray); }
+        .color-red { color: var(--suz-red) !important; }
+        .color-orange { color: var(--suz-orange) !important; }
+        .color-yellow { color: var(--suz-yellow) !important; }
+        .color-cyan { color: var(--suz-cyan) !important; }
+        .color-green { color: var(--suz-green) !important; }
+        .color-gray { color: var(--suz-gray) !important; }
         .color-gold { color: var(--suz-gold); }
     </style>
 </head>
@@ -249,36 +249,47 @@
             return "";
         }
 
-        // 打开卡片主函数
+        // --- 2. 国旗预加载逻辑 ---
+
+        function preloadFlags() {
+            console.log("正在同步位面旗帜数据...");
+            for (let key in countryData) {
+                if (countryData[key].flagFile) {
+                    const img = new Image();
+                    img.src = countryData[key].flagFile;
+                }
+            }
+        }
+
+        // --- 3. 初始化 ---
+
+        // 页面加载完成后执行预加载
+        window.onload = preloadFlags;
+
+
+          // 修改后的 openCard 函数内相关着色调用
         function openCard(key) {
             const d = countryData[key];
             if (!d) return;
 
-            // 填充文字内容
             document.getElementById('c-name').innerText = d.name;
             document.getElementById('c-motto').innerText = d.motto;
             document.getElementById('c-desc').innerText = d.desc;
-            
-            // 填充国旗图 (注意 GitHub 对后缀名大小写敏感)
             document.getElementById('c-flag-img').src = d.flagFile;
             
-            // 处理外交关系并着色
             const relEl = document.getElementById('c-relation');
             relEl.innerText = d.relation;
             relEl.className = "suz-value " + getRelationColorClass(d.relation);
 
-            // 处理军事实力并着色
             const milEl = document.getElementById('c-military');
             milEl.innerText = d.military;
             milEl.className = "suz-value " + getMilitaryColorClass(d.military);
 
-            // 填充其余数据
             document.getElementById('c-leader').innerText = d.leader;
             document.getElementById('c-gov').innerText = d.gov;
             document.getElementById('c-export').innerText = d.export;
             document.getElementById('c-capital').innerText = d.capital;
 
-            // 激活显示
             modal.style.display = 'flex';
             setTimeout(() => { modal.classList.add('active'); }, 10);
         }
