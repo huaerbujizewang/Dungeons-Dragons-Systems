@@ -6,85 +6,38 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #fff; padding: 40px; color: #333; margin: 0; }
-        
-        /* 顶部导航 */
         .back-nav { margin-bottom: 40px; }
-        .back-btn { 
-            padding: 8px 16px; 
-            border: 1px solid #ddd; 
-            background: #f9f9f9; 
-            cursor: pointer; 
-            text-decoration: none; 
-            color: #555; 
-            border-radius: 6px; 
-            font-size: 0.9em;
-            transition: all 0.2s;
-        }
+        .back-btn { padding: 8px 16px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; text-decoration: none; color: #555; border-radius: 6px; font-size: 0.9em; transition: all 0.2s; }
         .back-btn:hover { background: #eee; color: #000; border-color: #ccc; }
-
         .content-box { max-width: 1000px; margin: 0 auto; }
-        
         h1 { font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
         .subtitle { color: #666; font-size: 0.9em; margin-bottom: 40px; }
-
-        /* --- 卡片网格布局 --- */
-        .maps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-        }
-
-        /* 区域卡片样式 */
-        .region-card {
-            display: block; /* 让a标签充满 */
-            text-decoration: none;
-            color: inherit;
-            border: 1px solid #eee;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-
-        .region-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-            border-color: #ddd;
-        }
-
-        /* 卡片顶部：可以放缩略图或者色块 */
-        .card-header {
-            height: 140px;
-            background-color: #2c3e50; /* 默认深色背景 */
-            background-image: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%); /* 渐变色 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(255,255,255,0.2);
-            font-size: 4em;
-        }
-
-        /* 针对不同区域的卡片配色 */
-        .region-card[data-type="east"] .card-header {
-            background-image: linear-gradient(135deg, #434343 0%, #000000 100%); /* 奥法帝国用黑金/深色 */
-        }
-
-        .card-body { padding: 20px; }
         
-        .card-title { font-size: 1.2em; font-weight: bold; margin-bottom: 8px; color: #222; }
-        .card-desc { font-size: 0.85em; color: #666; line-height: 1.5; }
+        .maps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
+        .region-card { display: block; text-decoration: none; color: inherit; border: 1px solid #eee; border-radius: 12px; overflow: hidden; transition: all 0.3s ease; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .region-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.12); border-color: #ccc; }
         
-        .card-meta { 
-            margin-top: 15px; 
-            padding-top: 15px; 
-            border-top: 1px dashed #eee; 
-            font-size: 0.75em; 
-            color: #999; 
-            display: flex; 
-            justify-content: space-between;
-        }
+        .card-header { height: 160px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3); font-size: 4.5em; position: relative; }
+        
+        /* 远东卡片配色 */
+        .region-card[data-type="east"] .card-header { background: linear-gradient(135deg, #434343 0%, #000000 100%); }
+        /* 剑湾卡片配色 */
+        .region-card[data-type="west"] .card-header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
 
+        .card-body { padding: 25px; }
+        .card-title { font-size: 1.25em; font-weight: bold; margin-bottom: 10px; color: #111; }
+        .card-desc { 
+    font-size: 0.9em; 
+    color: #666; 
+    line-height: 1.6; 
+    height: 4.8em; 
+    overflow: hidden; 
+    display: -webkit-box; 
+    -webkit-line-clamp: 3; /* 旧版浏览器/移动端支持 */
+    line-clamp: 3;         /* 标准属性支持（新增这一行） */
+    -webkit-box-orient: vertical; 
+}
+        .card-meta { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #eee; font-size: 0.8em; color: #999; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
@@ -96,45 +49,46 @@
 
         <div id="page-content" style="display:none;">
             <h1>🏰 费伦地理志</h1>
-            <p class="subtitle">选择一个区域以查阅详细的地缘政治情报与势力分布。</p>
-            <hr style="border:0; border-top:1px solid #eee; margin-bottom:30px;">
+            <p class="subtitle">点击下方区域档案，进入交互式地缘政治情报视图。</p>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:40px;">
 
             <div class="maps-grid">
                 
-                <!-- 卡片 1：远东/奥法帝国 -->
+                <!-- 卡片 1：奥法帝国 -->
                 <a href="maps/far_east.html" class="region-card" data-type="east">
-                    <div class="card-header">
-                        🌋
-                    </div>
+                    <div class="card-header">🌋</div>
                     <div class="card-body">
-                        <div class="card-title">奥法帝国区域</div>
+                        <div class="card-title">奥法帝国</div>
                         <div class="card-desc">
-                            包含塞尔帝国、莱瑟曼王国、阿拉格隆等古老国度。目前正处于大瘟疫后的地缘政治剧变期。
+                            塞尔帝国及其周边邻国。在大瘟疫与贸易战的阴影下，古老的法师政权正在经历前所未有的体制改革。
                         </div>
                         <div class="card-meta">
                             <span>FR 1494 DR</span>
-                            <span>包含 7 个势力</span>
+                            <span>7 个可互动区域</span>
                         </div>
                     </div>
                 </a>
 
-                <!-- 未来可以添加更多卡片 -->
-                <!-- 
-                <a href="#" class="region-card">
-                    <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">🌊</div>
+                <!-- 卡片 2：剑湾 -->
+                <a href="maps/sword_coast.html" class="region-card" data-type="west">
+                    <div class="card-header">🌊</div>
                     <div class="card-body">
-                        <div class="card-title">剑湾与北地 (The Sword Coast)</div>
-                        <div class="card-desc">从深水城到冰风谷的广阔区域。</div>
+                        <div class="card-title">剑湾</div>
+                        <div class="card-desc">
+                            从博德之门到书卷堡垒烛堡。作为费伦最繁忙的贸易走廊，这里正面临着神权崛起、内政动荡与古老威胁的显现。
+                        </div>
+                        <div class="card-meta">
+                            <span>FR 1494 DR</span>
+                            <span>6 个可互动区域</span>
+                        </div>
                     </div>
-                </a> 
-                -->
+                </a>
 
             </div>
         </div>
     </div>
 
     <script>
-        // Supabase 初始化
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -142,7 +96,6 @@
         async function checkAccess() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
-                alert('需登录以查阅皇家地理档案');
                 window.location.href = 'index.html';
             } else {
                 document.getElementById('page-content').style.display = 'block';
