@@ -1,117 +1,196 @@
-# 🛡️ D&D 系统 DM 运维手册 (SQL)
+---
 
-这些命令需要在 Supabase 的 **SQL Editor** 中运行。
-> **注意：** 涉及 `update` 或 `delete` 的操作，建议先用 `select` 查一下确认无误再执行。
+# 🛠️ DM 数据库运维手册 (SQL Operations Manual)
 
-### 1. 🔑 账号管理
+> **操作提示**：所有命令请在 Supabase 的 **SQL Editor** 中运行。
+> 涉及具体玩家时，请将代码中的 `'master@almorel.com'` 替换为实际玩家邮箱。
 
-#### 强行激活某个账号 (修复 Email not confirmed)
-当玩家注册后无法收到邮件，或你想直接帮他激活时使用。
-```sql
-update auth.users 
-set email_confirmed_at = now(),
-    last_sign_in_at = now(), 
-    raw_user_meta_data = jsonb_set(
-      coalesce(raw_user_meta_data, '{}'::jsonb),
-      '{email_verified}',
-      'true'
-    )
-where email ILIKE 'IDRotF@1.com';
-```
-
-#### 强行修改玩家密码
-当玩家彻底忘记密码时，DM 可以帮他重置（玩家登录后应立即修改）。
-```sql
-update auth.users 
-set encrypted_password = crypt('新密码123456', gen_salt('bf')) 
-where email = '玩家邮箱@example.com';
-```
-
-#### 删除某个玩家 (慎用！)
-这会级联删除他的所有数据（背包、雇员、金币记录等）。
-```sql
-delete from auth.users where email = '玩家邮箱@example.com';
-```
+## 目录
+1.  [🔑 权限与账号管理](#1-权限与账号管理)
+2.  [📜 政务厅：发布新议案](#2-政务厅发布新议案)
+3.  [🏰 领地经济：修改收支与人口](#3-领地经济修改收支与人口)
+4.  [🏬 集市与图鉴管理](#4-集市与图鉴管理)
+5.  [👥 雇员与队伍状态](#5-雇员与队伍状态)
+6.  [🎒 玩家背包急救](#6-玩家背包急救)
 
 ---
 
-### 2. 💰 资产与物品修复
+### 1. 🔑 权限与账号管理
 
-#### 给玩家发钱 (上帝拨款)
+#### 设置管理员权限 (Root / DM)
+*   **Root**: 最高权限，能看全服日志、分配 DM。
+*   **DM**: 能管理分配给自己的玩家，能上架商品。
 ```sql
+-- 将某人设为 DM
+insert into admin_users (id, role_level)
+select id, 'dm' from auth.users where email = 'IDRotF@1.com'
+on conflict (id) do update set role_level = 'dm';
+
+-- 将某人设为 Root (慎用)
+-- 把 'dm' 改为 'root' 即可
+```
+
+#### 指派玩家给特定 DM
+```sql
+-- 将玩家 A 指派给 DM B 管理
 update profiles 
-set gold_gp = gold_gp + 1000 -- 增加 1000 金币
-where email = '玩家邮箱@example.com';
+set assigned_dm_id = (select id from auth.users where email = 'dm的邮箱@qq.com')
+where email = '玩家的邮箱@gmail.com';
 ```
 
-#### 彻底清空某玩家的背包
+#### 强行激活账号 (修复 Email not confirmed)
 ```sql
-delete from user_inventory 
-where user_id = (select id from auth.users where email = '玩家邮箱@example.com');
-```
-
-#### 修复错误的物品分类 (比如把所有的'长剑'改成'装备')
-```sql
-update user_inventory set category = '装备' where item_name = '长剑';
-update shop_items set category = '装备' where name = '长剑';
+update auth.users set email_confirmed_at = now() where email = '玩家邮箱@example.com';
 ```
 
 ---
 
-### 3. 👥 雇员与队伍
+### 2. 📜 政务厅：发布新议案
 
-#### 强行把某人设为“核心队友”
-这会让他无法被解雇，且在雇员中心置顶显示。
+这是推动剧情的核心功能。你需要手动插入数据来让玩家看到新的审批卡片。
+
+#### 发布一条新提案
+```sql
+do $$
+declare
+  target_uid uuid;
+begin
+  -- 1. 选定目标玩家
+  select id into target_uid from auth.users where email = 'master@almorel.com';
+
+  if target_uid is not null then
+    -- 2. 插入提案
+    insert into city_proposals (user_id, proposer_name, title, description, cost) values
+    (
+      target_uid, 
+      '艾琳', -- 提案人名字 (必须是该玩家有的雇员，否则头像不显示)
+      '扩建奥术研究室', -- 标题
+      '随着研究的深入，现有的场地已不足以支撑更高环阶的法术实验。我们需要扩建地下设施。', -- 描述
+      2000 -- 批准所需的金币 (0表示不花钱)
+    );
+  end if;
+end $$;
+```
+
+#### 重置/删除某个提案
+```sql
+-- 删除某个标题的提案
+delete from city_proposals where title = '扩建奥术研究室';
+
+-- 或者重置状态为“待审批”
+update city_proposals set status = 'pending' where title = '扩建奥术研究室';
+```
+
+---
+
+### 3. 🏰 领地经济：修改收支与人口
+
+#### 修改城市基础数据 (人口/补贴)
+```sql
+update city_stats 
+set population = 6500, -- 修改人口
+    subsidy = 0        -- 修改补贴 (例如莱瑟曼撤资)
+where user_id = (select id from auth.users where email = 'master@almorel.com');
+```
+
+#### 增加新的支出项目 (City Expenses)
+```sql
+-- 插入一条新的建筑维护费
+insert into city_expenses (user_id, name, count, unit_cost, category)
+select id, '魔法塔能量维护', 1, 500, 'building' -- category可选: staff, building, trade_cost
+from auth.users where email = 'master@almorel.com';
+```
+
+#### 增加新的收入项目 (City Incomes)
+```sql
+-- 插入一条新的贸易收入
+insert into city_incomes (user_id, name, count, unit_price, amount)
+select id, '向哈鲁阿出口卷轴', 10, 200, 2000 -- amount 最好等于 count * unit_price
+from auth.users where email = 'master@almorel.com';
+```
+
+#### 修改现有项目的数值
+```sql
+-- 例如：铁矿涨价了
+update city_expenses 
+set unit_cost = 450 
+where name like '%铁矿%' and user_id = (select id from auth.users where email = 'master@almorel.com');
+```
+
+---
+
+### 4. 🏬 集市与图鉴管理
+
+#### 从图鉴批量随机进货
+```sql
+-- 给指定玩家随机上架：1传说, 6极珍稀, 10珍稀, 20非普通
+select admin_random_restock((select id from auth.users where email = 'master@almorel.com'));
+
+-- 全服公共随机上架 (参数填 null)
+select admin_random_restock(null);
+```
+
+#### 往图鉴 (Compendium) 添加新物品
+这样以后你在后台搜素时就能搜到它。
+```sql
+insert into compendium_items (name, rarity, category, price, description) values
+('斩首巨剑', '传说', '魔法物品', 25000, '对特定生物造成斩首效果...');
+```
+
+---
+
+### 5. 👥 雇员与队伍状态
+
+#### 更改雇员状态 (在职/休假/离职)
+```sql
+-- 让 "艾斯特拉" 结束休假，回来上班
+update employees 
+set status = '在职' 
+where name = '艾斯特拉' and user_id = (select id from auth.users where email = 'master@almorel.com');
+```
+
+#### 晋升为核心队友
+核心队友不会显示工资，且不能被解雇。
 ```sql
 update employees 
 set role = '核心队友', salary = 0 
-where name = '角色名字';
+where name = '某个NPC名字';
 ```
 
-#### 强行解散某玩家的所有队伍 (一键离队)
-当队伍卡死或者出现幽灵队员时使用。
+#### 修复头像错误
+如果上传头像失败，可以手动更新 URL。
 ```sql
 update employees 
-set is_in_party = false 
-where user_id = (select id from auth.users where email = '玩家邮箱@example.com');
-```
-
-#### 转移雇员的所有权 (把 A 的雇员送给 B)
-```sql
-update employees 
-set user_id = (select id from auth.users where email = '接收者@example.com')
-where name = '雇员名字' 
-and user_id = (select id from auth.users where email = '原主人@example.com');
+set avatar_url = 'https://你的图片地址.png' 
+where name = '凯拉';
 ```
 
 ---
 
-### 4. 🏪 集市管理
+### 6. 🎒 玩家背包急救
 
-#### 批量删除某类商品 (如下架所有“普通”物品)
+#### 删除顽固物品 (无法在前端删除时)
 ```sql
-delete from shop_items where rarity = '普通';
+delete from user_inventory 
+where item_name = '博丽币' 
+and user_id = (select id from auth.users where email = 'master@almorel.com');
 ```
 
-#### 将某商品设为“全服可见”
-如果你不小心把它设成了特供，可以用这个命令公开。
+#### 强行修改物品数量
 ```sql
-update shop_items set user_id = null where name = '商品名称';
+update user_inventory 
+set quantity = 99 
+where item_name = '治疗药水' 
+and user_id = (select id from auth.users where email = 'master@almorel.com');
 ```
 
 ---
 
-### 5. 🛡️ 权限修复 (救命专用)
+### 7. 🚨 紧急修复 (RLS 权限重置)
 
-如果你的网页提示 `Permission denied` 或者数据加载不出来，运行这三条“万能钥匙”：
+如果突然谁都看不了数据，或者报错 Permission Denied，运行这个全开补丁（慎用，仅调试）：
 
 ```sql
--- 1. 允许 DM (你) 操作所有表
-create policy "DM GOD MODE" on user_inventory for all using (auth.jwt() ->> 'email' = '你的DM邮箱');
-
--- 2. 允许玩家读写自己的背包
-create policy "User Own Inventory" on user_inventory for all using (auth.uid() = user_id);
-
--- 3. 允许玩家读写自己的雇员
-create policy "User Own Employees" on employees for all using (auth.uid() = user_id);
-```
+-- 允许所有登录用户查看所有表 (仅用于排查问题)
+create policy "Emergency Read All" on profiles for select using (auth.role() = 'authenticated');
+create policy "Emergency Read Inventory" on user_inventory for select using (auth.role() = 'authenticated');
