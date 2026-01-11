@@ -47,7 +47,35 @@
         .status-approved { background: #d5f5e3; color: #27ae60; }
         .status-rejected { background: #fadbd8; color: #c0392b; }
         
-        .decision-note { margin-top: 10px; padding: 8px; background: #fffbe6; border: 1px solid #f1c40f; border-radius: 4px; font-size: 0.9em; color: #7f6000; display: flex; align-items: flex-start; gap: 8px; }
+        /* 优化后的批注框样式 */
+        .decision-note { 
+            margin-top: 10px; 
+            padding: 10px; 
+            background: #fffbe6; 
+            border: 1px solid #f1c40f; 
+            border-radius: 4px; 
+            font-size: 0.9em; 
+            color: #7f6000; 
+            display: flex; /* 保持 flex 布局 */
+            align-items: flex-start; /* 顶部对齐 */
+            gap: 10px; 
+            line-height: 1.6;
+        }
+
+        /* 固定左侧标签，不让它缩进或换行 */
+        .decision-label {
+            flex-shrink: 0; /* 禁止缩小 */
+            font-weight: bold;
+            white-space: nowrap; /* 禁止换行 */
+            display: flex;
+            align-items: center;
+        }
+
+        /* 右侧文本自动换行并保持缩进对齐 */
+        .decision-text {
+            word-break: break-all; /* 允许在单词内换行 */
+            text-align: justify; /* 两端对齐，更工整 */
+        }
         .decision-time { font-size: 0.8em; color: #999; margin-top: 5px; text-align: right; }
 
         #loading { text-align: center; color: #999; margin-top: 50px; }
@@ -174,8 +202,12 @@
                 
                 // 处理批注显示
                 const reasonHtml = item.decision_reason 
-                    ? `<div class="decision-note"><span>📝 领主批注：</span><span>${item.decision_reason}</span></div>` 
+                    ? `<div class="decision-note">
+                         <span class="decision-label">📝 领主批注：</span>
+                         <span class="decision-text">${item.decision_reason}</span>
+                       </div>` 
                     : '';
+
 
                 historyBox.innerHTML += `
                     <div class="proposal-card history-card ${item.status}">
