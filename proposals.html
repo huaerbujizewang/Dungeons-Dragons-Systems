@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>政务厅 - 艾尔莫瑞尔</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --bg-color: #f4f1ea; --card-bg: #fff; --text: #2c3e50; --border: #dcd6cc; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 40px; }
+        
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8e44ad; padding-bottom: 15px; margin-bottom: 30px; }
+        .back-btn { padding: 8px 15px; border: 1px solid #333; text-decoration: none; color: #333; border-radius: 4px; font-size: 0.9em; transition: 0.2s; }
+        .back-btn:hover { background: #333; color: #fff; }
+
+        .section-title { font-weight: bold; margin: 30px 0 15px; color: #555; border-left: 4px solid #8e44ad; padding-left: 10px; }
+        
+        /* 提案卡片 */
+        .proposal-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: flex; gap: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: 0.2s; }
+        .proposal-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        
+        .avatar-box { flex-shrink: 0; text-align: center; width: 80px; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; margin-bottom: 5px; }
+        .proposer-name { font-size: 0.85em; font-weight: bold; color: #666; }
+
+        .content-box { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .prop-title { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
+        .prop-desc { font-size: 0.95em; color: #555; line-height: 1.6; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 4px; border-left: 3px solid #ddd; }
+        
+        .action-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #eee; padding-top: 15px; }
+        .cost-tag { font-family: monospace; font-weight: bold; color: #c0392b; font-size: 1.1em; display: flex; align-items: center; gap: 5px; }
+        
+        /* 按钮 */
+        .btn-group { display: flex; gap: 10px; }
+        button { cursor: pointer; border: none; padding: 8px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+        .btn-approve { background: #27ae60; color: white; }
+        .btn-approve:hover { background: #219150; }
+        .btn-reject { background: #c0392b; color: white; }
+        .btn-reject:hover { background: #a93226; }
+        
+        /* 历史记录样式优化 */
+        .history-card { opacity: 0.8; background: #fcfcfc; border-left: 4px solid transparent; }
+        .history-card.approved { border-left-color: #27ae60; }
+        .history-card.rejected { border-left-color: #c0392b; }
+        
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .status-approved { background: #d5f5e3; color: #27ae60; }
+        .status-rejected { background: #fadbd8; color: #c0392b; }
+        
+        .decision-note { margin-top: 10px; padding: 8px; background: #fffbe6; border: 1px solid #f1c40f; border-radius: 4px; font-size: 0.9em; color: #7f6000; display: flex; align-items: flex-start; gap: 8px; }
+        .decision-time { font-size: 0.8em; color: #999; margin-top: 5px; text-align: right; }
+
+        #loading { text-align: center; color: #999; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 style="margin:0;">📜 领地政务厅</h1>
+        <a href="index.html" class="back-btn">⬅ 返回主控台</a>
+    </div>
+
+    <!-- 顶部资产显示 -->
+    <div style="text-align: right; margin-bottom: 20px; font-weight: bold; color: #d35400;">
+        当前国库: <span id="current-gold">Loading...</span> GP
+    </div>
+
+    <div id="loading">正在传召议会成员...</div>
+
+    <!-- 待审批 -->
+    <div id="pending-section" style="display:none;">
+        <div class="section-title">🔴 待审批议案</div>
+        <div id="pending-list"></div>
+    </div>
+
+    <!-- 历史记录 -->
+    <div id="history-section" style="display:none;">
+        <div class="section-title">🗄️ 历史决策档案</div>
+        <div id="history-list"></div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let userProfile = null;
+    let employeeMap = {}; 
+
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
+
+        const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        userProfile = prof;
+        document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
+
+        const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', user.id);
+        if (emps) { emps.forEach(e => employeeMap[e.name] = e.avatar_url); }
+
+        loadProposals(user.id);
+    }
+
+    async function loadProposals(userId) {
+        // 按最后更新时间排序，这样刚决策的会在最上面
+        const { data: list, error } = await supabaseClient
+            .from('city_proposals')
+            .select('*')
+            .eq('user_id', userId)
+            .order('decided_at', { ascending: false, nullsFirst: true }) // 已决策的按时间倒序，未决策的排最前
+            .order('created_at', { ascending: false });
+
+        if (error) return alert('加载失败');
+
+        document.getElementById('loading').style.display = 'none';
+        const pendingBox = document.getElementById('pending-list');
+        const historyBox = document.getElementById('history-list');
+        pendingBox.innerHTML = '';
+        historyBox.innerHTML = '';
+
+        let hasPending = false;
+        let hasHistory = false;
+
+        list.forEach(item => {
+            const avatarUrl = employeeMap[item.proposer_name] || 'https://via.placeholder.com/70';
+            const costHtml = item.cost > 0 
+                ? `<div class="cost-tag">💰 -${item.cost.toLocaleString()} GP</div>` 
+                : `<div class="cost-tag" style="color:#27ae60; font-size:0.9em;">无需额外预算</div>`;
+
+            if (item.status === 'pending') {
+                hasPending = true;
+                pendingBox.innerHTML += `
+                    <div class="proposal-card">
+                        <div class="avatar-box">
+                            <img src="${avatarUrl}" class="avatar">
+                            <div class="proposer-name">${item.proposer_name}</div>
+                        </div>
+                        <div class="content-box">
+                            <div>
+                                <div class="prop-title">${item.title}</div>
+                                <div class="prop-desc">${item.description}</div>
+                            </div>
+                            <div class="action-bar">
+                                ${costHtml}
+                                <div class="btn-group">
+                                    <button class="btn-approve" onclick="handleDecision(${item.id}, 'approved', ${item.cost}, '${item.title}')">✅ 批准</button>
+                                    <button class="btn-reject" onclick="handleDecision(${item.id}, 'rejected', 0, '${item.title}')">❌ 否决</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            } else {
+                hasHistory = true;
+                const isApproved = item.status === 'approved';
+                const statusTag = isApproved 
+                    ? `<span class="status-badge status-approved">已批准</span>`
+                    : `<span class="status-badge status-rejected">已否决</span>`;
+                
+                // 处理时间显示
+                const dateStr = item.decided_at ? new Date(item.decided_at).toLocaleString() : '未知日期';
+                
+                // 处理批注显示
+                const reasonHtml = item.decision_reason 
+                    ? `<div class="decision-note"><span>📝 领主批注：</span><span>${item.decision_reason}</span></div>` 
+                    : '';
+
+                historyBox.innerHTML += `
+                    <div class="proposal-card history-card ${item.status}">
+                        <div class="avatar-box">
+                            <img src="${avatarUrl}" class="avatar" style="filter:grayscale(80%)">
+                            <div class="proposer-name">${item.proposer_name}</div>
+                        </div>
+                        <div class="content-box">
+                            <div style="display:flex; justify-content:space-between;">
+                                <div class="prop-title">${item.title}</div>
+                                ${statusTag}
+                            </div>
+                            <div class="prop-desc" style="color:#888;">${item.description}</div>
+                            
+                            ${reasonHtml}
+                            <div class="decision-time">决策时间: ${dateStr}</div>
+                        </div>
+                    </div>`;
+            }
+        });
+
+        if (hasPending) document.getElementById('pending-section').style.display = 'block';
+        if (hasHistory) document.getElementById('history-section').style.display = 'block';
+        if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
+    }
+
+    // --- 决策逻辑 (升级版) ---
+    async function handleDecision(id, decision, cost, title) {
+        // 1. 弹出输入框询问理由
+        const actionName = decision === 'approved' ? '批准' : '否决';
+        const defaultReason = decision === 'approved' ? '同意执行。' : '暂缓议案。';
+        
+        const reason = prompt(`您决定 [${actionName}] 提案：${title}\n\n请输入决策理由/批注 (可选):`, defaultReason);
+        
+        if (reason === null) return; // 点击取消，终止操作
+
+        // 2. 资金检查
+        if (decision === 'approved' && cost > 0) {
+            if (userProfile.gold_gp < cost) {
+                return alert('国库资金不足，无法批准！');
+            }
+            const newGold = userProfile.gold_gp - cost;
+            const { error } = await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
+            if (error) return alert('扣款失败');
+            userProfile.gold_gp = newGold;
+            document.getElementById('current-gold').innerText = newGold.toLocaleString();
+        }
+
+        // 3. 更新数据库 (状态 + 理由 + 时间)
+        const { error: updateErr } = await supabaseClient
+            .from('city_proposals')
+            .update({ 
+                status: decision,
+                decision_reason: reason,
+                decided_at: new Date().toISOString()
+            })
+            .eq('id', id);
+
+        if (updateErr) {
+            alert('操作失败');
+        } else {
+            alert('公文已归档。');
+            location.reload(); 
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>
