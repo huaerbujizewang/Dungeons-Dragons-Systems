@@ -145,6 +145,22 @@ set role = '核心队友', salary = 0
 where name = '某个NPC名字';
 ```
 
+#### 加入某人
+为伊凡·琴创建核心队友档案
+```sql
+insert into employees (name, salary, status, role, is_in_party, user_id)
+select 
+  '伊凡·琴',      -- 名字
+  0,             -- 核心队友薪资为0
+  '在职',         -- 初始状态
+  '核心队友',     -- 身份标识
+  false,         -- 初始不在队伍中
+  id             -- 关联 master 账号的 ID
+from auth.users 
+where email = 'master@almorel.com'
+on conflict do nothing;
+```
+
 #### 修复头像错误
 如果上传头像失败，可以手动更新 URL。
 ```sql
