@@ -28,7 +28,15 @@
             font-size: 4em; font-weight: 900; color: #3d2b1f; letter-spacing: 5px; margin-bottom: 5px;
         }
         .wanted-status { font-size: 1.2em; font-weight: bold; color: #3d2b1f; border-top: 2px solid #3d2b1f; border-bottom: 2px solid #3d2b1f; display: inline-block; padding: 2px 20px; margin-bottom: 15px; }
-        
+        .source-org-text {
+            margin-top: 15px;
+            font-size: 0.75em;
+            color: #3d2b1f;
+            font-family: 'Wanted', 'Impact', sans-serif;
+            letter-spacing: 1px;
+            text-transform: uppercase; 
+            opacity: 0.8;
+        }
         /* 头像框 */
         .wanted-photo-frame { width: 100%; aspect-ratio: 1 / 1; border: 4px solid #3d2b1f; background: #dcc4a1; overflow: hidden; margin-bottom: 20px; position: relative; }
         .wanted-photo { width: 100%; height: 100%; object-fit: cover; filter: sepia(0.4) contrast(1.1) grayscale(0.2); }
@@ -102,15 +110,31 @@
             grid.innerHTML += `
                 <div class="wanted-poster">
                     <div class="wanted-status">${p.status_text}</div>
+                    
                     <div class="wanted-photo-frame">
                         <img src="${p.avatar_url || 'https://via.placeholder.com/400?text=NO+IMAGE'}" class="wanted-photo">
                         ${uploadOverlay}
                     </div>
+
                     <div class="wanted-name">${p.target_name}</div>
+
                     <div class="bounty-amount">
                         <span>REWARD</span>$${p.bounty_amount.toLocaleString()} GP
                     </div>
-                    <div style="font-size:0.7em; color:#666; margin-top:10px;">${p.source_org || 'UNKNOWN'}</div>
+
+                    <!-- 修改点：明确通缉令的签发方 -->
+                    <div style="
+                        margin-top: 15px;
+                        font-size: 0.75em;
+                        color: #3d2b1f;
+                        font-family: 'Wanted', sans-serif;
+                        letter-spacing: 1px;
+                        border-top: 1px solid rgba(61, 43, 31, 0.2);
+                        padding-top: 10px;
+                    ">
+                        ISSUED BY: ${p.source_org || 'UNKNOWN AUTHORITY'}
+                    </div>
+
                     <div class="admin-controls">${delBtn}</div>
                 </div>`;
         });
