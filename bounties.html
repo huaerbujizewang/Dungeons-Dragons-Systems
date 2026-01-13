@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>赏金名录 - 艾尔莫瑞尔</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @font-face { font-family: 'Wanted'; src: local('Impact'); }
+        body { font-family: "Georgia", serif; background-color: #f4f1ea; margin: 0; padding: 40px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .back-btn { padding: 8px 15px; border: 1px solid #333; text-decoration: none; color: #333; border-radius: 4px; font-family: sans-serif; margin-bottom: 20px; display: inline-block; }
+        
+        .poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 40px; margin-top: 40px; }
+
+        /* --- 海贼王风格悬赏令 --- */
+        .wanted-poster {
+            background-color: #e9d1a9;
+            padding: 25px 25px 40px 25px;
+            border: 1px solid #d4b483;
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            position: relative;
+            background-image: url('https://www.transparenttextures.com/patterns/papyros.png');
+            transition: 0.3s;
+        }
+        .wanted-poster::before {
+            content: "WANTED"; display: block; font-family: 'Wanted', sans-serif;
+            font-size: 4em; font-weight: 900; color: #3d2b1f; letter-spacing: 5px; margin-bottom: 5px;
+        }
+        .wanted-status { font-size: 1.2em; font-weight: bold; color: #3d2b1f; border-top: 2px solid #3d2b1f; border-bottom: 2px solid #3d2b1f; display: inline-block; padding: 2px 20px; margin-bottom: 15px; }
+        
+        /* 头像框 */
+        .wanted-photo-frame { width: 100%; aspect-ratio: 1 / 1; border: 4px solid #3d2b1f; background: #dcc4a1; overflow: hidden; margin-bottom: 20px; position: relative; }
+        .wanted-photo { width: 100%; height: 100%; object-fit: cover; filter: sepia(0.4) contrast(1.1) grayscale(0.2); }
+        
+        .wanted-name { font-size: 2.5em; font-weight: bold; color: #3d2b1f; margin: 15px 0; font-family: 'Wanted', sans-serif; letter-spacing: 2px; }
+        .bounty-amount { font-size: 1.6em; font-weight: bold; color: #3d2b1f; font-family: 'Wanted', sans-serif; }
+        .bounty-amount span { font-size: 0.7em; margin-right: 10px; }
+
+        /* 管理员功能样式 */
+        .admin-controls { position: absolute; bottom: 10px; left: 0; width: 100%; display: flex; justify-content: center; gap: 10px; opacity: 0; transition: 0.3s; }
+        .wanted-poster:hover .admin-controls { opacity: 1; }
+        .upload-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: 0.3s; }
+        .wanted-photo-frame:hover .upload-overlay { opacity: 1; }
+        .btn-del { background: #c0392b; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">⬅ 返回主界面</a>
+    <div id="poster-grid" class="poster-grid">
+        <p style="text-align:center; grid-column:1/-1;">正在同步位面通缉名单...</p>
+    </div>
+</div>
+
+<!-- 隐藏的上传 input -->
+<input type="file" id="hidden-file-input" style="display:none" accept="image/*">
+
+<script>
+    const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentViewingId = null;
+    let isAdmin = false;
+    let targetPosterId = null; // 当前正在传图的通缉令ID
+
+    async function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        currentViewingId = urlParams.get('uid');
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { location.href = 'index.html'; return; }
+
+        // 检查权限
+        const { data: admin } = await supabaseClient.from('admin_users').select('role_level').eq('id', user.id).maybeSingle();
+        isAdmin = admin && (admin.role_level === 'root' || admin.role_level === 'dm');
+
+        loadPosters();
+    }
+
+    async function loadPosters() {
+        const { data: posters } = await supabaseClient
+            .from('wanted_posters')
+            .select('*')
+            .eq('user_id', currentViewingId)
+            .order('bounty_amount', { ascending: false });
+
+        const grid = document.getElementById('poster-grid');
+        grid.innerHTML = '';
+
+        if (!posters || posters.length === 0) {
+            grid.innerHTML = "<p style='text-align:center; grid-column:1/-1; color:#999;'>此位面目前清白无暇。</p>";
+            return;
+        }
+
+        posters.forEach(p => {
+            const uploadOverlay = isAdmin ? `<div class="upload-overlay" onclick="triggerUpload(${p.id})">点击上传头像</div>` : '';
+            const delBtn = isAdmin ? `<button class="btn-del" onclick="deletePoster(${p.id})">撤销通缉</button>` : '';
+
+            grid.innerHTML += `
+                <div class="wanted-poster">
+                    <div class="wanted-status">${p.status_text}</div>
+                    <div class="wanted-photo-frame">
+                        <img src="${p.avatar_url || 'https://via.placeholder.com/400?text=NO+IMAGE'}" class="wanted-photo">
+                        ${uploadOverlay}
+                    </div>
+                    <div class="wanted-name">${p.target_name}</div>
+                    <div class="bounty-amount">
+                        <span>REWARD</span>$${p.bounty_amount.toLocaleString()} GP
+                    </div>
+                    <div style="font-size:0.7em; color:#666; margin-top:10px;">${p.source_org || 'UNKNOWN'}</div>
+                    <div class="admin-controls">${delBtn}</div>
+                </div>`;
+        });
+    }
+
+    // --- 管理员操作：上传头像 ---
+    function triggerUpload(id) {
+        targetPosterId = id;
+        document.getElementById('hidden-file-input').click();
+    }
+
+    document.getElementById('hidden-file-input').onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file || !targetPosterId) return;
+
+        const fileName = `bounty_${targetPosterId}_${Date.now()}`;
+        const { data, error } = await supabaseClient.storage.from('bounty_posters').upload(fileName, file);
+
+        if (data) {
+            const { data: urlData } = supabaseClient.storage.from('bounty_posters').getPublicUrl(fileName);
+            await supabaseClient.from('wanted_posters').update({ avatar_url: urlData.publicUrl }).eq('id', targetPosterId);
+            alert('悬赏令画像更新成功！');
+            loadPosters();
+        } else {
+            alert('上传失败：' + error.message);
+        }
+    };
+
+    async function deletePoster(id) {
+        if (!confirm('确定撤销此通缉令？（数据将永久消失）')) return;
+        await supabaseClient.from('wanted_posters').delete().eq('id', id);
+        loadPosters();
+    }
+
+    init();
+</script>
+</body>
+</html>
