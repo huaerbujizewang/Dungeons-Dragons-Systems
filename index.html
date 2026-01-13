@@ -201,11 +201,17 @@
         </div>
 
         <!-- 卡片 5：政务厅 -->
-        <div class="card emp-card-content" 
-             onclick="window.location.href='proposals.html?uid=' + viewingUserId" style="cursor:pointer; ">
+        <div class="card emp-card-content" onclick="window.location.href='proposals.html?uid=' + viewingUserId" style="cursor:pointer; ">
             <div style="font-size: 2.5em; margin-bottom:10px;">💼</div>
             <div style="font-weight:bold; font-size:1.1em;">政务厅</div>
-            <p style="font-size:0.8em; color:#666;">审批核心成员提案<br>决定城市发展路线</p>
+            <p style="font-size:0.8em; color:#666;">审批核心成员提案</p>
+        </div>
+
+        <!-- 卡片 6：悬赏名单 -->
+        <div class="card emp-card-content" onclick="window.location.href='bounties.html?uid=' + viewingUserId" style="cursor:pointer; ">
+            <div style="font-size: 2.5em; margin-bottom:10px;">💀</div>
+            <div style="font-weight:bold; font-size:1.1em;">赏金名录</div>
+            <p style="font-size:0.8em; color:#666;">位面通缉名单</p>
         </div>
 
         <!-- 可以根据需要继续添加卡片 -->
@@ -360,6 +366,26 @@
                 <select id="adm-emp-list" style="width:100%; margin-bottom:10px;"></select>
                 <div style="display:flex; gap:10px;"><input type="file" id="adm-emp-avatar" style="flex:1"><button onclick="uploadAvatar()">上传</button></div>
             </div>
+
+            
+            <div class="admin-box" style="border:1px solid #c0392b; padding:15px; border-radius:8px; background:#fff;">
+                <h3 style="margin-top:0; color:#c0392b;">☠️ 签发通缉令</h3>
+    
+                <!-- 单个添加 -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
+                    <input type="text" id="adm-wanted-name" placeholder="姓名" style="grid-column: 1/3;">
+                    <input type="number" id="adm-wanted-amount" placeholder="赏金 GP">
+                    <input type="text" id="adm-wanted-source" placeholder="悬赏组织">
+                </div>
+                <button onclick="addWantedPoster()" style="width:100%; background:#c0392b; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">单份签发</button>
+    
+                <hr style="margin:15px 0;">
+
+                <!-- 批量导入 -->
+                <h4 style="margin:0 0 5px 0;">批量导入 (每行一个：名字,金额,组织)</h4>
+                <textarea id="adm-wanted-bulk" placeholder="玛尔佐拉,34500,龙巫教&#10;路人甲,500,领主联盟" style="width:100%; height:60px; font-size:0.8em;"></textarea>
+                <button onclick="bulkAddWanted()" style="width:100%; margin-top:5px; border:1px solid #c0392b; color:#c0392b; background:none; padding:5px;">开始批量签发 (无头像)</button>
+           </div>
         </div>
     </div>
 </div>
@@ -2015,6 +2041,62 @@ async function loadLoginLogs() {
 
         // 5. 映射到 0.6 ~ 0.9 之间
         return 0.6 + (random * 0.3);
+    }
+
+    async function bulkAddWanted() {
+        if (!selectedUserId) return alert('请先选择目标玩家的位面');
+        const text = document.getElementById('adm-wanted-bulk').value;
+        if (!text) return;
+
+        const lines = text.split('\n');
+        const posters = lines.map(line => {
+            const [name, amount, source] = line.split(',');
+            return {
+                user_id: selectedUserId,
+                target_name: name.trim(),
+                bounty_amount: parseInt(amount) || 0,
+                source_org: source ? source.trim() : 'UNKNOWN',
+                status_text: 'DEAD OR ALIVE'
+            };
+        });
+
+        showLoading();
+        const { error } = await supabaseClient.from('wanted_posters').insert(posters);
+        if (error) alert(error.message);
+        else {
+            alert(`成功签发 ${posters.length} 份悬赏令！`);
+            document.getElementById('adm-wanted-bulk').value = '';
+        }
+        hideLoading();
+    }
+
+    async function addWantedPoster() {
+        if (!selectedUserId) return alert('请先选择玩家');
+        const name = document.getElementById('adm-wanted-name').value;
+        const amount = document.getElementById('adm-wanted-amount').value;
+        const status = document.getElementById('adm-wanted-status').value || 'DEAD OR ALIVE';
+        const source = document.getElementById('adm-wanted-source').value;
+        const avatar = document.getElementById('adm-wanted-avatar').value;
+
+        if(!name || !amount) return alert('姓名和金额必填');
+
+        showLoading();
+        const { error } = await supabaseClient.from('wanted_posters').insert([{
+            user_id: selectedUserId,
+            target_name: name,
+            bounty_amount: amount,
+            status_text: status,
+            source_org: source,
+            avatar_url: avatar
+        }]);
+
+        if (error) alert(error.message);
+        else {
+            alert('悬赏令已签发');
+            // 清空
+            document.getElementById('adm-wanted-name').value = '';
+        }
+        hideLoading();
     }
 
     function toggleShopMode() {
