@@ -111,7 +111,7 @@ where name like '%铁矿%' and user_id = (select id from auth.users where email 
 
 #### 从图鉴批量随机进货
 ```sql
--- 给指定玩家随机上架：1传说, 6极珍稀, 10珍稀, 20非普通
+-- 给指定玩家随机上架
 select admin_random_restock((select id from auth.users where email = 'master@almorel.com'));
 
 -- 全服公共随机上架 (参数填 null)
