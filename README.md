@@ -13,9 +13,6 @@
 insert into admin_users (id, role_level)
 select id, 'dm' from auth.users where email = 'IDRotF@1.com'
 on conflict (id) do update set role_level = 'dm';
-
--- 将某人设为 Root (慎用)
--- 把 'dm' 改为 'root' 即可
 ```
 
 #### 指派玩家给特定 DM
