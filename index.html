@@ -331,7 +331,7 @@
                 <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:10px;">确认上架</button>
                 <!-- 随机进货按钮 -->
                 <button onclick="randomRestock()" style="width:100%; margin-top:10px; background:#8e44ad; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">🎲 随机进货 (标准包)</button>
-                <div style="font-size:0.8em; color:#666; text-align:center; margin-top:5px;">包含: 1传说, 6极珍稀, 10珍稀, 20非普通</div>
+                <div style="font-size:0.8em; color:#666; text-align:center; margin-top:5px;">包含: 2传说, 12极珍稀, 20珍稀, 30非普通, 10普通</div>
             </div>
         </div>
 
@@ -1959,7 +1959,7 @@ async function loadLoginLogs() {
         let targetId = selectedUserId || null;
         let targetName = targetId ? '指定玩家特供' : '全服公共';
 
-        if (!confirm(`确定要执行 [标准随机包] 进货吗？\n\n目标: ${targetName}\n内容: 1传说 + 6极珍稀 + 10珍稀 + 20非普通\n\n(注意：这会直接添加到集市，不会覆盖已有商品)`)) return;
+        if (!confirm(`确定要执行 [标准随机包] 进货吗？\n\n目标: ${targetName}\n内容: 2传说 + 12极珍稀 + 20珍稀 + 30非普通 + 10普通\n\n(注意：这会直接添加到集市，不会覆盖已有商品)`)) return;
 
         showLoading();
         try {
