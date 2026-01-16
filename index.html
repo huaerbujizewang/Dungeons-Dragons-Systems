@@ -1263,81 +1263,41 @@ async function loadGold() {
 
 
 
-   // --- 购买逻辑 (支持30分钟退货记录) ---
+    // --- 购买逻辑 (支持30分钟退货记录) ---
     async function buy(id, p, n, c) {
-        showLoading();
+        showLoading(); // 开始转圈
+
         try {
-            // 1. 强制同步最新的金币数据，确保 userProfile 不是 null
-            await loadGold(); 
-            
-            if (!userProfile) {
-                alert('同步位面资产失败，请稍后重试');
-                hideLoading();
-                return;
-            }
+            // 只需要发送一个请求！
+            const { data, error } = await supabaseClient.rpc('atomic_buy_item', {
+                p_user_id: viewingUserId,
+                p_item_id: id,
+                p_price: p,
+                p_item_name: n,
+                p_category: c
+            });
 
-            // 2. 检查金币余额
-            if (userProfile.gold_gp < p) {
-                alert('金币不足，无法购买此物品！');
-                hideLoading();
-                return;
-            }
+            if (error) throw error;
 
-            // 3. 检查集市库存状态
-            const { data: shopItem } = await supabaseClient.from('shop_items').select('stock').eq('id', id).single();
-            if (!shopItem || shopItem.stock <= 0) {
-                alert('手慢了，该物品已售罄！');
-                loadShop();
-                hideLoading();
-                return;
-            }
-
-            // 4. 更新数据库：扣钱 + 减库存
-            // 注意：这里基于 viewingUserId (当前视角玩家) 进行操作
-            await supabaseClient.from('profiles').update({ gold_gp: userProfile.gold_gp - p }).eq('id', viewingUserId);
-            await supabaseClient.from('shop_items').update({ stock: shopItem.stock - 1 }).eq('id', id);
-
-            // 5. 将物品放入玩家背包 (如果是已有物品则数量+1)
-            const { data: inv } = await supabaseClient
-                .from('user_inventory')
-                .select('id, quantity')
-                .eq('user_id', viewingUserId)
-                .eq('item_name', n)
-                .maybeSingle();
-
-            if (inv) {
-                await supabaseClient.from('user_inventory').update({ quantity: inv.quantity + 1 }).eq('id', inv.id);
+            if (data === 'success') {
+                // 成功后，不要直接调用 refreshAllData()
+                // 而是只刷新受影响的三个部分，减少浏览器负担
+                await Promise.all([
+                    loadGold(),
+                    loadInventory()
+                    // loadShop() 暂时不用，因为 Realtime 会自动刷货架
+                ]);
+                alert(`[${n}] 购买成功！`);
             } else {
-                await supabaseClient.from('user_inventory').insert([{ 
-                    user_id: viewingUserId, 
-                    item_name: n, 
-                    quantity: 1, 
-                    category: c 
-                }]);
+                alert(data.replace('error:', ''));
+                loadShop(); // 失败了通常是库存变了，刷一下货架
             }
-
-            // 6. 写入订单历史，用于30分钟退货功能
-            // status 默认为 'completed'
-            await supabaseClient.from('purchase_history').insert([{
-                user_id: viewingUserId,
-                shop_item_id: id,
-                item_name: n,
-                price_paid: p,
-                category: c
-            }]);
-
-            // 7. 记录操作日志并刷新界面
-            await logAction('购买物品', `购买了 [${n}]，花费 ${p} GP`);
-            
-            alert(`[${n}] 购买成功！\n30分钟内可在“退货中心”撤销该操作。`);
-            
-            await refreshAllData(); 
 
         } catch (e) {
-            console.error("交易流程出错:", e);
-            alert('购买异常，请检查位面连接');
+            console.error(e);
+            alert('通信过载，请稍后再试');
         } finally {
-            hideLoading();
+            hideLoading(); // 结束转圈
         }
     }
 
