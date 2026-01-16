@@ -1265,39 +1265,35 @@ async function loadGold() {
 
     // --- 购买逻辑 (支持30分钟退货记录) ---
     async function buy(id, p, n, c) {
-        showLoading(); // 开始转圈
-
+        showLoading();
         try {
-            // 只需要发送一个请求！
             const { data, error } = await supabaseClient.rpc('atomic_buy_item', {
-                p_user_id: viewingUserId,
-                p_item_id: id,
-                p_price: p,
+                p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
+                p_item_id: parseInt(id),  // 确保是数字
+                p_price: parseInt(p),     // 确保是数字
                 p_item_name: n,
-                p_category: c
+                p_category: c || '杂项'    // 确保不为 null
             });
 
-            if (error) throw error;
-
-            if (data === 'success') {
-                // 成功后，不要直接调用 refreshAllData()
-                // 而是只刷新受影响的三个部分，减少浏览器负担
-                await Promise.all([
-                    loadGold(),
-                    loadInventory()
-                    // loadShop() 暂时不用，因为 Realtime 会自动刷货架
-                ]);
-                alert(`[${n}] 购买成功！`);
-            } else {
-                alert(data.replace('error:', ''));
-                loadShop(); // 失败了通常是库存变了，刷一下货架
+            if (error) {
+                console.error("RPC Error:", error);
+                throw error;
             }
 
+            if (data && data.startsWith('success')) {
+                // 成功
+                await Promise.all([loadGold(), loadInventory()]);
+                alert(`[${n}] 购买成功！`);
+            } else {
+                // 后端返回的业务错误
+                alert(data ? data.replace('error:', '') : '未知错误');
+                loadShop(); 
+            }
         } catch (e) {
-            console.error(e);
-            alert('通信过载，请稍后再试');
+            console.error("Full Error Info:", e);
+            alert('交易失败：' + (e.message || '请检查网络'));
         } finally {
-            hideLoading(); // 结束转圈
+            hideLoading();
         }
     }
 
