@@ -391,6 +391,7 @@
 </div>
 
 <script>
+    let mainRealtimeChannel = null;
     let viewingUserId = null; // 当前正在查看谁的场景
     let myId = null; // 登录者自己的 ID
     let presenceChannel = null;
@@ -415,6 +416,45 @@
 
     function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
     function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+    function setupMainRealtime(targetId) {
+        // 如果已经有频道在运行，先关掉（防止视角切换时重复监听）
+        if (mainRealtimeChannel) {
+            supabaseClient.removeChannel(mainRealtimeChannel);
+        }
+
+        // 创建新频道
+        mainRealtimeChannel = supabaseClient.channel('main_sync_channel');
+
+        mainRealtimeChannel
+            // 1. 监听金币和时间变动 (Profiles表)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${targetId}` }, (payload) => {
+                console.log('检测到资产/时间变动');
+                loadGold();
+                loadUserDate();
+            })
+            // 2. 监听集市变动 (Shop 表)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_items' }, (payload) => {
+                console.log('集市货架有更新');
+                loadShop();
+            })
+            // 3. 监听背包变动 (Inventory 表)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_inventory', filter: `user_id=eq.${targetId}` }, (payload) => {
+                console.log('背包物品有更新');
+                loadInventory();
+            })
+            // 4. 监听雇员/小队变动 (Employees 表)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'employees', filter: `user_id=eq.${targetId}` }, (payload) => {
+                console.log('人员/小队状态变动');
+                loadTeam();
+                loadEmployees();
+            })
+            // 5. 监听装备栏变动 (Equipped 表)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'equipped_items' }, (payload) => {
+                console.log('装备穿戴有更新');
+                loadTeam();
+            })
+            .subscribe();
+    }
 
     // --- 队伍管理 (统一显示，不隔开) ---
     async function loadTeam() {
@@ -885,6 +925,8 @@ async function openEquipModal(empId, slotIdx) {
             
             // 5. 加载所有业务数据
             await refreshAllData();
+            setupMainRealtime(viewingUserId); // 【新增】启动实时同步
+            initPresenceSystem()
 
             // 6. 启动在线系统 (监听+广播)
             // 必须放在最后，且必须确保你已经把 initPresenceSystem 函数复制到了 script 里
@@ -1342,6 +1384,7 @@ async function loadGold() {
         detailBox.style.display = 'block';
         viewingUserId = selectedUserId;
         await refreshAllData();
+        setupMainRealtime(viewingUserId); // 切换视角后，重新挂载对应的实时监听
 
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
         if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
