@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>退货中心 - 艾尔莫瑞尔</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: "PingFang SC", sans-serif; background-color: #f4f1ea; padding: 40px; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; }
+        .back-btn { padding: 8px 15px; border: 1px solid #333; text-decoration: none; color: #333; border-radius: 4px; display: inline-block; margin-bottom: 20px; }
+        .order-card { background: #fff; border: 1px solid #dcd6cc; padding: 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .order-info b { font-size: 1.1em; }
+        .order-info p { margin: 5px 0 0; font-size: 0.85em; color: #666; }
+        .timer { font-size: 0.8em; color: #e67e22; font-weight: bold; }
+        .btn-refund { background: #fff; border: 1px solid #e74c3c; color: #e74c3c; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-refund:hover { background: #e74c3c; color: #fff; }
+        #loading { text-align: center; color: #999; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">⬅ 返回主界面</a>
+    <h1>😭 交易撤回中心</h1>
+    <p style="color:#666; font-size:0.9em; margin-bottom:30px;">订单仅在购买后的 30 分钟内支持撤回。</p>
+
+    <div id="order-list">
+        <div id="loading">正在调阅近期账单...</div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let viewingId = null;
+
+    async function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        viewingId = urlParams.get('uid');
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { location.href = 'index.html'; return; }
+        if (!viewingId) viewingId = user.id;
+
+        loadOrders();
+        // 每分钟刷新一次时间显示
+        setInterval(loadOrders, 60000);
+    }
+
+    async function loadOrders() {
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60000).toISOString();
+        
+        // 只查30分钟内、未退款的订单
+        const { data: orders } = await supabaseClient
+            .from('purchase_history')
+            .select('*')
+            .eq('user_id', viewingId)
+            .eq('status', 'completed')
+            .gt('created_at', thirtyMinsAgo)
+            .order('created_at', { ascending: false });
+
+        const list = document.getElementById('order-list');
+        list.innerHTML = '';
+
+        if (!orders || orders.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#999; margin-top:50px;">近期（30分钟内）无误购记录。</div>';
+            return;
+        }
+
+        orders.forEach(order => {
+            const timePassed = Math.floor((Date.now() - new Date(order.created_at)) / 60000);
+            const timeLeft = 30 - timePassed;
+
+            list.innerHTML += `
+                <div class="order-card">
+                    <div class="order-info">
+                        <b>${order.item_name}</b>
+                        <p>成交价: ${order.price_paid} GP</p>
+                        <div class="timer">⏳ 剩余退货时间: ${timeLeft} 分钟</div>
+                    </div>
+                    <button class="btn-refund" onclick="processRefund(${JSON.stringify(order).replace(/"/g, '&quot;')})">撤销购买</button>
+                </div>
+            `;
+        });
+    }
+
+    async function processRefund(order) {
+        if (!confirm(`确定要撤销对 [${order.item_name}] 的购买吗？\n物品将从背包移除，${order.price_paid} GP 将退回。`)) return;
+
+        // 1. 检查背包里是否还有这个东西
+        const { data: invItem } = await supabaseClient
+            .from('user_inventory')
+            .select('*')
+            .eq('user_id', viewingId)
+            .eq('item_name', order.item_name)
+            .maybeSingle();
+
+        if (!invItem || invItem.quantity <= 0) {
+            return alert("退货失败：物品已不在背包中（可能已装备、已出售或已丢弃）。");
+        }
+
+        // 2. 执行逆向操作
+        try {
+            // A. 背包扣除
+            if (invItem.quantity > 1) {
+                await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invItem.id);
+            } else {
+                await supabaseClient.from('user_inventory').delete().eq('id', invItem.id);
+            }
+
+            // B. 金币退还
+            const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingId).single();
+            await supabaseClient.from('profiles').update({ gold_gp: prof.gold_gp + order.price_paid }).eq('id', viewingId);
+
+            // C. 集市库存加回 (如果原商品还在)
+            if (order.shop_item_id) {
+                const { data: shopItem } = await supabaseClient.from('shop_items').select('stock').eq('id', order.shop_item_id).single();
+                if (shopItem) {
+                    await supabaseClient.from('shop_items').update({ stock: shopItem.stock + 1 }).eq('id', order.shop_item_id);
+                }
+            }
+
+            // D. 标记订单已退款
+            await supabaseClient.from('purchase_history').update({ status: 'refunded' }).eq('id', order.id);
+
+            alert("时空回溯成功！金币已退回。");
+            loadOrders();
+        } catch (e) {
+            alert("操作失败，请联系 DM。");
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>
