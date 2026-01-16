@@ -214,6 +214,13 @@
             <p style="font-size:0.8em; color:#666;">位面通缉名单</p>
         </div>
 
+        <!-- 卡片 7：退货中心 -->
+        <div class="card emp-card-content" onclick="window.location.href='refunds.html?uid=' + viewingUserId" style="cursor:pointer; border-top: 4px solid #95a5a6;">
+            <div style="font-size: 2.5em; margin-bottom:10px;">😭</div>
+            <div style="font-weight:bold; font-size:1.1em;">退货中心</div>
+            <p style="font-size:0.8em; color:#666;">30分钟内误购撤回</p>
+        </div>
+
         <!-- 可以根据需要继续添加卡片 -->
         </div>
     </div>
@@ -1256,10 +1263,11 @@ async function loadGold() {
 
 
 
-    // 1. 购买 (增加日志)
+   // --- 购买逻辑 (支持30分钟退货记录) ---
     async function buy(id, p, n, c) {
         showLoading();
         try {
+            // 1. 强制同步最新的金币数据，确保 userProfile 不是 null
             await loadGold(); 
             
             if (!userProfile) {
@@ -1268,13 +1276,14 @@ async function loadGold() {
                 return;
             }
 
+            // 2. 检查金币余额
             if (userProfile.gold_gp < p) {
-                alert('金币不足！');
+                alert('金币不足，无法购买此物品！');
                 hideLoading();
                 return;
             }
 
-            // 1. 扣除库存逻辑 (已有的)
+            // 3. 检查集市库存状态
             const { data: shopItem } = await supabaseClient.from('shop_items').select('stock').eq('id', id).single();
             if (!shopItem || shopItem.stock <= 0) {
                 alert('手慢了，该物品已售罄！');
@@ -1283,24 +1292,50 @@ async function loadGold() {
                 return;
             }
 
-            // 2. 更新数据库：扣钱 + 减库存
+            // 4. 更新数据库：扣钱 + 减库存
+            // 注意：这里基于 viewingUserId (当前视角玩家) 进行操作
             await supabaseClient.from('profiles').update({ gold_gp: userProfile.gold_gp - p }).eq('id', viewingUserId);
             await supabaseClient.from('shop_items').update({ stock: shopItem.stock - 1 }).eq('id', id);
 
-            // 3. 放入背包
-            const { data: inv } = await supabaseClient.from('user_inventory').select('id,quantity').eq('user_id', viewingUserId).eq('item_name', n).maybeSingle();
+            // 5. 将物品放入玩家背包 (如果是已有物品则数量+1)
+            const { data: inv } = await supabaseClient
+                .from('user_inventory')
+                .select('id, quantity')
+                .eq('user_id', viewingUserId)
+                .eq('item_name', n)
+                .maybeSingle();
+
             if (inv) {
                 await supabaseClient.from('user_inventory').update({ quantity: inv.quantity + 1 }).eq('id', inv.id);
             } else {
-                await supabaseClient.from('user_inventory').insert([{ user_id: viewingUserId, item_name: n, quantity: 1, category: c }]);
+                await supabaseClient.from('user_inventory').insert([{ 
+                    user_id: viewingUserId, 
+                    item_name: n, 
+                    quantity: 1, 
+                    category: c 
+                }]);
             }
 
+            // 6. 写入订单历史，用于30分钟退货功能
+            // status 默认为 'completed'
+            await supabaseClient.from('purchase_history').insert([{
+                user_id: viewingUserId,
+                shop_item_id: id,
+                item_name: n,
+                price_paid: p,
+                category: c
+            }]);
+
+            // 7. 记录操作日志并刷新界面
             await logAction('购买物品', `购买了 [${n}]，花费 ${p} GP`);
-            alert('交易成功！');
-            await refreshAllData(); // 刷新所有界面
+            
+            alert(`[${n}] 购买成功！\n30分钟内可在“退货中心”撤销该操作。`);
+            
+            await refreshAllData(); 
+
         } catch (e) {
-            console.error(e);
-            alert('购买异常');
+            console.error("交易流程出错:", e);
+            alert('购买异常，请检查位面连接');
         } finally {
             hideLoading();
         }
