@@ -28,7 +28,7 @@
         .prop-desc { font-size: 0.95em; color: #555; line-height: 1.6; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 4px; border-left: 3px solid #ddd; }
         
         .action-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #eee; padding-top: 15px; }
-        .cost-tag { font-family: monospace; font-weight: bold; color: #c0392b; font-size: 1.1em; display: flex; align-items: center; gap: 5px; }
+        .cost-tag { font-family: monospace; font-weight: bold; font-size: 1.1em; display: flex; align-items: center; gap: 5px; }
         
         /* 按钮 */
         .btn-group { display: flex; gap: 10px; }
@@ -47,7 +47,7 @@
         .status-approved { background: #d5f5e3; color: #27ae60; }
         .status-rejected { background: #fadbd8; color: #c0392b; }
         
-        /* 优化后的批注框样式 */
+        /* 批注框样式 */
         .decision-note { 
             margin-top: 10px; 
             padding: 10px; 
@@ -56,26 +56,13 @@
             border-radius: 4px; 
             font-size: 0.9em; 
             color: #7f6000; 
-            display: flex; /* 保持 flex 布局 */
-            align-items: flex-start; /* 顶部对齐 */
+            display: flex;
+            align-items: flex-start;
             gap: 10px; 
             line-height: 1.6;
         }
-
-        /* 固定左侧标签，不让它缩进或换行 */
-        .decision-label {
-            flex-shrink: 0; /* 禁止缩小 */
-            font-weight: bold;
-            white-space: nowrap; /* 禁止换行 */
-            display: flex;
-            align-items: center;
-        }
-
-        /* 右侧文本自动换行并保持缩进对齐 */
-        .decision-text {
-            word-break: break-all; /* 允许在单词内换行 */
-            text-align: justify; /* 两端对齐，更工整 */
-        }
+        .decision-label { flex-shrink: 0; font-weight: bold; white-space: nowrap; display: flex; align-items: center; }
+        .decision-text { word-break: break-all; text-align: justify; }
         .decision-time { font-size: 0.8em; color: #999; margin-top: 5px; text-align: right; }
 
         #loading { text-align: center; color: #999; margin-top: 50px; }
@@ -89,20 +76,17 @@
         <a href="index.html" class="back-btn">⬅ 返回主控台</a>
     </div>
 
-    <!-- 顶部资产显示 -->
     <div style="text-align: right; margin-bottom: 20px; font-weight: bold; color: #d35400;">
         当前国库: <span id="current-gold">Loading...</span> GP
     </div>
 
     <div id="loading">正在加载...</div>
 
-    <!-- 待审批 -->
     <div id="pending-section" style="display:none;">
         <div class="section-title">🔴 待审批议案</div>
         <div id="pending-list"></div>
     </div>
 
-    <!-- 历史记录 -->
     <div id="history-section" style="display:none;">
         <div class="section-title">🗄️ 历史决策档案</div>
         <div id="history-list"></div>
@@ -121,34 +105,28 @@
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
 
-        // --- 支持从 URL 获取 ID  ---
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('uid') || user.id;
 
-        // 获取目标用户的金币
         const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', targetId).single();
         if (prof) {
             userProfile = prof;
             document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
         }
 
-        // 获取目标用户的雇员头像
         const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         if (emps) { emps.forEach(e => employeeMap[e.name] = e.avatar_url); }
 
-        // 加载目标用户的议案
         loadProposals(targetId);
-
         setupRealtime(targetId);
     }
 
     async function loadProposals(userId) {
-        // 按最后更新时间排序，这样刚决策的会在最上面
         const { data: list, error } = await supabaseClient
             .from('city_proposals')
             .select('*')
             .eq('user_id', userId)
-            .order('decided_at', { ascending: false, nullsFirst: true }) // 已决策的按时间倒序，未决策的排最前
+            .order('decided_at', { ascending: false, nullsFirst: true })
             .order('created_at', { ascending: false });
 
         if (error) return alert('加载失败');
@@ -164,9 +142,20 @@
 
         list.forEach(item => {
             const avatarUrl = employeeMap[item.proposer_name] || 'https://via.placeholder.com/70';
-            const costHtml = item.cost > 0 
-                ? `<div class="cost-tag">💰 -${item.cost.toLocaleString()} GP</div>` 
-                : `<div class="cost-tag" style="color:#27ae60; font-size:0.9em;">无需额外预算</div>`;
+            
+            // --- 修改点1：颜色与显示逻辑更新 ---
+            let costHtml = '';
+            if (item.cost > 0) {
+                // 花钱：红色
+                costHtml = `<div class="cost-tag" style="color: #c0392b;">💰 -${item.cost.toLocaleString()} GP</div>`;
+            } else if (item.cost < 0) {
+                // 赚钱：绿色 (负负得正)
+                costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(item.cost).toLocaleString()} GP</div>`;
+            } else {
+                // 0元：黄色 (琥珀色以增加辨识度)
+                costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 无需额外预算</div>`;
+            }
+            // ---------------------------------
 
             if (item.status === 'pending') {
                 hasPending = true;
@@ -197,17 +186,14 @@
                     ? `<span class="status-badge status-approved">已批准</span>`
                     : `<span class="status-badge status-rejected">已否决</span>`;
                 
-                // 处理时间显示
                 const dateStr = item.decided_at ? new Date(item.decided_at).toLocaleString() : '未知日期';
                 
-                // 处理批注显示
                 const reasonHtml = item.decision_reason 
                     ? `<div class="decision-note">
                          <span class="decision-label">📝 领主批注：</span>
                          <span class="decision-text">${item.decision_reason}</span>
                        </div>` 
                     : '';
-
 
                 historyBox.innerHTML += `
                     <div class="proposal-card history-card ${item.status}">
@@ -234,29 +220,33 @@
         if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
     }
 
-    // --- 决策逻辑 ---
+    // --- 修改点2：决策逻辑支持赚钱 ---
     async function handleDecision(id, decision, cost, title) {
-        // 1. 弹出输入框询问理由
         const actionName = decision === 'approved' ? '批准' : '否决';
         const defaultReason = decision === 'approved' ? '同意执行。' : '暂缓议案。';
         
         const reason = prompt(`您决定 [${actionName}] 提案：${title}\n\n请输入决策理由/批注 (可选):`, defaultReason);
         
-        if (reason === null) return; // 点击取消，终止操作
+        if (reason === null) return; 
 
-        // 2. 资金检查
-        if (decision === 'approved' && cost > 0) {
-            if (userProfile.gold_gp < cost) {
+        // 资金变动逻辑
+        // 只要是批准，且金额不为0 (无论是赚钱还是花钱)，都要更新金币
+        if (decision === 'approved' && cost !== 0) {
+            // 只有当是花钱(cost>0)且钱不够时，才拦截
+            if (cost > 0 && userProfile.gold_gp < cost) {
                 return alert('国库资金不足，无法批准！');
             }
+            
+            // 核心数学：减去负数 = 加上正数
             const newGold = userProfile.gold_gp - cost;
+            
             const { error } = await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
-            if (error) return alert('扣款失败');
+            if (error) return alert('资金变动失败');
+            
             userProfile.gold_gp = newGold;
             document.getElementById('current-gold').innerText = newGold.toLocaleString();
         }
 
-        // 3. 更新数据库 (状态 + 理由 + 时间)
         const { error: updateErr } = await supabaseClient
             .from('city_proposals')
             .update({ 
@@ -275,34 +265,30 @@
     }
 
     function setupRealtime(targetId) {
-        // 创建一个实时频道
         const proposalChannel = supabaseClient
             .channel('proposal_realtime')
             .on(
                 'postgres_changes', 
                 { 
-                    event: '*', // 监听所有变动：新增、修改、删除
+                    event: '*', 
                     schema: 'public', 
                     table: 'city_proposals',
-                    filter: `user_id=eq.${targetId}` // 关键：只监听当前正在看的那个玩家的变动
+                    filter: `user_id=eq.${targetId}` 
                 }, 
                 (payload) => {
                     console.log('检测到位面波动，提案表已更新:', payload);
-                    // 只要数据库变了，就重新加载列表和金币
                     loadProposals(targetId); 
-                    // 顺便刷新一下金币显示，防止钱扣了这边不知道
                     refreshGoldDisplay(targetId);
                 }
             )
             .subscribe();
     }
 
-    // 单独刷新金币显示
     async function refreshGoldDisplay(userId) {
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userId).single();
         if (prof) {
             document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
-            userProfile.gold_gp = prof.gold_gp; // 更新本地缓存
+            userProfile.gold_gp = prof.gold_gp;
         }
     }
 
