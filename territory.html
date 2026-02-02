@@ -89,9 +89,7 @@
             <div class="city-info" id="date-display">FR1494</div>
         </div>
 
-        <!-- 概览面板 -->
         <div id="overview-panel">
-            <!-- KPI -->
             <div class="kpi-row">
                 <div class="kpi-card">
                     <div class="kpi-label">当前人口</div>
@@ -110,7 +108,6 @@
                 </div>
             </div>
 
-            <!-- 图表 -->
             <div class="charts-row">
                 <div class="chart-box">
                     <div class="chart-title">种族构成 (Demographics)</div>
@@ -122,7 +119,6 @@
                 </div>
             </div>
 
-            <!-- 财务详情 -->
             <div class="data-section">
                 <div class="section-header">
                     <span>📜 月度财政收支详单</span>
@@ -133,12 +129,28 @@
                         <tr><th>项目</th><th>说明</th><th class="amount-col">金额</th></tr>
                     </thead>
                     <tbody id="finance-table-body">
-                        <!-- JS 填充 -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
 
-            <!-- 人员详情 -->
+            <div class="data-section">
+                <div class="section-header">
+                    <span>💰 税收明细 (Tax Revenue)</span>
+                    <span style="font-size:0.8em; color:#666; font-weight:normal;">含人头税与专项税</span>
+                </div>
+                <table class="finance-table">
+                    <thead>
+                        <tr>
+                            <th>税种</th>
+                            <th>征收标准/来源</th>
+                            <th class="amount-col">征收总额</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tax-table-body">
+                        </tbody>
+                </table>
+            </div>
+
             <div class="data-section">
                 <div class="section-header">
                     <span>👥 城市职员编制 (不含特殊雇员)</span>
@@ -148,12 +160,10 @@
                         <tr><th>职能</th><th>人数</th><th>月薪标准</th><th class="amount-col">月度总支出</th></tr>
                     </thead>
                     <tbody id="staff-table-body">
-                        <!-- JS 填充 -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
 
-            <!-- 贸易与产业详情 -->
             <div class="data-section">
                 <div class="section-header">
                     <span>⚖️ 贸易与产业收支</span>
@@ -163,12 +173,10 @@
                         <tr><th>项目名称</th><th>类型</th><th>详情</th><th class="amount-col">月度额度</th></tr>
                     </thead>
                     <tbody id="trade-table-body">
-                        <!-- JS 填充 -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
 
-            <!-- 设施详情 -->
             <div class="data-section">
                 <div class="section-header">
                     <span>🏗️ 城市基础设施维护详单</span>
@@ -178,13 +186,11 @@
                         <tr><th>设施名称</th><th>数量</th><th>单项维护费</th><th class="amount-col">月度总支出</th></tr>
                     </thead>
                     <tbody id="building-table-body">
-                        <!-- JS 填充 -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 详情面板 -->
         <div id="detail-panel">
             <div class="suzerain-container">
                 <div class="suz-header" id="suz-title">...</div>
@@ -219,53 +225,49 @@
         employee_expense: 0  
     };
 
-    // --- 静态描述性文本---
-const dataStore = {
+    // --- 静态描述性文本 (已更新为最新状态) ---
+    const dataStore = {
         'military': {
             title: "MILITARY / 军事概况",
             items: [
                 { title: "象征性兵役制", desc: "所有适龄人口在达到 18 岁时必须服役2个月。这确保了在边境冲突频繁的动荡年代，城市始终保有充足的兵员储备。" },
-                { title: "低能的参谋部", desc: "虽然名义上拥有参谋指挥系统，但由于缺乏经验丰富的高级军官，目前的参谋部反应迟钝。" },
+                { title: "低能的参谋部", desc: "虽然名义上拥有参谋指挥系统，但由于缺乏经验丰富的高级军官，目前的参谋部反应迟钝。虽然装备得到了更新，但指挥大脑依然是短板。" },
                 { title: "中央尖塔", desc: "这是艾尔莫瑞尔最令人敬畏的防御核心。这座魔法尖塔能够向全城范围释放毁灭性的闪电风暴。" },
-                { title: "死灵医学研究所", desc: "对外不挂牌，实则是一个半地下的死灵法术设施。" },
-                { title: "军备储备", desc: "得益于专项拨款，卫队的武器装备得到了全面更新，治安所也进行了扩建。" }
+                { title: "死灵医学研究所 (绝密)", desc: "对外宣称是“战场急救研究室”，实则是一个半地下的死灵法术设施。虽然有违道德，但这为军队提供了某种“非常规”的医疗与续航保障。" },
+                { title: "升级的军备储备", desc: "得益于专项拨款，卫队的武器装备得到了全面更新，治安所也进行了扩建。单兵素质未变，但硬件水平已大幅提升。" }
             ]
         },
         'economy': {
             title: "ECONOMY / 经济概况",
             items: [
-                { title: "魔法物品贸易", desc: "城市与魔法国度哈鲁阿达成了关键贸易协定：艾尔莫瑞尔每七天向其供给两件非普通级魔法物品。作为回报，哈鲁阿负责供给维持 5000 人生存的粮食。" },
-                { title: "粮食依赖", desc: "本地农业产出不足以维持人口消耗，城市命脉完全系于魔法物品贸易。一旦魔法工坊停产或贸易路线被切断，饥荒将不可避免。" },
-                { title: "飞船贸易", desc: "新建的飞船停泊港极大提升了物流效率。城市正成为区域性的空中交通枢纽。" },
-                { title: "债务扩张型经济", desc: "通过发行“两年期城市债券”，市政厅瞬间获得了巨大的现金流用于基建。" },
-                { title: "垄断资本", desc: "市政厅强制垄断了治疗药水产业，并推行了怪物狩猎许可制度，大部分高利润行业已被收归国有或官方特许经营。" },
-                { title: "针对性关税", desc: "虽然基础商业税维持中等，但针对外来商队和奢侈品交易征收了重税。" }
+                { title: "魔法与飞船贸易", desc: "除了与哈鲁阿的魔法物品换粮食协议外，新建的飞船停泊港极大提升了物流效率。虽然造价高昂，但这标志着城市正试图成为区域性的空中交通枢纽。" },
+                { title: "债务扩张型经济", desc: "通过发行“两年期城市债券”，市政厅瞬间获得了巨大的现金流用于基建。财政赤字暂时被巨额债务掩盖，城市目前正处于“借钱发展”的狂热阶段。" },
+                { title: "国家垄断资本", desc: "市政厅强制垄断了治疗药水产业，并推行了怪物狩猎许可制度。自由市场受到挤压，大部分高利润行业已被收归国有或官方特许经营。" },
+                { title: "针对性关税壁垒", desc: "虽然基础商业税维持中等，但针对外来商队和奢侈品交易（特别是淑妮信徒的消费品）征收了重税。这是一场精准的“劫富济贫”——劫商人的富，济领主的库。" }
             ]
         },
         'law': {
             title: "LAW / 法律与政策",
             items: [
-                { title: "市议会职能暂停", desc: "鉴于当前的紧急状态，民选市议会的立法与决策职能已被无限期冻结。所有行政命令直接由领主府签发。" },
-                { title: "城主豁免权", desc: "法律明确规定，现任城主在行使职权时享有完全的司法豁免权。这一条款确保了决策层的绝对权威。" },
-                { title: "夜间宵禁令", desc: "每晚 22:00 至次日 6:00 实施全城宵禁。" },
-                { title: "官方喉舌", desc: "《真理报》作为市政厅绝对控股的媒体，主导了城市的舆论方向。" },
-                { title: "宗教信仰自由", desc: "这曾是艾尔莫瑞尔繁荣的基石，也是如今信仰混杂的原因。只要不进行血祭或召唤恶魔，任何神祇的信徒都能在此找到一席之地。" }
+                { title: "市议会职能暂停", desc: "民选市议会的立法与决策职能已被无限期冻结。所有行政命令直接由领主府签发，且领主享有完全的司法豁免权。" },
+                { title: "夜间宵禁令", desc: "每晚 22:00 至次日 6:00 实施全城宵禁。这有效压制了夜间犯罪，但也让城市的夜晚变得死寂且充满肃杀之气。" },
+                { title: "官方喉舌", desc: "原本的言论自由已被遏制。《真理报》作为市政厅绝对控股的媒体，主导了城市的舆论方向。反对的声音不再出现在街头，只能在阴影中低语。" },
+                { title: "宗教宽容与利用", desc: "依然保持信仰自由，但教会也被纳入了税收体系。淑妮教会的美化提案被采纳，不仅为了审美，更为了展示政绩。" }
             ]
         },
         'welfare': { 
             title: "WELFARE / 社会福利", 
             items: [
-                { title: "阶级分化的教育", desc: "精英化的“提米恩斯魔法学院”分校与基础识字班并存。魔法力量掌握在少数付费者和贵族手中。" },
-                { title: "面包与马戏", desc: "通过建设公共浴场、魔法喷泉和角斗场，市政厅成功地用娱乐麻痹了底层民众。" },
-                { title: "下水道与卫生", desc: "虽然缺乏噱头，但下水道疏通工程实打实地降低了瘟疫风险。" },
-                { title: "免费丧葬服务", desc: "由市政厅出资，确保每位逝者都能得到体面的安葬。这不仅是对生命的尊重，也是为了防止亡灵瘟疫在贫民窟滋生的一项公共卫生措施。" }
+                { title: "阶级分化的教育", desc: "拒绝了普及义务教育，转而支持精英化的“提米恩斯魔法学院”分校与基础识字班并存。平民只需识字以便服从指令，而魔法力量则掌握在少数付费者和贵族手中。" },
+                { title: "面包与马戏", desc: "通过建设公共浴场、魔法喷泉和角斗场，市政厅成功地用娱乐麻痹了底层民众。虽然生活并未本质改善，但民众有了发泄精力的去处和感激领主“恩赐”的理由。" },
+                { title: "下水道与卫生", desc: "虽然缺乏噱头，但下水道疏通工程实打实地降低了瘟疫风险。这是一项不被歌颂但至关重要的德政。" }
             ] 
         },
         'order': { 
             title: "ORDER / 治安", 
             items: [
                 { title: "商业化治安体系", desc: "治安官的能力依然平庸，但通过“怪物狩猎许可”，原本也是治安隐患的冒险者被转化为付费的怪物清理工。城市周边的威胁被外包解决了。" },
-                { title: "高压管控", desc: "宵禁令和扩建的治安所让城内的显性犯罪率显著下降。" }
+                { title: "高压管控", desc: "宵禁令和扩建的治安所让城内的显性犯罪率显著下降。但这并非源于教化，而是源于对监禁和暴力的畏惧。" }
             ] 
         },
         'diplomacy': { 
@@ -294,7 +296,7 @@ const dataStore = {
         await loadAndRenderFinance(viewingId); 
     }
 
-    // --- 从数据库加载并计算财务 ---
+    // --- 从数据库加载并计算财务 (含税收分流逻辑) ---
     async function loadAndRenderFinance(userId) {
         // 1. 并行抓取所有数据
         const [statsRes, expensesRes, incomesRes, employeesRes] = await Promise.all([
@@ -309,29 +311,66 @@ const dataStore = {
         const incomes = incomesRes.data || [];
         const employees = employeesRes.data || [];
 
-        // 2. 收入计算
-        const taxIncome = Math.ceil(stats.population * stats.tax_rate);
+        // ==========================================
+        // 2. 收入计算 (税收 vs 产业 分离)
+        // ==========================================
         
-        let tradeRevenue = 0;
-        let tradeHtml = '';
+        // A. 基础人头税 (Head Tax)
+        const baseTaxRaw = Math.ceil(stats.population * stats.tax_rate);
         
-        // A. 渲染贸易收入 (严谨模式：数量 x 单价)
+        // B. 定义哪些收入属于“新税收” (通过名称匹配)
+        const taxKeywords = ['奢侈品与胭脂税', '贸易关税', '税']; 
+
+        let specializedTaxTotal = 0; // 专项税总额
+        let tradeRevenue = 0;        // 产业/贸易总额
+        
+        let taxHtml = '';   // 税收表 HTML
+        let tradeHtml = ''; // 产业表 HTML
+
+        // 先把“人头税”加入税收表 HTML
+        taxHtml += `
+            <tr>
+                <td>基础人头税</td>
+                <td>人口 ${stats.population.toLocaleString()} x 税率 ${stats.tax_rate}</td>
+                <td class="amount-col income-text">+${baseTaxRaw}</td>
+            </tr>`;
+
+        // 遍历数据库中的收入项进行分流
         incomes.forEach(i => {
             const count = i.count || 1;
             const unitPrice = i.unit_price || i.amount;
             const total = count * unitPrice;
-            
-            tradeRevenue += total;
-            tradeHtml += `
-                <tr>
-                    <td>${i.name}</td>
-                    <td><span class="tag-box" style="background:#eafaf1; color:#27ae60">收入</span></td>
-                    <td style="font-family:monospace; color:#555;">${count} x ${unitPrice} GP</td>
-                    <td class="amount-col income-text">+${total}</td>
-                </tr>`;
+
+            // 判断：名字里是否包含 '税' 或 '关税' ？
+            const isTax = taxKeywords.some(keyword => i.name.includes(keyword));
+
+            if (isTax) {
+                // ---> 归入税收表
+                specializedTaxTotal += total;
+                taxHtml += `
+                    <tr>
+                        <td>${i.name}</td>
+                        <td><span class="tag-box" style="background:#fff8e1; color:#f39c12">专项税</span></td>
+                        <td class="amount-col income-text">+${total}</td>
+                    </tr>`;
+            } else {
+                // ---> 归入贸易与产业表
+                tradeRevenue += total;
+                tradeHtml += `
+                    <tr>
+                        <td>${i.name}</td>
+                        <td><span class="tag-box" style="background:#eafaf1; color:#27ae60">国营/贸易</span></td>
+                        <td style="font-family:monospace; color:#555;">${count} x ${unitPrice} GP</td>
+                        <td class="amount-col income-text">+${total}</td>
+                    </tr>`;
+            }
         });
 
-        // 3. 支出计算 & 分类渲染
+        const totalTaxIncome = baseTaxRaw + specializedTaxTotal;
+
+        // ==========================================
+        // 3. 支出计算
+        // ==========================================
         let staffCost = 0;
         let buildingCost = 0;
         let tradeCost = 0;
@@ -349,8 +388,8 @@ const dataStore = {
                 buildingCost += cost;
                 buildingHtml += `<tr><td>${e.name}</td><td>${e.count}</td><td>${e.unit_cost} GP</td><td class="amount-col expense-text">-${cost}</td></tr>`;
             } else if (e.category === 'trade_cost') {
-                // B. 渲染贸易成本 (严谨模式)
                 tradeCost += cost;
+                // 将贸易成本行显示在产业表中，以便查看净利
                 tradeHtml += `
                     <tr>
                         <td>${e.name}</td>
@@ -360,11 +399,14 @@ const dataStore = {
                     </tr>`;
             }
         });
+        
+        // 修正：tradeRevenue 仅代表正向收入，不减成本（因为成本在 Total Expense 里减了）
+        // 这样总利润计算公式 Total Income - Total Expense 才是平的。
 
         const empCost = employees.reduce((sum, e) => sum + e.salary, 0);
         
         // 4. 汇总计算
-        const totalIncome = taxIncome + stats.subsidy + tradeRevenue;
+        const totalIncome = totalTaxIncome + stats.subsidy + tradeRevenue;
         const totalExpense = staffCost + buildingCost + tradeCost + empCost;
         const netIncome = totalIncome - totalExpense;
 
@@ -376,16 +418,21 @@ const dataStore = {
         kpiIncome.style.color = netIncome >= 0 ? '#27ae60' : '#c0392b';
         document.getElementById('kpi-income-sub').innerText = netIncome < 0 ? '⚠️ 赤字预警' : '✅ 财政健康';
 
-        // 填充表格
+        // 填充各分表
+        document.getElementById('tax-table-body').innerHTML = taxHtml; 
         document.getElementById('staff-table-body').innerHTML = staffHtml;
         document.getElementById('building-table-body').innerHTML = buildingHtml;
         document.getElementById('trade-table-body').innerHTML = tradeHtml;
 
-        // 填充总账单
+        // 填充总账单 (Summary Table)
         document.getElementById('finance-table-body').innerHTML = `
-            <tr><td>税收收入</td><td>人口 ${stats.population} * ${stats.tax_rate}</td><td class="amount-col income-text">+${taxIncome}</td></tr>
+            <tr>
+                <td><strong>税收总收入</strong></td>
+                <td>人头税 + 专项税</td>
+                <td class="amount-col income-text">+${totalTaxIncome}</td>
+            </tr>
             <tr><td>外交补贴</td><td>莱瑟曼援助</td><td class="amount-col income-text">+${stats.subsidy}</td></tr>
-            <tr><td>产业营收</td><td>贸易与制造</td><td class="amount-col income-text">+${tradeRevenue}</td></tr>
+            <tr><td>产业营收</td><td>国营垄断/贸易/许可费</td><td class="amount-col income-text">+${tradeRevenue}</td></tr>
             <tr style="background:#f0f9f0;font-weight:bold;"><td colspan="2">收入小计</td><td class="amount-col income-text">+${totalIncome}</td></tr>
             
             <tr><td>城市职员</td><td>卫兵/文职/工匠</td><td class="amount-col expense-text">-${staffCost}</td></tr>
@@ -397,9 +444,9 @@ const dataStore = {
             <tr class="total-row"><td colspan="2">月度净利润</td><td class="amount-col" style="color:${netIncome>=0?'#27ae60':'#c0392b'}">${netIncome} GP</td></tr>
         `;
     }
+
     // 同步核心团队支出
     async function syncEmployeeData(userId) {
-        // 去 employees 表查询该用户下所有“在职”的雇员
         const { data, error } = await supabaseClient
             .from('employees')
             .select('salary')
@@ -411,13 +458,8 @@ const dataStore = {
             return;
         }
 
-        // 计算总和
         const totalSalary = data.reduce((sum, emp) => sum + emp.salary, 0);
-        
-        // 更新全局配置
         cityStats.employee_expense = totalSalary;
-        
-        console.log(`已同步核心团队支出: ${totalSalary} GP`);
     }
 
     // --- UI 交互逻辑 ---
