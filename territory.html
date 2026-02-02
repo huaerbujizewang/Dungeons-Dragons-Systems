@@ -333,7 +333,7 @@
         
         // B. 定义分类关键词
         const taxKeywords = ['奢侈品与胭脂税', '贸易关税', '税']; 
-        const stateRunKeywords = ['官方治疗药水', '角斗场', '怪物狩猎']; // 国营关键词白名单
+        const stateRunKeywords = ['官方治疗药水', '角斗场', '怪物狩猎']; 
 
         let specializedTaxTotal = 0; // 专项税总额
         let tradeRevenue = 0;        // 产业/贸易总额
@@ -377,10 +377,10 @@
                 let tagHtml = '';
                 if (isStateRun) {
                     // 国营产业 (紫色)
-                    tagHtml = `<span class="tag-box tag-state">国营产业</span>`;
+                    tagHtml = `<span class="tag-box tag-state">国营</span>`;
                 } else {
                     // 对外贸易 (绿色)
-                    tagHtml = `<span class="tag-box tag-trade">对外贸易</span>`;
+                    tagHtml = `<span class="tag-box tag-trade">贸易</span>`;
                 }
 
                 tradeHtml += `
