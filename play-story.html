@@ -10,10 +10,11 @@
         #stage { width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: flex-end; justify-content: center; position: relative; transition: background-image 0.5s ease; }
         #stage::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); pointer-events: none; }
         
-        /增加了 opacity 的过渡效果，让显示隐藏更自然 */
+        /* 修改：保留容器的 opacity 过渡，让旁白出现/消失时稍微柔和一点，而不是闪现 */
         #avatar-container { position: absolute; bottom: 50px; left: 5%; z-index: 10; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease; }
         
-        .avatar { width: 220px; height: 220px; border-radius: 50%; border: 4px solid #fff; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: opacity 0.2s; }
+        /* 修改：去掉了图片的 opacity transition，防止切换时变灰 */
+        .avatar { width: 220px; height: 220px; border-radius: 50%; border: 4px solid #fff; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
         #dialogue-box { position: relative; z-index: 20; width: 90%; max-width: 900px; background: rgba(255,255,255,0.92); padding: 25px 30px 25px 150px; margin-bottom: 40px; border-radius: 12px; cursor: pointer; min-height: 120px; box-sizing: border-box; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
         #speaker-name { position: absolute; top: -15px; left: 150px; background: #2c3e50; color: #fff; padding: 4px 20px; border-radius: 4px; font-weight: bold; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -39,7 +40,8 @@
     <div class="controls"><button class="btn" onclick="location.href='lore.html'">退出回想</button></div>
     
     <div id="avatar-container">
-        <img id="main-avatar" src="" class="avatar" style="opacity:0"> </div>
+        <img id="main-avatar" src="" class="avatar"> 
+    </div>
 
     <div id="dialogue-box">
         <div id="speaker-name">...</div>
@@ -54,9 +56,9 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentLine = 0;
-    let isTyping = false; // 是否正在打字
-    let typeInterval = null; // 打字定时器
-    let currentText = ""; // 当前句子的完整文本
+    let isTyping = false;
+    let typeInterval = null;
+    let currentText = "";
 
     // 1. 初始化逻辑
     async function init() {
@@ -65,11 +67,9 @@
 
         if (!storyId) { window.location.href = 'lore.html'; return; }
 
-        // 鉴权检查
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert("请先登录。"); window.location.href = 'index.html'; return; }
 
-        // 加载故事脚本
         const script = document.createElement('script');
         script.src = `stories/content/${storyId}.js?v=${new Date().getTime()}`;
         
@@ -91,9 +91,7 @@
     // 2. 图片预加载
     function preloadAssets() {
         return new Promise((resolve) => {
-            // 安全检查，防止 assets 未定义
             if (!storyContent.assets) { resolve(); return; }
-
             const assets = Object.values(storyContent.assets);
             if (storyContent.bg) assets.push(storyContent.bg);
             
@@ -120,7 +118,7 @@
         });
     }
 
-    // 3. 渲染行逻辑 (重点修改部分)
+    // 3. 渲染行逻辑 (已还原为直接切换)
     function renderLine() {
         if (currentLine >= storyContent.lines.length) {
             document.getElementById('text-content').innerText = "（故事结束）";
@@ -138,41 +136,26 @@
         // 设置名字
         document.getElementById('speaker-name').innerText = data.speaker;
         
-        // --- 修改点2：核心判断逻辑 ---
+        // --- 核心修改：如果是旁白，隐藏容器；否则显示并直接切图 ---
         if (data.speaker === "旁白") {
-            // 如果是旁白，直接隐藏容器（配合 CSS opacity 过渡）
             avatarContainer.style.opacity = 0;
         } else {
-            // 如果不是旁白，显示容器
-            avatarContainer.style.opacity = 1;
+            avatarContainer.style.opacity = 1; // 确保显示
             
             const avatarPath = storyContent.assets[data.emotion];
             
-            // 如果有对应的图片资源
             if (avatarPath) {
-                // 判断图片是否需要切换
-                // 使用 new URL 统一格式，防止相对路径和绝对路径比对不一致
+                // 如果图片路径不一样，直接切换，不搞花里胡哨的淡入淡出
                 if (img.src !== new URL(avatarPath, document.baseURI).href) {
-                    // 图片切换动画
-                    img.style.opacity = 0.8;
-                    // 防止空 src 导致的闪烁
-                    if(avatarPath) {
-                        setTimeout(() => { 
-                            img.src = avatarPath; 
-                            img.style.opacity = 1; 
-                        }, 50);
-                    }
-                    // 角色跳动动画
+                    img.src = avatarPath; 
+                    
+                    // 保留一点点“跳动”效果，提示说话人变了
                     avatarContainer.style.transform = "translateY(-5px)";
                     setTimeout(() => avatarContainer.style.transform = "translateY(0)", 200);
-                } else {
-                    // 图片没变，确保不透明度为1
-                    img.style.opacity = 1;
                 }
             }
         }
 
-        // 打字机效果
         startTypewriter(data.text);
     }
 
@@ -180,12 +163,12 @@
     function startTypewriter(text) {
         const textEl = document.getElementById('text-content');
         
-        textEl.innerText = ""; // 清空
+        textEl.innerText = "";
         currentText = text;
         isTyping = true;
 
         let index = 0;
-        clearInterval(typeInterval); // 清除旧计时器
+        clearInterval(typeInterval);
 
         typeInterval = setInterval(() => {
             textEl.innerText += text.charAt(index);
@@ -197,14 +180,12 @@
         }, 30);
     }
 
-    // 瞬间完成打字
     function finishTyping() {
         clearInterval(typeInterval);
         document.getElementById('text-content').innerText = currentText;
         isTyping = false;
     }
 
-    // 4. 点击处理
     function handleTap() {
         if (isTyping) {
             finishTyping();
