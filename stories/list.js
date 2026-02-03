@@ -25,6 +25,14 @@ const storyList = [
         date: "FR1494 - 2月"
     },
     {
+        id: "nyanzaru_01",
+        title: "公审",
+        description: "对七位贸易亲王的审判。",
+        owner: "master@almorel.com",
+        tags: "异世界人",
+        date: "FR1494 - 2月"
+    },
+    {
         id: "test_01",
         title: "牢玩家的故事",
         description: "这是一段只有 IDRotF 负责的玩家才能看到的剧情。",
