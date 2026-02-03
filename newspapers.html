@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>费伦阅报室</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Merriweather:wght@300;700&family=Noto+Serif+SC:wght@300;700&family=UnifrakturMaguntia&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --paper-bg: #e3decb;
+            --ink-color: #2b2b2b;
+            --highlight: #a83f39;
+            --nav-bg: #1a1a1a;
+            --sidebar-bg: #2c2c2c; /* 侧边栏背景 */
+            --sidebar-text: #ccc;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            font-family: 'Merriweather', 'Noto Serif SC', serif;
+            color: var(--ink-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 禁止整个body滚动，让内部滚动 */
+        }
+
+        /* === 顶部品牌导航栏 === */
+        .news-nav {
+            background-color: var(--nav-bg);
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            z-index: 100;
+            flex-shrink: 0; /* 防止被压缩 */
+        }
+
+        .news-brand-btn {
+            background: none;
+            border: none;
+            color: #888;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            text-transform: uppercase;
+            border-bottom: 4px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .news-brand-btn:hover { color: #fff; background-color: #333; }
+        .news-brand-btn.active {
+            color: #fff;
+            border-bottom: 4px solid var(--highlight);
+            background-color: #222;
+        }
+
+        /* === 主布局：左右分栏 === */
+        .main-layout {
+            display: flex;
+            flex: 1; /* 占满剩余高度 */
+            height: calc(100vh - 55px); /* 减去顶部高度 */
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* === 左侧：文章列表 === */
+        .sidebar-list {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            overflow-y: auto; /* 允许垂直滚动 */
+            border-right: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .article-item {
+            padding: 15px;
+            border-bottom: 1px solid #444;
+            color: var(--sidebar-text);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .article-item:hover { background-color: #3d3d3d; color: #fff; }
+        .article-item.active {
+            background-color: var(--highlight);
+            color: #fff;
+            border-left: 4px solid #fff;
+        }
+
+        .item-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
+        .item-date { font-size: 0.75rem; opacity: 0.7; font-family: 'Cinzel'; }
+
+        /* === 右侧：报纸显示区 === */
+        .paper-viewport {
+            flex: 1;
+            background-color: #222;
+            padding: 20px;
+            overflow-y: auto; /* 允许报纸内容滚动 */
+            display: flex;
+            justify-content: center;
+        }
+
+        .paper-sheet {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--paper-bg);
+            padding: 50px;
+            min-height: 800px; /* 保证至少有一张纸的高度 */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* 纸张纹理 */
+            background-image: linear-gradient(rgba(255,255,255,0.5) 2px, transparent 2px),
+            linear-gradient(90deg, rgba(255,255,255,0.5) 2px, transparent 2px);
+            background-size: 100px 100px;
+            background-position: -2px -2px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 报纸内部排版 */
+        .paper-header { text-align: center; border-bottom: 3px double var(--ink-color); margin-bottom: 30px; padding-bottom: 10px; }
+        .paper-title { font-size: 3.5rem; margin: 0; line-height: 1.2; }
+        .headline { font-family: 'Noto Serif SC', serif; font-weight: 900; font-size: 2.2rem; margin-bottom: 15px; text-align: center; }
+        .sub-headline { font-style: italic; font-size: 1.2rem; color: #444; margin-bottom: 25px; border-left: 4px solid var(--highlight); padding-left: 15px; }
+        .article-body { font-size: 1.05rem; line-height: 1.8; text-align: justify; white-space: pre-wrap; /* 保留换行 */ }
+
+        /* 字体类 */
+        .font-gothic { font-family: 'UnifrakturMaguntia', cursive; font-size: 4.5rem; }
+        .font-serif { font-family: 'Cinzel', serif; }
+        .font-bold { font-family: 'Noto Serif SC', serif; font-weight: 900; }
+        .font-chinese { font-family: 'Ma Shan Zheng', cursive; font-size: 4rem; }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #888; }
+
+    </style>
+</head>
+<body>
+
+    <nav class="news-nav" id="brandNav">
+        </nav>
+
+    <div class="main-layout">
+        <aside class="sidebar-list" id="articleList">
+            </aside>
+
+        <main class="paper-viewport">
+            <div id="paperSheet" class="paper-sheet">
+                <div style="text-align: center; padding-top: 100px;">正在从费伦传输数据...</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // === 这里填入你的 JSON 地址 ===
+        const JSON_URL = 'https://raw.githubusercontent.com/YOUR_NAME/YOUR_REPO/main/news.json';
+        
+        // 模拟数据 (你测试时可以用这个，部署时换成上面的 fetch)
+        let allData = []; 
+
+        async function init() {
+            try {
+                const res = await fetch(JSON_URL);
+                if (!res.ok) throw new Error("无法读取JSON");
+                allData = await res.json();
+                
+                renderBrandNav();
+                // 默认选中第一个品牌
+                if (allData.length > 0) selectBrand(0);
+            } catch (e) {
+                console.error(e);
+                // 仅供测试用的假数据 fallback
+                document.getElementById('paperSheet').innerHTML = "无法加载数据: " + e.message;
+            }
+        }
+
+        // 渲染顶部品牌栏
+        function renderBrandNav() {
+            const nav = document.getElementById('brandNav');
+            nav.innerHTML = '';
+            allData.forEach((brand, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'news-brand-btn ' + (brand.styleClass || '');
+                btn.innerText = brand.name;
+                btn.onclick = () => selectBrand(index);
+                btn.id = `brand-${index}`;
+                nav.appendChild(btn);
+            });
+        }
+
+        // 选中某个报社品牌
+        function selectBrand(index) {
+            // UI 更新
+            document.querySelectorAll('.news-brand-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`brand-${index}`).classList.add('active');
+
+            const brandData = allData[index];
+            const articles = brandData.articles || [];
+            
+            // 渲染左侧文章列表
+            renderArticleList(articles, brandData);
+        }
+
+        // 渲染左侧文章列表
+        function renderArticleList(articles, brandInfo) {
+            const listContainer = document.getElementById('articleList');
+            listContainer.innerHTML = '';
+
+            if (articles.length === 0) {
+                listContainer.innerHTML = '<div style="padding:20px; color:#666;">暂无文章</div>';
+                renderPaper(null, brandInfo);
+                return;
+            }
+
+            articles.forEach((article, idx) => {
+                const div = document.createElement('div');
+                div.className = 'article-item';
+                div.innerHTML = `
+                    <div class="item-title">${article.title || article.headline}</div>
+                    <div class="item-date">${article.date}</div>
+                `;
+                div.onclick = () => {
+                    // 列表高亮处理
+                    document.querySelectorAll('.article-item').forEach(i => i.classList.remove('active'));
+                    div.classList.add('active');
+                    // 渲染正文
+                    renderPaper(article, brandInfo);
+                };
+                listContainer.appendChild(div);
+            });
+
+            // 默认自动点击第一篇文章
+            if (listContainer.firstChild) {
+                listContainer.firstChild.click();
+            }
+        }
+
+        // 渲染右侧报纸正文
+        function renderPaper(article, brandInfo) {
+            const sheet = document.getElementById('paperSheet');
+            
+            if (!article) {
+                sheet.innerHTML = "<h2 style='text-align:center'>今日无版面</h2>";
+                return;
+            }
+
+            // 获取报头字体样式
+            const titleClass = brandInfo.styleClass || 'font-serif';
+
+            // 重新渲染整张纸
+            sheet.innerHTML = `
+                <header class="paper-header">
+                    <h1 class="paper-title ${titleClass}">${brandInfo.name}</h1>
+                    <div class="paper-meta">
+                        <span>${article.date}</span>
+                        <span>${brandInfo.name} 编辑部</span>
+                    </div>
+                </header>
+                
+                <article>
+                    <div class="headline">${article.headline}</div>
+                    <div class="sub-headline">${article.subhead || ''}</div>
+                    <div style="text-align:center; color:#a83f39; margin:20px 0;">~ * ~</div>
+                    <div class="article-body">${article.content}</div>
+                </article>
+            `;
+        }
+
+        init();
+    </script>
+</body>
+</html>
