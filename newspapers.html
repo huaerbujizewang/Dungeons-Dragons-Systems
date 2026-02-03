@@ -27,8 +27,6 @@
         .item-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
         .item-date { font-size: 0.75rem; opacity: 0.7; font-family: 'Cinzel'; }
         .paper-viewport { flex: 1; background-color: #222; padding: 20px; overflow-y: auto; display: flex; justify-content: center; }
-        
-        /* 修改如下：去掉了 background-image 里的 linear-gradient 网格线 */
         .paper-sheet { 
             width: 100%; 
             max-width: 800px; 
@@ -39,7 +37,6 @@
             animation: fadeIn 0.5s ease; 
             position: relative; 
         }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .paper-header { text-align: center; border-bottom: 3px double var(--ink-color); margin-bottom: 30px; padding-bottom: 10px; }
         .paper-title { font-size: 3.5rem; margin: 0; line-height: 1.2; text-shadow: 2px 2px 0px rgba(0,0,0,0.1); }
@@ -54,7 +51,6 @@
         ::-webkit-scrollbar-track { background: #1a1a1a; }
         ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
         
-        /* Loading 遮罩层 */
         #auth-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Cinzel'; flex-direction: column;}
     </style>
 </head>
@@ -71,7 +67,7 @@
         <main class="paper-viewport">
             <div id="paperSheet" class="paper-sheet">
                 <div style="text-align: center; padding-top: 100px;">
-                    正在从以太位面获取资讯...<br>
+                    正在获取资讯...<br>
                     <span style="font-size:0.8em; color:#666;">Fetch from GitHub...</span>
                 </div>
             </div>
@@ -82,14 +78,11 @@
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        // 保留了你提供的这个新 URL
         const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/refs/heads/main/news.json';
         
         let allNewsData = [];
 
-        // 程序入口
         async function init() {
-            // --- 第一步：鉴权 ---
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 
@@ -108,7 +101,6 @@
                 return;
             }
 
-            // --- 第二步：加载数据 ---
             loadNewspapers();
         }
 
@@ -212,7 +204,6 @@
                     <div class="paper-meta">
                         <span>${article.date}</span>
                         <span>${brandInfo.name} 编辑部</span>
-                        <span>售价: 2 cp</span>
                     </div>
                 </header>
                 
