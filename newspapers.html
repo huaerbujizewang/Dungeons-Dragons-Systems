@@ -6,51 +6,166 @@
     <title>费伦阅报室</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Merriweather:wght@300;700&family=Noto+Serif+SC:wght@300;700&family=UnifrakturMaguntia&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Merriweather:wght@300;700&family=Noto+Serif+SC:wght@300;700;900&family=UnifrakturMaguntia&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
     
     <style>
-        :root { --paper-bg: #e3decb; --ink-color: #2b2b2b; --highlight: #a83f39; --nav-bg: #1a1a1a; --sidebar-bg: #2c2c2c; --sidebar-text: #ccc; }
-        body { margin: 0; padding: 0; background-color: #111; font-family: 'Merriweather', 'Noto Serif SC', serif; color: var(--ink-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .news-nav { background-color: var(--nav-bg); display: flex; justify-content: center; padding: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 100; flex-shrink: 0; }
-        .news-brand-btn { background: none; border: none; color: #888; padding: 15px 20px; cursor: pointer; font-family: 'Cinzel', serif; font-size: 1rem; text-transform: uppercase; border-bottom: 4px solid transparent; transition: all 0.3s; }
+        /* --- 全局设置 --- */
+        * { box-sizing: border-box; }
+
+        :root { 
+            --paper-bg: #e3decb; 
+            --ink-color: #2b2b2b; 
+            --highlight: #a83f39; 
+            --nav-bg: #1a1a1a; 
+            --sidebar-bg: #2c2c2c; 
+            --sidebar-text: #ccc; 
+        }
+
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background-color: #111; 
+            font-family: 'Merriweather', 'Noto Serif SC', serif; 
+            color: var(--ink-color); 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+
+        /* --- 顶部导航 --- */
+        .news-nav { 
+            background-color: var(--nav-bg); 
+            display: flex; 
+            justify-content: center; 
+            padding: 0; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5); 
+            z-index: 100; 
+            flex-shrink: 0; 
+            height: 55px;
+        }
+
+        .news-brand-btn { 
+            background: none; 
+            border: none; 
+            color: #888; 
+            padding: 0 20px; 
+            height: 100%;
+            cursor: pointer; 
+            font-family: 'Cinzel', serif; 
+            font-size: 1rem; 
+            text-transform: uppercase; 
+            border-bottom: 4px solid transparent; 
+            transition: all 0.3s; 
+        }
         .news-brand-btn:hover { color: #fff; background-color: #333; }
         .news-brand-btn.active { color: #fff; border-bottom: 4px solid var(--highlight); background-color: #222; }
-        .font-gothic { font-family: 'UnifrakturMaguntia', cursive; font-size: 1.2rem; }
-        .font-serif { font-family: 'Cinzel', serif; }
-        .font-bold { font-family: 'Noto Serif SC', serif; font-weight: 900; }
-        .font-chinese { font-family: 'Ma Shan Zheng', cursive; font-size: 1.1rem; }
-        .main-layout { display: flex; flex: 1; height: calc(100vh - 55px); width: 100%; max-width: 1200px; margin: 0 auto; }
-        .sidebar-list { width: 250px; background-color: var(--sidebar-bg); overflow-y: auto; border-right: 1px solid #444; display: flex; flex-direction: column; }
-        .article-item { padding: 15px; border-bottom: 1px solid #444; color: var(--sidebar-text); cursor: pointer; transition: background 0.2s; }
+
+        /* --- 主布局区域 --- */
+        .main-layout { 
+            display: flex; 
+            flex: 1; 
+            width: 100%; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            min-height: 0; /* 关键：允许Flex子项滚动 */
+            overflow: hidden; 
+        }
+
+        /* --- 左侧侧边栏 --- */
+        .sidebar-list { 
+            width: 250px; 
+            background-color: var(--sidebar-bg); 
+            overflow-y: auto; 
+            border-right: 1px solid #444; 
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0;
+        }
+
+        .article-item { 
+            padding: 15px; 
+            border-bottom: 1px solid #444; 
+            color: var(--sidebar-text); 
+            cursor: pointer; 
+            transition: background 0.2s; 
+        }
         .article-item:hover { background-color: #3d3d3d; color: #fff; }
         .article-item.active { background-color: var(--highlight); color: #fff; border-left: 4px solid #fff; }
+
         .item-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
         .item-date { font-size: 0.75rem; opacity: 0.7; font-family: 'Cinzel'; }
-        .paper-viewport { flex: 1; background-color: #222; padding: 20px; overflow-y: auto; display: flex; justify-content: center; }
+
+        /* --- 中间报纸视口 --- */
+        .paper-viewport { 
+            flex: 1; 
+            background-color: #222; 
+            padding: 20px; 
+            overflow-y: auto; /* 开启垂直滚动 */
+            display: flex; 
+            justify-content: center; 
+        }
+
+        /* --- 报纸本体 --- */
         .paper-sheet { 
             width: 100%; 
             max-width: 800px; 
             background-color: var(--paper-bg); 
-            padding: 50px; 
+            padding: 60px 50px; 
+            /* 关键修复：高度设为 fit-content 或 auto，让纸张随内容变长 */
+            height: fit-content; 
             min-height: 800px; 
             box-shadow: 0 0 20px rgba(0,0,0,0.5); 
             animation: fadeIn 0.5s ease; 
             position: relative; 
+            margin-bottom: 50px; /* 底部留白，防止滚动到底部太挤 */
         }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         .paper-header { text-align: center; border-bottom: 3px double var(--ink-color); margin-bottom: 30px; padding-bottom: 10px; }
+        
+        /* 报头字体 */
+        .font-gothic { font-family: 'UnifrakturMaguntia', cursive; font-size: 1.2rem; }
+        .font-serif { font-family: 'Cinzel', serif; }
+        .font-bold { font-family: 'Noto Serif SC', serif; font-weight: 900; }
+        .font-chinese { font-family: 'Ma Shan Zheng', cursive; font-size: 1.1rem; }
+
         .paper-title { font-size: 3.5rem; margin: 0; line-height: 1.2; text-shadow: 2px 2px 0px rgba(0,0,0,0.1); }
         .paper-title.font-gothic { font-family: 'UnifrakturMaguntia', cursive; font-size: 4.5rem; }
-        .paper-title.font-serif { font-family: 'Cinzel', serif; }
         .paper-title.font-chinese { font-family: 'Ma Shan Zheng', cursive; font-size: 4rem; }
-        .headline { font-family: 'Noto Serif SC', serif; font-weight: 900; font-size: 2.2rem; margin-bottom: 15px; text-align: center; }
+
+        .headline { font-family: 'Noto Serif SC', serif; font-weight: 900; font-size: 2.2rem; margin-bottom: 15px; text-align: center; line-height: 1.3; }
         .sub-headline { font-style: italic; font-size: 1.2rem; color: #444; margin-bottom: 25px; border-left: 4px solid var(--highlight); padding-left: 15px; }
-        .article-body { font-size: 1.05rem; line-height: 1.8; text-align: justify; white-space: pre-wrap; }
-        .separator { text-align: center; margin: 20px 0; color: var(--highlight); }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1a1a1a; }
-        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
         
+        /* --- 正文排版 --- */
+        .article-body { 
+            font-size: 1.05rem; 
+            line-height: 1.8; 
+            text-align: justify; 
+            color: var(--ink-color);
+        }
+        
+        /* 解析后的HTML样式 */
+        .article-body h3 {
+            margin-top: 40px;
+            margin-bottom: 15px;
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 900;
+            font-size: 1.5rem;
+            color: #000;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+        .article-body p {
+            margin-bottom: 1.5em;
+            text-indent: 2em; /* 首行缩进 */
+        }
+        .article-body strong {
+            color: #000;
+            font-weight: 900;
+        }
+
         #auth-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Cinzel'; flex-direction: column;}
     </style>
 </head>
@@ -85,7 +200,6 @@
         async function init() {
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
-                
                 if (!user) {
                     alert("请先登录！");
                     window.location.href = 'index.html'; 
@@ -182,9 +296,38 @@
             if (listContainer.firstChild) listContainer.firstChild.click();
         }
 
+        // --- 简单的 Markdown 解析器 ---
+        function simpleMarkdownParser(text) {
+            if (!text) return '';
+            
+            // 1. 处理标题 (### Title)
+            // 将 "### 内容" 替换为 "<h3>内容</h3>"
+            let html = text.replace(/^###\s+(.*$)/gm, '<h3>$1</h3>');
+            
+            // 2. 处理粗体 (**Bold**)
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // 3. 处理段落 (双换行)
+            // 先按双换行分割，然后给每段加 <p>
+            // 如果某行已经是 <h3> 开头，就不加 <p>
+            let paragraphs = html.split(/\n\s*\n/);
+            
+            let finalHtml = paragraphs.map(p => {
+                p = p.trim();
+                if (!p) return '';
+                if (p.startsWith('<h3')) return p; // 标题保持原样
+                return `<p>${p}</p>`; // 普通文本包在 p 标签里
+            }).join('');
+
+            return finalHtml;
+        }
+
         function renderPaper(article, brandInfo) {
             const sheet = document.getElementById('paperSheet');
             const titleClass = brandInfo.styleClass || 'font-serif';
+
+            // 滚动回顶部
+            document.querySelector('.paper-viewport').scrollTop = 0;
 
             if (!article) {
                 sheet.innerHTML = `
@@ -196,6 +339,9 @@
                 `;
                 return;
             }
+
+            // 使用解析器处理内容
+            const parsedContent = simpleMarkdownParser(article.content);
 
             sheet.innerHTML = `
                 <header class="paper-header">
@@ -210,7 +356,7 @@
                 <article>
                     <div class="headline">${article.headline}</div>
                     ${article.subhead ? `<div class="sub-headline">${article.subhead}</div>` : ''}
-                    <div class="article-body">${article.content}</div>
+                    <div class="article-body">${parsedContent}</div>
                 </article>
             `;
         }
