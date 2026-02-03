@@ -1,45 +1,93 @@
 [
   {
-    "id": "plateau",
-    "name": "高原新声",
-    "styleClass": "font-bold",
+    "id": "truth",
+    "name": "真理报",
+    "styleClass": "font-gothic",
+    "titleEn": "The Truth",
+    "titleCn": "真 理 报",
     "articles": [
       {
-        "title": "第120期：萨扎斯坦的胜利",
-        "date": "1494 DR, 12月",
-        "headline": "魔法工业的伟大里程碑",
-        "subhead": "贝赞特港吞吐量创新高",
-        "content": "这里是第一篇文章的内容..."
-      },
-      {
-        "title": "第119期：反驳深水城的谣言",
-        "date": "1494 DR, 11月",
-        "headline": "他们嫉妒我们的秩序",
-        "subhead": "关于所谓强制劳动的澄清",
-        "content": "这里是第二篇文章的内容..."
-      },
-      {
-        "title": "第118期：关于死灵法术的科普",
-        "date": "1494 DR, 11月",
-        "headline": "死亡不是终结，是新的岗前培训",
-        "subhead": "...",
-        "content": "..."
+        "title": "创刊号：黎明",
+        "date": "1494 DR, 5月",
+        "headline": "我们的新时代",
+        "subhead": "致所有追求自由意志的公民",
+        "content": "这是真理报的第一篇文章内容..."
       }
-      // ... 你可以继续往下加，加到120个都没问题
     ]
-  },
+  },  
   {
     "id": "wazoo",
     "name": "深水城小报",
     "styleClass": "font-serif",
+    "titleEn": "Waterdeep Wazoo",
+    "titleCn": "深水城小报",
     "articles": [
       {
-        "title": "今日头条：蒙面领主是谁？",
-        "date": "今日",
-        "headline": "那个面具下流汗了吗？",
-        "subhead": "...",
-        "content": "..."
+        "title": "今日头条",
+        "date": "1494 DR, 5月",
+        "headline": "蒙面领主的秘密",
+        "content": "深水城的八卦内容..."
       }
     ]
-  }
+  },  
+  {
+    "id": "plateau",
+    "name": "高原新声",
+    "styleClass": "font-bold",
+    "titleEn": "The Plateau Herald",
+    "titleCn": "高 原 新 声",
+    "articles": [
+      {
+        "title": "第120期：萨扎斯坦",
+        "date": "1494 DR, 5月",
+        "headline": "魔法工业化的胜利",
+        "content": "塞尔的官方宣传内容..."
+      }
+    ]
+  },
+  {
+    "id": "economist",
+    "name": "经济学人",
+    "styleClass": "font-serif",
+    "titleEn": "The Economist",
+    "titleCn": "经 济 学 人",
+    "articles": [
+      {
+        "title": "市场分析",
+        "date": "1494 DR, 5月",
+        "headline": "做空科米尔",
+        "content": "关于贸易逆差的分析..."
+      }
+    ]
+  },
+  {
+    "id": "candlekeep",
+    "name": "烛堡真知",
+    "styleClass": "font-serif",
+    "titleEn": "Candlekeep Verity",
+    "titleCn": "烛 堡 真 知",
+    "articles": [
+      {
+        "title": "历史考据",
+        "date": "1494 DR, 5月",
+        "headline": "红袍法师的历史演变",
+        "content": "学术性的文章..."
+      }
+    ]
+  },
+  {
+    "id": "midnight",
+    "name": "午夜杂谈",
+    "styleClass": "font-chinese",
+    "titleEn": "Midnight Gossip",
+    "titleCn": "午 夜 杂 谈",
+    "articles": [
+      {
+        "title": "西市闹鬼",
+        "date": "昨夜",
+        "headline": "打更人三更见鬼",
+        "content": "恐怖故事..."
+      }
+    ]
+  }   
 ]
