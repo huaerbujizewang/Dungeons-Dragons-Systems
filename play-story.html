@@ -10,7 +10,9 @@
         #stage { width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: flex-end; justify-content: center; position: relative; transition: background-image 0.5s ease; }
         #stage::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); pointer-events: none; }
         
-        #avatar-container { position: absolute; bottom: 50px; left: 5%; z-index: 10; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        /增加了 opacity 的过渡效果，让显示隐藏更自然 */
+        #avatar-container { position: absolute; bottom: 50px; left: 5%; z-index: 10; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease; }
+        
         .avatar { width: 220px; height: 220px; border-radius: 50%; border: 4px solid #fff; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: opacity 0.2s; }
         
         #dialogue-box { position: relative; z-index: 20; width: 90%; max-width: 900px; background: rgba(255,255,255,0.92); padding: 25px 30px 25px 150px; margin-bottom: 40px; border-radius: 12px; cursor: pointer; min-height: 120px; box-sizing: border-box; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
@@ -18,7 +20,6 @@
         
         #text-content { line-height: 1.8; font-size: 1.15em; color: #2c3e50; min-height: 1.8em; }
         
-
         .controls { position: absolute; top: 20px; right: 20px; z-index: 100; }
         .btn { background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 15px; border-radius: 5px; cursor: pointer; backdrop-filter: blur(2px); transition: 0.2s; }
         .btn:hover { background: rgba(255,255,255,0.2); }
@@ -38,8 +39,7 @@
     <div class="controls"><button class="btn" onclick="location.href='lore.html'">退出回想</button></div>
     
     <div id="avatar-container">
-        <img id="main-avatar" src="" class="avatar" style="opacity:0"> <!-- 初始隐藏 -->
-    </div>
+        <img id="main-avatar" src="" class="avatar" style="opacity:0"> </div>
 
     <div id="dialogue-box">
         <div id="speaker-name">...</div>
@@ -65,23 +65,22 @@
 
         if (!storyId) { window.location.href = 'lore.html'; return; }
 
-        // 鉴权检查 (保持你原来的逻辑)
+        // 鉴权检查
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert("请先登录。"); window.location.href = 'index.html'; return; }
-        // ... (此处省略详细的 Admin 检查代码，建议保留你之前写的权限逻辑) ...
 
-        // --- 核心修复：添加随机数 ?v=timestamp 强制刷新缓存 ---
+        // 加载故事脚本
         const script = document.createElement('script');
         script.src = `stories/content/${storyId}.js?v=${new Date().getTime()}`;
         
         script.onload = async () => {
-            // 脚本加载完后，先预加载图片
             await preloadAssets();
-            // 图片预加载完，隐藏 Loading，开始演出
             document.getElementById('loading-screen').style.opacity = 0;
             setTimeout(() => {
                 document.getElementById('loading-screen').style.display = 'none';
-                document.getElementById('stage').style.backgroundImage = `url('${storyContent.bg}')`;
+                if(storyContent.bg) {
+                    document.getElementById('stage').style.backgroundImage = `url('${storyContent.bg}')`;
+                }
                 renderLine();
             }, 500);
         };
@@ -89,9 +88,12 @@
         document.body.appendChild(script);
     }
 
-    // 2. 图片预加载 (解决卡顿)
+    // 2. 图片预加载
     function preloadAssets() {
         return new Promise((resolve) => {
+            // 安全检查，防止 assets 未定义
+            if (!storyContent.assets) { resolve(); return; }
+
             const assets = Object.values(storyContent.assets);
             if (storyContent.bg) assets.push(storyContent.bg);
             
@@ -102,6 +104,11 @@
             if (total === 0) resolve();
 
             assets.forEach(src => {
+                if(!src) {
+                    loaded++;
+                    if (loaded === total) resolve();
+                    return;
+                }
                 const img = new Image();
                 img.src = src;
                 img.onload = img.onerror = () => {
@@ -113,7 +120,7 @@
         });
     }
 
-    // 3. 渲染行逻辑
+    // 3. 渲染行逻辑 (重点修改部分)
     function renderLine() {
         if (currentLine >= storyContent.lines.length) {
             document.getElementById('text-content').innerText = "（故事结束）";
@@ -125,26 +132,47 @@
         }
 
         const data = storyContent.lines[currentLine];
-        const avatarPath = storyContent.assets[data.emotion];
+        const avatarContainer = document.getElementById('avatar-container');
+        const img = document.getElementById('main-avatar');
 
         // 设置名字
         document.getElementById('speaker-name').innerText = data.speaker;
         
-        // 设置图片 (因为已预加载，这里是瞬时的)
-        const img = document.getElementById('main-avatar');
-        img.style.opacity = 1;
-        if (img.src !== new URL(avatarPath, document.baseURI).href) {
-            // 只有当图片变了才做切换动画
-            img.style.opacity = 0.8;
-            setTimeout(() => { img.src = avatarPath; img.style.opacity = 1; }, 50);
-            // 角色跳动
-            document.getElementById('avatar-container').style.transform = "translateY(-5px)";
-            setTimeout(() => document.getElementById('avatar-container').style.transform = "translateY(0)", 200);
+        // --- 修改点2：核心判断逻辑 ---
+        if (data.speaker === "旁白") {
+            // 如果是旁白，直接隐藏容器（配合 CSS opacity 过渡）
+            avatarContainer.style.opacity = 0;
         } else {
-            img.src = avatarPath;
+            // 如果不是旁白，显示容器
+            avatarContainer.style.opacity = 1;
+            
+            const avatarPath = storyContent.assets[data.emotion];
+            
+            // 如果有对应的图片资源
+            if (avatarPath) {
+                // 判断图片是否需要切换
+                // 使用 new URL 统一格式，防止相对路径和绝对路径比对不一致
+                if (img.src !== new URL(avatarPath, document.baseURI).href) {
+                    // 图片切换动画
+                    img.style.opacity = 0.8;
+                    // 防止空 src 导致的闪烁
+                    if(avatarPath) {
+                        setTimeout(() => { 
+                            img.src = avatarPath; 
+                            img.style.opacity = 1; 
+                        }, 50);
+                    }
+                    // 角色跳动动画
+                    avatarContainer.style.transform = "translateY(-5px)";
+                    setTimeout(() => avatarContainer.style.transform = "translateY(0)", 200);
+                } else {
+                    // 图片没变，确保不透明度为1
+                    img.style.opacity = 1;
+                }
+            }
         }
 
-        // --- 核心：打字机效果 ---
+        // 打字机效果
         startTypewriter(data.text);
     }
 
@@ -164,10 +192,9 @@
             index++;
             
             if (index >= text.length) {
-                // 打完字了
                 finishTyping();
             }
-        }, 30); // 打字速度：30ms/字 (你可以调快慢)
+        }, 30);
     }
 
     // 瞬间完成打字
@@ -177,13 +204,11 @@
         isTyping = false;
     }
 
-    // 4. 点击处理 (控制流)
+    // 4. 点击处理
     function handleTap() {
         if (isTyping) {
-            // 如果正在打字，点击瞬间显示全句
             finishTyping();
         } else {
-            // 如果字已打完，点击进入下一句
             currentLine++;
             renderLine();
         }
