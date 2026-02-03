@@ -1,0 +1,45 @@
+[
+  {
+    "id": "plateau",
+    "name": "高原新声",
+    "styleClass": "font-bold",
+    "articles": [
+      {
+        "title": "第120期：萨扎斯坦的胜利",
+        "date": "1494 DR, 12月",
+        "headline": "魔法工业的伟大里程碑",
+        "subhead": "贝赞特港吞吐量创新高",
+        "content": "这里是第一篇文章的内容..."
+      },
+      {
+        "title": "第119期：反驳深水城的谣言",
+        "date": "1494 DR, 11月",
+        "headline": "他们嫉妒我们的秩序",
+        "subhead": "关于所谓强制劳动的澄清",
+        "content": "这里是第二篇文章的内容..."
+      },
+      {
+        "title": "第118期：关于死灵法术的科普",
+        "date": "1494 DR, 11月",
+        "headline": "死亡不是终结，是新的岗前培训",
+        "subhead": "...",
+        "content": "..."
+      }
+      // ... 你可以继续往下加，加到120个都没问题
+    ]
+  },
+  {
+    "id": "wazoo",
+    "name": "深水城小报",
+    "styleClass": "font-serif",
+    "articles": [
+      {
+        "title": "今日头条：蒙面领主是谁？",
+        "date": "今日",
+        "headline": "那个面具下流汗了吗？",
+        "subhead": "...",
+        "content": "..."
+      }
+    ]
+  }
+]
