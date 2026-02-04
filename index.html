@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D 小队管理系统</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
         body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #fff; color: #333; margin: 0; padding: 0; height: 100vh; }
@@ -122,6 +123,9 @@
     <h2>冒险者工会终端</h2>
     <input type="email" id="login-email" placeholder="邮箱地址">
     <input type="password" id="login-password" placeholder="通行密码">
+    
+    <div class="cf-turnstile" data-sitekey="0x4AAAAAACXd68RuHuvi3cAG" data-theme="light" style="margin-bottom: 15px; display: flex; justify-content: center;"></div>
+    
     <button onclick="login()">连接节点</button>
 </div>
 
@@ -828,16 +832,25 @@ async function openEquipModal(empId, slotIdx) {
     }
 
 // 登录逻辑---
+    // --- 修改后的登录逻辑 ---
     async function login() {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         const btn = document.querySelector('#login-section button');
-        
+    
         if (!email || !password) return alert('请输入账号密码');
+
+        // 1. 获取验证码 Token
+        const captchaToken = turnstile.getResponse(); 
+        if (!captchaToken) {
+            alert('请点击验证码');
+            return;
+        }
 
         btn.innerText = '安全检查中...';
         btn.disabled = true;
 
+        // --- 保留你原有的设备指纹记录逻辑 ---
         const fingerprint = [
             navigator.language,
             screen.colorDepth,
@@ -846,24 +859,29 @@ async function openEquipModal(empId, slotIdx) {
             navigator.hardwareConcurrency
         ].join('|');
 
-        let ip = '无法获取(可能屏蔽了追踪)';
-        const ipApis = [
-            'https://api.ipify.org?format=json',
-            'https://icanhazip.com',
-            'https://ipapi.co/json/'
-        ];
+        let ip = '无法获取';
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const json = await res.json();
+            ip = json.ip;
+        } catch (e) { console.log("IP获取跳过"); }
+        // ------------------------------------
 
-        for (let api of ipApis) {
-            try {
-                const res = await fetch(api, { timeout: 2000 });
-                const text = await res.text();
-                const match = text.match(/\d+\.\d+\.\d+\.\d+/);
-                if (match) { ip = match[0]; break; }
-            } catch (e) {}
-        }
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        // 2. 发起登录请求，同时发送 Token 供 Supabase 后端校验
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ 
+            email, 
+            password,
+            options: {
+                captchaToken: captchaToken, // 这里是关键：后端会校验这个 Token
+            }
+        });
+
+        // 无论成功失败，都重置验证码
+        turnstile.reset();
+
         const status = error ? `失败: ${error.message}` : '成功';
-        
+    
+        // 记录登录日志
         await supabaseClient.from('login_logs').insert([{
             email: email,
             ip_address: ip,
@@ -871,11 +889,11 @@ async function openEquipModal(empId, slotIdx) {
             user_agent: `${fingerprint} | ${navigator.userAgent}` 
         }]);
 
-        btn.innerText = '启动';
+        btn.innerText = '连接节点';
         btn.disabled = false;
 
         if (error) {
-            alert('登录失败: ' + error.message);
+            alert('验证失败：请检查凭据或尝试重新验证。');
         } else {
             checkUser();
         }
