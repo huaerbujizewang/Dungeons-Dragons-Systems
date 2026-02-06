@@ -107,7 +107,42 @@
 
         /* DM 管理面板 */
         #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: #fff; border: 2px solid #333; z-index: 3000; padding: 25px; overflow-y: auto; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); box-sizing: border-box; }
-        .admin-box { margin-bottom: 0; } /* Reset margin for grid */
+        .admin-box { margin-bottom: 0; } 
+
+        /* --- D&D 属性面板样式 (Stat Block) --- */
+        .stat-block-container {
+            background: #fdf1dc;
+            padding: 20px;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #58180d;
+            border: 1px solid #dcdcdc;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 4px;
+        }
+        .stat-header h2 { margin: 0; font-size: 1.8em; color: #822000; font-variant: small-caps; }
+        .stat-header i { font-style: italic; font-size: 0.9em; color: #333; }
+        .tapered-rule {
+            display: block; height: 2px; border: none; margin: 10px 0;
+            background: #822000;
+            background: linear-gradient(to right, transparent, #822000, transparent);
+        }
+        .red-rule { display: block; height: 2px; background: #822000; margin: 8px 0; border: none; }
+        .stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; text-align: center; margin: 15px 0; color: #822000;}
+        .stat-box { display: flex; flex-direction: column; align-items: center; }
+        .stat-box strong { font-size: 0.9em; text-transform: uppercase; }
+        .stat-box span { font-size: 1.1em; }
+        .property-line { margin: 4px 0; color: #822000; }
+        .property-line strong { color: #58180d; }
+        .trait-section { margin-top: 15px; }
+        .trait-name { font-weight: bold; font-style: italic; color: #333; }
+        .action-header { 
+            font-size: 1.4em; border-bottom: 1px solid #822000; 
+            color: #822000; margin-top: 20px; margin-bottom: 5px; font-variant: small-caps;
+        }
+
+        
     </style>
 </head>
 <body>
@@ -295,6 +330,13 @@
     </div>
 </div>
 
+<div id="sheet-modal" class="modal">
+    <div class="modal-box" style="width: 600px; max-width: 95%; background: transparent; box-shadow: none; padding: 0;">
+        <div id="sheet-content"></div>
+        <button onclick="closeModal('sheet-modal')" style="margin-top:10px; width:100%; background:#333; color:#fff; border:none; padding:10px; border-radius:4px;">关闭面板</button>
+    </div>
+</div>
+
 <!-- DM 上帝控制台 -->
 <div id="admin-panel">
     <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
@@ -383,6 +425,13 @@
                 <h3 style="margin-top:0">👷 雇员头像更新</h3>
                 <select id="adm-emp-list" style="width:100%; margin-bottom:10px;"></select>
                 <div style="display:flex; gap:10px;"><input type="file" id="adm-emp-avatar" style="flex:1"><button onclick="uploadAvatar()">上传</button></div>
+            </div>
+
+            <div class="admin-box" style="border:1px solid #822000; padding:15px; border-radius:8px; background:#fffcf0;">
+                <h3 style="margin-top:0; color:#822000;">📜 角色卡数据录入 (JSON)</h3>
+                <select id="adm-sheet-list" style="width:100%; margin-bottom:10px;"></select>
+                <textarea id="adm-sheet-json" placeholder="在此粘贴 JSON 数据..." style="width:100%; height:150px; font-family:monospace; font-size:0.8em;"></textarea>
+                <button onclick="saveCharacterSheet()" style="width:100%; margin-top:5px; background:#822000; color:white; border:none; padding:8px;">保存属性数据</button>
             </div>
 
             
@@ -535,7 +584,7 @@
         container.className = 'team-grid';
     }
 
-    //员工系统
+    // --- 雇员系统  ---
     async function loadEmployees() {
         const container = document.getElementById('emp-container');
         container.innerHTML = '正在读取位面名单...';
@@ -552,7 +601,7 @@
             return;
         }
 
-        // 2. 状态配置与权重 (用于核心队友排序)
+        // 2. 状态配置与权重
         const statusConfig = {
             '在职': { color: '#2ecc71', weight: 1 },
             '休假': { color: '#3498db', weight: 2 },
@@ -561,13 +610,12 @@
             '申请解雇': { color: '#e67e22', weight: 5 }
         };
 
-        // 3. 计算账单 (只算在职)
+        // 3. 计算账单
         const totalSalary = data
             .filter(e => e.status === '在职')
             .reduce((sum, e) => sum + e.salary, 0);
 
         // 4. 分离并排序
-        // 核心队友：按状态权重排序 (在职 > 休假 > 离职)
         const coreMembers = data.filter(e => e.role === '核心队友');
         coreMembers.sort((a, b) => {
             const weightA = statusConfig[a.status]?.weight || 99;
@@ -575,17 +623,19 @@
             return weightA - weightB;
         });
 
-        // 普通雇员：按工资降序排序 (从高到低)
         const hirelings = data.filter(e => e.role !== '核心队友');
         hirelings.sort((a, b) => b.salary - a.salary);
 
-        // 5. 渲染逻辑 (复用)
+        // 5. 渲染逻辑 
         const renderGrid = (list) => {
             if (list.length === 0) return '<div style="color:#999; padding:20px; grid-column:1/-1;">(空)</div>';
             return list.map(e => {
                 const config = statusConfig[e.status] || { color: '#666' };
                 const isCore = e.role === '核心队友';
                 const canFire = !isCore && e.status === '在职';
+                
+                // 判断是否有属性卡数据
+                const hasSheet = e.stat_block ? true : false;
 
                 return `
                 <div class="card emp-card-content" style="border-top: 4px solid ${config.color};">
@@ -597,12 +647,18 @@
                         ${e.role || '雇员'}${isCore ? '' : ' | ' + e.salary + ' GP'}
                     </div>
 
-                    <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold;">
+                    <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold; margin-bottom:8px;">
                         ${e.status}
                     </div>
 
-                    <div style="margin-top:10px;">
-                        ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id})">申请解雇</button>` : ''}
+                    <div style="margin-top:5px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
+                        ${hasSheet ? 
+                            `<button onclick="openSheetModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 查看属性</button>` 
+                            : ''}
+                        
+                        ${canFire ? 
+                            `<button class="danger-btn" onclick="requestFire(${e.id})" style="width:auto; margin-top:0;">申请解雇</button>` 
+                            : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -662,7 +718,7 @@ async function equipItem(invId, itemName) {
             if (equipError) throw equipError;
 
             // 4. 【补回】记录操作日志
-            // 这样你在后台就能看到：“master@... 将 [贤者法杖] 装备给了 狐坂樱”
+            // 这样在后台就能看到：“master@... 将 [贤者法杖] 装备给了 狐坂樱”
             await logAction('装备物品', `将 [${itemName}] 装备给队员 (ID:${currentEquipTarget.empId})`);
 
             closeModal('equip-modal'); 
@@ -1441,6 +1497,7 @@ async function loadGold() {
         } else {
             empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
         }
+        updateStatBlockSelect(selectedUserId);
     }
 
     async function assignDM() {
@@ -2305,6 +2362,164 @@ async function loadLoginLogs() {
         } catch (e) {
             console.error(e);
             alert("交易失败，请稍后重试");
+        } finally {
+            hideLoading();
+        }
+    }
+    // --- 角色属性卡逻辑 ---
+
+    async function openSheetModal(empId) {
+        document.getElementById('sheet-modal').style.display = 'flex';
+        const container = document.getElementById('sheet-content');
+        container.innerHTML = '<div style="background:#fff; padding:20px; text-align:center;">正在读取卷宗...</div>';
+
+        // 重新获取该雇员的最新数据
+        const { data: emp } = await supabaseClient
+            .from('employees')
+            .select('stat_block, name')
+            .eq('id', empId)
+            .single();
+
+        if (!emp || !emp.stat_block) {
+            container.innerHTML = '<div style="background:#fff; padding:20px;">暂无详细数据</div>';
+            return;
+        }
+
+        renderStatBlock(emp.name, emp.stat_block);
+    }
+
+    function renderStatBlock(name, data) {
+        const c = document.getElementById('sheet-content');
+        
+        // 渲染属性六维
+        const statsHtml = Object.keys(data.stats).map(key => `
+            <div class="stat-box">
+                <strong>${key.toUpperCase()}</strong>
+                <span>${data.stats[key].score} (${data.stats[key].mod})</span>
+            </div>
+        `).join('');
+
+        // 渲染通用属性行
+        const propsHtml = data.props.map(p => `
+            <div class="property-line"><strong>${p.label}:</strong> ${p.value}</div>
+        `).join('');
+
+        // 渲染特性
+        const traitsHtml = data.traits ? data.traits.map(t => `
+            <div class="trait-section">
+                <span class="trait-name">${t.name}.</span> ${t.desc.replace(/\n/g, '<br>')}
+            </div>
+        `).join('') : '';
+
+        // 渲染动作
+        const actionsHtml = data.actions ? `
+            <div class="action-header">动作</div>
+            ${data.actions.map(a => `
+                <div class="trait-section">
+                    <span class="trait-name">${a.name}.</span> ${a.desc}
+                </div>
+            `).join('')}
+        ` : '';
+
+        // 渲染附赠动作
+        const bonusHtml = data.bonus_actions ? `
+            <div class="action-header">附赠动作</div>
+            ${data.bonus_actions.map(a => `
+                <div class="trait-section">
+                    <span class="trait-name">${a.name}.</span> ${a.desc.replace(/\n/g, '<br>')}
+                </div>
+            `).join('')}
+        ` : '';
+
+        // 渲染法术
+        let spellsHtml = '';
+        if (data.spells) {
+            spellsHtml = `
+                <div class="action-header">施法</div>
+                <div class="trait-section">${data.spells.header}</div>
+                ${data.spells.list.map(s => `
+                    <div class="trait-section">
+                        <span class="trait-name">${s.level}:</span> ${s.spells}
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // 组装整体 HTML
+        c.innerHTML = `
+            <div class="stat-block-container">
+                <div class="stat-header">
+                    <h2>${name}</h2>
+                    <i>${data.meta}</i>
+                </div>
+                <hr class="tapered-rule">
+                
+                <div class="property-line"><strong>护甲等级:</strong> ${data.ac}</div>
+                <div class="property-line"><strong>生命值:</strong> ${data.hp}</div>
+                <div class="property-line"><strong>速度:</strong> ${data.speed}</div>
+                
+                <hr class="red-rule">
+                <div class="stat-grid">${statsHtml}</div>
+                <hr class="red-rule">
+                
+                ${propsHtml}
+                
+                <hr class="tapered-rule">
+                ${traitsHtml}
+                ${spellsHtml}
+                ${actionsHtml}
+                ${bonusHtml}
+            </div>
+        `;
+    }
+
+    // --- DM 控制台功能：加载雇员到下拉框 ---
+
+    async function updateStatBlockSelect(userId) {
+        const select = document.getElementById('adm-sheet-list');
+        select.innerHTML = '<option>加载中...</option>';
+        const { data: emps } = await supabaseClient.from('employees').select('id, name, stat_block').eq('user_id', userId);
+        
+        select.innerHTML = '<option value="">-- 选择雇员录入数据 --</option>';
+        if (emps) {
+            emps.forEach(e => {
+                select.innerHTML += `<option value="${e.id}">${e.name} ${e.stat_block ? '✅' : ''}</option>`;
+            });
+            
+            // 监听下拉框变化，如果选中了人，自动把现有的 JSON 填进去方便修改
+            select.onchange = () => {
+                const emp = emps.find(x => x.id == select.value);
+                if (emp && emp.stat_block) {
+                    document.getElementById('adm-sheet-json').value = JSON.stringify(emp.stat_block, null, 2);
+                } else {
+                    document.getElementById('adm-sheet-json').value = '';
+                }
+            };
+        }
+    }
+
+    async function saveCharacterSheet() {
+        const empId = document.getElementById('adm-sheet-list').value;
+        const jsonStr = document.getElementById('adm-sheet-json').value;
+
+        if (!empId) return alert('请选择雇员');
+        if (!jsonStr) return alert('请输入 JSON');
+
+        try {
+            const jsonObj = JSON.parse(jsonStr); // 校验格式
+            
+            showLoading();
+            const { error } = await supabaseClient
+                .from('employees')
+                .update({ stat_block: jsonObj })
+                .eq('id', empId);
+
+            if (error) throw error;
+            alert('角色卡保存成功！');
+            // 刷新显示
+            updateStatBlockSelect(viewingUserId); 
+        } catch (e) {
+            alert('保存失败：JSON 格式错误或网络问题\n' + e.message);
         } finally {
             hideLoading();
         }
