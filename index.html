@@ -111,15 +111,9 @@
 
         /* --- D&D 属性面板样式 (Stat Block) --- */
         .stat-block-container {
-            background: #fdf1dc;
             padding: 20px;
             font-family: 'Georgia', 'Times New Roman', serif;
             color: #58180d;
-            border: 1px solid #dcdcdc;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            max-height: 80vh;
-            overflow-y: auto;
-            border-radius: 4px;
         }
         .stat-header h2 { margin: 0; font-size: 1.8em; color: #822000; font-variant: small-caps; }
         .stat-header i { font-style: italic; font-size: 0.9em; color: #333; }
@@ -331,9 +325,14 @@
 </div>
 
 <div id="sheet-modal" class="modal">
-    <div class="modal-box" style="width: 600px; max-width: 95%; background: transparent; box-shadow: none; padding: 0;">
-        <div id="sheet-content"></div>
-        <button onclick="closeModal('sheet-modal')" style="margin-top:10px; width:100%; background:#333; color:#fff; border:none; padding:10px; border-radius:4px;">关闭面板</button>
+    <div class="modal-box" style="width: 600px; max-width: 95%; height: 80vh; padding: 0; background: transparent; box-shadow: none; display: flex; flex-direction: column; overflow: hidden;">
+        
+        <div id="sheet-content" style="flex: 1; overflow-y: auto; background: #fdf1dc; border-radius: 8px 8px 0 0; border: 1px solid #dcdcdc; border-bottom: none;">
+            </div>
+
+        <button onclick="closeModal('sheet-modal')" style="flex-shrink: 0; width:100%; background:#333; color:#fff; border:none; padding:15px; font-weight:bold; border-radius: 0 0 8px 8px; cursor:pointer; font-size: 1.1em;">
+            关闭面板
+        </button>
     </div>
 </div>
 
@@ -2379,7 +2378,7 @@ async function loadLoginLogs() {
     async function openSheetModal(empId) {
         document.getElementById('sheet-modal').style.display = 'flex';
         const container = document.getElementById('sheet-content');
-        container.innerHTML = '<div style="background:#fff; padding:20px; text-align:center;">正在读取卷宗...</div>';
+        container.innerHTML = '<div style="padding:40px; text-align:center; color:#822000;">正在读取...</div>';
 
         // 重新获取该雇员的最新数据
         const { data: emp } = await supabaseClient
