@@ -113,8 +113,8 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">治安指数</div>
-                    <div class="kpi-value" style="color:#2ecc71;">良好</div>
-                    <div style="font-size:0.8em; color:#666;">宵禁令成效显著</div>
+                    <div class="kpi-value" style="color:green;">优秀</div>
+                    <div style="font-size:0.8em; color:#666;">神迹已经降临</div>
                 </div>
             </div>
 
@@ -527,57 +527,76 @@
     }
 
     // --- 图表渲染 ---
-    function renderCharts() {
-        // 种族图表
-        new Chart(document.getElementById('raceChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['人类', '矮人', '半精灵', '精灵', '地精', '兽人', '提夫林', '龙裔', '侏儒', '阿斯莫', '狐妖', '狗头人', '坎比翁'],
-                datasets: [{
-                    data: [62.6, 11.0, 6.8, 3.7, 3.0, 2.5, 2.5, 2.0, 2.0, 1.5, 1.3, 1.0, 0.1],
-                    backgroundColor: [
-                        '#2c3e50', // 人类 - 深蓝灰
-                        '#7f8c8d', // 矮人 - 铁灰
-                        '#e67e22', // 半精灵 - 橙色
-                        '#27ae60', // 精灵 - 森林绿
-                        '#8e44ad', // 地精 - 紫色 
-                        '#f1c40f', // 兽人 - 黄色
-                        '#800000', // 提夫林 - 深栗红 
-                        '#B22222', // 龙裔 - 火砖红
-                        '#c0392b', // 侏儒 - 红色
-                        '#FFD700', // 阿斯莫 - 金色 
-                        '#ff9ff3', // 狐妖 - 粉色
-                        '#8B4513', // 狗头人 - 鞍褐色
-                        '#000000'  // 坎比翁 - 纯黑
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }
-            }
-        });
+    // --- 更新后的图表渲染 ---
+function renderCharts() {
 
-        // 宗教图表
-        new Chart(document.getElementById('faithChart'), {
-            type: 'pie',
-            data: {
-                labels: ['渥金', '欧格玛', '淑妮', '密丝特拉', '洛山达', '阿斯蒙蒂斯', '坦帕斯', '贡德', '海姆', '红骑士', '塞伦涅', '萨弗拉斯'],
-                datasets: [{
-                    data: [20, 12, 10, 9, 8, 8, 6, 6, 6, 5, 5, 5],
-                    backgroundColor: ['#f1c40f', '#3498db', '#e84393', '#9b59b6', '#f39c12', '#c0392b', '#7f8c8d', '#d35400', '#2980b9', '#c0392b', '#bdc3c7', '#16a085'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
+    new Chart(document.getElementById('raceChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['人类', '矮人', '半精灵', '精灵', '地精', '兽人', '提夫林', '龙裔', '侏儒', '阿斯莫', '狐妖', '狗头人', '龙', '坎比翁'],
+            datasets: [{
+                data: [62.4, 11.0, 6.8, 3.7, 3.0, 2.5, 2.5, 2.0, 2.0, 1.5, 1.3, 1.0, 0.2, 0.1],
+                backgroundColor: [
+                    '#2c3e50', // 人类
+                    '#7f8c8d', // 矮人
+                    '#e67e22', // 半精灵
+                    '#27ae60', // 精灵
+                    '#8e44ad', // 地精 
+                    '#f1c40f', // 兽人
+                    '#800000', // 提夫林 
+                    '#B22222', // 龙裔
+                    '#c0392b', // 侏儒
+                    '#FFD700', // 阿斯莫 
+                    '#ff9ff3', // 狐妖
+                    '#8B4513', // 狗头人
+                    '#E5E4E2', // 真龙
+                    '#000000'  // 坎比翁
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+                title: { display: true, text: '城市种族构成 (北风降临后)', font: { size: 14 } }
             }
-        });
-    }
+        }
+    });
+
+    new Chart(document.getElementById('faithChart'), {
+        type: 'pie',
+        data: {
+            labels: ['巴哈姆特', '渥金', '洛山达', '塞伦涅', '欧格玛', '密丝特拉', '淑妮', '坦帕斯', '贡德', '海姆', '其他'],
+            datasets: [{
+                data: [71, 8, 6, 4, 3, 2, 2, 1, 1, 1, 1],
+                backgroundColor: [
+                    '#D7BE69', // 巴哈姆特 - 圣洁金
+                    '#f1c40f', // 渥金
+                    '#f39c12', // 洛山达
+                    '#bdc3c7', // 塞伦涅
+                    '#3498db', // 欧格玛
+                    '#9b59b6', // 密丝特拉
+                    '#e84393', // 淑妮
+                    '#7f8c8d', // 坦帕斯
+                    '#d35400', // 贡德
+                    '#2980b9', // 海姆
+                    '#ecf0f1'  // 其他
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } },
+                title: { display: true, text: '城市信仰分布 (白金神迹后)', font: { size: 14 } }
+            }
+        }
+    });
+}
 
     // 启动初始化
     init();
