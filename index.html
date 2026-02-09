@@ -895,72 +895,82 @@ async function openEquipModal(empId, slotIdx) {
     }
 
 // 登录逻辑---
-    // --- 修改后的登录逻辑 ---
-    async function login() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const btn = document.querySelector('#login-section button');
-    
-        if (!email || !password) return alert('请输入账号密码');
 
-        // 1. 获取验证码 Token
-        const captchaToken = turnstile.getResponse(); 
-        if (!captchaToken) {
-            alert('请点击验证码');
-            return;
-        }
+async function login() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const btn = document.querySelector('#login-section button');
 
-        btn.innerText = '安全检查中...';
-        btn.disabled = true;
+    if (!email || !password) return alert('请输入账号密码');
 
-        // --- 保留你原有的设备指纹记录逻辑 ---
-        const fingerprint = [
-            navigator.language,
-            screen.colorDepth,
-            screen.width + 'x' + screen.height,
-            new Date().getTimezoneOffset(),
-            navigator.hardwareConcurrency
-        ].join('|');
-
-        let ip = '无法获取';
-        try {
-            const res = await fetch('https://api.ipify.org?format=json');
-            const json = await res.json();
-            ip = json.ip;
-        } catch (e) { console.log("IP获取跳过"); }
-        // ------------------------------------
-
-        // 2. 发起登录请求，同时发送 Token 供 Supabase 后端校验
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ 
-            email, 
-            password,
-            options: {
-                captchaToken: captchaToken, // 这里是关键：后端会校验这个 Token
-            }
-        });
-
-        // 无论成功失败，都重置验证码
-        turnstile.reset();
-
-        const status = error ? `失败: ${error.message}` : '成功';
-    
-        // 记录登录日志
-        await supabaseClient.from('login_logs').insert([{
-            email: email,
-            ip_address: ip,
-            status: status,
-            user_agent: `${fingerprint} | ${navigator.userAgent}` 
-        }]);
-
-        btn.innerText = '连接节点';
-        btn.disabled = false;
-
-        if (error) {
-            alert('验证失败：请检查凭据或尝试重新验证。');
-        } else {
-            checkUser();
-        }
+    // 1. 获取验证码 Token
+    const captchaToken = turnstile.getResponse(); 
+    if (!captchaToken) {
+        alert('请点击验证码进行人机验证');
+        return;
     }
+
+    // 2. 锁定按钮，防止重复点击
+    const originalBtnText = btn.innerText;
+    btn.innerText = '正在建立安全连接...';
+    btn.disabled = true;
+
+    // 3. 并行处理：同时开始登录和获取 IP 
+    
+    // --- 获取设备指纹 ---
+    const fingerprint = [
+        navigator.language,
+        screen.colorDepth,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency
+    ].join('|');
+
+    // --- ✅ 获取 IP ---
+    let clientIp = '检测中...';
+    try {
+        clientIp = await getRobustIP();
+        console.log("当前客户端 IP:", clientIp);
+    } catch (e) {
+        console.log("IP 获取跳过");
+    }
+
+    // 4. 发起 Supabase 登录请求
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ 
+        email, 
+        password,
+        options: {
+            captchaToken: captchaToken, // 后端校验 Token
+        }
+    });
+
+    // 5. 无论成功失败，都必须重置验证码
+    turnstile.reset();
+
+    const statusMsg = error ? `失败: ${error.message}` : '成功';
+
+    // 6. 写入登录日志 (记录 IP 和指纹)
+    supabaseClient.from('login_logs').insert([{
+        email: email,
+        ip_address: clientIp, // 写入刚才获取到的强壮 IP
+        status: statusMsg,
+        user_agent: `${fingerprint} | ${navigator.userAgent}` 
+    }]).then(({ error }) => {
+        if (error) console.error("日志写入失败:", error);
+    });
+
+    // 7. 恢复按钮状态
+    btn.innerText = originalBtnText;
+    btn.disabled = false;
+
+    // 8. 处理登录结果
+    if (error) {
+        alert('验证失败：请检查账号密码或验证码。');
+    } else {
+        // 登录成功，进入主流程
+        checkUser();
+    }
+}
 
     async function logout() {
         // 离开频道
@@ -1287,7 +1297,7 @@ async function loadGold() {
         
         // 1. 查询所有状态为 '申请解雇' 的雇员
         // 如果是 Root，查所有；如果是 DM，查自己负责玩家的 (利用 RLS 或筛选)
-        let query = supabaseClient.from('employees').select('*, profiles:user_id(email)').eq('status', '申请解雇');
+        let query = supabaseClient.from('employees').select('*, profiles(email)').eq('status', '申请解雇');
         
         if (currentUserRole === 'dm') {
             // 这里依赖 profiles 表的 RLS 或者我们手动过滤
@@ -2565,6 +2575,54 @@ async function loadLoginLogs() {
             hideLoading();
         }
     }
+
+async function getRobustIP() {
+    const timeout = 3000; // 3秒超时，避免卡住登录
+
+    // 封装一个带超时的 fetch
+    const fetchWithTimeout = async (url, type = 'json') => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(id);
+            if (!res.ok) throw new Error('Network response was not ok');
+            
+            if (type === 'text') return await res.text();
+            return await res.json();
+        } catch (e) {
+            clearTimeout(id);
+            throw e;
+        }
+    };
+
+    try {
+        // 方案 A: Cloudflare Trace
+        const text = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', 'text');
+        const match = text.match(/ip=(.+)/);
+        if (match && match[1]) return match[1];
+    } catch (e) {
+        console.warn("方案A失败，尝试方案B");
+    }
+
+    try {
+        // 方案 B: Ipify 
+        const json = await fetchWithTimeout('https://api.ipify.org?format=json', 'json');
+        if (json.ip) return json.ip;
+    } catch (e) {
+        console.warn("方案B失败，尝试方案C");
+    }
+    
+    try {
+        // 方案 C: Ipip.net 
+        const json = await fetchWithTimeout('https://myip.ipip.net/json', 'json');
+        if (json.data && json.data.ip) return json.data.ip;
+    } catch(e) {
+        console.warn("IP获取全军覆没");
+    }
+
+    return 'IP_UNKNOWN'; // 如果都失败了，返回这个
+}
 
 
     
