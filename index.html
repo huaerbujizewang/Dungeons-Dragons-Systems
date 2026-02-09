@@ -2419,37 +2419,37 @@ async function loadLoginLogs() {
     function renderStatBlock(name, data) {
         const c = document.getElementById('sheet-content');
         
-        // 渲染属性六维
+        // 1. 渲染属性六维
         const statsHtml = Object.keys(data.stats).map(key => `
             <div class="stat-box">
                 <strong>${key.toUpperCase()}</strong>
-                <span>${data.stats[key].score} (${data.stats[key].mod})</span>
+                <span>${data.stats[key].score} ${data.stats[key].mod}</span>
             </div>
         `).join('');
 
-        // 渲染通用属性行
+        // 2. 渲染通用属性行
         const propsHtml = data.props.map(p => `
             <div class="property-line"><strong>${p.label}:</strong> ${p.value}</div>
         `).join('');
 
-        // 渲染特性
+        // 3. 渲染特性 (Traits)
         const traitsHtml = data.traits ? data.traits.map(t => `
             <div class="trait-section">
                 <span class="trait-name">${t.name}.</span> ${t.desc.replace(/\n/g, '<br>')}
             </div>
         `).join('') : '';
 
-        // 渲染动作
+        // 4. 渲染动作 (Actions)
         const actionsHtml = data.actions ? `
             <div class="action-header">动作</div>
             ${data.actions.map(a => `
                 <div class="trait-section">
-                    <span class="trait-name">${a.name}.</span> ${a.desc}
+                    <span class="trait-name">${a.name}.</span> ${a.desc.replace(/\n/g, '<br>')}
                 </div>
             `).join('')}
         ` : '';
 
-        // 渲染附赠动作
+        // 5. 渲染附赠动作 (Bonus Actions)
         const bonusHtml = data.bonus_actions ? `
             <div class="action-header">附赠动作</div>
             ${data.bonus_actions.map(a => `
@@ -2459,21 +2459,50 @@ async function loadLoginLogs() {
             `).join('')}
         ` : '';
 
-        // 渲染法术
+        // 6. [新增] 渲染反应 (Reactions)
+        const reactionsHtml = data.reactions ? `
+            <div class="action-header">反应</div>
+            ${data.reactions.map(r => `
+                <div class="trait-section">
+                    <span class="trait-name">${r.name}.</span> ${r.desc.replace(/\n/g, '<br>')}
+                </div>
+            `).join('')}
+        ` : '';
+
+        // 7. [新增] 渲染传奇动作 (Legendary Actions) - 以防万一以后有
+        const legendaryHtml = data.legendary_actions ? `
+            <div class="action-header">传奇动作</div>
+            <div class="trait-section" style="margin-bottom:10px;">${data.legendary_desc || '该生物可以采取 3 个传奇动作，在另一生物的回合结束时选择执行。'}</div>
+            ${data.legendary_actions.map(l => `
+                <div class="trait-section">
+                    <span class="trait-name">${l.name}.</span> ${l.desc.replace(/\n/g, '<br>')}
+                </div>
+            `).join('')}
+        ` : '';
+
+        // 8. 渲染法术
         let spellsHtml = '';
         if (data.spells) {
-            spellsHtml = `
-                <div class="action-header">施法</div>
-                <div class="trait-section">${data.spells.header}</div>
-                ${data.spells.list.map(s => `
+            // 兼容两种格式：一种是 list 数组，一种是简单的字符串描述
+            let listContent = '';
+            if (Array.isArray(data.spells.list)) {
+                listContent = data.spells.list.map(s => `
                     <div class="trait-section">
                         <span class="trait-name">${s.level}:</span> ${s.spells}
                     </div>
-                `).join('')}
+                `).join('');
+            } else {
+                listContent = `<div class="trait-section">${data.spells.list || ''}</div>`;
+            }
+
+            spellsHtml = `
+                <div class="action-header">施法</div>
+                <div class="trait-section" style="margin-bottom:5px;"><em>${data.spells.header}</em></div>
+                ${listContent}
             `;
         }
 
-        // 组装整体 HTML
+        // 9. 组装整体 HTML
         c.innerHTML = `
             <div class="stat-block-container">
                 <div class="stat-header">
@@ -2494,9 +2523,10 @@ async function loadLoginLogs() {
                 
                 <hr class="tapered-rule">
                 ${traitsHtml}
-                ${spellsHtml}
+                
                 ${actionsHtml}
                 ${bonusHtml}
+                ${reactionsHtml}  ${legendaryHtml}  ${spellsHtml}
             </div>
         `;
     }
