@@ -456,6 +456,10 @@
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
                     <input type="text" id="adm-wanted-name" placeholder="姓名" style="grid-column: 1/3;">
                     <input type="number" id="adm-wanted-amount" placeholder="赏金 GP">
+                    <select id="adm-wanted-status">
+                        <option value="DEAD OR ALIVE">DEAD OR ALIVE</option>
+                        <option value="CAPTURED">CAPTURED (已捕获)</option>
+                    </select>
                     <input type="text" id="adm-wanted-source" placeholder="悬赏组织">
                 </div>
                 <button onclick="addWantedPoster()" style="width:100%; background:#c0392b; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">单份签发</button>
