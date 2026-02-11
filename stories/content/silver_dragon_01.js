@@ -2,14 +2,14 @@ const storyContent = {
     bg: "assets/stories/backgrounds/golden_tree.jpg",
     assets: {
         // --- 伊凡·琴  ---
-        "琴_普通": "assets/stories/ivan_qin/normal.png",   // 自信、吃东西、日常
-        "琴_惊讶": "assets/stories/ivan_qin/surprised.png", // 吃惊、心虚、尴尬
-        "琴_生气": "assets/stories/ivan_qin/angry.png",     // 炸毛、吐槽、嫌弃
+        "琴_普通": "assets/stories/ivan_qin/normal.png",   
+        "琴_惊讶": "assets/stories/ivan_qin/surprised.png",
+        "琴_生气": "assets/stories/ivan_qin/angry.png",    
         
         // --- 伊凡·乾 ---
-        "乾_严肃": "assets/stories/ivan_chan/serious.png",  // 圣武士脸、说教、认真
-        "乾_微笑": "assets/stories/ivan_chan/smile.png",    // 戏谑、温柔、看戏
-        "乾_尴尬": "assets/stories/ivan_chan/awkward.png"   // 被揭短、僵硬
+        "乾_严肃": "assets/stories/ivan_chan/serious.png", 
+        "乾_微笑": "assets/stories/ivan_chan/smile.png",    
+        "乾_尴尬": "assets/stories/ivan_chan/awkward.png"   
     },
     lines: [
         // --- 开场 ---
