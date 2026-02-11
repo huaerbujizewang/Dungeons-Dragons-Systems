@@ -33,6 +33,14 @@ const storyList = [
         date: "FR1494 - 2月"
     },
     {
+        id: "silver_dragon_01",
+        title: "银龙小剧场",
+        description: "黄金树下的下午茶与“监护”任务。",
+        owner: "master@almorel.com",
+        tags: "伊凡·琴",
+        date: "FR1494 - 2月"
+    },
+    {
         id: "test_01",
         title: "牢玩家的故事",
         description: "这是一段只有 IDRotF 负责的玩家才能看到的剧情。",
