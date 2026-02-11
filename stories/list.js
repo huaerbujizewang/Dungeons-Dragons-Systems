@@ -33,6 +33,14 @@ const storyList = [
         date: "FR1494 - 2月"
     },
     {
+        id: "manshoon_rin_01",
+        title: "穷途末路",
+        description: "曼松在魔力枯竭之际。",
+        owner: "master@almorel.com",
+        tags: "异世界人",
+        date: "FR1494 - 2月"
+    },
+    {
         id: "silver_dragon_01",
         title: "银龙小剧场",
         description: "黄金树下的下午茶与“监护”任务。",
