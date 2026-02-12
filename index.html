@@ -223,6 +223,19 @@
 /* 历史记录小字 */
 .pity-counter { font-size: 0.8em; color: #999; margin-top: 10px; }
 
+/* --- 星级边框颜色 --- */
+    /* 6星：红金流光 */
+    .rarity-border-6 { border-top: 5px solid #e74c3c; border-image: linear-gradient(to right, #f1c40f, #e74c3c, #f1c40f) 1; box-shadow: 0 -2px 10px rgba(231, 76, 60, 0.2); }
+    /* 5星：纯金 */
+    .rarity-border-5 { border-top: 5px solid #f1c40f; }
+    /* 4星：紫 */
+    .rarity-border-4 { border-top: 5px solid #9b59b6; }
+    /* 3星：蓝 */
+    .rarity-border-3 { border-top: 5px solid #3498db; }
+    /* 2星：绿 */
+    .rarity-border-2 { border-top: 5px solid #2ecc71; }
+    /* 1星：灰 */
+    .rarity-border-1 { border-top: 5px solid #95a5a6; }
         
     </style>
 </head>
@@ -574,6 +587,36 @@
                 </div>
             </div>
 
+            <div class="admin-box" style="border:1px solid #f1c40f; padding:15px; border-radius:8px; background:#fffff0;">
+                <h3 style="margin-top:0; color:#f39c12;">🌟 雇员星级调整</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选雇员</div>
+                <div style="display:flex; gap:5px;">
+                    <select id="adm-rarity-emp-list" style="flex:1;"></select>
+                    <select id="adm-rarity-val" style="width:80px;">
+                        <option value="6">6星</option>
+                        <option value="5">5星</option>
+                        <option value="4">4星</option>
+                        <option value="3">3星</option>
+                        <option value="2">2星</option>
+                        <option value="1">1星</option>
+                    </select>
+                </div>
+                <button onclick="updateEmpRarity()" style="width:100%; margin-top:5px; background:#f1c40f; border:none; color:#fff; padding:5px; font-weight:bold;">更新星级</button>
+            </div>
+
+            <div class="admin-box" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#faf0ff;">
+                <h3 style="margin-top:0; color:#8e44ad;">🎲 卡池头像上传</h3>
+                <div style="margin-bottom:5px;">
+                    <input type="text" id="adm-pool-search" placeholder="输入卡池角色名..." onblur="searchPoolChar()" style="width:100%;">
+                    <input type="hidden" id="adm-pool-id">
+                </div>
+                <div id="adm-pool-preview" style="font-size:0.8em; color:#666; margin-bottom:5px;">等待搜索...</div>
+                <div style="display:flex; gap:5px;">
+                    <input type="file" id="adm-pool-file">
+                    <button onclick="uploadPoolAvatar()">上传</button>
+                </div>
+            </div>
+
             <!-- 雇员头像 -->
             <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
                 <h3 style="margin-top:0">👷 雇员头像更新</h3>
@@ -759,15 +802,14 @@
         const { data, error } = await supabaseClient
             .from('employees')
             .select('*')
-            .eq('user_id', viewingUserId)
-            .order('id');
+            .eq('user_id', viewingUserId); 
         
         if (error) {
             container.innerHTML = '<div style="color:red; padding:20px;">无法加载名单。</div>';
             return;
         }
 
-        // 2. 状态配置与权重
+        // 2. 状态配置
         const statusConfig = {
             '在职': { color: '#2ecc71', weight: 1 },
             '休假': { color: '#3498db', weight: 2 },
@@ -776,37 +818,47 @@
             '申请解雇': { color: '#e67e22', weight: 5 }
         };
 
-        // 3. 计算账单
-        const totalSalary = data
-            .filter(e => e.status === '在职')
-            .reduce((sum, e) => sum + e.salary, 0);
+        const totalSalary = data.filter(e => e.status === '在职').reduce((sum, e) => sum + e.salary, 0);
 
-        // 4. 分离并排序
-        const coreMembers = data.filter(e => e.role === '核心队友');
-        coreMembers.sort((a, b) => {
-            const weightA = statusConfig[a.status]?.weight || 99;
-            const weightB = statusConfig[b.status]?.weight || 99;
-            return weightA - weightB;
-        });
+        // 3. 分离并排序
+        // 排序逻辑：核心队友置顶 -> 星级(高到低) -> 薪资(高到低)
+        const sortLogic = (a, b) => {
+            // 先比星级 (默认3星防止null报错)
+            const rA = a.rarity || 3;
+            const rB = b.rarity || 3;
+            if (rA !== rB) return rB - rA; 
+            // 再比薪资
+            return b.salary - a.salary;
+        };
 
-        const hirelings = data.filter(e => e.role !== '核心队友');
-        hirelings.sort((a, b) => b.salary - a.salary);
+        const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
+        const hirelings = data.filter(e => e.role !== '核心队友').sort(sortLogic);
 
-        // 5. 渲染逻辑 
+        // 4. 渲染逻辑 (核心修改：动态 Class)
         const renderGrid = (list) => {
             if (list.length === 0) return '<div style="color:#999; padding:20px; grid-column:1/-1;">(空)</div>';
             return list.map(e => {
                 const config = statusConfig[e.status] || { color: '#666' };
                 const isCore = e.role === '核心队友';
                 const canFire = !isCore && e.status === '在职';
-                
-                // 判断是否有属性卡数据
                 const hasSheet = e.stat_block ? true : false;
+                
+                // 获取稀有度 (默认为 3)
+                const rarity = e.rarity || 3;
+                // 生成星星字符串
+                const stars = '★'.repeat(rarity);
+                // 决定边框样式类
+                const borderClass = `rarity-border-${rarity}`;
 
                 return `
-                <div class="card emp-card-content" style="border-top: 4px solid ${config.color};">
+                <div class="card emp-card-content ${borderClass}" style="position:relative;">
+                    <div style="position:absolute; top:5px; right:10px; color:#f1c40f; font-size:0.8em; letter-spacing:1px; text-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                        ${stars}
+                    </div>
+
                     <img src="${e.avatar_url || 'https://via.placeholder.com/70'}" 
-                         style="width:70px; height:70px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:1px solid #eee;">
+                         style="width:70px; height:70px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:1px solid #eee; margin-top:10px;">
+                    
                     <div style="font-weight:bold; font-size:1.1em;">${e.name}</div>
                     
                     <div style="font-size:0.8em; color:#666; margin:4px 0;">
@@ -818,31 +870,20 @@
                     </div>
 
                     <div style="margin-top:5px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
-                        ${hasSheet ? 
-                            `<button onclick="openSheetModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 查看属性</button>` 
-                            : ''}
-                        
-                        ${canFire ? 
-                            `<button class="danger-btn" onclick="requestFire(${e.id})" style="width:auto; margin-top:0; display:none;">申请解雇</button>` 
-                            : ''}
+                        ${hasSheet ? `<button onclick="openSheetModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 属性</button>` : ''}
+                        ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id})" style="width:auto; margin-top:0; display:none;">解雇</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
         };
 
-        // 6. 渲染界面
         container.innerHTML = `
             <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:30px; text-align:center; border-radius:8px;">
-                <h3 style="margin:0; color:#d35400;">📉 当前特殊雇员总支出: ${totalSalary} GP</h3>
-                <div style="font-size:0.85em; color:#666; margin-top:5px;">
-                    (将在每月1日基于 <a href="territory.html" style="color:#333; font-weight:bold;">城市总账单</a> 自动结算)
-                </div>
+                <h3 style="margin:0; color:#d35400;">📉 每月薪资总支出: ${totalSalary} GP</h3>
             </div>
-
-            <div class="section-title">⚔️ 核心队友 (按状态排序)</div>
+            <div class="section-title">⚔️ 核心队友</div>
             <div class="shop-grid" style="margin-bottom:40px;">${renderGrid(coreMembers)}</div>
-            
-            <div class="section-title">🛡️ 雇员 / 随从 (按薪资排序)</div>
+            <div class="section-title">🛡️ 雇员 / 随从 (按星级排序)</div>
             <div class="shop-grid">${renderGrid(hirelings)}</div>
         `;
     }
@@ -1670,6 +1711,7 @@ async function loadGold() {
             empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
         }
         updateStatBlockSelect(selectedUserId);
+        loadEmpForRarity(selectedUserId);
     }
 
     async function assignDM() {
@@ -3048,66 +3090,98 @@ async function getRobustIP() {
         drawWheel(remainingSlots);
     }
 
-    // 4. 旋转动画 (核心)
+    // 4. 旋转动画
     async function spinWheel() {
         const btn = document.getElementById('btn-spin');
         btn.disabled = true;
 
-        // 调用后端
+        // 1. 调用后端接口
         const { data, error } = await supabaseClient.rpc('rpc_spin_wheel', {
             p_user_id: viewingUserId,
             p_item_name: currentWheelTarget.name,
             p_base_price: parseInt(currentWheelPrice)
         });
 
+        // 2. 错误处理
         if (error || (data && data.status === 'error')) {
             btn.disabled = false;
             return alert(error ? error.message : data.msg);
         }
 
+        // 3. 计算目标角度逻辑
+        
+        // 获取当前盘面的格子总数
         const currentStepStr = document.getElementById('wheel-step').innerText;
         const currentSlotsCount = 8 - (parseInt(currentStepStr) - 1);
 
+        // 确定目标扇区索引
         let targetIndex = 0;
         if (data.hit) {
-            targetIndex = 0; 
+            targetIndex = 0;
         } else {
             targetIndex = Math.floor(Math.random() * (currentSlotsCount - 1)) + 1;
         }
 
-        const arcDeg = 360 / currentSlotsCount;  
-        const finalAngle = 360 * 5 + (270 - (targetIndex * arcDeg + arcDeg/2));
+        // 计算单个扇区的弧度 (角度制)
+        const arcDeg = 360 / currentSlotsCount;
+        const targetSectorAngle = (targetIndex * arcDeg) + (arcDeg / 2);
         
-        // 开始动画
-        animateRotation(wheelAngle, finalAngle * (Math.PI / 180), 4000, () => {
-            // 动画结束回调
+        const currentRotMod = wheelAngle % 360; // 获取当前转盘已经转过的角度余数
+        
+        // 目标增量 Delta = (270 - 目标初始角度) - 当前已转角度
+        let delta = (270 - targetSectorAngle) - currentRotMod;
+        
+        // 归一化：确保 delta 是正数（保证顺时针旋转，不倒转）
+        while (delta < 0) {
+            delta += 360;
+        }
+
+        // 4. 设定总旋转角度
+        const minSpins = 8;
+        const finalAngle = wheelAngle + (360 * minSpins) + delta;
+        
+        // 5. 执行动画 (6000ms = 6秒)
+        animateRotation(wheelAngle, finalAngle, 6000, () => {
+            // --- 动画结束后的回调 ---
+            
             if (data.hit) {
                 alert(`🎉 恭喜！命运的指针指向了 [${data.item}]！`);
             } else {
-                alert(`💨 又是谢谢惠顾... 获得 [纪念币] x1`);
+                alert(`💨 谢谢惠顾... 获得 [纪念币] x1`);
             }
+            
+            // 刷新金币和界面状态
             loadGold();
-            refreshWheelState(); // 刷新界面（格子会变少）
+            refreshWheelState(); 
         });
     }
 
     // 缓动动画函数
-    function animateRotation(startRad, endRad, duration, callback) {
+    function animateRotation(startDeg, endDeg, duration, callback) {
         const startTime = performance.now();
         
         function animate(currentTime) {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // Ease Out Cubic (先快后慢)
-            const ease = 1 - Math.pow(1 - progress, 3);
+            // Ease Out Quart (更强烈的减速感)
+            const ease = 1 - Math.pow(1 - progress, 4);
             
-            wheelAngle = startRad + (endRad - startRad) * ease;
+            // 更新全局角度
+            wheelAngle = startDeg + (endDeg - startDeg) * ease;
             
-            // 获取当前格子数重绘
+            // 重绘 (传入弧度)
             const currentStepStr = document.getElementById('wheel-step').innerText;
             const slots = 8 - (parseInt(currentStepStr) - 1);
-            drawWheel(slots);
+            
+            // 绘制时需要弧度
+            wheelCtx.clearRect(0, 0, 300, 300);
+            wheelCtx.save();
+            wheelCtx.translate(150, 150);
+            wheelCtx.rotate(wheelAngle * Math.PI / 180); // 角度转弧度
+            wheelCtx.translate(-150, -150);
+            drawWheelContent(slots); // 把具体的绘制逻辑抽离出来
+            wheelCtx.restore();
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
@@ -3116,6 +3190,124 @@ async function getRobustIP() {
             }
         }
         requestAnimationFrame(animate);
+    }
+
+    
+    function drawWheel(slotsCount) {
+        if (!wheelCtx) return;
+        wheelCtx.clearRect(0, 0, 300, 300);
+        wheelCtx.save();
+        wheelCtx.translate(150, 150);
+        wheelCtx.rotate(wheelAngle * Math.PI / 180); 
+        wheelCtx.translate(-150, -150);
+        drawWheelContent(slotsCount);
+        wheelCtx.restore();
+    }
+    
+    function drawWheelContent(slotsCount) {
+         const ctx = wheelCtx;
+         const cx = 150, cy = 150, radius = 140;
+         const arc = (2 * Math.PI) / slotsCount;
+         
+         for (let i = 0; i < slotsCount; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, i * arc, (i + 1) * arc);
+            ctx.closePath();
+            if (i === 0) ctx.fillStyle = '#e74c3c'; 
+            else ctx.fillStyle = (i % 2 === 0) ? '#ecf0f1' : '#bdc3c7';
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(i * arc + arc / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = i === 0 ? "#fff" : "#333";
+            ctx.font = "bold 14px Arial";
+            ctx.fillText(i === 0 ? "目标" : "惠顾", radius - 10, 5);
+            ctx.restore();
+        }
+    }
+
+    // --- DM功能：修改现有雇员星级 ---
+    // 1. 当 DM 在“玩家资产”里选中玩家时，自动填充这里的下拉框
+    // 需要修改现有的 loadUserDetail 函数，在最后加上：
+    /* // 在 loadUserDetail 函数末尾添加这一行：
+       loadEmpForRarity(selectedUserId); 
+    */
+
+    async function loadEmpForRarity(uid) {
+        const select = document.getElementById('adm-rarity-emp-list');
+        select.innerHTML = '<option>加载中...</option>';
+        const { data } = await supabaseClient.from('employees').select('id, name, rarity').eq('user_id', uid);
+        select.innerHTML = '';
+        if(data) {
+            data.forEach(e => {
+                select.innerHTML += `<option value="${e.id}">${e.name} (${e.rarity||3}★)</option>`;
+            });
+        }
+    }
+
+    async function updateEmpRarity() {
+        const empId = document.getElementById('adm-rarity-emp-list').value;
+        const rarity = document.getElementById('adm-rarity-val').value;
+        if(!empId) return;
+
+        showLoading();
+        await supabaseClient.from('employees').update({ rarity: parseInt(rarity) }).eq('id', empId);
+        hideLoading();
+        alert('星级已更新');
+        // 刷新列表
+        loadEmpForRarity(selectedUserId);
+        loadEmployees(); // 刷新主界面
+    }
+
+    // --- DM功能：卡池头像上传 ---
+    
+    async function searchPoolChar() {
+        const name = document.getElementById('adm-pool-search').value;
+        if(!name) return;
+        
+        const { data } = await supabaseClient.from('gacha_pool').select('*').ilike('name', name).maybeSingle();
+        const preview = document.getElementById('adm-pool-preview');
+        
+        if(data) {
+            document.getElementById('adm-pool-id').value = data.id;
+            preview.innerHTML = `✅ 选中: <b>${data.name}</b> (${data.rarity}★) <br> 头像: ${data.avatar_url ? '已存在' : '无'}`;
+        } else {
+            document.getElementById('adm-pool-id').value = '';
+            preview.innerHTML = `❌ 未找到该角色`;
+        }
+    }
+
+    async function uploadPoolAvatar() {
+        const id = document.getElementById('adm-pool-id').value;
+        const file = document.getElementById('adm-pool-file').files[0];
+        
+        if(!id || !file) return alert('请先搜索角色并选择文件');
+
+        showLoading();
+        try {
+            // 上传图片
+            const fileName = `pool_${id}_${Date.now()}`;
+            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+            if(error) throw error;
+
+            // 获取 URL
+            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
+            
+            // 更新数据库
+            await supabaseClient.from('gacha_pool').update({ avatar_url: urlData.publicUrl }).eq('id', id);
+            
+            alert('头像上传成功');
+            searchPoolChar(); // 刷新预览
+        } catch(e) {
+            console.error(e);
+            alert('上传失败');
+        } finally {
+            hideLoading();
+        }
     }
 
 
