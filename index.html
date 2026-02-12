@@ -280,8 +280,8 @@
     
     .ak-mini-card img {
         width: 100%;
-        height: 120px;
-        object-fit: cover;
+        height: 160px;
+        object-fit: contain;
         background: #333;
     }
     .ak-mini-bar {
@@ -564,7 +564,6 @@
             <div style="margin-top:30px; color:#aaa; font-size:0.8em;">点击任意处关闭</div>
         </div>
         
-        <div style="margin-top:50px; color:#aaa; font-size:0.8em; animation:fadeIn 2s;">点击任意处关闭</div>
     </div>
 
     <div id="gacha-weapon-panel" class="gacha-container" style="display:none; background:linear-gradient(135deg, #2c3e50 0%, #000 100%);">
@@ -792,6 +791,20 @@
                 <select id="adm-emp-list" style="width:100%; margin-bottom:10px;"></select>
                 <div style="display:flex; gap:10px;"><input type="file" id="adm-emp-avatar" style="flex:1"><button onclick="uploadAvatar()">上传</button></div>
             </div>
+
+            <div class="admin-box" style="border:1px solid #1abc9c; padding:15px; border-radius:8px; background:#fafffd; margin-top:20px;">
+    <h3 style="margin-top:0; color:#16a085;">🖼️ 干员全幅立绘上传</h3>
+    <div style="font-size:0.8em; color:#666; margin-bottom:5px;">建议比例 3:5 的纵向立绘（全身像）</div>
+    <div style="margin-bottom:10px;">
+        <input type="text" id="adm-pool-stand-search" placeholder="输入卡池角色名..." onblur="searchPoolCharForStand()" style="width:100%;">
+        <input type="hidden" id="adm-pool-stand-id">
+        <div id="adm-pool-stand-preview" style="font-size:0.8em; color:#666; margin-top:5px;">等待搜索...</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <input type="file" id="adm-pool-stand-file" style="flex:1">
+        <button onclick="uploadPoolStand()">上传立绘</button>
+    </div>
+</div>
 
             <div class="admin-box" style="border:1px solid #822000; padding:15px; border-radius:8px; background:#fffcf0;">
                 <h3 style="margin-top:0; color:#822000;">📜 角色卡数据录入 (JSON)</h3>
@@ -3139,22 +3152,22 @@ async function getRobustIP() {
     }
 
     // 抽卡核心逻辑
-    async function pullOperator() {
+   async function pullOperator() {
         if (!confirm('消耗 600 GP 进行一次干员寻访？')) return;
-        document.getElementById('gacha-card-container').style.display = 'block';
-        document.getElementById('gacha-ten-container').style.display = 'none';
 
         const overlay = document.getElementById('gacha-result-overlay');
         const beam = document.getElementById('gacha-beam');
         const card = document.getElementById('gacha-card-container');
-        
-        // 1. 开始动画
+        const tenContainer = document.getElementById('gacha-ten-container');
+
+        // 重置状态
+        card.style.display = 'block';
+        tenContainer.style.display = 'none';
         overlay.style.display = 'flex';
-        card.style.transform = 'scale(0)'; // 先隐藏卡片
-        beam.style.display = 'block'; // 播放光束动画
+        card.style.transform = 'scale(0)';
+        beam.style.display = 'block';
         
         try {
-            // 2. 后端请求
             const { data, error } = await supabaseClient.rpc('rpc_gacha_pull', { p_user_id: viewingUserId });
             
             if (error || (data && data.status === 'error')) {
@@ -3162,23 +3175,23 @@ async function getRobustIP() {
                 return alert(error ? error.message : data.msg);
             }
 
-            // 3. 确定光色
-            let color = '#fff'; // 白
-            if (data.rarity === 6) color = '#ff4e50'; // 红/彩
-            else if (data.rarity === 5) color = '#f1c40f'; // 金
-            else if (data.rarity === 4) color = '#9b59b6'; // 紫
+            // 确定光色
+            let color = '#fff';
+            if (data.rarity === 6) color = '#ff4e50';
+            else if (data.rarity === 5) color = '#f1c40f';
+            else if (data.rarity === 4) color = '#9b59b6';
 
-            // 修改光束颜色
             beam.style.boxShadow = `0 0 50px 20px ${color}`;
             beam.style.background = color;
 
-            // 4. 显示结果 (延迟一下等光束闪完)
             setTimeout(() => {
-                beam.style.display = 'none'; // 隐藏光束
+                beam.style.display = 'none';
                 
-                // 填充数据
+                // --- 核心修改：优先使用立绘 (stand_url) ---
+                const resultImg = data.stand_url || data.avatar_url || 'https://via.placeholder.com/300x500';
+                document.getElementById('res-img').src = resultImg;
+                
                 document.getElementById('res-name').innerText = data.name;
-                document.getElementById('res-img').src = data.avatar_url || 'https://via.placeholder.com/300';
                 document.getElementById('res-stars').innerText = '★'.repeat(data.rarity);
                 document.getElementById('res-stars').style.color = color;
                 
@@ -3189,20 +3202,11 @@ async function getRobustIP() {
                     typeTag.innerHTML = `<span style="color:#f1c40f">NEW!</span><br><span style="font-size:0.8em; color:#aaa;">新干员入职</span>`;
                 }
 
-                // 卡片弹出动画
                 card.style.transform = 'scale(1)';
-                
-                // 刷新数据
-                loadGold();
-                loadCerts();
-                loadPityCount();
-                
-            }, 600); // 0.6秒后出卡
-
+                loadGold(); loadCerts(); loadPityCount();
+            }, 600);
         } catch (e) {
-            console.error(e);
-            overlay.style.display = 'none';
-            alert('通讯错误');
+            overlay.style.display = 'none'; alert('通讯错误');
         }
     }
 
@@ -3646,7 +3650,6 @@ async function getRobustIP() {
 
             // 4. 构建网格 DOM
             tenGrid.innerHTML = results.map((item, index) => {
-                // 稀有度颜色
                 let color = '#95a5a6';
                 if (item.rarity === 6) color = '#e74c3c';
                 else if (item.rarity === 5) color = '#f1c40f';
@@ -3654,22 +3657,19 @@ async function getRobustIP() {
                 else if (item.rarity === 3) color = '#3498db';
 
                 const stars = '★'.repeat(item.rarity);
-                
-                // 延迟动画 style
                 const delay = index * 0.1; 
 
-                // 转化/新获得 标签
-                let tag = '';
-                if (item.type === 'duplicate') {
-                    tag = `<div style="position:absolute; top:0; right:0; background:rgba(0,0,0,0.7); color:#fff; font-size:0.7em; padding:2px 5px;">凭证+${item.cert_gain}</div>`;
-                } else {
-                    tag = `<div style="position:absolute; top:0; right:0; background:#e74c3c; color:#fff; font-size:0.7em; padding:2px 5px; font-weight:bold;">NEW</div>`;
-                }
+                // --- 核心修改：十连小卡片也优先用立绘 ---
+                const cardImg = item.stand_url || item.avatar_url || 'https://via.placeholder.com/100';
+
+                let tag = item.type === 'duplicate' 
+                    ? `<div style="position:absolute; top:0; right:0; background:rgba(0,0,0,0.7); color:#fff; font-size:0.7em; padding:2px 5px;">凭证+${item.cert_gain}</div>`
+                    : `<div style="position:absolute; top:0; right:0; background:#e74c3c; color:#fff; font-size:0.7em; padding:2px 5px; font-weight:bold;">NEW</div>`;
 
                 return `
                     <div class="ak-mini-card" style="border-bottom: 4px solid ${color}; animation: popIn 0.4s ease backwards ${delay}s;">
                         ${tag}
-                        <img src="${item.avatar_url || 'https://via.placeholder.com/100'}" onerror="this.src='https://via.placeholder.com/100'">
+                        <img src="${cardImg}" onerror="this.src='https://via.placeholder.com/100'">
                         <div class="ak-mini-bar" style="background:${color}">
                             ${item.name}
                         </div>
@@ -3692,6 +3692,64 @@ async function getRobustIP() {
             console.error(e);
             overlay.style.display = 'none';
             alert('十连失败：网络或资金问题');
+        }
+    }
+
+    async function uploadPoolStand() {
+    const id = document.getElementById('adm-pool-id').value; // 复用之前的搜索选择ID
+    const file = document.getElementById('adm-pool-stand-file').files[0];
+    
+    if(!id || !file) return alert('请先搜索确定卡池角色');
+
+    showLoading();
+    try {
+        const fileName = `stand_${id}_${Date.now()}`;
+        const { data } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+        const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
+        
+        await supabaseClient.from('gacha_pool').update({ stand_url: urlData.publicUrl }).eq('id', id);
+        alert('立绘更新成功！');
+    } catch(e) {
+        alert('上传失败');
+    } finally {
+        hideLoading();
+    }
+}  
+// 搜索卡池角色（专门用于立绘上传）
+    async function searchPoolCharForStand() {
+        const name = document.getElementById('adm-pool-stand-search').value;
+        if(!name) return;
+        const { data } = await supabaseClient.from('gacha_pool').select('*').ilike('name', name).maybeSingle();
+        const preview = document.getElementById('adm-pool-stand-preview');
+        if(data) {
+            document.getElementById('adm-pool-stand-id').value = data.id;
+            preview.innerHTML = `✅ 选中: <b>${data.name}</b> | 立绘: ${data.stand_url ? '已存在' : '暂无'}`;
+        } else {
+            preview.innerHTML = `❌ 未找到该角色`;
+        }
+    }
+
+    // 执行上传
+    async function uploadPoolStand() {
+        const id = document.getElementById('adm-pool-stand-id').value;
+        const file = document.getElementById('adm-pool-stand-file').files[0];
+        if(!id || !file) return alert('请先搜索确定角色并选择文件');
+
+        showLoading();
+        try {
+            const fileName = `stand_${id}_${Date.now()}`;
+            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+            if(error) throw error;
+
+            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
+            await supabaseClient.from('gacha_pool').update({ stand_url: urlData.publicUrl }).eq('id', id);
+            
+            alert('全幅立绘更新成功！');
+            searchPoolCharForStand();
+        } catch(e) {
+            alert('上传失败');
+        } finally {
+            hideLoading();
         }
     }
 
