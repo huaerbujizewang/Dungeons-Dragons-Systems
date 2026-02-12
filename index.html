@@ -356,22 +356,20 @@
     <!-- 抽卡机制 -->
 
     <div id="gacha-section" class="section">
-    
     <div style="display:flex; justify-content:center; gap:20px; margin-bottom:20px;">
         <button onclick="showGachaMode('operator')" class="tab-btn active" id="btn-mode-op">干员寻访</button>
-        <button onclick="showGachaMode('weapon')" class="tab-btn" id="btn-mode-wp">武器寻访</button>
+        <button onclick="showGachaMode('weapon')" class="tab-btn" id="btn-mode-wp">军械库定轨</button>
+        <button onclick="loadGachaHistory()" class="tab-btn" style="color:#3498db;">📜 历史记录</button>
     </div>
 
     <div id="gacha-operator-panel" class="gacha-container">
         <h2 style="margin:0; color:#fff;">标准寻访</h2>
-        <div style="color:#aaa; font-size:0.9em;">六星概率: 0.8% (含动态保底) | 600 GP/次</div>
+        <div style="color:#aaa; font-size:0.9em; margin-bottom:20px;">六星概率: 0.8% (含动态保底) | 600 GP/次</div>
         
         <div id="gacha-bag" class="bag-container" onclick="pullOperator()">
             <div class="bag-zipper" id="bag-zipper"></div>
             <div class="bag-light" id="bag-light"></div>
-            <div style="position:absolute; bottom:20px; width:100%; text-align:center; color:#666; font-weight:bold;">
-                TAP TO OPEN
-            </div>
+            <div style="position:absolute; bottom:20px; width:100%; text-align:center; color:#666; font-weight:bold;">TAP TO OPEN</div>
         </div>
 
         <div id="op-result" class="gacha-result">
@@ -384,25 +382,23 @@
             <button onclick="resetBag()" style="margin-top:20px; padding:10px 30px; background:#fff; border:none; border-radius:20px; font-weight:bold;">确认</button>
         </div>
 
-        <div class="pity-counter">
-            当前垫刀: <span id="pity-count-display">加载中...</span> 抽
-            <br> (66抽后概率提升，80抽必出)
-        </div>
+        <div class="pity-counter">当前垫刀: <span id="pity-count-display">--</span></div>
     </div>
 
-    <div id="gacha-weapon-panel" class="gacha-container" style="display:none; background:linear-gradient(135deg, #4b1a1a 0%, #000 100%);">
+    <div id="gacha-weapon-panel" class="gacha-container" style="display:none; background:linear-gradient(135deg, #2c3e50 0%, #000 100%);">
         <h2 style="margin:0; color:#e74c3c;">武器寻访</h2>
         
         <div id="wheel-setup" style="margin:20px 0;">
             <input type="text" id="wheel-search" placeholder="搜索图鉴中的物品..." style="padding:8px; width:200px;">
-            <button onclick="searchWheelTarget()" style="padding:8px;">定轨</button>
+            <button onclick="searchWheelTarget()" style="padding:8px;">武器寻访</button>
             <div id="wheel-target-display" style="margin-top:10px; font-weight:bold; color:#f1c40f;">当前无目标</div>
         </div>
 
-        <div id="wheel-stage" style="display:none;">
-            <div class="wheel-container" id="wheel-circle">
-                <div class="wheel-pointer"></div>
-                </div>
+        <div id="wheel-stage" style="display:none; text-align:center;">
+            <div style="position:relative; width:300px; height:300px; margin:0 auto;">
+                <canvas id="wheel-canvas" width="300" height="300"></canvas>
+                <div style="position:absolute; top:-10px; left:140px; width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-top:20px solid #e74c3c; z-index:5; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"></div>
+            </div>
             
             <div style="margin:20px 0;">
                 <div style="font-size:0.9em; color:#aaa;">当前阶段: <span id="wheel-step">1</span> / 8</div>
@@ -411,10 +407,16 @@
                 </div>
             </div>
 
-            <button id="btn-spin" class="wheel-btn" onclick="spinWheel()">
-                启动转盘
-            </button>
+            <button id="btn-spin" class="wheel-btn" onclick="spinWheel()">启动转盘</button>
         </div>
+    </div>
+
+    <div id="gacha-history-panel" class="gacha-container" style="display:none; background:#fff; color:#333; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px;">
+            <h3 style="margin:0;">📜 近期出货记录</h3>
+            <button onclick="showGachaMode('operator')" style="font-size:0.8em;">返回</button>
+        </div>
+        <div id="history-list" style="max-height:400px; overflow-y:auto; font-size:0.9em;">加载中...</div>
     </div>
 </div>
 
@@ -2813,80 +2815,123 @@ async function getRobustIP() {
         console.warn("IP获取全军覆没");
     }
 
-    return 'IP_UNKNOWN'; // 如果都失败了，返回这个
+    return 'IP_UNKNOWN'; 
 }
 
-    // --- 寻访系统逻辑 ---
+    // --- 寻访与转盘系统 ---
 
     let currentWheelTarget = null;
     let currentWheelPrice = 0;
+    let wheelCtx = null;
+    let wheelAngle = 0; 
 
     function showGachaMode(mode) {
         document.getElementById('gacha-operator-panel').style.display = mode === 'operator' ? 'block' : 'none';
         document.getElementById('gacha-weapon-panel').style.display = mode === 'weapon' ? 'block' : 'none';
+        document.getElementById('gacha-history-panel').style.display = 'none';
+        
         document.getElementById('btn-mode-op').classList.toggle('active', mode === 'operator');
         document.getElementById('btn-mode-wp').classList.toggle('active', mode === 'weapon');
         
         if (mode === 'operator') loadPityCount();
     }
 
-    // 1. 加载保底计数
-    async function loadPityCount() {
-        const { data } = await supabaseClient.from('profiles').select('pity_count').eq('id', viewingUserId).single();
-        if (data) {
-            document.getElementById('pity-count-display').innerText = data.pity_count;
+    // --- 历史记录功能 ---
+    async function loadGachaHistory() {
+        document.getElementById('gacha-operator-panel').style.display = 'none';
+        document.getElementById('gacha-weapon-panel').style.display = 'none';
+        const panel = document.getElementById('gacha-history-panel');
+        panel.style.display = 'block';
+        
+        const list = document.getElementById('history-list');
+        list.innerHTML = '查询档案中...';
+
+        // 查询全服最近 50 条记录
+        const { data, error } = await supabaseClient
+            .from('gacha_records')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            list.innerHTML = `<div style="color:red">加载失败: ${error.message}</div>`;
+            return;
         }
+
+        if (!data || data.length === 0) {
+            list.innerHTML = '<div style="color:#999; text-align:center;">暂无记录，快去当第一个吃螃蟹的人！</div>';
+            return;
+        }
+
+        list.innerHTML = data.map(rec => {
+            const date = new Date(rec.created_at).toLocaleString();
+            const isMe = rec.user_id === viewingUserId;
+            // 颜色区分稀有度
+            let color = '#333';
+            if (rec.rarity === 6) color = '#e74c3c'; // 红
+            if (rec.rarity === 5) color = '#f1c40f'; // 黄
+            if (rec.rarity === 4) color = '#9b59b6'; // 紫
+
+            const poolName = rec.pool_type === 'operator' ? '干员寻访' : '定轨军械';
+            
+            return `
+                <div style="padding:10px; border-bottom:1px solid #eee; background:${isMe ? '#f0f9ff' : '#fff'};">
+                    <div style="display:flex; justify-content:space-between; color:#999; font-size:0.8em;">
+                        <span>${poolName}</span>
+                        <span>${date}</span>
+                    </div>
+                    <div style="margin-top:4px;">
+                        <span style="font-weight:bold; color:${isMe ? '#2980b9' : '#666'}">${rec.user_email || '神秘人'}</span>
+                        获得了 
+                        <span style="font-weight:bold; color:${color}; font-size:1.1em;">[${rec.item_name}]</span>
+                        ${rec.rarity >= 5 ? '✨' : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
-    // 2. 干员抽卡逻辑
+    // --- 干员抽卡逻辑 ---
+    async function loadPityCount() {
+        const { data } = await supabaseClient.from('profiles').select('pity_count').eq('id', viewingUserId).maybeSingle();
+        if (data) document.getElementById('pity-count-display').innerText = data.pity_count || 0;
+    }
+
     async function pullOperator() {
         const bag = document.getElementById('gacha-bag');
-        if (bag.style.display === 'none') return; // 已经在结果页
-        
-        if (!confirm('确认消耗 600 GP 进行一次寻访？')) return;
+        if (bag.style.display === 'none') return; 
+        if (!confirm('消耗 600 GP 寻访一次？')) return;
 
-        // 动画阶段 1: 抖动
         bag.classList.add('shaking');
-        
         try {
-            // 调用后端
             const { data, error } = await supabaseClient.rpc('rpc_gacha_pull', { p_user_id: viewingUserId });
             
-            if (error) throw error;
-            if (data.status === 'error') {
+            if (error || (data && data.status === 'error')) {
                 bag.classList.remove('shaking');
-                return alert(data.msg);
+                return alert(error ? error.message : data.msg);
             }
 
-            // 动画阶段 2: 拉开拉链
             setTimeout(() => {
                 bag.classList.remove('shaking');
-                document.getElementById('bag-zipper').style.height = '0%'; // 拉开
+                document.getElementById('bag-zipper').style.height = '0%';
                 
-                // 确定光效颜色
-                const rarity = data.rarity;
-                let lightColor = '#fff'; // 白
-                if (rarity === 6) lightColor = '#ff4e50'; // 红
-                else if (rarity === 5) lightColor = '#f1c40f'; // 黄
-                else if (rarity === 4) lightColor = '#9b59b6'; // 紫
-                else if (rarity === 3) lightColor = '#3498db'; // 蓝
+                let lightColor = '#fff'; 
+                if (data.rarity === 6) lightColor = '#ff4e50'; 
+                else if (data.rarity === 5) lightColor = '#f1c40f'; 
+                else if (data.rarity === 4) lightColor = '#9b59b6'; 
+                else if (data.rarity === 3) lightColor = '#3498db'; 
 
                 const light = document.getElementById('bag-light');
                 light.style.background = `radial-gradient(circle, ${lightColor} 0%, transparent 70%)`;
                 light.style.opacity = 1;
 
-                // 动画阶段 3: 显示结果
                 setTimeout(() => {
                     showOpResult(data);
-                    loadGold(); // 刷新金币
-                    loadPityCount(); // 刷新垫刀
+                    loadGold(); loadPityCount();
                 }, 800);
-            }, 1000); // 假装网络延迟，增加紧张感
-
+            }, 1000);
         } catch (e) {
-            console.error(e);
-            bag.classList.remove('shaking');
-            alert('通讯故障 (网络错误)');
+            bag.classList.remove('shaking'); alert('网络错误');
         }
     }
 
@@ -2894,70 +2939,103 @@ async function getRobustIP() {
         document.getElementById('gacha-bag').style.display = 'none';
         const resDiv = document.getElementById('op-result');
         resDiv.style.display = 'block';
-
-        // 渲染卡片
         const cardBg = document.getElementById('op-card-bg');
-        cardBg.className = `rarity-${data.rarity}`; // 应用颜色样式
+        cardBg.className = `rarity-${data.rarity}`;
         
         document.getElementById('op-name').innerText = data.name;
         document.getElementById('op-class').innerText = data.role;
-        document.getElementById('op-avatar').src = data.avatar_url || 'https://via.placeholder.com/80'; // 需要在gacha_pool存头像
+        document.getElementById('op-avatar').src = data.avatar_url || 'https://via.placeholder.com/80';
         document.getElementById('op-rarity-stars').innerText = '★'.repeat(data.rarity);
     }
-
+    
     function resetBag() {
         document.getElementById('op-result').style.display = 'none';
         const bag = document.getElementById('gacha-bag');
         bag.style.display = 'block';
-        document.getElementById('bag-zipper').style.height = '100%'; // 拉上
+        document.getElementById('bag-zipper').style.height = '100%';
         document.getElementById('bag-light').style.opacity = 0;
     }
 
-    // --- 转盘逻辑 ---
+    // --- 军械库转盘逻辑---
 
-    // 搜索并定轨
+    // 1. 初始化和绘制
+    function initCanvas() {
+        const canvas = document.getElementById('wheel-canvas');
+        wheelCtx = canvas.getContext('2d');
+        wheelAngle = 0; // 重置角度
+        drawWheel(8); // 默认画满8格
+    }
+
+    function drawWheel(slotsCount) {
+        if (!wheelCtx) return;
+        const ctx = wheelCtx;
+        const cx = 150, cy = 150, radius = 140;
+        const arc = (2 * Math.PI) / slotsCount; // 动态计算扇形大小
+
+        ctx.clearRect(0, 0, 300, 300);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(wheelAngle); // 应用当前旋转
+
+        for (let i = 0; i < slotsCount; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, radius, i * arc, (i + 1) * arc);
+            ctx.closePath();
+
+            // 颜色逻辑：0号位永远是大奖(红)，其他是杂项(灰)
+            if (i === 0) {
+                ctx.fillStyle = '#e74c3c'; // 红色大奖
+            } else {
+                ctx.fillStyle = (i % 2 === 0) ? '#ecf0f1' : '#bdc3c7'; // 灰白交替
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            // 文字
+            ctx.save();
+            ctx.rotate(i * arc + arc / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = i === 0 ? "#fff" : "#333";
+            ctx.font = "bold 14px Arial";
+            const text = i === 0 ? "目标" : "惠顾";
+            ctx.fillText(text, radius - 10, 5);
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+
+    // 2. 搜索逻辑
     async function searchWheelTarget() {
         const query = document.getElementById('wheel-search').value;
         if (!query) return;
-
-        // 查图鉴
-        const { data } = await supabaseClient.from('compendium_items')
-            .select('*').ilike('name', `%${query}%`).limit(1);
+        const { data } = await supabaseClient.from('compendium_items').select('*').ilike('name', `%${query}%`).limit(1);
+        if (!data || data.length === 0) return alert('找不到该物品');
         
-        if (!data || data.length === 0) return alert('图鉴中找不到该物品');
-        
-        const item = data[0];
-        currentWheelTarget = item;
-        currentWheelPrice = item.price; // 基础价
-
-        document.getElementById('wheel-target-display').innerHTML = `
-            定轨目标: <span style="color:#fff; border-bottom:1px dashed #fff;">${item.name}</span>
-            <br><span style="font-size:0.8em; color:#ccc;">基础价值: ${item.price} GP</span>
-        `;
+        currentWheelTarget = data[0];
+        currentWheelPrice = data[0].price;
+        document.getElementById('wheel-target-display').innerHTML = `目标: <span style="color:#f1c40f">${currentWheelTarget.name}</span>`;
         document.getElementById('wheel-stage').style.display = 'block';
         
+        // 初始绘制
+        initCanvas(); 
         refreshWheelState();
     }
 
+    // 3. 刷新状态和格子数
     async function refreshWheelState() {
-        // 查当前进度
-        const { data, error } = await supabaseClient.from('wheel_sessions') 
-        .select('steps_taken, is_finished')
-        .eq('user_id', viewingUserId)
-        .eq('target_item_name', currentWheelTarget.name)
-        .eq('is_finished', false)
-        .maybeSingle(); 
-
-        // 如果出错（排除掉“查不到数据”的情况），打印日志
-         if (error && error.code !== 'PGRST116') { // 
-            console.error("查询转盘状态失败:", error);
-        }
+        const { data } = await supabaseClient.from('wheel_sessions')
+            .select('steps_taken, is_finished')
+            .eq('user_id', viewingUserId)
+            .eq('target_item_name', currentWheelTarget.name)
+            .eq('is_finished', false)
+            .maybeSingle();
 
         const step = data ? data.steps_taken : 0;
-        const prices = [0.10, 0.20, 0.30, 0.50, 0.75, 1.00, 1.50, 2.50]; // 对应SQL中的逻辑
+        const prices = [0.10, 0.20, 0.30, 0.50, 0.75, 1.00, 1.50, 2.50];
         
         if (step >= 8 || (data && data.is_finished)) {
-            document.getElementById('wheel-stage').innerHTML = '<div style="padding:20px;">该物品已获得！</div>';
+            document.getElementById('wheel-stage').innerHTML = '<div style="padding:20px; color:#2ecc71">该轮次已结束（物品已获取）</div>';
             return;
         }
 
@@ -2965,87 +3043,79 @@ async function getRobustIP() {
         document.getElementById('wheel-step').innerText = step + 1;
         document.getElementById('wheel-cost').innerText = cost;
         document.getElementById('btn-spin').disabled = false;
-        
-        // 渲染转盘格子 (剩余 8 - step 格)
-        const totalSlots = 8 - step;
-        const circle = document.getElementById('wheel-circle');
-        // 清除旧的扇区 (除了指针)
-        Array.from(circle.children).forEach(c => {
-            if (!c.classList.contains('wheel-pointer')) circle.removeChild(c);
-        });
 
-        // 绘制扇区 (视觉上只画 totalSlots 个)
-        for(let i=0; i<totalSlots; i++) {
-            const sector = document.createElement('div');
-            sector.className = 'wheel-sector';
-            const angle = 360 / totalSlots;
-            const rot = i * angle;
-            // 简单用颜色区分
-            sector.style.transform = `rotate(${rot}deg) skewY(${-(90 - angle)}deg)`;
-            sector.style.background = i === 0 ? '#e74c3c' : (i % 2 ? '#eee' : '#ddd'); 
-            circle.appendChild(sector);
-        }
+        const remainingSlots = 8 - step;
+        drawWheel(remainingSlots);
     }
 
+    // 4. 旋转动画 (核心)
     async function spinWheel() {
         const btn = document.getElementById('btn-spin');
         btn.disabled = true;
-        
 
-        
+        // 调用后端
+        const { data, error } = await supabaseClient.rpc('rpc_spin_wheel', {
+            p_user_id: viewingUserId,
+            p_item_name: currentWheelTarget.name,
+            p_base_price: parseInt(currentWheelPrice)
+        });
 
-        // 【Debug】确保 viewingUserId 存在
-        if (!viewingUserId) {
-            alert("登录状态异常，请刷新页面");
+        if (error || (data && data.status === 'error')) {
             btn.disabled = false;
-            return;
+            return alert(error ? error.message : data.msg);
         }
 
-        try {
-            const { data, error } = await supabaseClient.rpc('rpc_spin_wheel', {
-                p_user_id: viewingUserId,
-                p_item_name: currentWheelTarget.name,
-                p_base_price: parseInt(currentWheelPrice) 
-            });
+        const currentStepStr = document.getElementById('wheel-step').innerText;
+        const currentSlotsCount = 8 - (parseInt(currentStepStr) - 1);
 
-            // 无论 HTTP 状态码是多少，如果 data.status 是 error，就弹窗显示真实原因
-            if (error || (data && data.status === 'error')) {
-                const msg = error ? error.message : data.msg;
-                alert('操作失败: ' + msg);
-                btn.disabled = false;
-                return;
+        let targetIndex = 0;
+        if (data.hit) {
+            targetIndex = 0; 
+        } else {
+            targetIndex = Math.floor(Math.random() * (currentSlotsCount - 1)) + 1;
+        }
+
+        const arcDeg = 360 / currentSlotsCount;  
+        const finalAngle = 360 * 5 + (270 - (targetIndex * arcDeg + arcDeg/2));
+        
+        // 开始动画
+        animateRotation(wheelAngle, finalAngle * (Math.PI / 180), 4000, () => {
+            // 动画结束回调
+            if (data.hit) {
+                alert(`🎉 恭喜！命运的指针指向了 [${data.item}]！`);
+            } else {
+                alert(`💨 又是谢谢惠顾... 获得 [纪念币] x1`);
             }
+            loadGold();
+            refreshWheelState(); // 刷新界面（格子会变少）
+        });
+    }
 
-            // 旋转动画
-            const wheel = document.getElementById('wheel-circle');
-            // 随机转几圈
-            const baseRot = 1440; // 4圈
-            const targetIndex = data.hit ? 0 : Math.floor(Math.random() * (8 - (data.next_step - 1) - 1)) + 1; // 如果中奖停在0(红色)，否则停在其他
+    // 缓动动画函数
+    function animateRotation(startRad, endRad, duration, callback) {
+        const startTime = performance.now();
+        
+        function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
             
-            // 计算角度逻辑略微复杂，这里简化处理：直接弹窗
-            // 视觉旋转
-            wheel.style.transition = 'transform 3s cubic-bezier(0.25, 0.1, 0.25, 1)';
-            wheel.style.transform = `rotate(${baseRot + Math.random() * 360}deg)`;
+            // Ease Out Cubic (先快后慢)
+            const ease = 1 - Math.pow(1 - progress, 3);
+            
+            wheelAngle = startRad + (endRad - startRad) * ease;
+            
+            // 获取当前格子数重绘
+            const currentStepStr = document.getElementById('wheel-step').innerText;
+            const slots = 8 - (parseInt(currentStepStr) - 1);
+            drawWheel(slots);
 
-            setTimeout(() => {
-                wheel.style.transition = 'none';
-                wheel.style.transform = 'rotate(0deg)';
-                
-                if (data.hit) {
-                    alert(`🎉 恭喜！你以累计较低的价格获得了 [${data.item}]！`);
-                    loadInventory();
-                } else {
-                    alert(`😭 遗憾... 获得 [谢谢惠顾纪念币] x1\n下一次概率提升！`);
-                }
-                loadGold();
-                refreshWheelState();
-            }, 3000);
-
-        } catch (e) {
-            console.error(e);
-            btn.disabled = false;
-            alert('转盘卡住了');
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                callback();
+            }
         }
+        requestAnimationFrame(animate);
     }
 
 
