@@ -802,14 +802,14 @@
         const { data, error } = await supabaseClient
             .from('employees')
             .select('*')
-            .eq('user_id', viewingUserId); 
+            .eq('user_id', viewingUserId);
         
         if (error) {
             container.innerHTML = '<div style="color:red; padding:20px;">无法加载名单。</div>';
             return;
         }
 
-        // 2. 状态配置
+        // 2. 状态配置 (权重越小，排在越前面)
         const statusConfig = {
             '在职': { color: '#2ecc71', weight: 1 },
             '休假': { color: '#3498db', weight: 2 },
@@ -820,21 +820,28 @@
 
         const totalSalary = data.filter(e => e.status === '在职').reduce((sum, e) => sum + e.salary, 0);
 
-        // 3. 分离并排序
-        // 排序逻辑：核心队友置顶 -> 星级(高到低) -> 薪资(高到低)
+        // 3. 核心排序逻辑
         const sortLogic = (a, b) => {
-            // 先比星级 (默认3星防止null报错)
+            // 第一优先级：状态权重 (Ascending: 1 -> 5)
+            // 在职(1) 会排在 离职(4) 前面
+            const weightA = statusConfig[a.status]?.weight || 99;
+            const weightB = statusConfig[b.status]?.weight || 99;
+            if (weightA !== weightB) return weightA - weightB;
+
+            // 第二优先级：星级 (Descending: 6 -> 1)
             const rA = a.rarity || 3;
             const rB = b.rarity || 3;
             if (rA !== rB) return rB - rA; 
-            // 再比薪资
+
+            // 第三优先级：薪资 (Descending: High -> Low)
             return b.salary - a.salary;
         };
 
+        // 4. 分离并应用排序
         const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
         const hirelings = data.filter(e => e.role !== '核心队友').sort(sortLogic);
 
-        // 4. 渲染逻辑 (核心修改：动态 Class)
+        // 5. 渲染逻辑
         const renderGrid = (list) => {
             if (list.length === 0) return '<div style="color:#999; padding:20px; grid-column:1/-1;">(空)</div>';
             return list.map(e => {
@@ -843,12 +850,9 @@
                 const canFire = !isCore && e.status === '在职';
                 const hasSheet = e.stat_block ? true : false;
                 
-                // 获取稀有度 (默认为 3)
                 const rarity = e.rarity || 3;
-                // 生成星星字符串
                 const stars = '★'.repeat(rarity);
-                // 决定边框样式类
-                const borderClass = `rarity-border-${rarity}`;
+                const borderClass = `rarity-border-${rarity}`; // 引用 CSS
 
                 return `
                 <div class="card emp-card-content ${borderClass}" style="position:relative;">
@@ -881,9 +885,9 @@
             <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:30px; text-align:center; border-radius:8px;">
                 <h3 style="margin:0; color:#d35400;">📉 每月薪资总支出: ${totalSalary} GP</h3>
             </div>
-            <div class="section-title">⚔️ 核心队友</div>
+            <div class="section-title">⚔️ 核心队友 (按状态 > 星级排序)</div>
             <div class="shop-grid" style="margin-bottom:40px;">${renderGrid(coreMembers)}</div>
-            <div class="section-title">🛡️ 雇员 / 随从 (按星级排序)</div>
+            <div class="section-title">🛡️ 雇员 / 随从 (按状态 > 星级排序)</div>
             <div class="shop-grid">${renderGrid(hirelings)}</div>
         `;
     }
