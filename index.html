@@ -143,41 +143,109 @@
             color: #822000; margin-top: 20px; margin-bottom: 5px; font-variant: small-caps;
         }
 
-        /* --- 抽卡系统样式 --- */
-.gacha-container {
-    text-align: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #2c3e50 0%, #000 100%);
-    color: #fff;
-    border-radius: 8px;
-    min-height: 500px;
-}
+/* --- Arknights 风格寻访界面 --- */
+    .ak-gacha-panel {
+        position: relative;
+        height: 500px;
+        background: #1a1a1a;
+        overflow: hidden;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        color: #fff;
+        border: 1px solid #333;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    
+    /* 背景装饰：斜条纹 */
+    .ak-bg-pattern {
+        position: absolute; top:0; left:0; width:120%; height:100%;
+        background: repeating-linear-gradient(45deg, #222, #222 10px, #1a1a1a 10px, #1a1a1a 20px);
+        opacity: 0.5; z-index: 0;
+    }
+    
+    /* 左侧：标题与信息 */
+    .ak-info-layer {
+        position: absolute; top: 30px; left: 30px; z-index: 2;
+        display: flex; flex-direction: column; gap: 5px;
+    }
+    .ak-banner-title {
+        font-size: 2.5em; font-weight: 900; letter-spacing: -1px; line-height: 1;
+        background: linear-gradient(to right, #fff, #999); 
+        -webkit-background-clip: text; 
+        background-clip: text;         
+        
+        color: transparent;
+        text-transform: uppercase; font-style: italic;
+    }
+    .ak-banner-subtitle {
+        font-size: 1.2em; font-weight: bold; color: #f1c40f; 
+        background: #000; display: inline-block; padding: 2px 8px; transform: skewX(-15deg);
+    }
+    
+    /* 中间：立绘展示区 */
+    .ak-char-stand {
+        position: absolute; right: -50px; bottom: 0; height: 110%; 
+        width: 60%; object-fit: cover; z-index: 1;
+        mask-image: linear-gradient(to left, rgba(0,0,0,1) 50%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 50%, transparent 100%);
+        transition: transform 0.3s;
+    }
+    .ak-char-stand:hover { transform: scale(1.02); }
 
-/* 干员包 */
-.bag-container {
-    width: 200px;
-    height: 300px;
-    background: #333;
-    margin: 50px auto;
-    position: relative;
-    cursor: pointer;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    transition: transform 0.1s;
-    border: 2px solid #555;
-    overflow: hidden;
-}
-.bag-container:hover { transform: scale(1.05); }
-.bag-container.shaking { animation: bagShake 0.5s infinite; }
-.bag-zipper {
-    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-    width: 20px; height: 100%; background: #111; z-index: 2;
-    transition: height 0.5s ease-in;
-}
-.bag-light {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    opacity: 0; transition: opacity 0.5s; z-index: 1;
-}
+    /* 右上角：资源 */
+    .ak-resources {
+        position: absolute; top: 20px; right: 20px; z-index: 3;
+        display: flex; gap: 15px; align-items: center;
+    }
+    .ak-res-box {
+        background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px;
+        border: 1px solid #444; font-size: 0.9em; display: flex; align-items: center; gap: 5px;
+    }
+
+    /* 底部：控制栏 */
+    .ak-bottom-bar {
+        position: absolute; bottom: 0; left: 0; width: 100%; height: 90px;
+        background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+        z-index: 5; display: flex; align-items: center; justify-content: space-between;
+        padding: 0 40px; box-sizing: border-box;
+    }
+
+    /* 抽卡大按钮 */
+    .ak-pull-btn {
+        width: 220px; height: 60px;
+        background: #f1c40f; color: #000;
+        border: none; transform: skewX(-15deg);
+        font-weight: 900; font-size: 1.4em; letter-spacing: 1px;
+        cursor: pointer; position: relative; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+        transition: 0.2s;
+    }
+    .ak-pull-btn:hover { background: #fff; box-shadow: 0 0 25px rgba(255,255,255,0.5); }
+    .ak-pull-btn:active { transform: skewX(-15deg) scale(0.95); }
+    .ak-pull-btn span { transform: skewX(15deg); } /* 文字反斜回来 */
+
+    /* 详情与商店按钮 */
+    .ak-sub-btn {
+        background: transparent; color: #fff; border: 1px solid #fff;
+        padding: 8px 15px; cursor: pointer; font-size: 0.9em;
+        transition: 0.2s; text-transform: uppercase;
+    }
+    .ak-sub-btn:hover { background: #fff; color: #000; }
+
+    /* 抽卡结果弹窗 (全屏遮罩) */
+    .ak-result-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.95); z-index: 9000;
+        display: none; align-items: center; justify-content: center; flex-direction: column;
+        animation: fadeIn 0.3s;
+    }
+    .ak-light-beam {
+        width: 10px; height: 0; background: #fff;
+        box-shadow: 0 0 50px 20px #fff;
+        animation: beamExpand 0.5s forwards;
+    }
+    @keyframes beamExpand { to { height: 100vh; width: 100%; opacity: 0; } }
+
 
 @keyframes bagShake {
     0% { transform: rotate(0deg); }
@@ -375,27 +443,69 @@
         <button onclick="loadGachaHistory()" class="tab-btn" style="color:#3498db;">📜 历史记录</button>
     </div>
 
-    <div id="gacha-operator-panel" class="gacha-container">
-        <h2 style="margin:0; color:#fff;">标准寻访</h2>
-        <div style="color:#aaa; font-size:0.9em; margin-bottom:20px;">六星概率: 0.8% (含动态保底) | 600 GP/次</div>
+    <div id="gacha-operator-panel" class="ak-gacha-panel">
+        <div class="ak-bg-pattern"></div>
         
-        <div id="gacha-bag" class="bag-container" onclick="pullOperator()">
-            <div class="bag-zipper" id="bag-zipper"></div>
-            <div class="bag-light" id="bag-light"></div>
-            <div style="position:absolute; bottom:20px; width:100%; text-align:center; color:#666; font-weight:bold;">TAP TO OPEN</div>
-        </div>
-
-        <div id="op-result" class="gacha-result">
-            <div id="op-card-bg" style="width:200px; height:300px; margin:0 auto; border-radius:8px; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#333; background:#fff;">
-                <div id="op-rarity-stars" style="color:#f1c40f; font-size:1.5em; margin-bottom:10px;">★★★★★★</div>
-                <img id="op-avatar" src="" style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; border:2px solid #333;">
-                <h3 id="op-name" style="margin:0;">干员名</h3>
-                <p id="op-class" style="margin:5px 0; font-size:0.8em; color:#666;">职业</p>
+        <div class="ak-info-layer">
+            <div class="ak-banner-title">OPERATOR<br>RECRUITMENT</div>
+            <div class="ak-banner-subtitle">干员寻访 / 标准池</div>
+            <div style="margin-top:20px; font-size:0.8em; color:#aaa; max-width: 200px;">
+                <div style="margin-bottom:5px;">★6 概率: 2% (含动态保底)</div>
+                <div style="margin-bottom:5px;">★5 概率: 8%</div>
+                <div>重复获取将自动转化为凭证</div>
             </div>
-            <button onclick="resetBag()" style="margin-top:20px; padding:10px 30px; background:#fff; border:none; border-radius:20px; font-weight:bold;">确认</button>
+            <div style="margin-top:20px; font-size:0.8em; color:#ccc;">
+                 当前垫刀: <span id="pity-count-display" style="color:#f1c40f; font-weight:bold;">--</span> / 80
+            </div>
         </div>
 
-        <div class="pity-counter">当前垫刀: <span id="pity-count-display">--</span></div>
+        <img id="gacha-stand-img" src="https://via.placeholder.com/400x600?text=UP+Operator" class="ak-char-stand">
+
+        <div class="ak-resources">
+            <div class="ak-res-box">
+                <span style="color:#f1c40f;">🎫</span>
+                <span id="cert-count-display">0</span>
+            </div>
+            <div class="ak-res-box">
+                <span style="color:#f1c40f;">💰</span>
+                <span id="gacha-gold-display">0</span>
+            </div>
+        </div>
+
+        <div class="ak-bottom-bar">
+            <div style="display:flex; gap:10px;">
+                <button class="ak-sub-btn" onclick="openGachaRates()">概率详情</button>
+                <button class="ak-sub-btn" onclick="openCertShop()">凭证商店</button>
+            </div>
+            
+            <div style="display:flex; gap:20px; align-items:center;">
+                <div style="text-align:right; font-size:0.8em; color:#bbb;">
+                    消耗 <span style="color:#f1c40f; font-weight:bold; font-size:1.2em;">600</span> GP<br>
+                    寻访一次
+                </div>
+                <button class="ak-pull-btn" onclick="pullOperator()">
+                    <span>寻访一次</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gacha-result-overlay" class="ak-result-overlay" onclick="closeGachaResult()">
+        <div id="gacha-beam" class="ak-light-beam"></div>
+        
+        <div id="gacha-card-container" style="text-align:center; transform: scale(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div id="res-stars" style="color:#f1c40f; font-size:2em; letter-spacing:5px; margin-bottom:10px; text-shadow:0 0 10px orange;">★★★★★★</div>
+            
+            <img id="res-img" src="" style="height:400px; border: 4px solid #fff; box-shadow: 0 0 50px rgba(255,255,255,0.2);">
+            
+            <div style="background:#000; color:#fff; display:inline-block; padding:5px 30px; font-size:2em; font-weight:bold; transform:skewX(-15deg); margin-top:-20px; position:relative; border:2px solid #fff;">
+                <span id="res-name" style="display:block; transform:skewX(15deg);">NAME</span>
+            </div>
+
+            <div id="res-type-tag" style="margin-top:20px; font-size:1.2em; color:#fff; font-weight:bold;"></div>
+        </div>
+        
+        <div style="margin-top:50px; color:#aaa; font-size:0.8em; animation:fadeIn 2s;">点击任意处关闭</div>
     </div>
 
     <div id="gacha-weapon-panel" class="gacha-container" style="display:none; background:linear-gradient(135deg, #2c3e50 0%, #000 100%);">
@@ -2879,7 +2989,10 @@ async function getRobustIP() {
         document.getElementById('btn-mode-op').classList.toggle('active', mode === 'operator');
         document.getElementById('btn-mode-wp').classList.toggle('active', mode === 'weapon');
         
-        if (mode === 'operator') loadPityCount();
+        if (mode === 'operator'){
+            loadPityCount();
+            initGachaPanel();
+        } 
     }
 
     // --- 历史记录功能 ---
@@ -2943,64 +3056,179 @@ async function getRobustIP() {
         if (data) document.getElementById('pity-count-display').innerText = data.pity_count || 0;
     }
 
-    async function pullOperator() {
-        const bag = document.getElementById('gacha-bag');
-        if (bag.style.display === 'none') return; 
-        if (!confirm('消耗 600 GP 寻访一次？')) return;
+    // --- 新版寻访系统 JS ---
 
-        bag.classList.add('shaking');
-        try {
-            const { data, error } = await supabaseClient.rpc('rpc_gacha_pull', { p_user_id: viewingUserId });
-            
-            if (error || (data && data.status === 'error')) {
-                bag.classList.remove('shaking');
-                return alert(error ? error.message : data.msg);
-            }
+    // 初始化加载
+    async function initGachaPanel() {
+        await Promise.all([loadPityCount(), loadCerts(), loadUpCharImage()]);
+        // 同步一下上面的金币显示
+        document.getElementById('gacha-gold-display').innerText = document.getElementById('gold-amount').innerText;
+    }
 
-            setTimeout(() => {
-                bag.classList.remove('shaking');
-                document.getElementById('bag-zipper').style.height = '0%';
-                
-                let lightColor = '#fff'; 
-                if (data.rarity === 6) lightColor = '#ff4e50'; 
-                else if (data.rarity === 5) lightColor = '#f1c40f'; 
-                else if (data.rarity === 4) lightColor = '#9b59b6'; 
-                else if (data.rarity === 3) lightColor = '#3498db'; 
+    async function loadCerts() {
+        const { data } = await supabaseClient.from('profiles').select('gacha_certs').eq('id', viewingUserId).single();
+        if (data) document.getElementById('cert-count-display').innerText = data.gacha_certs || 0;
+    }
 
-                const light = document.getElementById('bag-light');
-                light.style.background = `radial-gradient(circle, ${lightColor} 0%, transparent 70%)`;
-                light.style.opacity = 1;
-
-                setTimeout(() => {
-                    showOpResult(data);
-                    loadGold(); loadPityCount();
-                }, 800);
-            }, 1000);
-        } catch (e) {
-            bag.classList.remove('shaking'); alert('网络错误');
+    // 加载封面立绘 (找一个6星的头像)
+    async function loadUpCharImage() {
+        // 尝试找 rarity=6 的第一个
+        const { data } = await supabaseClient.from('gacha_pool').select('avatar_url').eq('rarity', 6).limit(1).maybeSingle();
+        if (data && data.avatar_url) {
+            document.getElementById('gacha-stand-img').src = data.avatar_url;
         }
     }
 
-    function showOpResult(data) {
-        document.getElementById('gacha-bag').style.display = 'none';
-        const resDiv = document.getElementById('op-result');
-        resDiv.style.display = 'block';
-        const cardBg = document.getElementById('op-card-bg');
-        cardBg.className = `rarity-${data.rarity}`;
+    // 抽卡核心逻辑
+    async function pullOperator() {
+        if (!confirm('消耗 600 GP 进行一次干员寻访？')) return;
+
+        const overlay = document.getElementById('gacha-result-overlay');
+        const beam = document.getElementById('gacha-beam');
+        const card = document.getElementById('gacha-card-container');
         
-        document.getElementById('op-name').innerText = data.name;
-        document.getElementById('op-class').innerText = data.role;
-        document.getElementById('op-avatar').src = data.avatar_url || 'https://via.placeholder.com/80';
-        document.getElementById('op-rarity-stars').innerText = '★'.repeat(data.rarity);
+        // 1. 开始动画
+        overlay.style.display = 'flex';
+        card.style.transform = 'scale(0)'; // 先隐藏卡片
+        beam.style.display = 'block'; // 播放光束动画
+        
+        try {
+            // 2. 后端请求
+            const { data, error } = await supabaseClient.rpc('rpc_gacha_pull', { p_user_id: viewingUserId });
+            
+            if (error || (data && data.status === 'error')) {
+                overlay.style.display = 'none';
+                return alert(error ? error.message : data.msg);
+            }
+
+            // 3. 确定光色
+            let color = '#fff'; // 白
+            if (data.rarity === 6) color = '#ff4e50'; // 红/彩
+            else if (data.rarity === 5) color = '#f1c40f'; // 金
+            else if (data.rarity === 4) color = '#9b59b6'; // 紫
+
+            // 修改光束颜色
+            beam.style.boxShadow = `0 0 50px 20px ${color}`;
+            beam.style.background = color;
+
+            // 4. 显示结果 (延迟一下等光束闪完)
+            setTimeout(() => {
+                beam.style.display = 'none'; // 隐藏光束
+                
+                // 填充数据
+                document.getElementById('res-name').innerText = data.name;
+                document.getElementById('res-img').src = data.avatar_url || 'https://via.placeholder.com/300';
+                document.getElementById('res-stars').innerText = '★'.repeat(data.rarity);
+                document.getElementById('res-stars').style.color = color;
+                
+                const typeTag = document.getElementById('res-type-tag');
+                if (data.status === 'duplicate') {
+                    typeTag.innerHTML = `已拥有<br><span style="font-size:0.8em; color:#aaa;">转化为高级凭证 x${data.cert_gain}</span>`;
+                } else {
+                    typeTag.innerHTML = `<span style="color:#f1c40f">NEW!</span><br><span style="font-size:0.8em; color:#aaa;">新干员入职</span>`;
+                }
+
+                // 卡片弹出动画
+                card.style.transform = 'scale(1)';
+                
+                // 刷新数据
+                loadGold();
+                loadCerts();
+                loadPityCount();
+                
+            }, 600); // 0.6秒后出卡
+
+        } catch (e) {
+            console.error(e);
+            overlay.style.display = 'none';
+            alert('通讯错误');
+        }
     }
+
+    function closeGachaResult() {
+        document.getElementById('gacha-result-overlay').style.display = 'none';
+    }
+
+// 详情弹窗
+    function openGachaRates() {
+        alert(
+            "【标准寻访概率公示】\n\n" +
+            "★★★★★★ (6星): 0.8%\n" +
+            "★★★★★ (5星): 3.2%\n" +
+            "★★★★ (4星): 10%\n" +  
+            "★★★ (3星): 40%\n" +
+            "★★ (2星): 30%\n" +
+            "★ (1星): 16%\n\n" +   
+            "【动态保底机制】\n" +
+            "若连续 65 次寻访未获得 6 星干员，\n" +
+            "从第 66 次开始，获得 6 星的概率每次提升 5%。\n" +
+            "第 80 次寻访必定获得 6 星干员。\n\n" +
+            "【重复获取】\n" +
+            "重复获得干员时，不再重复入职，\n" +
+            "而是自动转化为[高级凭证]用于兑换。"
+        );
+    }
+
+    // 凭证商店
+    async function openCertShop() {
+        const modal = document.getElementById('member-modal'); // 复用现有的弹窗结构
+        const list = document.getElementById('member-select-list');
+        const title = modal.querySelector('h3');
+        const desc = modal.querySelector('p');
+        
+        title.innerText = "凭证兑换处";
+        desc.innerText = "消耗 300 高级凭证可定点招聘一名六星干员";
+        list.innerHTML = "正在拉取花名册...";
+        modal.style.display = 'flex';
+
+        // 查所有6星
+        const { data: chars } = await supabaseClient
+            .from('gacha_pool')
+            .select('*')
+            .eq('rarity', 6);
+        
+        if (!chars) {
+            list.innerHTML = "无数据";
+            return;
+        }
+
+        list.innerHTML = chars.map(c => `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img src="${c.avatar_url}" style="width:40px; height:40px; border-radius:4px; object-fit:cover;">
+                    <div>
+                        <div style="font-weight:bold; color:#e67e22;">${c.name}</div>
+                        <div style="font-size:0.8em; color:#aaa;">${c.role}</div>
+                    </div>
+                </div>
+                <button onclick="exchangeSixStar(${c.id}, '${c.name}')" style="background:#333; color:#f1c40f; border:1px solid #f1c40f; padding:5px 10px; cursor:pointer;">
+                    300 🎫 兑换
+                </button>
+            </div>
+        `).join('');
+    }
+
+    async function exchangeSixStar(poolId, name) {
+        if (!confirm(`确认消耗 300 凭证兑换 [${name}] 吗？`)) return;
+        
+        showLoading();
+        const { data, error } = await supabaseClient.rpc('rpc_exchange_six_star', {
+            p_user_id: viewingUserId,
+            p_pool_id: poolId
+        });
+        
+        hideLoading();
+        if (error || (data && data.status === 'error')) {
+            alert(error ? error.message : data.msg);
+        } else {
+            alert(`兑换成功！${name} 已加入队伍。`);
+            loadEmployees();
+            loadCerts();
+            closeModal('member-modal');
+        }
+    }
+
     
-    function resetBag() {
-        document.getElementById('op-result').style.display = 'none';
-        const bag = document.getElementById('gacha-bag');
-        bag.style.display = 'block';
-        document.getElementById('bag-zipper').style.height = '100%';
-        document.getElementById('bag-light').style.opacity = 0;
-    }
 
     // --- 军械库转盘逻辑---
 
