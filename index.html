@@ -359,7 +359,7 @@
     
     <div style="display:flex; justify-content:center; gap:20px; margin-bottom:20px;">
         <button onclick="showGachaMode('operator')" class="tab-btn active" id="btn-mode-op">干员寻访</button>
-        <button onclick="showGachaMode('weapon')" class="tab-btn" id="btn-mode-wp">军械库定轨</button>
+        <button onclick="showGachaMode('weapon')" class="tab-btn" id="btn-mode-wp">武器寻访</button>
     </div>
 
     <div id="gacha-operator-panel" class="gacha-container">
@@ -391,7 +391,7 @@
     </div>
 
     <div id="gacha-weapon-panel" class="gacha-container" style="display:none; background:linear-gradient(135deg, #4b1a1a 0%, #000 100%);">
-        <h2 style="margin:0; color:#e74c3c;">定轨军械库</h2>
+        <h2 style="margin:0; color:#e74c3c;">武器寻访</h2>
         
         <div id="wheel-setup" style="margin:20px 0;">
             <input type="text" id="wheel-search" placeholder="搜索图鉴中的物品..." style="padding:8px; width:200px;">
@@ -2990,18 +2990,30 @@ async function getRobustIP() {
     async function spinWheel() {
         const btn = document.getElementById('btn-spin');
         btn.disabled = true;
+        
+
+        
+
+        // 【Debug】确保 viewingUserId 存在
+        if (!viewingUserId) {
+            alert("登录状态异常，请刷新页面");
+            btn.disabled = false;
+            return;
+        }
 
         try {
             const { data, error } = await supabaseClient.rpc('rpc_spin_wheel', {
                 p_user_id: viewingUserId,
                 p_item_name: currentWheelTarget.name,
-                p_base_price: currentWheelPrice
+                p_base_price: parseInt(currentWheelPrice) 
             });
 
-            if (error) throw error;
-            if (data.status === 'error') {
+            // 无论 HTTP 状态码是多少，如果 data.status 是 error，就弹窗显示真实原因
+            if (error || (data && data.status === 'error')) {
+                const msg = error ? error.message : data.msg;
+                alert('操作失败: ' + msg);
                 btn.disabled = false;
-                return alert(data.msg);
+                return;
             }
 
             // 旋转动画
