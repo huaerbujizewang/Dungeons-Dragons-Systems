@@ -2941,15 +2941,20 @@ async function getRobustIP() {
 
     async function refreshWheelState() {
         // 查当前进度
-        const { data } = await supabaseClient.from('wheel_sessions')
-            .select('steps_taken, is_finished')
-            .eq('user_id', viewingUserId)
-            .eq('target_item_name', currentWheelTarget.name)
-            .eq('is_finished', false)
-            .single();
+        const { data, error } = await supabaseClient.from('wheel_sessions') 
+        .select('steps_taken, is_finished')
+        .eq('user_id', viewingUserId)
+        .eq('target_item_name', currentWheelTarget.name)
+        .eq('is_finished', false)
+        .maybeSingle(); 
+
+        // 如果出错（排除掉“查不到数据”的情况），打印日志
+         if (error && error.code !== 'PGRST116') { // 
+            console.error("查询转盘状态失败:", error);
+        }
 
         const step = data ? data.steps_taken : 0;
-        const prices = [0.01, 0.03, 0.06, 0.10, 0.15, 0.25, 0.40, 0.60]; // 对应SQL中的逻辑
+        const prices = [0.10, 0.20, 0.30, 0.50, 0.75, 1.00, 1.50, 2.50]; // 对应SQL中的逻辑
         
         if (step >= 8 || (data && data.is_finished)) {
             document.getElementById('wheel-stage').innerHTML = '<div style="padding:20px;">该物品已获得！</div>';
