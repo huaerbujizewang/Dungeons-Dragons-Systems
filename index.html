@@ -434,21 +434,43 @@
     }
 
     /* --- 模块：战斗属性 --- */
-    /* 顶栏 (HP/AC) */
     .combat-top-bar {
         display: flex; gap: 15px; margin-bottom: 25px;
     }
     .combat-stat-box {
         flex: 1; background: #222; border-left: 4px solid #555;
-        padding: 10px; position: relative;
+        padding: 8px 12px; 
+        display: flex; flex-direction: column; justify-content: space-between;
+        min-height: 80px; 
+        position: relative;
     }
-    .combat-stat-box.hp { border-color: #e74c3c; }
-    .combat-stat-box.ac { border-color: #3498db; }
-    .combat-stat-box.spd { border-color: #f1c40f; }
-    .stat-label-top { font-size: 0.7em; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
-    .stat-val-top { font-size: 1.8em; font-weight: bold; color: #fff; font-family: 'Arial Black', sans-serif; }
-    .stat-note-top { font-size: 0.8em; color: #666; position: absolute; top: 12px; right: 10px; }
-
+    .combat-stat-box.hp { border-color: #e74c3c; background: linear-gradient(to bottom, #2c2c2c, #222); }
+    .combat-stat-box.ac { border-color: #3498db; background: linear-gradient(to bottom, #2c2c2c, #222); }
+    .combat-stat-box.spd { border-color: #f1c40f; background: linear-gradient(to bottom, #2c2c2c, #222); }
+    
+    .stat-label-top { 
+        font-size: 0.7em; color: #aaa; text-transform: uppercase; letter-spacing: 1px; 
+        align-self: flex-start;
+    }
+    
+    .stat-val-top { 
+        font-size: 2.2em; font-weight: 900; color: #fff; 
+        font-family: 'Arial Black', sans-serif;
+        line-height: 1.1; margin-top: 2px;
+    }
+    
+    /* 核心修改：公式显示在右下角，不遮挡大数字 */
+    .stat-note-top { 
+        font-size: 0.75em; color: #666; 
+        align-self: flex-end; /* 靠右对齐 */
+        font-family: 'Consolas', monospace; /* 等宽字体更有数据感 */
+        margin-top: auto; /* 推到底部 */
+        text-align: right;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     /* 六维方块 */
     .ability-grid {
         display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 25px;
@@ -849,6 +871,10 @@
                         <div class="info-item">
                             <span class="info-label">【种族】</span>
                             <span id="info-race" class="info-val">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">【体型】</span>
+                            <span id="info-size" class="info-val">--</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">【性别】</span>
