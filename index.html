@@ -499,6 +499,7 @@
     }
     .trait-card.action { border-left-color: #e74c3c; } /* 动作是红色 */
     .trait-card.bonus { border-left-color: #e67e22; } /* 附赠是橙色 */
+    .trait-card.reaction { border-left-color: #9b59b6; }/* 反应是紫色 */
     .trait-title { font-weight: bold; color: #fff; margin-bottom: 4px; font-size: 1.05em; }
     .trait-desc { font-size: 0.9em; color: #aaa; line-height: 1.6; }
     .trait-desc b { color: #ddd; } /* 小标题加亮 */
@@ -4296,6 +4297,7 @@ async function getRobustIP() {
         renderCards(data.traits, ''); // 被动特性
         renderCards(data.actions, 'action'); // 动作 (红色)
         renderCards(data.bonus_actions, 'bonus'); // 附赠 (橙色)
+        renderCards(data.reactions, 'reaction');//反应（紫色）
 
         // 法术列表
         if (data.spells && data.spells.list) {
