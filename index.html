@@ -847,7 +847,7 @@
                             <span id="info-name" class="info-val">--</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">【种族/类型】</span>
+                            <span class="info-label">【种族】</span>
                             <span id="info-race" class="info-val">--</span>
                         </div>
                         <div class="info-item">
@@ -867,7 +867,7 @@
                             <span id="info-birthday" class="info-val">--</span>
                         </div>
                         <div class="info-item" style="grid-column: 1 / -1;">
-                            <span class="info-label">【专长/标签】</span>
+                            <span class="info-label">【专长】</span>
                             <div id="info-tags" style="margin-top:5px;"></div>
                         </div>
                     </div>
@@ -1234,6 +1234,29 @@
         
         container.className = 'team-grid';
     }
+    // --- 图片预加载系统 ---
+    const preloadedCache = new Set(); 
+
+    function preloadImages(urlList) {
+        if (!urlList || urlList.length === 0) return;
+
+        // 使用 requestIdleCallback 或 setTimeout 来避免阻塞主界面渲染
+        const runPreload = () => {
+            urlList.forEach(url => {
+                if (!url || preloadedCache.has(url)) return; // 已经加载过就不管了
+                
+                const img = new Image();
+                img.src = url;
+                preloadedCache.add(url);
+            });
+        };
+
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(runPreload);
+        } else {
+            setTimeout(runPreload, 1000); // 延迟1秒执行，优先渲染界面
+        }
+    }
 
     // --- 雇员系统  ---
     async function loadEmployees() {
@@ -1250,6 +1273,12 @@
             container.innerHTML = '<div style="color:red; padding:20px;">无法加载名单。</div>';
             return;
         }
+        // --- 触发静默预加载 ---
+        const standUrls = data
+            .map(e => e.stand_url)
+            .filter(url => url && url.length > 0);
+        
+        preloadImages(standUrls);
 
         // 2. 状态配置 (权重越小，排在越前面)
         const statusConfig = {
