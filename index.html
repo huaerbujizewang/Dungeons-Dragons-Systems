@@ -350,6 +350,148 @@
     .rarity-border-2 { border-top: 5px solid #2ecc71; }
     /* 1星：灰 */
     .rarity-border-1 { border-top: 5px solid #95a5a6; }
+
+    /* --- Arknights 风格：干员档案 (Dossier) --- */
+    #dossier-modal .modal-box {
+        width: 900px; max-width: 95%; height: 600px;
+        background: #1a1a1a; color: #ecf0f1;
+        padding: 0; overflow: hidden; display: flex;
+        border: 1px solid #444; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    /* 左侧立绘区 */
+    .dossier-left {
+        width: 350px; position: relative; background: #111;
+        overflow: hidden; flex-shrink: 0;
+        border-right: 1px solid #333;
+    }
+    .dossier-stand-img {
+        width: 100%; height: 100%; object-fit: cover;
+        mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+        transition: transform 0.3s;
+    }
+    .dossier-stand-img:hover { transform: scale(1.02); }
+    .dossier-bg-blur {
+        position: absolute; top:0; left:0; width:100%; height:100%;
+        background-size: cover; background-position: center;
+        filter: blur(20px) brightness(0.4); z-index: 0;
+    }
+    .dossier-watermark {
+        position: absolute; bottom: -20px; left: -20px;
+        font-size: 8em; font-weight: 900; color: rgba(255,255,255,0.03);
+        z-index: 1; pointer-events: none; white-space: nowrap;
+        font-family: Impact, sans-serif;
+    }
+
+    /* 右侧信息区 */
+    .dossier-right {
+        flex: 1; display: flex; flex-direction: column;
+        background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMWExYTFhIi8+CjxwYXRoIGQ9Ik0wIDBoNHYxSDB6IiBmaWxsPSIjMjIyIi8+Cjwvc3ZnPg==');
+    }
+
+    /* 头部 */
+    .dossier-header {
+        padding: 20px 30px; border-bottom: 2px solid #f1c40f;
+        background: linear-gradient(to right, rgba(241, 196, 15, 0.1), transparent);
+        display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .dossier-name { font-size: 2.5em; font-weight: 900; line-height: 1; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+    .dossier-meta { color: #f1c40f; font-weight: bold; font-size: 0.9em; background: #000; padding: 2px 8px; display: inline-block; transform: skewX(-15deg); margin-top: 5px; }
+    .dossier-meta span { display: block; transform: skewX(15deg); }
+
+    /* 标签页导航 */
+    .dossier-tabs {
+        display: flex; background: #000; padding-left: 20px; border-bottom: 1px solid #333;
+    }
+    .dossier-tab-btn {
+        padding: 12px 25px; background: transparent; color: #666;
+        border: none; cursor: pointer; font-weight: bold; font-size: 0.9em;
+        transition: 0.2s; border-bottom: 3px solid transparent;
+    }
+    .dossier-tab-btn:hover { color: #fff; background: #222; }
+    .dossier-tab-btn.active { color: #f1c40f; border-bottom-color: #f1c40f; background: #1a1a1a; }
+
+    /* 内容滚动区 */
+    .dossier-content {
+        flex: 1; overflow-y: auto; padding: 25px 30px; position: relative;
+    }
+    .dossier-pane { display: none; animation: fadeIn 0.3s; }
+    .dossier-pane.active { display: block; }
+
+    /* --- 模块：基础档案 --- */
+    .info-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    }
+    .info-item {
+        border-bottom: 1px solid #333; padding-bottom: 5px;
+    }
+    .info-label { font-size: 0.8em; color: #7f8c8d; display: block; margin-bottom: 2px; }
+    .info-val { font-size: 1.1em; color: #fff; font-weight: 500; }
+    .tag-box {
+        display: inline-block; background: #333; color: #ccc; 
+        font-size: 0.75em; padding: 2px 6px; border-radius: 2px; margin-right: 5px;
+    }
+
+    /* --- 模块：战斗属性 --- */
+    /* 顶栏 (HP/AC) */
+    .combat-top-bar {
+        display: flex; gap: 15px; margin-bottom: 25px;
+    }
+    .combat-stat-box {
+        flex: 1; background: #222; border-left: 4px solid #555;
+        padding: 10px; position: relative;
+    }
+    .combat-stat-box.hp { border-color: #e74c3c; }
+    .combat-stat-box.ac { border-color: #3498db; }
+    .combat-stat-box.spd { border-color: #f1c40f; }
+    .stat-label-top { font-size: 0.7em; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-val-top { font-size: 1.8em; font-weight: bold; color: #fff; font-family: 'Arial Black', sans-serif; }
+    .stat-note-top { font-size: 0.8em; color: #666; position: absolute; top: 12px; right: 10px; }
+
+    /* 六维方块 */
+    .ability-grid {
+        display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 25px;
+    }
+    .ability-box {
+        background: #2c3e50; color: #fff; text-align: center; padding: 8px 0;
+        border-radius: 2px; position: relative;
+    }
+    .ability-title { font-size: 0.7em; color: #95a5a6; display: block; margin-bottom: 2px; }
+    .ability-score { font-size: 0.9em; color: #bdc3c7; }
+    .ability-mod { font-size: 1.4em; font-weight: bold; color: #fff; display: block; margin-top: -2px; }
+
+    /* 列表属性 */
+    .props-list {
+        font-size: 0.9em; color: #ccc; margin-bottom: 20px;
+        background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px;
+    }
+    .props-row { margin-bottom: 5px; display: flex; }
+    .props-key { color: #f39c12; width: 50px; flex-shrink: 0; font-weight: bold; }
+    .props-val { color: #ecf0f1; }
+
+    /* 特性/动作卡片 */
+    .trait-card {
+        margin-bottom: 12px; background: #252525; padding: 10px 15px;
+        border-left: 3px solid #666;
+    }
+    .trait-card.action { border-left-color: #e74c3c; } /* 动作是红色 */
+    .trait-card.bonus { border-left-color: #e67e22; } /* 附赠是橙色 */
+    .trait-title { font-weight: bold; color: #fff; margin-bottom: 4px; font-size: 1.05em; }
+    .trait-desc { font-size: 0.9em; color: #aaa; line-height: 1.6; }
+    .trait-desc b { color: #ddd; } /* 小标题加亮 */
+
+    /* 施法列表 */
+    .spell-group { margin-bottom: 10px; font-size: 0.9em; }
+    .spell-level { color: #3498db; font-weight: bold; display: inline-block; width: 120px; }
+    .spell-items { color: #ccc; }
+
+    /* --- 模块：客观履历 --- */
+    .resume-text {
+        font-family: 'Courier New', Courier, monospace;
+        line-height: 1.8; color: #ccc; font-size: 0.95em;
+        white-space: pre-wrap; /* 保留换行 */
+    }
         
     </style>
 </head>
@@ -669,6 +811,99 @@
         <button onclick="closeModal('sheet-modal')" style="flex-shrink: 0; width:100%; background:#333; color:#fff; border:none; padding:15px; font-weight:bold; border-radius: 0 0 8px 8px; cursor:pointer; font-size: 1.1em;">
             关闭面板
         </button>
+    </div>
+</div>
+
+<div id="dossier-modal" class="modal">
+    <div class="modal-box">
+        <div class="dossier-left">
+            <div id="dossier-bg-blur" class="dossier-bg-blur"></div>
+            <img id="dossier-stand-img" src="" class="dossier-stand-img">
+            <div id="dossier-watermark" class="dossier-watermark">ARCHIVE</div>
+        </div>
+
+        <div class="dossier-right">
+            <div class="dossier-header">
+                <div>
+                    <div id="dossier-name" class="dossier-name">NAME</div>
+                    <div class="dossier-meta"><span id="dossier-meta">RACE / CLASS</span></div>
+                </div>
+                <div id="dossier-stars" style="color:#f1c40f; font-size:1.2em; letter-spacing:2px;">★★★★★★</div>
+            </div>
+
+            <div class="dossier-tabs">
+                <button class="dossier-tab-btn active" onclick="switchDossierTab('basic')">基础档案</button>
+                <button class="dossier-tab-btn" onclick="switchDossierTab('combat')">战斗属性</button>
+                <button class="dossier-tab-btn" onclick="switchDossierTab('resume')">客观履历</button>
+                <button class="dossier-tab-btn" onclick="closeModal('dossier-modal')" style="margin-left:auto; color:#666;">✕ 关闭</button>
+            </div>
+
+            <div class="dossier-content">
+                
+                <div id="dossier-pane-basic" class="dossier-pane active">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">【姓名】</span>
+                            <span id="info-name" class="info-val">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">【种族/类型】</span>
+                            <span id="info-race" class="info-val">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">【性别】</span>
+                            <span id="info-gender" class="info-val">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">【出身】</span>
+                            <span id="info-origin" class="info-val">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">【身高】</span>
+                            <span id="info-height" class="info-val">--</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">【生日】</span>
+                            <span id="info-birthday" class="info-val">--</span>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <span class="info-label">【专长/标签】</span>
+                            <div id="info-tags" style="margin-top:5px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dossier-pane-combat" class="dossier-pane">
+                    <div class="combat-top-bar">
+                        <div class="combat-stat-box hp">
+                            <span class="stat-label-top">MAX HP</span>
+                            <div id="combat-hp" class="stat-val-top">0</div>
+                            <div id="combat-hp-note" class="stat-note-top"></div>
+                        </div>
+                        <div class="combat-stat-box ac">
+                            <span class="stat-label-top">ARMOR</span>
+                            <div id="combat-ac" class="stat-val-top">10</div>
+                            <div id="combat-ac-note" class="stat-note-top"></div>
+                        </div>
+                        <div class="combat-stat-box spd">
+                            <span class="stat-label-top">SPEED</span>
+                            <div id="combat-speed" class="stat-val-top">30</div>
+                        </div>
+                    </div>
+
+                    <div id="combat-stats-grid" class="ability-grid"></div>
+
+                    <div id="combat-props" class="props-list"></div>
+
+                    <div id="combat-abilities-list"></div>
+                </div>
+
+                <div id="dossier-pane-resume" class="dossier-pane">
+                    <div id="resume-content" class="resume-text"></div>
+                </div>
+
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1056,7 +1291,7 @@
                     </div>
 
                     <div style="margin-top:5px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
-                        ${hasSheet ? `<button onclick="openSheetModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 属性</button>` : ''}
+                        ${hasSheet ? `<button onclick="openDossierModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 档案</button>` : ''}
                         ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id})" style="width:auto; margin-top:0; display:none;">解雇</button>` : ''}
                     </div>
                 </div>`;
@@ -2935,6 +3170,28 @@ async function loadLoginLogs() {
                 }
             };
         }
+
+        if (!emp.stat_block) {
+    document.getElementById('adm-sheet-json').value = JSON.stringify({
+        name: "姓名",
+        meta: "种族/类型",
+        basic_info: {
+            gender: "男/女",
+            origin: "出身地",
+            height: "175cm",
+            birthday: "x月x日",
+            tags: ["标签1", "标签2"]
+        },
+        resume: "在此输入客观履历文本...",
+        hp: "100",
+        ac: "15",
+        speed: "30尺",
+        stats: { str:{score:10, mod:"+0"}, dex:{score:10, mod:"+0"}, con:{score:10, mod:"+0"}, int:{score:10, mod:"+0"}, wis:{score:10, mod:"+0"}, cha:{score:10, mod:"+0"} },
+        props: [],
+        traits: [],
+        actions: []
+    }, null, 2);
+}
     }
 
     async function saveCharacterSheet() {
@@ -3751,6 +4008,184 @@ async function getRobustIP() {
         } finally {
             hideLoading();
         }
+    }
+
+    // --- 档案系统逻辑 ---
+
+    // 1. 打开档案弹窗
+    async function openDossierModal(empId) {
+        // 先显示加载状态
+        const modal = document.getElementById('dossier-modal');
+        modal.style.display = 'flex';
+        
+        // 切回第一个 Tab
+        switchDossierTab('basic');
+        
+        // 获取雇员数据
+        const { data: emp, error } = await supabaseClient
+            .from('employees')
+            .select('*')
+            .eq('id', empId)
+            .single();
+
+        if (error || !emp) {
+            alert("无法读取档案数据");
+            modal.style.display = 'none';
+            return;
+        }
+
+        const data = emp.stat_block || {};
+        const basic = data.basic_info || {};
+
+        // --- 渲染左侧立绘 ---
+        // 优先 stand_url, 其次 avatar_url, 最后占位符
+        const standImg = emp.stand_url || emp.avatar_url || 'https://via.placeholder.com/300x500';
+        document.getElementById('dossier-stand-img').src = standImg;
+        // 背景模糊图 (用头像做模糊背景，色调更统一)
+        document.getElementById('dossier-bg-blur').style.backgroundImage = `url('${emp.avatar_url || standImg}')`;
+        // 水印 (职业或名字)
+        document.getElementById('dossier-watermark').innerText = (data.meta || 'ARCHIVE').split(' ')[0].toUpperCase();
+
+        // --- 渲染头部 ---
+        document.getElementById('dossier-name').innerText = emp.name;
+        document.getElementById('dossier-meta').innerText = data.meta || '未知实体';
+        document.getElementById('dossier-stars').innerText = '★'.repeat(emp.rarity || 3);
+        
+        // --- 渲染 Tab 1: 基础档案 ---
+        document.getElementById('info-name').innerText = emp.name;
+        document.getElementById('info-race').innerText = data.meta || '--';
+        document.getElementById('info-gender').innerText = basic.gender || '未知';
+        document.getElementById('info-origin').innerText = basic.origin || '未知区域';
+        document.getElementById('info-height').innerText = basic.height || '--';
+        document.getElementById('info-birthday').innerText = basic.birthday || '--'; // 新增生日
+        
+        // 渲染标签
+        const tagsContainer = document.getElementById('info-tags');
+        tagsContainer.innerHTML = '';
+        if (basic.tags && Array.isArray(basic.tags)) {
+            basic.tags.forEach(tag => {
+                tagsContainer.innerHTML += `<span class="tag-box">${tag}</span>`;
+            });
+        } else {
+            tagsContainer.innerHTML = '<span style="color:#666">--</span>';
+        }
+
+        // --- 渲染 Tab 2: 战斗属性 (核心) ---
+        renderCombatTab(data);
+
+        // --- 渲染 Tab 3: 客观履历 ---
+        const resumeText = data.resume || "【数据缺失】\n暂无该干员的详细履历记录。";
+        document.getElementById('resume-content').innerText = resumeText;
+    }
+
+    // 2. 渲染战斗属性 Tab
+    function renderCombatTab(data) {
+        // A. 顶部数值 (HP/AC/SPD)
+        // 尝试解析 "241（14d6...）" 这种格式
+        const parseVal = (str) => {
+            if(!str) return { val: '--', note: '' };
+            const match = str.match(/^([^\uff08(]+)(?:[\uff08(](.*)[\uff09)])?$/);
+            return match ? { val: match[1].trim(), note: match[2] || '' } : { val: str, note: '' };
+        };
+
+        const hpData = parseVal(data.hp);
+        document.getElementById('combat-hp').innerText = hpData.val;
+        document.getElementById('combat-hp-note').innerText = hpData.note;
+
+        const acData = parseVal(data.ac);
+        document.getElementById('combat-ac').innerText = acData.val;
+        document.getElementById('combat-ac-note').innerText = acData.note;
+
+        document.getElementById('combat-speed').innerText = data.speed || '--';
+
+        // B. 六维属性
+        const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+        const grid = document.getElementById('combat-stats-grid');
+        grid.innerHTML = '';
+        
+        if (data.stats) {
+            statKeys.forEach(k => {
+                const s = data.stats[k] || { score: 10, mod: '+0' };
+                grid.innerHTML += `
+                    <div class="ability-box">
+                        <span class="ability-title">${k.toUpperCase()}</span>
+                        <span class="ability-mod">${s.mod}</span>
+                        <span class="ability-score">${s.score}</span>
+                    </div>`;
+            });
+        } else {
+            grid.innerHTML = '<div style="grid-column:1/-1; color:#666; padding:10px;">暂无属性数据</div>';
+        }
+
+        // C. 列表属性 (豁免/技能/免疫...)
+        const propsDiv = document.getElementById('combat-props');
+        propsDiv.innerHTML = '';
+        if (data.props && data.props.length > 0) {
+            data.props.forEach(p => {
+                propsDiv.innerHTML += `
+                    <div class="props-row">
+                        <div class="props-key">${p.label}</div>
+                        <div class="props-val">${p.value}</div>
+                    </div>`;
+            });
+        }
+
+        // D. 能力详情 (特性/动作/法术)
+        const listDiv = document.getElementById('combat-abilities-list');
+        listDiv.innerHTML = '';
+
+        // 辅助渲染函数
+        const renderCards = (arr, typeClass) => {
+            if (!arr) return;
+            arr.forEach(item => {
+                // 处理描述中的换行和加粗
+                // 1. \n 转 <br>
+                // 2. "死咒。" -> <b>死咒。</b> (正则：句号前的短语加粗)
+                let desc = item.desc || '';
+                desc = desc.replace(/\n/g, '<br>'); 
+                desc = desc.replace(/^([^。]+。)/gm, '<b>$1</b>'); // 句首加粗
+
+                listDiv.innerHTML += `
+                    <div class="trait-card ${typeClass}">
+                        <div class="trait-title">${item.name}</div>
+                        <div class="trait-desc">${desc}</div>
+                    </div>`;
+            });
+        };
+
+        renderCards(data.traits, ''); // 被动特性
+        renderCards(data.actions, 'action'); // 动作 (红色)
+        renderCards(data.bonus_actions, 'bonus'); // 附赠 (橙色)
+
+        // 法术列表
+        if (data.spells && data.spells.list) {
+            let spellHtml = `<div class="trait-card" style="border-left-color:#3498db;">
+                <div class="trait-title">施法能力</div>
+                <div class="trait-desc" style="margin-bottom:10px; font-style:italic;">${data.spells.header || ''}</div>`;
+            
+            data.spells.list.forEach(s => {
+                spellHtml += `
+                    <div class="spell-group">
+                        <span class="spell-level">${s.level}</span>
+                        <span class="spell-items">${s.spells}</span>
+                    </div>`;
+            });
+            spellHtml += '</div>';
+            listDiv.innerHTML += spellHtml;
+        }
+    }
+
+    // 3. Tab 切换逻辑
+    function switchDossierTab(tabName) {
+        // 按钮样式
+        document.querySelectorAll('.dossier-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('onclick').includes(tabName)) btn.classList.add('active');
+        });
+
+        // 内容显示
+        document.querySelectorAll('.dossier-pane').forEach(pane => pane.classList.remove('active'));
+        document.getElementById(`dossier-pane-${tabName}`).classList.add('active');
     }
 
 
