@@ -4163,6 +4163,7 @@ async function getRobustIP() {
         document.getElementById('info-name').innerText = emp.name;
         document.getElementById('info-race').innerText = data.meta || '--';
         document.getElementById('info-gender').innerText = basic.gender || '未知';
+        document.getElementById('info-size').innerText = basic.size || '中型';
         document.getElementById('info-origin').innerText = basic.origin || '未知区域';
         document.getElementById('info-height').innerText = basic.height || '--';
         document.getElementById('info-birthday').innerText = basic.birthday || '--';
@@ -4200,7 +4201,7 @@ async function getRobustIP() {
         document.getElementById('dossier-watermark').innerText = '';
 
         // 3. 重置基础信息
-        ['info-name', 'info-race', 'info-gender', 'info-origin', 'info-height', 'info-birthday'].forEach(id => {
+        ['info-name', 'info-race', 'info-size', 'info-gender', 'info-origin', 'info-height', 'info-birthday'].forEach(id => {
             document.getElementById(id).innerText = '--';
         });
         document.getElementById('info-tags').innerHTML = '...';
