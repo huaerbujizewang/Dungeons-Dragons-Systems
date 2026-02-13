@@ -4068,8 +4068,12 @@ async function getRobustIP() {
 
     // 1. 打开档案弹窗
     async function openDossierModal(empId) {
-        // 先显示加载状态
         const modal = document.getElementById('dossier-modal');
+        
+        // --- 在请求数据前，先清空/重置所有 UI 元素 ---
+        resetDossierUI(); 
+        
+        // 显示弹窗
         modal.style.display = 'flex';
         
         // 切回第一个 Tab
@@ -4092,12 +4096,18 @@ async function getRobustIP() {
         const basic = data.basic_info || {};
 
         // --- 渲染左侧立绘 ---
-        // 优先 stand_url, 其次 avatar_url, 最后占位符
         const standImg = emp.stand_url || emp.avatar_url || 'https://via.placeholder.com/300x500';
-        document.getElementById('dossier-stand-img').src = standImg;
-        // 背景模糊图 (用头像做模糊背景，色调更统一)
+        const imgEl = document.getElementById('dossier-stand-img');
+        
+        // 图片加载逻辑
+        imgEl.classList.remove('loaded'); 
+        imgEl.src = standImg;
+        imgEl.onload = () => imgEl.classList.add('loaded');
+        if (imgEl.complete) imgEl.classList.add('loaded');
+
+        // 背景模糊图
         document.getElementById('dossier-bg-blur').style.backgroundImage = `url('${emp.avatar_url || standImg}')`;
-        // 水印 (职业或名字)
+        // 水印
         document.getElementById('dossier-watermark').innerText = (data.meta || 'ARCHIVE').split(' ')[0].toUpperCase();
 
         // --- 渲染头部 ---
@@ -4111,7 +4121,7 @@ async function getRobustIP() {
         document.getElementById('info-gender').innerText = basic.gender || '未知';
         document.getElementById('info-origin').innerText = basic.origin || '未知区域';
         document.getElementById('info-height').innerText = basic.height || '--';
-        document.getElementById('info-birthday').innerText = basic.birthday || '--'; // 新增生日
+        document.getElementById('info-birthday').innerText = basic.birthday || '--';
         
         // 渲染标签
         const tagsContainer = document.getElementById('info-tags');
@@ -4124,12 +4134,43 @@ async function getRobustIP() {
             tagsContainer.innerHTML = '<span style="color:#666">--</span>';
         }
 
-        // --- 渲染 Tab 2: 战斗属性 (核心) ---
+        // --- 渲染 Tab 2: 战斗属性 ---
         renderCombatTab(data);
 
         // --- 渲染 Tab 3: 客观履历 ---
         const resumeText = data.resume || "【数据缺失】\n暂无该干员的详细履历记录。";
         document.getElementById('resume-content').innerText = resumeText;
+    }
+
+    // 重置 UI 的辅助函数
+    function resetDossierUI() {
+        // 1. 重置图片和背景
+        document.getElementById('dossier-stand-img').src = ''; 
+        document.getElementById('dossier-stand-img').classList.remove('loaded'); // 隐藏图片直到加载完成
+        document.getElementById('dossier-bg-blur').style.backgroundImage = 'none';
+        
+        // 2. 重置文字为加载状态
+        document.getElementById('dossier-name').innerText = 'LOADING...';
+        document.getElementById('dossier-meta').innerText = '...';
+        document.getElementById('dossier-stars').innerText = '';
+        document.getElementById('dossier-watermark').innerText = '';
+
+        // 3. 重置基础信息
+        ['info-name', 'info-race', 'info-gender', 'info-origin', 'info-height', 'info-birthday'].forEach(id => {
+            document.getElementById(id).innerText = '--';
+        });
+        document.getElementById('info-tags').innerHTML = '...';
+
+        // 4. 重置战斗面板
+        document.getElementById('combat-hp').innerText = '--';
+        document.getElementById('combat-ac').innerText = '--';
+        document.getElementById('combat-speed').innerText = '--';
+        document.getElementById('combat-stats-grid').innerHTML = '<div style="color:#666;padding:10px;">数据加载中...</div>';
+        document.getElementById('combat-props').innerHTML = '';
+        document.getElementById('combat-abilities-list').innerHTML = '';
+
+        // 5. 重置履历
+        document.getElementById('resume-content').innerText = '正在解密档案...';
     }
 
     // 2. 渲染战斗属性 Tab
