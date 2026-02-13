@@ -1299,33 +1299,24 @@
             return;
         }
 
-        // 1. 触发立绘预加载 (保留之前的优化)
+        // 1. 触发立绘预加载
         const standUrls = data.map(e => e.stand_url).filter(u => u && u.length > 0);
         preloadImages(standUrls);
 
         // 2. 状态权重配置
         const statusWeight = {
-            '在职': 1,
-            '休假': 2,
-            '特殊状态': 3,
-            '离职': 4,
-            '申请解雇': 5
+            '在职': 1, '休假': 2, '特殊状态': 3, '离职': 4, '申请解雇': 5
         };
 
-        // --- 新函数：获取排序权重 ---
+        // --- 排序权重计算 ---
         const getSortWeight = (e) => {
-            // 状态优先级 (越小越前)
             const sWeight = statusWeight[e.status] || 99;
-            
-            // 玩家判定：薪资为 -1 的是玩家，给极高权重
-            // 我们给玩家一个仅仅在排序时生效的 "虚拟星级" 加成
             const isPlayer = e.salary === -1;
-            
             return {
                 status: sWeight,
                 isPlayer: isPlayer,
                 rarity: e.rarity || 3,
-                salary: Math.max(0, e.salary) // 负数薪资在比较大小时视为0
+                salary: Math.max(0, e.salary)
             };
         };
 
@@ -1334,22 +1325,18 @@
             const wA = getSortWeight(a);
             const wB = getSortWeight(b);
 
-            // 1. 先比状态 (升序：在职 < 离职)
+            // 1. 状态
             if (wA.status !== wB.status) return wA.status - wB.status;
-
-            // 2. 再比身份 (玩家优先)
-            // 如果A是玩家，B不是，A排前面 (-1)
+            // 2. 玩家身份 (-1 优先)
             if (wA.isPlayer && !wB.isPlayer) return -1;
             if (!wA.isPlayer && wB.isPlayer) return 1;
-
-            // 3. 再比星级 (降序：6星 > 1星)
+            // 3. 星级
             if (wA.rarity !== wB.rarity) return wB.rarity - wA.rarity;
-
-            // 4. 最后比薪资 (降序)
+            // 4. 薪资
             return wB.salary - wA.salary;
         };
 
-        // 计算总薪资 (只计算 > 0 的，-1 的玩家不计入支出)
+        // 计算总薪资
         const totalSalary = data
             .filter(e => e.status === '在职' && e.salary > 0)
             .reduce((sum, e) => sum + e.salary, 0);
@@ -1358,12 +1345,12 @@
         const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
         const hirelings = data.filter(e => e.role !== '核心队友').sort(sortLogic);
 
-        // 4. 渲染 (UI 不做任何特殊处理，保持原样)
+        // 4. 渲染函数
         const renderGrid = (list) => {
             if (list.length === 0) return '<div style="color:#999; padding:20px; grid-column:1/-1;">(空)</div>';
             return list.map(e => {
-                const config = { color: '#666', ...statusWeight[e.status] ? {} : {} }; // 简化的状态色获取
-                // 补全状态色
+                // 状态色
+                const config = { color: '#666' };
                 if(e.status === '在职') config.color = '#2ecc71';
                 else if(e.status === '休假') config.color = '#3498db';
                 else if(e.status === '特殊状态') config.color = '#9b59b6';
@@ -1371,10 +1358,12 @@
                 else if(e.status === '申请解雇') config.color = '#e67e22';
 
                 const isCore = e.role === '核心队友';
+                const isPlayer = e.salary === -1;
                 const hasSheet = e.stat_block ? true : false;
-                
-                const displaySalary = e.salary < 0 ? 0 : e.salary;
-                const canFire = !isCore && e.status === '在职' && e.salary !== -1;
+                const roleDisplay = isCore || isPlayer 
+                    ? `<div>${e.role || '队友'}</div>`
+                    : `<div>${e.role || '雇员'} | ${e.salary} GP</div>`;
+                const canFire = !isCore && !isPlayer && e.status === '在职';
 
                 const rarity = e.rarity || 3;
                 const stars = '★'.repeat(rarity);
@@ -1392,7 +1381,7 @@
                     <div style="font-weight:bold; font-size:1.1em;">${e.name}</div>
                     
                     <div style="font-size:0.8em; color:#666; margin:4px 0;">
-                        ${e.role || '雇员'} | ${displaySalary} GP
+                        ${roleDisplay}
                     </div>
 
                     <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold; margin-bottom:8px;">
