@@ -1021,10 +1021,35 @@
             </div>
 
             <!-- 雇员头像 -->
-            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
-                <h3 style="margin-top:0">👷 雇员头像更新</h3>
-                <select id="adm-emp-list" style="width:100%; margin-bottom:10px;"></select>
-                <div style="display:flex; gap:10px;"><input type="file" id="adm-emp-avatar" style="flex:1"><button onclick="uploadAvatar()">上传</button></div>
+            <div class="admin-box" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#fbf0ff;">
+                <h3 style="margin-top:0; color:#8e44ad;">🎨 雇员图片管理</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:10px;">
+                    先在上方 [玩家资产操控] 选择玩家，再在此处选择雇员
+                </div>
+                
+                <select id="adm-emp-list" style="width:100%; margin-bottom:15px; padding:8px; border:2px solid #8e44ad; border-radius:4px; font-weight:bold;"></select>
+                
+                <div style="margin-bottom:15px; border-bottom:1px dashed #cca; padding-bottom:10px;">
+                    <div style="font-size:0.85em; font-weight:bold; margin-bottom:5px; display:flex; align-items:center;">
+                        <span style="font-size:1.2em; margin-right:5px;">🟢</span> 
+                        列表头像
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <input type="file" id="adm-emp-avatar" style="flex:1; font-size:0.8em;">
+                        <button onclick="uploadAvatar()" style="padding:5px 10px;">更新头像</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:0.85em; font-weight:bold; margin-bottom:5px; color:#8e44ad; display:flex; align-items:center;">
+                        <span style="font-size:1.2em; margin-right:5px;">🟣</span> 
+                        档案立绘
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <input type="file" id="adm-emp-stand" style="flex:1; font-size:0.8em;">
+                        <button onclick="uploadExistingStand()" style="background:#8e44ad; color:#fff; border:none; padding:5px 10px; border-radius:4px;">更新立绘</button>
+                    </div>
+                </div>
             </div>
 
             <div class="admin-box" style="border:1px solid #1abc9c; padding:15px; border-radius:8px; background:#fafffd; margin-top:20px;">
@@ -4186,6 +4211,47 @@ async function getRobustIP() {
         // 内容显示
         document.querySelectorAll('.dossier-pane').forEach(pane => pane.classList.remove('active'));
         document.getElementById(`dossier-pane-${tabName}`).classList.add('active');
+    }
+
+    // --- 为现有雇员上传立绘 ---
+    async function uploadExistingStand() {
+        const file = document.getElementById('adm-emp-stand').files[0];
+        const empId = document.getElementById('adm-emp-list').value;
+        
+        if (!empId) return alert('请先在列表中选择一名雇员');
+        if (!file) return alert('请选择立绘图片文件');
+
+        showLoading();
+        try {
+            // 1. 生成文件名 (stand_emp_ID_时间戳)
+            const fileName = `stand_emp_${empId}_${Date.now()}`;
+            
+            // 2. 上传到 Supabase Storage (复用 avatars 桶)
+            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+            if (error) throw error;
+
+            // 3. 获取公开链接
+            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
+            
+            // 4. 更新数据库 (employees 表的 stand_url 字段)
+            const { error: dbError } = await supabaseClient
+                .from('employees')
+                .update({ stand_url: urlData.publicUrl })
+                .eq('id', empId);
+
+            if (dbError) throw dbError;
+            
+            alert('✅ 全身立绘更新成功！\n请重新打开该角色的档案查看效果。');
+            
+            // 清空文件框
+            document.getElementById('adm-emp-stand').value = '';
+
+        } catch (e) {
+            console.error(e);
+            alert('上传失败: ' + (e.message || '网络错误'));
+        } finally {
+            hideLoading();
+        }
     }
 
 
