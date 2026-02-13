@@ -1284,12 +1284,11 @@
         }
     }
 
-    // --- 雇员系统  ---
+    // --- 雇员系统 ---
     async function loadEmployees() {
         const container = document.getElementById('emp-container');
         container.innerHTML = '正在读取位面名单...';
         
-        // 1. 获取当前视角下的所有雇员
         const { data, error } = await supabaseClient
             .from('employees')
             .select('*')
@@ -1299,57 +1298,87 @@
             container.innerHTML = '<div style="color:red; padding:20px;">无法加载名单。</div>';
             return;
         }
-        // --- 触发静默预加载 ---
-        const standUrls = data
-            .map(e => e.stand_url)
-            .filter(url => url && url.length > 0);
-        
+
+        // 1. 触发立绘预加载 (保留之前的优化)
+        const standUrls = data.map(e => e.stand_url).filter(u => u && u.length > 0);
         preloadImages(standUrls);
 
-        // 2. 状态配置 (权重越小，排在越前面)
-        const statusConfig = {
-            '在职': { color: '#2ecc71', weight: 1 },
-            '休假': { color: '#3498db', weight: 2 },
-            '特殊状态': { color: '#9b59b6', weight: 3 },
-            '离职': { color: '#95a5a6', weight: 4 },
-            '申请解雇': { color: '#e67e22', weight: 5 }
+        // 2. 状态权重配置
+        const statusWeight = {
+            '在职': 1,
+            '休假': 2,
+            '特殊状态': 3,
+            '离职': 4,
+            '申请解雇': 5
         };
 
-        const totalSalary = data.filter(e => e.status === '在职').reduce((sum, e) => sum + e.salary, 0);
+        // --- 新函数：获取排序权重 ---
+        const getSortWeight = (e) => {
+            // 状态优先级 (越小越前)
+            const sWeight = statusWeight[e.status] || 99;
+            
+            // 玩家判定：薪资为 -1 的是玩家，给极高权重
+            // 我们给玩家一个仅仅在排序时生效的 "虚拟星级" 加成
+            const isPlayer = e.salary === -1;
+            
+            return {
+                status: sWeight,
+                isPlayer: isPlayer,
+                rarity: e.rarity || 3,
+                salary: Math.max(0, e.salary) // 负数薪资在比较大小时视为0
+            };
+        };
 
         // 3. 核心排序逻辑
         const sortLogic = (a, b) => {
-            // 第一优先级：状态权重 (Ascending: 1 -> 5)
-            // 在职(1) 会排在 离职(4) 前面
-            const weightA = statusConfig[a.status]?.weight || 99;
-            const weightB = statusConfig[b.status]?.weight || 99;
-            if (weightA !== weightB) return weightA - weightB;
+            const wA = getSortWeight(a);
+            const wB = getSortWeight(b);
 
-            // 第二优先级：星级 (Descending: 6 -> 1)
-            const rA = a.rarity || 3;
-            const rB = b.rarity || 3;
-            if (rA !== rB) return rB - rA; 
+            // 1. 先比状态 (升序：在职 < 离职)
+            if (wA.status !== wB.status) return wA.status - wB.status;
 
-            // 第三优先级：薪资 (Descending: High -> Low)
-            return b.salary - a.salary;
+            // 2. 再比身份 (玩家优先)
+            // 如果A是玩家，B不是，A排前面 (-1)
+            if (wA.isPlayer && !wB.isPlayer) return -1;
+            if (!wA.isPlayer && wB.isPlayer) return 1;
+
+            // 3. 再比星级 (降序：6星 > 1星)
+            if (wA.rarity !== wB.rarity) return wB.rarity - wA.rarity;
+
+            // 4. 最后比薪资 (降序)
+            return wB.salary - wA.salary;
         };
 
-        // 4. 分离并应用排序
+        // 计算总薪资 (只计算 > 0 的，-1 的玩家不计入支出)
+        const totalSalary = data
+            .filter(e => e.status === '在职' && e.salary > 0)
+            .reduce((sum, e) => sum + e.salary, 0);
+
+        // 分组并排序
         const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
         const hirelings = data.filter(e => e.role !== '核心队友').sort(sortLogic);
 
-        // 5. 渲染逻辑
+        // 4. 渲染 (UI 不做任何特殊处理，保持原样)
         const renderGrid = (list) => {
             if (list.length === 0) return '<div style="color:#999; padding:20px; grid-column:1/-1;">(空)</div>';
             return list.map(e => {
-                const config = statusConfig[e.status] || { color: '#666' };
+                const config = { color: '#666', ...statusWeight[e.status] ? {} : {} }; // 简化的状态色获取
+                // 补全状态色
+                if(e.status === '在职') config.color = '#2ecc71';
+                else if(e.status === '休假') config.color = '#3498db';
+                else if(e.status === '特殊状态') config.color = '#9b59b6';
+                else if(e.status === '离职') config.color = '#95a5a6';
+                else if(e.status === '申请解雇') config.color = '#e67e22';
+
                 const isCore = e.role === '核心队友';
-                const canFire = !isCore && e.status === '在职';
                 const hasSheet = e.stat_block ? true : false;
                 
+                const displaySalary = e.salary < 0 ? 0 : e.salary;
+                const canFire = !isCore && e.status === '在职' && e.salary !== -1;
+
                 const rarity = e.rarity || 3;
                 const stars = '★'.repeat(rarity);
-                const borderClass = `rarity-border-${rarity}`; // 引用 CSS
+                const borderClass = `rarity-border-${rarity}`; 
 
                 return `
                 <div class="card emp-card-content ${borderClass}" style="position:relative;">
@@ -1363,7 +1392,7 @@
                     <div style="font-weight:bold; font-size:1.1em;">${e.name}</div>
                     
                     <div style="font-size:0.8em; color:#666; margin:4px 0;">
-                        ${e.role || '雇员'}${isCore ? '' : ' | ' + e.salary + ' GP'}
+                        ${e.role || '雇员'} | ${displaySalary} GP
                     </div>
 
                     <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold; margin-bottom:8px;">
@@ -1382,9 +1411,9 @@
             <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:30px; text-align:center; border-radius:8px;">
                 <h3 style="margin:0; color:#d35400;">📉 每月薪资总支出: ${totalSalary} GP</h3>
             </div>
-            <div class="section-title">⚔️ 核心队友 (按状态 > 星级排序)</div>
+            <div class="section-title">⚔️ 核心队友</div>
             <div class="shop-grid" style="margin-bottom:40px;">${renderGrid(coreMembers)}</div>
-            <div class="section-title">🛡️ 雇员 / 随从 (按状态 > 星级排序)</div>
+            <div class="section-title">🛡️ 雇员 / 随从</div>
             <div class="shop-grid">${renderGrid(hirelings)}</div>
         `;
     }
