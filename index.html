@@ -446,7 +446,25 @@
     }
     .combat-stat-box.hp { border-color: #e74c3c; background: linear-gradient(to bottom, #2c2c2c, #222); }
     .combat-stat-box.ac { border-color: #3498db; background: linear-gradient(to bottom, #2c2c2c, #222); }
-    .combat-stat-box.spd { border-color: #f1c40f; background: linear-gradient(to bottom, #2c2c2c, #222); }
+    .combat-stat-box.spd .stat-val-top {
+        font-size: 1.8em; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        align-self: flex-start;
+        width: 100%;
+    }
+
+    /* 备注区  */
+    .combat-stat-box.spd .stat-note-top {
+        color: #f1c40f; 
+        font-size: 0.8em;
+        opacity: 0.9;
+        text-align: right;
+        width: 100%;
+        line-height: 1.2;
+        white-space: pre-wrap; 
+    }
     
     .stat-label-top { 
         font-size: 0.7em; color: #aaa; text-transform: uppercase; letter-spacing: 1px; 
@@ -935,6 +953,7 @@
                         <div class="combat-stat-box spd">
                             <span class="stat-label-top">SPEED</span>
                             <div id="combat-speed" class="stat-val-top">30</div>
+                            <div id="combat-speed-note" class="stat-note-top"></div>
                         </div>
                     </div>
 
@@ -4241,24 +4260,59 @@ async function getRobustIP() {
 
     // 2. 渲染战斗属性 Tab
     function renderCombatTab(data) {
-        // --- A. 顶部数值 (HP/AC/SPD) ---
+        
+        // --- A. 顶部数值 (HP/AC) 智能解析 ---
+        // 解析 "19 (24 护盾术)" 这种格式 -> val="19", note="24 护盾术"
         const parseVal = (str) => {
             if(!str) return { val: '--', note: '' };
+            // 匹配中文或英文括号
             const match = str.match(/^([^\uff08(]+)(?:[\uff08(](.*)[\uff09)])?$/);
             return match ? { val: match[1].trim(), note: match[2] || '' } : { val: str, note: '' };
         };
 
+        // 渲染 HP
         const hpData = parseVal(data.hp);
         document.getElementById('combat-hp').innerText = hpData.val;
         document.getElementById('combat-hp-note').innerText = hpData.note;
 
+        // 渲染 AC
         const acData = parseVal(data.ac);
         document.getElementById('combat-ac').innerText = acData.val;
         document.getElementById('combat-ac-note').innerText = acData.note;
 
-        document.getElementById('combat-speed').innerText = data.speed || '--';
+        // --- B. 速度 (Speed) 智能拆分 ---
+        // 解析 "30尺, 攀爬 30尺" -> main="30尺", note="攀爬 30尺"
+        const speedRaw = data.speed || '--';
+        let mainSpeed = speedRaw;
+        let extraSpeed = '';
+        const splitRegex = /[,，]/; // 支持中英文逗号
 
-        // --- B. 六维属性 ---
+        if (splitRegex.test(speedRaw)) {
+            const parts = speedRaw.split(splitRegex);
+            mainSpeed = parts[0].trim();
+            // 把剩下的部分重新组合起来
+            extraSpeed = parts.slice(1).join(', ').trim(); 
+        }
+
+        // 渲染主速度
+        document.getElementById('combat-speed').innerText = mainSpeed;
+        
+        // 渲染副速度 (需要获取或创建 note 容器)
+        let spdBox = document.querySelector('.combat-stat-box.spd');
+        let spdNote = document.getElementById('combat-speed-note');
+        
+        // 容错：如果 HTML 里没写 id="combat-speed-note"，自动补一个
+        if (!spdNote && spdBox) {
+            spdNote = document.createElement('div');
+            spdNote.id = 'combat-speed-note';
+            spdNote.className = 'stat-note-top';
+            spdNote.style.color = '#f1c40f'; // 强制加上高亮色
+            spdBox.appendChild(spdNote);
+        }
+        if (spdNote) spdNote.innerText = extraSpeed;
+
+
+        // --- C. 六维属性 (Stats) ---
         const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
         const grid = document.getElementById('combat-stats-grid');
         grid.innerHTML = '';
@@ -4277,7 +4331,7 @@ async function getRobustIP() {
             grid.innerHTML = '<div style="grid-column:1/-1; color:#666; padding:10px;">暂无属性数据</div>';
         }
 
-        // --- C. 列表属性 ---
+        // --- D. 列表属性 (Props: 豁免/技能/感官等) ---
         const propsDiv = document.getElementById('combat-props');
         propsDiv.innerHTML = '';
         if (data.props && data.props.length > 0) {
@@ -4290,7 +4344,7 @@ async function getRobustIP() {
             });
         }
 
-        // --- D. 能力详情 (特性/动作/法术) ---
+        // --- E. 能力详情 (特性/动作/法术) ---
         const listDiv = document.getElementById('combat-abilities-list');
         listDiv.innerHTML = '';
 
@@ -4298,13 +4352,15 @@ async function getRobustIP() {
         const renderSection = (title, list, typeClass) => {
             if (!list || list.length === 0) return;
 
-            // 1. 渲染标题
+            // 1. 渲染分类标题
             listDiv.innerHTML += `<div class="combat-section-title ${typeClass}">${title}</div>`;
 
             // 2. 渲染卡片
             list.forEach(item => {
                 let desc = item.desc || '';
+                // 处理换行符
                 desc = desc.replace(/\n/g, '<br>'); 
+                // 处理句首小标题加粗 (例如 "死咒。xxx" -> "<b>死咒。</b>xxx")
                 desc = desc.replace(/^([^。]+。)/gm, '<b>$1</b>');
 
                 listDiv.innerHTML += `
@@ -4316,20 +4372,27 @@ async function getRobustIP() {
         };
 
         // 按顺序渲染各个板块
+        // 特性 (无色/灰色)
         renderSection('特性 / TRAITS', data.traits, '');
-        renderSection('动作 / ACTIONS', data.actions, 'action');       // 红
-        renderSection('附赠 / BONUS', data.bonus_actions, 'bonus');   // 橙
-        renderSection('反应 / REACTIONS', data.reactions, 'reaction'); // 紫
-        renderSection('传奇 / LEGENDARY', data.legendary_actions, 'legendary'); // 金 (预留)
+        // 动作 (红色)
+        renderSection('动作 / ACTIONS', data.actions, 'action');       
+        // 附赠 (橙色)
+        renderSection('附赠 / BONUS', data.bonus_actions, 'bonus');   
+        // 反应 (紫色) - 必须确保 CSS 里加了 .trait-card.reaction { border-left-color: #9b59b6; }
+        renderSection('反应 / REACTIONS', data.reactions, 'reaction'); 
+        // 传奇动作 (金色) - 预留
+        renderSection('传奇 / LEGENDARY', data.legendary_actions, 'legendary'); 
 
-        // --- E. 施法列表 (单独处理) ---
+        // --- F. 施法列表 (Spells) ---
         if (data.spells && data.spells.list && data.spells.list.length > 0) {
-            // 加个施法标题
+            // 施法标题
             listDiv.innerHTML += `<div class="combat-section-title" style="border-left-color:#3498db; color:#3498db;">施法 / SPELLS</div>`;
 
+            // 施法总览卡片
             let spellHtml = `<div class="trait-card" style="border-left-color:#3498db;">
                 <div class="trait-desc" style="margin-bottom:10px; font-style:italic; color:#aaa;">${data.spells.header || ''}</div>`;
             
+            // 循环渲染每一环
             data.spells.list.forEach(s => {
                 spellHtml += `
                     <div class="spell-group">
