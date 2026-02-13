@@ -518,6 +518,7 @@
     .trait-card.action { border-left-color: #e74c3c; } /* 动作是红色 */
     .trait-card.bonus { border-left-color: #e67e22; } /* 附赠是橙色 */
     .trait-card.reaction { border-left-color: #9b59b6; }/* 反应是紫色 */
+    .trait-card.legendary { border-left-color: #f1c40f; }/* 传动是金色 */
     .trait-title { font-weight: bold; color: #fff; margin-bottom: 4px; font-size: 1.05em; }
     .trait-desc { font-size: 0.9em; color: #aaa; line-height: 1.6; }
     .trait-desc b { color: #ddd; } /* 小标题加亮 */
@@ -4380,7 +4381,7 @@ async function getRobustIP() {
         renderSection('附赠 / BONUS', data.bonus_actions, 'bonus');   
         // 反应 (紫色) - 必须确保 CSS 里加了 .trait-card.reaction { border-left-color: #9b59b6; }
         renderSection('反应 / REACTIONS', data.reactions, 'reaction'); 
-        // 传奇动作 (金色) - 预留
+        // 传奇动作 (金色) 
         renderSection('传奇 / LEGENDARY', data.legendary_actions, 'legendary'); 
 
         // --- F. 施法列表 (Spells) ---
