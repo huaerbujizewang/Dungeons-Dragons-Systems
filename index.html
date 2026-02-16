@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self' 'unsafe-inline' 'unsafe-eval' https:;
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://challenges.cloudflare.com;
-    connect-src 'self' https://vbzfpgucpciqgaakqndz.supabase.co wss://vbzfpgucpciqgaakqndz.supabase.co https://challenges.cloudflare.com https://www.cloudflare.com https://api.ipify.org https://myip.ipip.net;
+    default-src 'self'; 
+    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://vbzfpgucpciqgaakqndz.supabase.co; 
+    connect-src 'self' https://vbzfpgucpciqgaakqndz.supabase.co wss://vbzfpgucpciqgaakqndz.supabase.co https://cdn.jsdelivr.net; 
+    style-src 'self' 'unsafe-inline'; 
     img-src 'self' data: https: blob:;
-    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
 ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D 小队管理系统</title>
@@ -3346,49 +3346,47 @@ async function loadLoginLogs() {
 
     // --- DM 控制台功能：加载雇员到下拉框 ---
 
-    async function updateStatBlockSelect(userId) {
-        const select = document.getElementById('adm-sheet-list');
-        select.innerHTML = '<option>加载中...</option>';
-        const { data: emps } = await supabaseClient.from('employees').select('id, name, stat_block').eq('user_id', userId);
-        
-        select.innerHTML = '<option value="">-- 选择雇员录入数据 --</option>';
-        if (emps) {
-            emps.forEach(e => {
-                select.innerHTML += `<option value="${e.id}">${e.name} ${e.stat_block ? '✅' : ''}</option>`;
-            });
-            
-            // 监听下拉框变化，如果选中了人，自动把现有的 JSON 填进去方便修改
-            select.onchange = () => {
-                const emp = emps.find(x => x.id == select.value);
-                if (emp && emp.stat_block) {
-                    document.getElementById('adm-sheet-json').value = JSON.stringify(emp.stat_block, null, 2);
-                } else {
-                    document.getElementById('adm-sheet-json').value = '';
-                }
-            };
-        }
+    async function updateStatBlockSelect() {
+        const empId = document.getElementById('adm-emp-list').value;
+        if (!empId) return;
 
-        if (!emp.stat_block) {
-    document.getElementById('adm-sheet-json').value = JSON.stringify({
-        name: "姓名",
-        meta: "种族/类型",
-        basic_info: {
-            gender: "男/女",
-            origin: "出身地",
-            height: "175cm",
-            birthday: "x月x日",
-            tags: ["标签1", "标签2"]
-        },
-        resume: "在此输入客观履历文本...",
-        hp: "100",
-        ac: "15",
-        speed: "30尺",
-        stats: { str:{score:10, mod:"+0"}, dex:{score:10, mod:"+0"}, con:{score:10, mod:"+0"}, int:{score:10, mod:"+0"}, wis:{score:10, mod:"+0"}, cha:{score:10, mod:"+0"} },
-        props: [],
-        traits: [],
-        actions: []
-    }, null, 2);
-}
+        const { data: emp, error } = await supabaseClient
+            .from('employees')
+            .select('*')
+            .eq('id', empId)
+            .single();
+
+        if (error || !emp) return;
+
+        // 2. 填充文本框
+        const textArea = document.getElementById('adm-sheet-json');
+        
+        if (emp.stat_block) {
+            // 如果有数据，直接显示
+            textArea.value = JSON.stringify(emp.stat_block, null, 2);
+        } else {
+            // 如果没有数据，提供默认模板
+            textArea.value = JSON.stringify({
+                name: emp.name || "姓名",
+                meta: "种族/类型",
+                basic_info: {
+                    gender: "男/女",
+                    origin: "出身地",
+                    height: "175cm",
+                    size: "中型",
+                    birthday: "x月x日",
+                    tags: ["标签1", "标签2"]
+                },
+                resume: "在此输入客观履历文本...",
+                hp: "100",
+                ac: "15",
+                speed: "30尺",
+                stats: { str:{score:10, mod:"+0"}, dex:{score:10, mod:"+0"}, con:{score:10, mod:"+0"}, int:{score:10, mod:"+0"}, wis:{score:10, mod:"+0"}, cha:{score:10, mod:"+0"} },
+                props: [],
+                traits: [],
+                actions: []
+            }, null, 2);
+        }
     }
 
     async function saveCharacterSheet() {
@@ -4515,6 +4513,18 @@ async function getRobustIP() {
             alert('上传失败: ' + (e.message || '网络错误'));
         } finally {
             hideLoading();
+        }
+    }
+
+    // --- 雇员中心提示 ---
+    function toggleSysHelp() {
+        const modal = document.getElementById('sys-help-modal');
+        if (!modal) return; 
+        
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+        } else {
+            modal.style.display = 'flex';
         }
     }
 
