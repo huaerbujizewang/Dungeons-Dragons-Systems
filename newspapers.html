@@ -37,7 +37,7 @@
         .news-nav { 
             background-color: var(--nav-bg); 
             display: flex; 
-            justify-content: center; 
+            justify-content: flex-start; 
             padding: 0; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.5); 
             z-index: 100; 
@@ -112,7 +112,6 @@
             max-width: 800px; 
             background-color: var(--paper-bg); 
             padding: 60px 50px; 
-            /* 关键修复：高度设为 fit-content 或 auto，让纸张随内容变长 */
             height: fit-content; 
             min-height: 800px; 
             box-shadow: 0 0 20px rgba(0,0,0,0.5); 
@@ -166,6 +165,44 @@
             font-weight: 900;
         }
 
+        /* --- 返回按钮样式 --- */
+        .back-btn {
+            background: #a83f39; 
+            color: #fff;
+            border: none;
+            padding: 0 20px;
+            height: 100%; 
+            cursor: pointer;
+            font-family: 'Noto Serif SC', serif;
+            font-weight: bold;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            transition: background 0.3s;
+            margin-right: auto; 
+        }
+        
+        .back-btn:hover {
+            background: #8e322d;
+        }
+        
+        .back-btn svg {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+        
+        /* 创建一个中间容器来放品牌按钮，保持居中 */
+        .nav-brand-container {
+            display: flex;
+            height: 100%;
+            margin: 0 auto; 
+            transform: translateX(-40px); /* 微调补偿返回按钮的宽度，让品牌视觉居中 */
+        }
+
+        
+
         #auth-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Cinzel'; flex-direction: column;}
     </style>
 </head>
@@ -175,7 +212,18 @@
         <div>正在验证...</div>
     </div>
 
-    <nav class="news-nav" id="brandNav"></nav>
+    <nav class="news-nav">
+        <button class="back-btn" onclick="window.location.href='index.html'">
+            <svg viewBox="0 0 24 24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            返回大厅
+        </button>
+
+        <div id="brandNav" class="nav-brand-container"></div>
+        
+        <div style="width: 100px;"></div>
+    </nav>
 
     <div class="main-layout" style="display:none;" id="main-content">
         <aside class="sidebar-list" id="articleList"></aside>
