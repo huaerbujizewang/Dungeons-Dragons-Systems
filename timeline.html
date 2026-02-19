@@ -60,12 +60,6 @@
             position: relative; width: 100%; display: flex; 
             justify-content: center; margin-bottom: 90px; z-index: 1;
         }
-        
-        .timeline-node {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #f1c40f; box-shadow: 0 0 10px #f1c40f; z-index: 2;
-        }
 
         .cinematic-card {
             width: 85%; 
@@ -205,7 +199,6 @@
                 // 彻底删除了 desc，只保留 date 和 title
                 const html = `
                     <div class="timeline-item">
-                        <div class="timeline-node"></div>
                         <div class="cinematic-card" onclick="openLightbox('${imgSrc}', '${ev.title}')">
                             <img src="${imgSrc}" class="cinematic-img" loading="lazy" alt="${ev.title}">
                             <div class="cinematic-overlay">
