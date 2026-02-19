@@ -603,7 +603,12 @@
 ">
     <div style="font-size: 2em; margin-bottom: 20px;">🛡️</div>
     <div style="font-size: 1.2em; letter-spacing: 2px;">正在加载...</div>
-    <div style="font-size: 0.8em; color: #666; margin-top: 10px;">Verifying Soul Signature...</div>
+    <div style="font-size: 0.8em; color: #666; margin-top: 10px; margin-bottom: 20px;">Verifying Soul Signature...</div>
+    
+    <div style="width: 300px; height: 4px; background: #333; border-radius: 2px; overflow: hidden; position: relative;">
+        <div id="loading-progress-bar" style="width: 0%; height: 100%; background: #f1c40f; transition: width 0.3s ease; box-shadow: 0 0 10px #f1c40f;"></div>
+    </div>
+    <div id="loading-progress-text" style="font-family: 'Consolas', monospace; color: #f1c40f; font-size: 0.9em; margin-top: 10px;">0%</div>
 </div>
 
 
@@ -1827,7 +1832,9 @@ async function login() {
         
         // 1. 获取当前登录用户
         const { data: { session } } = await supabaseClient.auth.getSession();
-        await new Promise(r => setTimeout(r, 300));
+        
+        // 稍微等待一下，防止画面切换太快
+        await new Promise(r => setTimeout(r, 100));
 
         if (session) {
             const user = session.user;
@@ -1865,13 +1872,27 @@ async function login() {
             // 初始化视图 ID
             if (!viewingUserId) viewingUserId = user.id;
 
-            // 加载所有业务数据
-            await refreshAllData();
+            // ✅ 核心修改：带进度的加载流程
+            console.log("开始加载数据...");
+            
+            // 1. 重置进度条到 5%
+            const bar = document.getElementById('loading-progress-bar');
+            const txt = document.getElementById('loading-progress-text');
+            if(bar) bar.style.width = '5%'; 
+            if(txt) txt.innerText = '5%';
+
+            // 2. 执行并行加载 (这里会驱动进度条跑到 100%)
+            await refreshAllData(); 
+            
+            // 3. 加载完成，启动实时系统
             setupMainRealtime(viewingUserId); 
-            console.log("正在加载...");
+            console.log("正在启动在线状态系统...");
             initPresenceSystem(); 
 
-            // ✅ 数据准备好后，再切换界面
+            // 4. 给用户 0.25秒 欣赏 100% 进度条，然后切入主界面
+            await new Promise(r => setTimeout(r, 250));
+
+            // 5. 切换界面
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-section').style.display = 'block';
 
@@ -1882,7 +1903,7 @@ async function login() {
             document.getElementById('main-section').style.display = 'none';
         }
 
-        // ✅ 最后一步：关闭加载遮罩
+        // 关闭全屏加载遮罩
         if (loadingMask) loadingMask.style.display = 'none';
     }
 
@@ -2422,13 +2443,41 @@ async function loadGold() {
         }
     }
 
+    // --- 并行数据加载与进度条控制 ---
     async function refreshAllData() {
-        await loadUserDate();
-        await loadGold();   
-        await loadShop();
-        await loadTeam();
-        await loadInventory();
-        await loadEmployees();
+        const bar = document.getElementById('loading-progress-bar');
+        const txt = document.getElementById('loading-progress-text');
+        
+        // 定义所有需要加载的任务
+        const tasks = [
+            loadUserDate(),   // 1. 时间
+            loadGold(),       // 2. 金币
+            loadShop(),       // 3. 商店
+            loadTeam(),       // 4. 队伍
+            loadInventory(),  // 5. 背包
+            loadEmployees()   // 6. 雇员
+        ];
+
+        let completed = 0;
+        const total = tasks.length;
+
+        // 辅助函数：更新进度 UI
+        const updateProgress = () => {
+            completed++;
+            const percent = Math.floor((completed / total) * 100);
+            if (bar) bar.style.width = `${percent}%`;
+            if (txt) txt.innerText = `${percent}%`;
+        };
+
+        // 并行执行所有任务，并监听每个任务的完成
+        // map: 把每个 Promise 包一层，完成后触发 updateProgress
+        const activeTasks = tasks.map(p => p.then(res => {
+            updateProgress();
+            return res;
+        }));
+
+        // 等待所有任务全部彻底完成
+        await Promise.all(activeTasks);
     }
 
     // ================== ：加载日志 ==================
