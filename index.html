@@ -606,12 +606,6 @@
     <div style="font-size: 0.8em; color: #666; margin-top: 10px;">Verifying Soul Signature...</div>
 </div>
 
-<div class="login-container" id="login-box" style="display: none;">
-    </div>
-
-<div class="main-container" id="main-interface" style="display: none;">
-    </div>  
-
 
 <!-- Loading 遮罩 -->
 <div id="loading-overlay">
@@ -620,7 +614,8 @@
 </div>
 
 <!-- 登录界面 (独立居中) -->
-<div id="login-section">
+<div id="login-section" style="display: none;">
+    
     <h2>冒险者工会终端</h2>
     <input type="email" id="login-email" placeholder="邮箱地址">
     <input type="password" id="login-password" placeholder="通行密码">
@@ -1258,45 +1253,6 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const DM_EMAIL = '739477825@qq.com';
 
-    // ============================================================
-    //  全屏加载与身份验证逻辑 (解决闪烁问题)
-    // ============================================================
-    async function startSystem() {
-        const loadingMask = document.getElementById('global-loading-mask');
-        const loginBox = document.querySelector('.login-container'); 
-        const mainUI = document.querySelector('.main-container');    
-
-        if (!loginBox || !mainUI) {
-            console.error("找不到 login-container 或 main-container，请检查 HTML class 名");
-            return;
-        }
-
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        await new Promise(r => setTimeout(r, 500));
-
-        // 4. 分流逻辑
-        if (session) {
-            // --- A. 已登录 ---
-            console.log(">> 身份验证通过: ", session.user.email);
-            
-            // 隐藏遮罩 & 登录框
-            loadingMask.style.display = 'none';
-            loginBox.style.display = 'none';
-            
-            // 显示主界面
-            mainUI.style.display = 'block'; 
-            if (typeof init === 'function') init(); 
-            else if (typeof loadEmployees === 'function') loadEmployees(); 
-
-        } else {
-            console.log(">> 未检测到会话，请登录");
-            loadingMask.style.display = 'none';
-            mainUI.style.display = 'none';
-            loginBox.style.display = 'flex'; 
-        }
-    }
-
-    startSystem();
 
 
 
@@ -1865,62 +1821,70 @@ async function login() {
         location.reload();
     }
 
-     // checkUser：获取管理员等级
+     // checkUser：核心启动函数
     async function checkUser() {
-    // 1. 获取当前登录用户
-    const { data: { user } } = await supabaseClient.auth.getUser();
-
-    if (user) {
-        // 初始化全局变量
-        myId = user.id;
-        currentUserEmail = user.email;
+        const loadingMask = document.getElementById('global-loading-mask');
         
-        // 2. 检查管理员权限
-        const { data: adminData } = await supabaseClient
-            .from('admin_users')
-            .select('role_level')
-            .eq('id', user.id)
-            .maybeSingle();
+        // 1. 获取当前登录用户
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        await new Promise(r => setTimeout(r, 300));
 
-        if (adminData) {
-            currentUserRole = adminData.role_level;
+        if (session) {
+            const user = session.user;
             
-            // 显示 DM 入口
-            document.getElementById('admin-link').style.display = 'inline';
-            const badge = document.getElementById('role-badge');
-            if (badge) badge.innerText = currentUserRole.toUpperCase();
+            // --- A. 已登录 ---
+            console.log(">> 身份验证通过:", user.email);
+
+            // 初始化全局变量
+            myId = user.id;
+            currentUserEmail = user.email;
             
-            if (currentUserRole === 'root') {
-                const secBtn = document.getElementById('security-tab-btn');
-                if (secBtn) secBtn.style.display = 'inline-block';
+            // 检查管理员权限
+            const { data: adminData } = await supabaseClient
+                .from('admin_users')
+                .select('role_level')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (adminData) {
+                currentUserRole = adminData.role_level;
+                // 显示 DM 入口
+                document.getElementById('admin-link').style.display = 'inline';
+                const badge = document.getElementById('role-badge');
+                if (badge) badge.innerText = currentUserRole.toUpperCase();
+                
+                if (currentUserRole === 'root') {
+                    const secBtn = document.getElementById('security-tab-btn');
+                    if (secBtn) secBtn.style.display = 'inline-block';
+                }
+                loadAdminData();
+            } else {
+                currentUserRole = 'player';
             }
             
-            loadAdminData();
+            // 初始化视图 ID
+            if (!viewingUserId) viewingUserId = user.id;
+
+            // 加载所有业务数据
+            await refreshAllData();
+            setupMainRealtime(viewingUserId); 
+            console.log("正在加载...");
+            initPresenceSystem(); 
+
+            // ✅ 数据准备好后，再切换界面
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('main-section').style.display = 'block';
+
         } else {
-            currentUserRole = 'player';
+            // --- B. 未登录 ---
+            console.log(">> 未检测到会话，显示登录框");
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('main-section').style.display = 'none';
         }
-        
-        // 3. 初始化视图 ID
-        if (!viewingUserId) viewingUserId = user.id;
 
-        // 4. 切换界面显示
-        document.getElementById('login-section').style.display = 'none';
-        document.getElementById('main-section').style.display = 'block';
-        
-        // 5. 加载所有业务数据
-        await refreshAllData();
-        setupMainRealtime(viewingUserId); 
-
-        // 6. 🚀 关键修复：确保在这里启动在线系统
-        console.log("正在启动在线状态系统...");
-        initPresenceSystem(); 
-
-    } else {
-        // 未登录，显示登录框
-        document.getElementById('login-section').style.display = 'block';
-        document.getElementById('main-section').style.display = 'none';
+        // ✅ 最后一步：关闭加载遮罩
+        if (loadingMask) loadingMask.style.display = 'none';
     }
-}
 
 
 let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
