@@ -1889,8 +1889,8 @@ async function login() {
             console.log("正在启动在线状态系统...");
             initPresenceSystem(); 
 
-            // 4. 给用户 0.25秒 欣赏 100% 进度条，然后切入主界面
-            await new Promise(r => setTimeout(r, 250));
+            // 4. 给用户 0.3秒 欣赏 100% 进度条，然后切入主界面
+            await new Promise(r => setTimeout(r, 300));
 
             // 5. 切换界面
             document.getElementById('login-section').style.display = 'none';
