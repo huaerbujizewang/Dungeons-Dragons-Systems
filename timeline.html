@@ -2,13 +2,14 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>费伦编年史 - 记忆回廊</title>
+    <title>记忆回廊</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* --- 全局与深色主题 --- */
         body { 
-            font-family: "PingFang SC", "Microsoft YaHei", serif; 
-            background: #0a0a0c; /* 深邃的黑底 */
+            font-family: 'Noto Serif SC', "PingFang SC", serif; 
+            background: #0a0a0c; 
             color: #ecf0f1; 
             margin: 0; 
             padding: 0; 
@@ -20,7 +21,7 @@
             position: fixed; top: 0; left: 0; width: 100%; 
             padding: 15px 30px; 
             background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-            z-index: 100; pointer-events: none; /* 让渐变不挡点击 */
+            z-index: 100; pointer-events: none; 
         }
         .back-btn { 
             padding: 8px 20px; border: 1px solid #f1c40f; 
@@ -28,6 +29,7 @@
             text-decoration: none; color: #f1c40f; border-radius: 4px; 
             font-weight: bold; transition: 0.3s; pointer-events: auto;
             backdrop-filter: blur(5px);
+            font-family: "PingFang SC", sans-serif;
         }
         .back-btn:hover { background: #f1c40f; color: #000; }
 
@@ -38,74 +40,70 @@
         .page-header h1 {
             font-size: 2.5em; letter-spacing: 5px; margin: 0;
             color: #fff; text-shadow: 0 2px 10px rgba(255,255,255,0.2);
-            font-family: 'Georgia', serif; font-weight: normal;
+            font-family: 'Georgia', 'Noto Serif SC', serif; font-weight: normal;
         }
-        .page-header p { color: #888; font-size: 0.9em; letter-spacing: 2px; }
+        .page-header p { color: #888; font-size: 0.9em; letter-spacing: 2px; font-family: "PingFang SC", sans-serif; }
 
         /* --- 时间线主容器 --- */
         .timeline-container {
             max-width: 1000px; margin: 0 auto; padding: 0 20px 100px 20px;
             position: relative;
         }
-        /* 中间的贯穿线 */
         .timeline-container::before {
             content: ''; position: absolute; top: 0; bottom: 0; left: 50%;
-            width: 2px; background: linear-gradient(to bottom, transparent, #333 10%, #333 90%, transparent);
+            width: 1px; background: linear-gradient(to bottom, transparent, #444 10%, #444 90%, transparent);
             transform: translateX(-50%); z-index: 0;
         }
 
         /* --- 电影画幅卡片 --- */
         .timeline-item {
             position: relative; width: 100%; display: flex; 
-            justify-content: center; margin-bottom: 80px; z-index: 1;
+            justify-content: center; margin-bottom: 90px; z-index: 1;
         }
         
-        /* 时间节点小圆点 */
         .timeline-node {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 12px; height: 12px; border-radius: 50%;
-            background: #f1c40f; box-shadow: 0 0 15px #f1c40f; z-index: 2;
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #f1c40f; box-shadow: 0 0 10px #f1c40f; z-index: 2;
         }
 
         .cinematic-card {
-            width: 85%; /* 限制宽度，露出时间线 */
-            aspect-ratio: 16 / 9; /* 强制 16:9 比例 */
-            position: relative; border-radius: 8px; overflow: hidden;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-            border: 1px solid #222; transition: transform 0.4s, box-shadow 0.4s;
-            cursor: zoom-in; /* 提示可以点击放大 */
+            width: 85%; 
+            aspect-ratio: 16 / 9; 
+            position: relative; border-radius: 4px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border: 1px solid #1a1a1a; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            cursor: zoom-in; 
         }
         .cinematic-card:hover {
             transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.8);
-            border-color: #444;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            border-color: #333;
         }
 
-        /* 图片本体 (懒加载) */
         .cinematic-img {
             width: 100%; height: 100%; object-fit: cover;
             transition: opacity 0.5s;
         }
 
-        /* 底部文字遮罩 (渐变黑) */
+        /* 极简底部遮罩与文字 */
         .cinematic-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%);
-            padding: 40px 30px 20px 30px; box-sizing: border-box;
-            text-align: center;
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, transparent 100%);
+            padding: 50px 30px 25px 30px; box-sizing: border-box;
+            text-align: center; pointer-events: none;
         }
 
         .card-date {
             font-family: 'Georgia', serif; font-size: 0.8em; color: #f1c40f;
-            letter-spacing: 2px; margin-bottom: 5px;
+            letter-spacing: 3px; margin-bottom: 8px; opacity: 0.8;
         }
+        
+        /* 核心修改：七绝诗句作为图名 */
         .card-title {
-            font-size: 1.8em; font-weight: bold; margin: 0 0 10px 0; color: #fff;
-            letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-        .card-desc {
-            font-size: 0.95em; color: #ccc; margin: 0; line-height: 1.6;
-            font-style: italic;
+            font-size: 1.6em; font-weight: normal; margin: 0; color: #fff;
+            letter-spacing: 6px; text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+            font-family: 'Noto Serif SC', serif; text-indent: 6px; /* 修正字间距导致的居中偏移 */
         }
 
         /* --- 剧场模式 (Lightbox全屏查看) --- */
@@ -118,16 +116,16 @@
         }
         #lightbox img {
             max-width: 95vw; max-height: 95vh; object-fit: contain;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
         }
         #lightbox-caption {
-            position: absolute; bottom: 20px; left: 0; width: 100%;
-            text-align: center; color: #fff; font-size: 1.2em; letter-spacing: 2px;
+            position: absolute; bottom: 30px; left: 0; width: 100%;
+            text-align: center; color: #fff; font-size: 1.2em; letter-spacing: 4px;
             text-shadow: 0 2px 4px #000; pointer-events: none;
+            font-family: 'Noto Serif SC', serif;
         }
 
-        /* 状态提示 */
-        #status-msg { text-align: center; color: #666; padding: 50px; font-size: 1.2em; }
+        #status-msg { text-align: center; color: #666; padding: 50px; font-size: 1.2em; font-family: "PingFang SC", sans-serif; }
     </style>
 </head>
 <body>
@@ -151,34 +149,33 @@
         </div>
 
     <script>
-        // Supabase 初始化 (用于鉴权)
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // JSON 数据源
         const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/timeline.json';
 
-        // 安全性检查与初始化
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             
             if (!user) {
-                alert('未登录，请先进行身份验证');
+                alert('检测到位面波动（未登录），请先进行身份验证');
                 window.location.href = 'index.html';
             } else {
-                // 已登录，显示主框架，开始拉取数据
                 document.getElementById('page-content').style.display = 'block';
                 document.getElementById('timeline-container').style.display = 'block';
                 loadTimelineData();
             }
         }
 
-        // 加载 GitHub 上的 JSON 数据
         async function loadTimelineData() {
             const container = document.getElementById('timeline-container');
             const statusMsg = document.getElementById('status-msg');
 
             try {
-                const response = await fetch(JSON_URL);
+                // 加一个防缓存的时间戳，防止你更新 github 后网页不刷新
+                const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
                 if (!response.ok) throw new Error("无法读取时间线数据");
                 const data = await response.json();
 
@@ -187,7 +184,7 @@
                     return;
                 }
 
-                statusMsg.style.display = 'none'; // 隐藏加载提示
+                statusMsg.style.display = 'none';
                 renderTimeline(data);
 
             } catch (error) {
@@ -195,29 +192,25 @@
                 statusMsg.innerHTML = `
                     <div style="color:#e74c3c;">链接中断</div>
                     <div style="font-size:0.7em; margin-top:10px;">${error.message}</div>
-                    <div style="font-size:0.7em; margin-top:5px;">(请确保 timeline.json 已上传至 GitHub 仓库根目录)</div>
                 `;
             }
         }
 
-        // 渲染时间线卡片
         function renderTimeline(events) {
             const container = document.getElementById('timeline-container');
             
             events.forEach(ev => {
-                // 如果没有提供图片，用一张黑底占位图
                 const imgSrc = ev.image || 'https://via.placeholder.com/1600x900/111/444?text=IMAGE+MISSING';
                 
+                // 彻底删除了 desc，只保留 date 和 title
                 const html = `
                     <div class="timeline-item">
                         <div class="timeline-node"></div>
                         <div class="cinematic-card" onclick="openLightbox('${imgSrc}', '${ev.title}')">
                             <img src="${imgSrc}" class="cinematic-img" loading="lazy" alt="${ev.title}">
-                            
                             <div class="cinematic-overlay">
-                                <div class="card-date">${ev.date || '未知纪元'}</div>
-                                <h2 class="card-title">【${ev.title || '未命名事件'}】</h2>
-                                <p class="card-desc">"${ev.desc || '...'}"</p>
+                                <div class="card-date">${ev.date || ''}</div>
+                                <h2 class="card-title">${ev.title || ''}</h2>
                             </div>
                         </div>
                     </div>
@@ -226,16 +219,14 @@
             });
         }
 
-        // --- 剧场模式控制 ---
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightbox-img');
         const lightboxCaption = document.getElementById('lightbox-caption');
 
         function openLightbox(imgSrc, title) {
             lightboxImg.src = imgSrc;
-            lightboxCaption.innerText = `【 ${title} 】`;
+            lightboxCaption.innerText = title; // 放大后也不加修饰符号，保持简约
             lightbox.style.display = 'flex';
-            // 简单延时实现淡入动画
             setTimeout(() => { lightbox.style.opacity = '1'; }, 10);
         }
 
@@ -243,11 +234,10 @@
             lightbox.style.opacity = '0';
             setTimeout(() => { 
                 lightbox.style.display = 'none'; 
-                lightboxImg.src = ''; // 清空 src 释放内存
+                lightboxImg.src = ''; 
             }, 300);
         }
 
-        // 启动系统
         init();
     </script>
 </body>
