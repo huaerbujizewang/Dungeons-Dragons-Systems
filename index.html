@@ -594,6 +594,25 @@
 </head>
 <body>
 
+<!-- 全屏加载遮罩 -->
+<div id="global-loading-mask" style="
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #111; z-index: 99999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #f1c40f; font-family: 'Cinzel', serif;
+">
+    <div style="font-size: 2em; margin-bottom: 20px;">🛡️</div>
+    <div style="font-size: 1.2em; letter-spacing: 2px;">正在加载...</div>
+    <div style="font-size: 0.8em; color: #666; margin-top: 10px;">Verifying Soul Signature...</div>
+</div>
+
+<div class="login-container" id="login-box" style="display: none;">
+    </div>
+
+<div class="main-container" id="main-interface" style="display: none;">
+    </div>  
+
+
 <!-- Loading 遮罩 -->
 <div id="loading-overlay">
     <div class="spinner"></div>
@@ -1238,6 +1257,50 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const DM_EMAIL = '739477825@qq.com';
+
+    // ============================================================
+    //  全屏加载与身份验证逻辑 (解决闪烁问题)
+    // ============================================================
+    async function startSystem() {
+        const loadingMask = document.getElementById('global-loading-mask');
+        const loginBox = document.querySelector('.login-container'); 
+        const mainUI = document.querySelector('.main-container');    
+
+        if (!loginBox || !mainUI) {
+            console.error("找不到 login-container 或 main-container，请检查 HTML class 名");
+            return;
+        }
+
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        await new Promise(r => setTimeout(r, 500));
+
+        // 4. 分流逻辑
+        if (session) {
+            // --- A. 已登录 ---
+            console.log(">> 身份验证通过: ", session.user.email);
+            
+            // 隐藏遮罩 & 登录框
+            loadingMask.style.display = 'none';
+            loginBox.style.display = 'none';
+            
+            // 显示主界面
+            mainUI.style.display = 'block'; 
+            if (typeof init === 'function') init(); 
+            else if (typeof loadEmployees === 'function') loadEmployees(); 
+
+        } else {
+            console.log(">> 未检测到会话，请登录");
+            loadingMask.style.display = 'none';
+            mainUI.style.display = 'none';
+            loginBox.style.display = 'flex'; 
+        }
+    }
+
+    startSystem();
+
+
+
+
     // --- 【补回】稀有度颜色定义 ---
     const rarityColors = { 
         '普通': '#95a5a6', 
@@ -1797,6 +1860,8 @@ async function login() {
             await supabaseClient.removeChannel(presenceChannel);
         }
         await supabaseClient.auth.signOut();
+        document.getElementById('main-interface').style.display = 'none';
+        document.getElementById('login-box').style.display = 'flex';
         location.reload();
     }
 
