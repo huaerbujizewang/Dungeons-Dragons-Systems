@@ -647,10 +647,17 @@
     <button id="security-tab-btn" class="tab-btn" onclick="switchTab('security')" style="display:none; color:#e74c3c; border:1px solid #ff000033;">🛡️ 安全与权限</button>
     <span id="admin-link" style="display:none; color:#3498db; cursor:pointer; font-weight:bold; margin-left: 10px;" onclick="toggleAdmin()">⚙️ DM 控制台</span>
         
-        <div class="info-bar">
-            <div id="date-text" style="font-weight:bold; background:#f1c40f; color:#333; padding:4px 10px; border-radius:4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">日期加载中...</div>
-            <div style="color:#d35400; font-weight:bold; margin-top:4px;">💰 <span id="gold-amount">0</span> GP</div>
-            <a href="#" onclick="logout()" style="color:#999; font-size:0.8em; text-decoration: underline;">退出登录</a>
+        <div class="info-bar" style="flex-direction: row; align-items: center; gap: 15px;">
+            <button onclick="openNoticeCenter()" style="background:none; border:none; cursor:pointer; font-size:1.6em; position:relative; padding:0; transition:0.2s;" title="公告中心">
+                🔔
+                <span id="notice-badge" style="display:none; position:absolute; top:-5px; right:-10px; background:#e74c3c; color:white; font-size:0.4em; padding:2px 6px; border-radius:10px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.3);">0</span>
+            </button>
+            
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                <div id="date-text" style="font-weight:bold; background:#f1c40f; color:#333; padding:4px 10px; border-radius:4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">日期加载中...</div>
+                <div style="color:#d35400; font-weight:bold; margin-top:4px;">💰 <span id="gold-amount">0</span> GP</div>
+                <a href="#" onclick="logout()" style="color:#999; font-size:0.8em; text-decoration: underline;">退出登录</a>
+            </div>
         </div>
     </div>
 
@@ -904,27 +911,17 @@
 
 </div>
 <!-- 弹窗：系统公告 -->
-<div id="sys-notice-modal" class="modal">
-    <div class="modal-box" style="border: 2px solid #444; background: #1a1a1a; color: #ecf0f1; padding: 0; overflow: hidden; max-width: 450px;">
-        <div id="sys-notice-header" style="background: #e74c3c; padding: 15px 20px; text-align: center;">
-            <h3 id="sys-notice-title" style="margin: 0; color: #fff; letter-spacing: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">系统公告</h3>
+<div id="notice-center-modal" class="modal">
+    <div class="modal-box" style="width: 550px; max-width: 95%; background: #1a1a1a; color: #ecf0f1; border: 1px solid #444; padding:0; display: flex; flex-direction: column; max-height: 80vh; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+        
+        <div style="padding: 15px 20px; background: #222; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333;">
+            <h3 style="margin: 0; color: #f1c40f; letter-spacing: 2px;">📜 公告中心</h3>
+            <button onclick="closeModal('notice-center-modal')" style="background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.2em; transition:0.2s;">✕</button>
         </div>
         
-        <div style="padding: 25px 20px;">
-            <div id="sys-notice-content" style="font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; color: #ccc;">
-                公告内容加载中...
+        <div id="notice-list-container" style="padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 15px; background: #151515;">
             </div>
-            
-            <div style="margin-top: 10px; text-align: right; font-size: 0.8em; color: #777;" id="sys-notice-date">
-                FR 1494
-            </div>
-        </div>
         
-        <div style="padding: 15px 20px; background: #111; text-align: center; border-top: 1px solid #333;">
-            <button onclick="closeModal('sys-notice-modal')" style="background: transparent; color: #f1c40f; border: 1px solid #f1c40f; padding: 8px 30px; border-radius: 4px; font-weight: bold; font-size: 1em; transition: 0.2s;">
-                我已了解
-            </button>
-        </div>
     </div>
 </div>
 
@@ -4647,9 +4644,12 @@ async function getRobustIP() {
     }
 
     // --- 检查系统公告 ---
+    // --- 公告系统核心逻辑 ---
+    let allNotices = []; // 全局存储当前的公告
+
+    // 1. 后台静默抓取公告
     async function checkAnnouncements() {
         try {
-            // 加时间戳防止 GitHub 缓存
             const url = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/announcements.json?t=' + new Date().getTime();
             const res = await fetch(url);
             if (!res.ok) return;
@@ -4657,36 +4657,82 @@ async function getRobustIP() {
             
             let myNotices = [];
             
-            // 1. 检查是否有全服公告
-            if (data.global && data.global.length > 0) {
-                myNotices = myNotices.concat(data.global);
-            }
+            // 合并全服公告和专属公告
+            if (data.global && data.global.length > 0) myNotices = myNotices.concat(data.global);
+            if (data.users && data.users[currentUserEmail]) myNotices = myNotices.concat(data.users[currentUserEmail]);
             
-            // 2. 检查是否有我的专属公告
-            if (data.users && data.users[currentUserEmail]) {
-                myNotices = myNotices.concat(data.users[currentUserEmail]);
-            }
+            // 将数组翻转，让最新加的公告排在最上面
+            allNotices = myNotices.reverse();
             
-            // 如果有公告，弹出最后一个/最新加的
-            if (myNotices.length > 0) {
-                const notice = myNotices[myNotices.length - 1]; // 取最后一条
-                
-                document.getElementById('sys-notice-title').innerText = notice.title;
-                // 解析 markdown 加粗语法 (简单把 **文字** 变红)
-                const parsedContent = notice.content.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#e74c3c;">$1</strong>');
-                document.getElementById('sys-notice-content').innerHTML = parsedContent;
-                document.getElementById('sys-notice-date').innerText = notice.date || '';
-                
-                // 动态修改头部颜色（警告就用红色，测试用蓝色等）
-                const headerBg = notice.color || '#333';
-                document.getElementById('sys-notice-header').style.background = headerBg;
-                
-                // 显示弹窗
-                document.getElementById('sys-notice-modal').style.display = 'flex';
+            // 更新右上角铃铛的红点
+            const badge = document.getElementById('notice-badge');
+            if (allNotices.length > 0) {
+                badge.style.display = 'inline-block';
+                badge.innerText = allNotices.length;
+            } else {
+                badge.style.display = 'none';
             }
         } catch (e) {
-            console.warn("未能获取系统公告，跳过显示。");
+            console.warn("未能获取系统公告");
         }
+    }
+
+    // 2. 点击铃铛时，打开列表面板
+    function openNoticeCenter() {
+        const container = document.getElementById('notice-list-container');
+        container.innerHTML = '';
+        
+        if (allNotices.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:60px 20px; color:#555;">
+                    <div style="font-size:3em; margin-bottom:15px; opacity:0.5;">📭</div>
+                    <div style="letter-spacing:2px; font-weight:bold;">当前无新指令或公告</div>
+                </div>`;
+        } else {
+            // 遍历渲染所有的公告卡片
+            allNotices.forEach(notice => {
+                // 解析 markdown 加粗语法
+                const parsedContent = notice.content.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#f1c40f;">$1</strong>');
+                
+                container.innerHTML += `
+                    <div style="
+                        background: linear-gradient(145deg, #222228, #1a1a1f);
+                        border: 1px solid #333;
+                        border-top: 1px solid #444; /* 顶部微高光增加立体感 */
+                        border-radius: 10px;
+                        padding: 20px 25px;
+                        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+                        position: relative;
+                        overflow: hidden;
+                    ">
+                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #f1c40f; opacity: 0.8;"></div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px dashed #333; padding-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.2em; filter: grayscale(20%);">📢</span>
+                                <h4 style="margin: 0; color: #ecf0f1; font-size: 1.15em; letter-spacing: 1px; font-weight: bold;">${notice.title}</h4>
+                            </div>
+                            <span style="font-size: 0.85em; color: #7f8c8d; font-family: 'Georgia', serif; letter-spacing: 1px;">${notice.date || ''}</span>
+                        </div>
+                        
+                        <div style="
+                            font-size: 0.95em; 
+                            line-height: 1.8; 
+                            color: #bdc3c7; 
+                            white-space: pre-wrap; 
+                            font-family: 'PingFang SC', sans-serif;
+                        ">${parsedContent}</div>
+                    </div>
+                `;
+            });
+        }
+        
+        // 点击后隐藏红点（模拟已读）
+        const badge = document.getElementById('notice-badge');
+        if (badge) badge.style.display = 'none';
+        
+        // 弹出面板
+        document.getElementById('notice-center-modal').style.display = 'flex';
     }
 
 
