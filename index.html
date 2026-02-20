@@ -621,14 +621,18 @@
 
 <!-- 登录界面 (独立居中) -->
 <div id="login-section" style="display: none;">
-    
     <h2>冒险者工会终端</h2>
-    <input type="email" id="login-email" placeholder="邮箱地址">
-    <input type="password" id="login-password" placeholder="通行密码">
     
-    <div class="cf-turnstile" data-sitekey="0x4AAAAAACXd68RuHuvi3cAG" data-theme="light" style="margin-bottom: 15px; display: flex; justify-content: center;"></div>
-    
-    <button onclick="login()">连接节点</button>
+    <form onsubmit="event.preventDefault(); login();">
+        
+        <input type="email" id="login-email" placeholder="邮箱地址" autocomplete="username" required>
+        
+        <input type="password" id="login-password" placeholder="通行密码" autocomplete="current-password" required>
+        
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAACXd68RuHuvi3cAG" data-theme="light" style="margin-bottom: 15px; display: flex; justify-content: center;"></div>
+        
+        <button type="submit">连接节点</button>
+    </form>
 </div>
 
 <!-- 主界面 -->
@@ -1816,15 +1820,21 @@ async function login() {
 }
 
     async function logout() {
-        // 离开频道
-        if (presenceChannel) {
-            await presenceChannel.untrack();
-            await supabaseClient.removeChannel(presenceChannel);
+        // 尝试离开频道
+        try {
+            if (typeof presenceChannel !== 'undefined' && presenceChannel) {
+                await presenceChannel.untrack();
+                await supabaseClient.removeChannel(presenceChannel);
+            }
+        } catch(e) {
+            console.warn("频道退出异常", e);
         }
+        
+        // 登出
         await supabaseClient.auth.signOut();
-        document.getElementById('main-interface').style.display = 'none';
-        document.getElementById('login-box').style.display = 'flex';
-        location.reload();
+        
+        // 刷新页面，让系统重新执行 checkUser() 并自动显示登录框
+        window.location.reload();
     }
 
      // checkUser：核心启动函数
