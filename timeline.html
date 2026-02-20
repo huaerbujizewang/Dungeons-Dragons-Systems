@@ -2,77 +2,96 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>记忆回廊</title>
+    <title>费伦编年史 - 记忆回廊</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* --- 全局与深色主题 --- */
+        /* --- 全局锁定，打造全屏沉浸感 --- */
         body { 
             font-family: 'Noto Serif SC', "PingFang SC", serif; 
-            background: #0a0a0c; 
+            background: #050505; /* 极深的黑色 */
             color: #ecf0f1; 
             margin: 0; 
             padding: 0; 
-            overflow-x: hidden;
+            overflow: hidden; /* 彻底禁止浏览器的默认滚动 */
+            width: 100vw;
+            height: 100vh;
         }
 
         /* --- 导航栏 --- */
         .back-nav { 
             position: fixed; top: 0; left: 0; width: 100%; 
-            padding: 15px 30px; 
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            padding: 20px 30px; 
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
             z-index: 100; pointer-events: none; 
+            display: flex; justify-content: space-between; align-items: center;
         }
         .back-btn { 
-            padding: 8px 20px; border: 1px solid #f1c40f; 
+            padding: 8px 20px; border: 1px solid #444; 
             background: rgba(0,0,0,0.5); cursor: pointer; 
-            text-decoration: none; color: #f1c40f; border-radius: 4px; 
+            text-decoration: none; color: #888; border-radius: 4px; 
             font-weight: bold; transition: 0.3s; pointer-events: auto;
             backdrop-filter: blur(5px);
             font-family: "PingFang SC", sans-serif;
+            letter-spacing: 1px;
         }
-        .back-btn:hover { background: #f1c40f; color: #000; }
+        .back-btn:hover { background: #f1c40f; color: #000; border-color: #f1c40f; }
 
-        /* --- 页面标题 --- */
-        .page-header {
-            text-align: center; margin-top: 80px; margin-bottom: 50px;
+        .page-title {
+            color: #555; font-family: 'Georgia', serif; 
+            letter-spacing: 8px; font-size: 0.9em; margin: 0;
+            pointer-events: auto;
         }
-        .page-header h1 {
-            font-size: 2.5em; letter-spacing: 5px; margin: 0;
-            color: #fff; text-shadow: 0 2px 10px rgba(255,255,255,0.2);
-            font-family: 'Georgia', 'Noto Serif SC', serif; font-weight: normal;
-        }
-        .page-header p { color: #888; font-size: 0.9em; letter-spacing: 2px; font-family: "PingFang SC", sans-serif; }
 
-        /* --- 时间线主容器 --- */
-        .timeline-container {
-            max-width: 1000px; margin: 0 auto; padding: 0 20px 100px 20px;
-            position: relative;
+        /* --- 横向画廊视口 --- */
+        .gallery-viewport {
+            width: 100%; height: 100%;
+            display: flex; align-items: center;
+            overflow-x: auto; overflow-y: hidden;
+            scroll-behavior: smooth;
+            /* 隐藏各种浏览器的滚动条 */
+            -ms-overflow-style: none; scrollbar-width: none; 
         }
-        .timeline-container::before {
-            content: ''; position: absolute; top: 0; bottom: 0; left: 50%;
-            width: 1px; background: linear-gradient(to bottom, transparent, #444 10%, #444 90%, transparent);
-            transform: translateX(-50%); z-index: 0;
+        .gallery-viewport::-webkit-scrollbar { display: none; }
+
+        /* --- 时间线轨道 --- */
+        .timeline-track {
+            display: flex; align-items: center;
+            padding: 0 50vw 0 15vw; /* 起点留白，终点留出半个屏幕的深邃感 */
+            gap: 8vw; /* 图片之间的间距 */
+            height: 100%; position: relative;
+        }
+
+        /* 贯穿中心的横向暗线 */
+        .timeline-track::before {
+            content: ''; position: absolute; 
+            top: 50%; left: 0; right: 0; height: 1px; 
+            background: linear-gradient(to right, transparent, #333 5%, #333 95%, transparent);
+            z-index: 0; transform: translateY(-50%);
         }
 
         /* --- 电影画幅卡片 --- */
         .timeline-item {
-            position: relative; width: 100%; display: flex; 
-            justify-content: center; margin-bottom: 90px; z-index: 1;
+            position: relative; z-index: 1;
+            width: 65vw; /* 占据屏幕宽度的 65% */
+            max-width: 1100px; min-width: 600px;
+            flex-shrink: 0; /* 防止被 flex 挤压 */
         }
 
         .cinematic-card {
-            width: 85%; 
-            aspect-ratio: 16 / 9; 
+            width: 100%; aspect-ratio: 16 / 9; 
             position: relative; border-radius: 4px; overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border: 1px solid #1a1a1a; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            border: 1px solid #111; transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
             cursor: zoom-in; 
+            filter: grayscale(20%) contrast(1.1); /* 默认带一点电影胶片的低饱和度 */
         }
+        
         .cinematic-card:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(0,0,0,1);
             border-color: #333;
+            filter: grayscale(0%) contrast(1.1); /* 悬浮时恢复全彩 */
         }
 
         .cinematic-img {
@@ -80,57 +99,56 @@
             transition: opacity 0.5s;
         }
 
-        /* 极简底部遮罩与文字 */
+        /* 极简底部遮罩与日期 */
         .cinematic-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, transparent 100%);
-            padding: 50px 30px 25px 30px; box-sizing: border-box;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+            padding: 40px; box-sizing: border-box;
             text-align: center; pointer-events: none;
         }
 
         .card-date {
-            font-family: 'Georgia', serif; font-size: 0.8em; color: #f1c40f;
-            letter-spacing: 3px; margin-bottom: 8px; opacity: 0.8;
-        }
-        
-        /* 核心修改：七绝诗句作为图名 */
-        .card-title {
-            font-size: 1.6em; font-weight: normal; margin: 0; color: #fff;
-            letter-spacing: 6px; text-shadow: 0 2px 6px rgba(0,0,0,0.9);
-            font-family: 'Noto Serif SC', serif; text-indent: 6px; /* 修正字间距导致的居中偏移 */
+            font-family: 'Georgia', serif; font-size: 1.4em; color: #f1c40f;
+            letter-spacing: 6px; margin: 0; opacity: 0.85;
+            text-shadow: 0 2px 15px rgba(0,0,0,1);
         }
 
         /* --- 剧场模式 (Lightbox全屏查看) --- */
         #lightbox {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 2000;
+            background: rgba(0,0,0,0.98); z-index: 2000;
             align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.3s;
+            opacity: 0; transition: opacity 0.4s;
             cursor: zoom-out;
         }
         #lightbox img {
             max-width: 95vw; max-height: 95vh; object-fit: contain;
-            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            box-shadow: 0 0 50px rgba(0,0,0,1);
         }
         #lightbox-caption {
-            position: absolute; bottom: 30px; left: 0; width: 100%;
-            text-align: center; color: #fff; font-size: 1.2em; letter-spacing: 4px;
-            text-shadow: 0 2px 4px #000; pointer-events: none;
-            font-family: 'Noto Serif SC', serif;
+            position: absolute; bottom: 40px; left: 0; width: 100%;
+            text-align: center; color: #f1c40f; font-size: 1.5em; letter-spacing: 6px;
+            font-family: 'Georgia', serif; text-shadow: 0 2px 10px #000; pointer-events: none;
+            opacity: 0.8;
         }
 
-        #status-msg { text-align: center; color: #666; padding: 50px; font-size: 1.2em; font-family: "PingFang SC", sans-serif; }
+        #status-msg { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #666; font-size: 1.2em; font-family: "PingFang SC", sans-serif; letter-spacing: 2px;
+        }
     </style>
 </head>
 <body>
 
     <div class="back-nav">
-        <a href="index.html" class="back-btn">⬅ 离开回廊</a>
+        <a href="index.html" class="back-btn">⬅ 离开</a>
+        <h1 class="page-title">CHRONICLES OF FAERÛN</h1>
     </div>
 
-    <div class="page-header" id="page-content" style="display:none;">
-        <h1>时空回廊</h1>
-        <p>CHRONICLES OF FAERÛN</p>
+    <div class="gallery-viewport" id="gallery-viewport">
+        <div id="status-msg">正在链接阿卡夏记录...</div>
+        <div class="timeline-track" id="timeline-track" style="display:none;">
+            </div>
     </div>
 
     <div id="lightbox" onclick="closeLightbox()">
@@ -138,17 +156,22 @@
         <div id="lightbox-caption"></div>
     </div>
 
-    <div class="timeline-container" id="timeline-container" style="display:none;">
-        <div id="status-msg">正在链接阿卡夏记录...</div>
-        </div>
-
     <script>
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // JSON 数据源
         const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/timeline.json';
+
+        // --- 核心交互：将鼠标滚轮的垂直滚动转化为横向滚动 ---
+        const viewport = document.getElementById('gallery-viewport');
+        viewport.addEventListener('wheel', (evt) => {
+            if (evt.deltaY !== 0) {
+                evt.preventDefault();
+                // 乘以 1.5 增加滚动灵敏度，让滑动更顺畅
+                viewport.scrollLeft += evt.deltaY * 1.5; 
+            }
+        });
 
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
@@ -157,28 +180,26 @@
                 alert('检测到位面波动（未登录），请先进行身份验证');
                 window.location.href = 'index.html';
             } else {
-                document.getElementById('page-content').style.display = 'block';
-                document.getElementById('timeline-container').style.display = 'block';
                 loadTimelineData();
             }
         }
 
         async function loadTimelineData() {
-            const container = document.getElementById('timeline-container');
+            const track = document.getElementById('timeline-track');
             const statusMsg = document.getElementById('status-msg');
 
             try {
-                // 加一个防缓存的时间戳，防止你更新 github 后网页不刷新
                 const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
                 if (!response.ok) throw new Error("无法读取时间线数据");
                 const data = await response.json();
 
                 if (!data || data.length === 0) {
-                    statusMsg.innerText = "记忆回廊空空如也，等待新的史诗被书写。";
+                    statusMsg.innerText = "回廊空空如也。";
                     return;
                 }
 
                 statusMsg.style.display = 'none';
+                track.style.display = 'flex';
                 renderTimeline(data);
 
             } catch (error) {
@@ -191,34 +212,35 @@
         }
 
         function renderTimeline(events) {
-            const container = document.getElementById('timeline-container');
+            const track = document.getElementById('timeline-track');
             
             events.forEach(ev => {
                 const imgSrc = ev.image || 'https://via.placeholder.com/1600x900/111/444?text=IMAGE+MISSING';
                 
-                // 彻底删除了 desc，只保留 date 和 title
+                // 完全移除了标题渲染，只保留日期作为视觉锚点
                 const html = `
                     <div class="timeline-item">
-                        <div class="cinematic-card" onclick="openLightbox('${imgSrc}', '${ev.title}')">
-                            <img src="${imgSrc}" class="cinematic-img" loading="lazy" alt="${ev.title}">
+                        <div class="cinematic-card" onclick="openLightbox('${imgSrc}', '${ev.date}')">
+                            <img src="${imgSrc}" class="cinematic-img" loading="lazy" alt="Memory">
                             <div class="cinematic-overlay">
                                 <div class="card-date">${ev.date || ''}</div>
-                                <h2 class="card-title">${ev.title || ''}</h2>
                             </div>
                         </div>
                     </div>
                 `;
-                container.innerHTML += html;
+                track.innerHTML += html;
             });
         }
 
+        // --- 剧场模式 ---
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightbox-img');
         const lightboxCaption = document.getElementById('lightbox-caption');
 
-        function openLightbox(imgSrc, title) {
+        function openLightbox(imgSrc, date) {
             lightboxImg.src = imgSrc;
-            lightboxCaption.innerText = title; // 放大后也不加修饰符号，保持简约
+            // 放大后也只显示日期
+            lightboxCaption.innerText = date; 
             lightbox.style.display = 'flex';
             setTimeout(() => { lightbox.style.opacity = '1'; }, 10);
         }
@@ -228,7 +250,7 @@
             setTimeout(() => { 
                 lightbox.style.display = 'none'; 
                 lightboxImg.src = ''; 
-            }, 300);
+            }, 400);
         }
 
         init();
