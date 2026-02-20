@@ -9,11 +9,11 @@
         /* --- 全局锁定，打造全屏沉浸感 --- */
         body { 
             font-family: 'Noto Serif SC', "PingFang SC", serif; 
-            background: #050505; /* 极深的黑色 */
+            background: #050505; 
             color: #ecf0f1; 
             margin: 0; 
             padding: 0; 
-            overflow: hidden; /* 彻底禁止浏览器的默认滚动 */
+            overflow: hidden; 
             width: 100vw;
             height: 100vh;
         }
@@ -48,11 +48,15 @@
             width: 100%; height: 100%;
             display: flex; align-items: center;
             overflow-x: auto; overflow-y: hidden;
-            scroll-behavior: smooth;
             /* 隐藏各种浏览器的滚动条 */
             -ms-overflow-style: none; scrollbar-width: none; 
         }
         .gallery-viewport::-webkit-scrollbar { display: none; }
+        
+        /* 拖拽时的鼠标指针样式 */
+        .gallery-viewport.active {
+            cursor: grabbing;
+        }
 
         /* --- 时间线轨道 --- */
         .timeline-track {
@@ -163,16 +167,56 @@
         
         const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/timeline.json';
 
-        // --- 核心交互：将鼠标滚轮的垂直滚动转化为横向滚动 ---
+        // --- 核心交互：丝滑滚轮 + 鼠标拖拽 ---
         const viewport = document.getElementById('gallery-viewport');
+        
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let isDragging = false; 
+
+        // 滚轮逻辑
         viewport.addEventListener('wheel', (evt) => {
-            if (evt.deltaY !== 0) {
-                evt.preventDefault();
-                // 乘以 1.5 增加滚动灵敏度，让滑动更顺畅
+            evt.preventDefault();
+            if (evt.deltaX !== 0) {
+                viewport.scrollLeft += evt.deltaX; 
+            } else {
                 viewport.scrollLeft += evt.deltaY * 1.5; 
             }
+        }, { passive: false });
+
+        // 鼠标拖拽逻辑
+        viewport.addEventListener('mousedown', (e) => {
+            isDown = true;
+            isDragging = false; 
+            viewport.classList.add('active');
+            startX = e.pageX - viewport.offsetLeft;
+            scrollLeft = viewport.scrollLeft;
         });
 
+        viewport.addEventListener('mouseleave', () => {
+            isDown = false;
+            viewport.classList.remove('active');
+        });
+
+        viewport.addEventListener('mouseup', () => {
+            isDown = false;
+            viewport.classList.remove('active');
+        });
+
+        viewport.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - viewport.offsetLeft;
+            const walk = (x - startX) * 2; 
+            
+            if (Math.abs(walk) > 5) {
+                isDragging = true; 
+            }
+            viewport.scrollLeft = scrollLeft - walk;
+        });
+
+        // --- 数据加载与渲染 ---
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             
@@ -217,11 +261,10 @@
             events.forEach(ev => {
                 const imgSrc = ev.image || 'https://via.placeholder.com/1600x900/111/444?text=IMAGE+MISSING';
                 
-                // 完全移除了标题渲染，只保留日期作为视觉锚点
                 const html = `
                     <div class="timeline-item">
                         <div class="cinematic-card" onclick="openLightbox('${imgSrc}', '${ev.date}')">
-                            <img src="${imgSrc}" class="cinematic-img" loading="lazy" alt="Memory">
+                            <img src="${imgSrc}" class="cinematic-img" loading="lazy" alt="Memory" draggable="false">
                             <div class="cinematic-overlay">
                                 <div class="card-date">${ev.date || ''}</div>
                             </div>
@@ -238,8 +281,9 @@
         const lightboxCaption = document.getElementById('lightbox-caption');
 
         function openLightbox(imgSrc, date) {
+            if (isDragging) return; // 拖拽时不触发点击
+            
             lightboxImg.src = imgSrc;
-            // 放大后也只显示日期
             lightboxCaption.innerText = date; 
             lightbox.style.display = 'flex';
             setTimeout(() => { lightbox.style.opacity = '1'; }, 10);
