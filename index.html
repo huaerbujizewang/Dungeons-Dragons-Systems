@@ -903,6 +903,30 @@
 
 
 </div>
+<!-- 弹窗：系统公告 -->
+<div id="sys-notice-modal" class="modal">
+    <div class="modal-box" style="border: 2px solid #444; background: #1a1a1a; color: #ecf0f1; padding: 0; overflow: hidden; max-width: 450px;">
+        <div id="sys-notice-header" style="background: #e74c3c; padding: 15px 20px; text-align: center;">
+            <h3 id="sys-notice-title" style="margin: 0; color: #fff; letter-spacing: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">系统公告</h3>
+        </div>
+        
+        <div style="padding: 25px 20px;">
+            <div id="sys-notice-content" style="font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; color: #ccc;">
+                公告内容加载中...
+            </div>
+            
+            <div style="margin-top: 10px; text-align: right; font-size: 0.8em; color: #777;" id="sys-notice-date">
+                FR 1494
+            </div>
+        </div>
+        
+        <div style="padding: 15px 20px; background: #111; text-align: center; border-top: 1px solid #333;">
+            <button onclick="closeModal('sys-notice-modal')" style="background: transparent; color: #f1c40f; border: 1px solid #f1c40f; padding: 8px 30px; border-radius: 4px; font-weight: bold; font-size: 1em; transition: 0.2s;">
+                我已了解
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- 弹窗：装备选择 -->
 <div id="equip-modal" class="modal">
@@ -1916,6 +1940,11 @@ async function login() {
 
         // 关闭全屏加载遮罩
         if (loadingMask) loadingMask.style.display = 'none';
+
+        // 如果是已登录状态，检查并弹出公告
+        if (session) {
+            checkAnnouncements();
+        }
     }
 
 
@@ -4617,9 +4646,53 @@ async function getRobustIP() {
         }
     }
 
+    // --- 检查系统公告 ---
+    async function checkAnnouncements() {
+        try {
+            // 加时间戳防止 GitHub 缓存
+            const url = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/announcements.json?t=' + new Date().getTime();
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            let myNotices = [];
+            
+            // 1. 检查是否有全服公告
+            if (data.global && data.global.length > 0) {
+                myNotices = myNotices.concat(data.global);
+            }
+            
+            // 2. 检查是否有我的专属公告
+            if (data.users && data.users[currentUserEmail]) {
+                myNotices = myNotices.concat(data.users[currentUserEmail]);
+            }
+            
+            // 如果有公告，弹出最后一个/最新加的
+            if (myNotices.length > 0) {
+                const notice = myNotices[myNotices.length - 1]; // 取最后一条
+                
+                document.getElementById('sys-notice-title').innerText = notice.title;
+                // 解析 markdown 加粗语法 (简单把 **文字** 变红)
+                const parsedContent = notice.content.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#e74c3c;">$1</strong>');
+                document.getElementById('sys-notice-content').innerHTML = parsedContent;
+                document.getElementById('sys-notice-date').innerText = notice.date || '';
+                
+                // 动态修改头部颜色（警告就用红色，测试用蓝色等）
+                const headerBg = notice.color || '#333';
+                document.getElementById('sys-notice-header').style.background = headerBg;
+                
+                // 显示弹窗
+                document.getElementById('sys-notice-modal').style.display = 'flex';
+            }
+        } catch (e) {
+            console.warn("未能获取系统公告，跳过显示。");
+        }
+    }
+
 
     
     checkUser();
+
 </script>
 
 
