@@ -747,7 +747,7 @@
         </div>
 
         <!-- 卡片 9：图鉴 -->
-        <div class="card emp-card-content" onclick="window.location.href='bestiary.html'" style="cursor:pointer; ">
+        <div class="card emp-card-content" onclick="window.location.href='bestiary.html?uid=' + viewingUserId" style="cursor:pointer; ">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #e74c3c;">🧌</div>
             <div style="font-weight:bold; font-size:1.1em; ">敌人图鉴</div>
             <p style="font-size:0.8em; color:#666;">已遭遇的威胁档案</p>
@@ -5059,12 +5059,26 @@ async function getRobustIP() {
         if (!name || isNaN(max)) return alert('名称和总进度必填');
 
         showLoading();
-        await supabaseClient.from('research_projects').insert([{ user_id: selectedUserId, name, max_progress: max, speed_per_day: speed, description: desc }]);
+        // 核心：加上 { error } 的接收
+        const { error } = await supabaseClient.from('research_projects').insert([{ 
+            user_id: selectedUserId, 
+            name: name, 
+            max_progress: max, 
+            speed_per_day: speed, 
+            description: desc 
+        }]);
+        
+        // 如果数据库拦截了，直接弹窗告诉你为什么
+        if (error) {
+            hideLoading();
+            return alert('❌ 数据库拒绝了操作：\n' + error.message);
+        }
+
         await logAction('DM操作', `下发了科研项目 [${name}]`);
         hideLoading();
         
         document.getElementById('adm-res-name').value = ''; // 清空输入框
-        loadAdminResearch();
+        loadAdminResearch(); // 重新读取列表
     }
 
     // 2. [新增] 手动修改当前进度
@@ -5147,6 +5161,8 @@ async function getRobustIP() {
         }
     }
 
+    
+
 
     
     checkUser();
@@ -5160,7 +5176,6 @@ async function getRobustIP() {
 
 </body>
 </html>
-
 
 
 
