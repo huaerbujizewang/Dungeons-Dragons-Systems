@@ -1124,29 +1124,7 @@
                 <button onclick="randomRestock()" style="width:100%; margin-top:10px; background:#8e44ad; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">🎲 随机进货 (标准包)</button>
                 <div style="font-size:0.8em; color:#666; text-align:center; margin-top:5px;">包含: 2传说, 12极珍稀, 20珍稀, 30非普通, 10普通</div>
             </div>
-        </div>
-
-        <div class="admin-box" style="border:1px solid #c0392b; padding:15px; border-radius:8px; background:#fffcf0;">
-                <h3 style="margin-top:0; color:#c0392b;">更新怪物图鉴 </h3>
-                <div style="font-size:0.8em; color:#666; margin-bottom:10px;">
-                    请先在上方【玩家资产操控】选中玩家。选择怪物后点击授权，下方会自动生成更新后的 JSON，复制替换你的本地 <code>enemies.json</code> 即可。
-                </div>
-                
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <select id="adm-bestiary-list" style="flex:1; padding:8px; border: 1px solid #ccc; border-radius: 4px;"></select>
-                    <button onclick="grantMonsterToPlayer()" style="background:#c0392b; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer; transition: 0.2s;">
-                        ➕ 授权给TA
-                    </button>
-                </div>
-
-                <textarea id="adm-bestiary-json" placeholder="读取中或等待生成..." style="width:100%; height:180px; font-family:monospace; font-size:0.8em; border: 1px solid #ddd; border-radius:4px; padding:8px; box-sizing:border-box;"></textarea>
-                
-                <button onclick="copyBestiaryJson()" style="width:100%; margin-top:8px; background:#34495e; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">
-                    📋 一键复制更新后的 JSON
-                </button>
-        </div>
-
-        <div class="admin-box" style="border:1px solid #3498db; padding:15px; border-radius:8px; background:#f0f9ff; margin-top:20px;">
+            <div class="admin-box" style="border:1px solid #3498db; padding:15px; border-radius:8px; background:#f0f9ff; margin-top:20px;">
             <h3 style="margin-top:0; color:#2980b9;">🔬 科研与工程委派</h3>
             <div style="font-size:0.8em; color:#666; margin-bottom:10px;">先在上方[玩家资产]选定玩家。分配雇员后，其状态将锁死为"科研中"且无法参战。</div>
                 
@@ -1166,6 +1144,46 @@
                   请先选择玩家以加载项目...
              </div>
         </div>
+
+         <div class="admin-box" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fffcf0; margin-top:20px;">
+                <h3 style="margin-top:0; color:#e74c3c;">💀 怪物图鉴在线编辑器</h3>
+                
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <select id="adm-monster-select" style="flex:1; padding:5px;" onchange="loadMonsterForEdit()">
+                        <option value="">-- 选择已有怪物进行编辑，或留空以新增 --</option>
+                    </select>
+                    <button onclick="deleteMonster()" style="background:#c0392b; color:white; border:none; padding:5px 10px; border-radius:4px;">❌ 删除</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <input type="hidden" id="edit-mon-id">
+                    <input type="text" id="edit-mon-name" placeholder="怪物名称 (如: 曼松)">
+                    <input type="text" id="edit-mon-faction" placeholder="阵营 (如: 散塔林会)">
+                    <select id="edit-mon-threat" style="padding:5px;">
+                        <option value="杂兵">杂兵</option>
+                        <option value="精英">精英</option>
+                        <option value="首领">首领</option>
+                    </select>
+                    <input type="text" id="edit-mon-status" placeholder="身份标签 (如: 领主)">
+                    <input type="text" id="edit-mon-avatar" placeholder="头像 URL" style="grid-column: 1/3;">
+                    <input type="text" id="edit-mon-stand" placeholder="立绘 URL" style="grid-column: 1/3;">
+                    <input type="text" id="edit-mon-visible" placeholder="可见权限 (如: all 或 玩家邮箱，用逗号分隔)" style="grid-column: 1/3;">
+                    
+                    <div style="grid-column: 1/3; font-size:0.8em; color:#666; margin-top:5px;">Stat Block (JSON格式的数据面板)：</div>
+                    <textarea id="edit-mon-statblock" style="grid-column: 1/3; height:150px; font-family:monospace;" placeholder='{"hp": "100", "ac": "15", ...}'></textarea>
+                </div>
+
+                <button onclick="saveMonster()" style="width:100%; margin-top:10px; background:#e74c3c; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">
+                    💾 保存 / 录入怪物
+                </button>
+            </div>
+
+
+        
+        </div>
+
+       
+        
 
         <!-- 右侧列 -->
         <div style="display:flex; flex-direction:column; gap:20px;">
@@ -1338,69 +1356,92 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const DM_EMAIL = '739477825@qq.com';
-    // --- 怪物图鉴在线修改器逻辑 ---
-    let globalEnemiesData = [];
+    // === 怪物图鉴在线修改器 ===
+    let adminMonsters = [];
 
-    // 1. 加载图鉴数据
-    async function loadBestiaryForAdmin() {
+    // 每次打开 DM 面板时，顺便调用这个刷新列表
+    async function loadAdminMonsters() {
+        const { data } = await supabaseClient.from('bestiary').select('*');
+        adminMonsters = data || [];
+        const sel = document.getElementById('adm-monster-select');
+        sel.innerHTML = '<option value="">-- 新增怪物 (留空) --</option>';
+        adminMonsters.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name} (${m.faction})</option>`);
+    }
+
+    // 选中怪物时，回填数据到输入框
+    function loadMonsterForEdit() {
+        const id = document.getElementById('adm-monster-select').value;
+        if (!id) {
+            // 清空表单用于新增
+            document.querySelectorAll('#edit-mon-id, #edit-mon-name, #edit-mon-faction, #edit-mon-status, #edit-mon-avatar, #edit-mon-stand, #edit-mon-statblock').forEach(el => el.value = '');
+            document.getElementById('edit-mon-visible').value = 'all';
+            return;
+        }
+        const m = adminMonsters.find(x => x.id == id);
+        if(m) {
+            document.getElementById('edit-mon-id').value = m.id;
+            document.getElementById('edit-mon-name').value = m.name || '';
+            document.getElementById('edit-mon-faction').value = m.faction || '';
+            document.getElementById('edit-mon-threat').value = m.threat_level || '杂兵';
+            document.getElementById('edit-mon-status').value = m.status || '';
+            document.getElementById('edit-mon-avatar').value = m.avatar_url || '';
+            document.getElementById('edit-mon-stand').value = m.stand_url || '';
+            document.getElementById('edit-mon-visible').value = (m.visible_to || ['all']).join(',');
+            document.getElementById('edit-mon-statblock').value = JSON.stringify(m.stat_block || {}, null, 2);
+        }
+    }
+
+    // 在线保存/修改 (复刻你的雇员保存逻辑)
+    async function saveMonster() {
+        const id = document.getElementById('edit-mon-id').value;
+        const visibleStr = document.getElementById('edit-mon-visible').value || 'all';
+        const visibleArr = visibleStr.split(',').map(s => s.trim());
+        
+        let statBlock = {};
         try {
-            const res = await fetch('enemies.json?t=' + Date.now());
-            if (res.ok) {
-                globalEnemiesData = await res.json();
-                const select = document.getElementById('adm-bestiary-list');
-                select.innerHTML = '<option value="">-- 选择要解锁的怪物档案 --</option>';
-                globalEnemiesData.forEach(e => {
-                    select.innerHTML += `<option value="${e.id}">${e.name} (${e.threat_level || '无评级'})</option>`;
-                });
-                document.getElementById('adm-bestiary-json').value = JSON.stringify(globalEnemiesData, null, 2);
-            } else {
-                document.getElementById('adm-bestiary-json').value = "未找到 enemies.json，请确认文件路径。";
-            }
-        } catch (e) {
-            console.error("加载图鉴失败", e);
+            const rawStat = document.getElementById('edit-mon-statblock').value;
+            if(rawStat) statBlock = JSON.parse(rawStat);
+        } catch(e) {
+            return alert('⚠️ Stat Block 的 JSON 格式有误，请检查标点符号！');
         }
+
+        const payload = {
+            name: document.getElementById('edit-mon-name').value,
+            faction: document.getElementById('edit-mon-faction').value,
+            threat_level: document.getElementById('edit-mon-threat').value,
+            status: document.getElementById('edit-mon-status').value,
+            avatar_url: document.getElementById('edit-mon-avatar').value,
+            stand_url: document.getElementById('edit-mon-stand').value,
+            visible_to: visibleArr,
+            stat_block: statBlock
+        };
+
+        if (!payload.name) return alert('请至少填写怪物名称！');
+
+        showLoading();
+        if (id) {
+            // 更新现有
+            await supabaseClient.from('bestiary').update(payload).eq('id', id);
+            alert('修改成功！');
+        } else {
+            // 新增
+            await supabaseClient.from('bestiary').insert([payload]);
+            alert('新增怪物成功！');
+        }
+        hideLoading();
+        loadAdminMonsters(); // 刷新列表
     }
 
-    // 2. 授权怪物给选中玩家
-    function grantMonsterToPlayer() {
-        const userSelect = document.getElementById('adm-user-list');
-        const monsterId = document.getElementById('adm-bestiary-list').value;
-        
-        if (!userSelect || !userSelect.value) return alert('⚠️ 请先在上方 [玩家资产操控] 列表中选择一个玩家！');
-        if (!monsterId) return alert('⚠️ 请选择要授权的怪物！');
-
-        const userEmail = userSelect.options[userSelect.selectedIndex].text; 
-
-        // 在内存中查找该怪物
-        const enemy = globalEnemiesData.find(e => e.id === monsterId);
-        if (enemy) {
-            // 如果本来没有 visible_to 字段，初始化一个
-            if (!enemy.visible_to) enemy.visible_to = [];
-            
-            // 检查是否已经有权限
-            if (enemy.visible_to.includes(userEmail) || enemy.visible_to.includes('all')) {
-                alert(`该玩家 ${userEmail} (或全服) 已经拥有 [${enemy.name}] 的查阅权限啦！`);
-                return;
-            }
-
-            // 将玩家邮箱追加到该怪物的可见列表中
-            enemy.visible_to.push(userEmail);
-            
-            // 重新将更新后的对象转为 JSON 字符串，并美化格式
-            document.getElementById('adm-bestiary-json').value = JSON.stringify(globalEnemiesData, null, 2);
-            
-            alert(`✅ 成功！\n已将 [${enemy.name}] 授权给 ${userEmail}。\n\n请点击下方的复制按钮，去覆盖你的 enemies.json 文件！`);
+    async function deleteMonster() {
+        const id = document.getElementById('adm-monster-select').value;
+        if (!id) return alert('请先选择一个要删除的怪物');
+        if (confirm('警告：确定要彻底删除该怪物档案吗？')) {
+            showLoading();
+            await supabaseClient.from('bestiary').delete().eq('id', id);
+            hideLoading();
+            alert('已删除');
+            loadAdminMonsters();
         }
-    }
-
-    // 3. 一键复制代码
-    function copyBestiaryJson() {
-        const jsonText = document.getElementById('adm-bestiary-json');
-        if (!jsonText.value || jsonText.value.includes('未找到')) return alert('没有有效的 JSON 数据可复制');
-        
-        jsonText.select();
-        document.execCommand('copy'); 
-        alert('📋 JSON 代码已复制到剪贴板！\n请前往你的代码编辑器，全选 enemies.json 的内容并直接粘贴替换。');
     }
 
 
