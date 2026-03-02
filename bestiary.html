@@ -312,9 +312,9 @@
         container.innerHTML = html;
     }
 
-    // --- 5. 档案弹窗逻辑 (从 index.html 完美迁移) ---
+    // --- 5. 档案弹窗逻辑 ---
     function openEnemyDossier(enemyId) {
-        const enemy = allEnemies.find(e => e.id === enemyId);
+        const enemy = allEnemies.find(e => e.id == enemyId);
         if (!enemy || !enemy.stat_block) return alert('档案数据损坏或未录入详细数据');
 
         const modal = document.getElementById('dossier-modal');
