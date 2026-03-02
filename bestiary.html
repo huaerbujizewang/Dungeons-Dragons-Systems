@@ -314,8 +314,11 @@
 
     // --- 5. 档案弹窗逻辑 ---
     function openEnemyDossier(enemyId) {
+        // 使用 == 解决字符串与数字匹配失败的终极Bug
         const enemy = allEnemies.find(e => e.id == enemyId);
-        if (!enemy || !enemy.stat_block) return alert('档案数据损坏或未录入详细数据');
+        
+        if (!enemy) return alert('系统中找不到该怪物的数据！');
+        if (!enemy.stat_block || Object.keys(enemy.stat_block).length === 0) return alert('档案数据空白：DM 尚未录入该怪物的 JSON 面板。');
 
         const modal = document.getElementById('dossier-modal');
         resetDossierUI(); 
@@ -326,21 +329,23 @@
         const data = enemy.stat_block;
         const basic = data.basic_info || {};
 
-        // 头部与立绘
+        // 1. 头部与立绘处理
         const imgEl = document.getElementById('dossier-stand-img');
         imgEl.src = enemy.stand_url || enemy.avatar_url || 'https://via.placeholder.com/300x500';
         imgEl.onload = () => imgEl.classList.add('loaded');
         if (imgEl.complete) imgEl.classList.add('loaded');
 
         document.getElementById('dossier-bg-blur').style.backgroundImage = `url('${enemy.avatar_url || imgEl.src}')`;
-        document.getElementById('dossier-name').innerText = enemy.name;
+        document.getElementById('dossier-name').innerText = enemy.name || data.name;
         document.getElementById('dossier-meta').innerText = data.meta || '未知实体';
         document.getElementById('dossier-stars').innerText = '⚠️'.repeat(threatWeights[enemy.threat_level] || 1);
 
-        // Tab 1: 基础档案
-        document.getElementById('info-name').innerText = enemy.name;
+        // 2. Tab 1: 基础档案 
+        document.getElementById('info-name').innerText = enemy.name || data.name;
         document.getElementById('info-race').innerText = data.meta || '--';
-        document.getElementById('info-origin').innerText = enemy.faction || '未知';
+        document.getElementById('info-origin').innerText = basic.origin || enemy.faction || '未知区域';
+        
+        // 渲染怪物的独有信息
         document.getElementById('info-tags').innerHTML = `<span class="tag-box" style="background:#c0392b;">${enemy.threat_level}</span>`;
         if (basic.tags) {
             basic.tags.forEach(tag => {
@@ -348,10 +353,10 @@
             });
         }
 
-        // Tab 2: 战斗属性
+        // 3. Tab 2: 战斗属性
         renderCombatTab(data);
 
-        // Tab 3: 情报
+        // 4. Tab 3: 情报
         document.getElementById('resume-content').innerText = data.resume || "【系统提示】\n未检索到该实体的详细侦查情报。";
     }
 
