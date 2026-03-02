@@ -2269,7 +2269,8 @@ async function loadGold() {
                 // 只有 Root 能看网安
                 securityPanel.style.display = (currentUserRole === 'root') ? 'flex' : 'none';
             }
-            loadBestiaryForAdmin();
+            
+            loadAdminMonsters();
         }
         if (p.style.display === 'block' && currentUserRole === 'root') {
             loadAllAccounts(); // 自动加载账号
