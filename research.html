@@ -55,24 +55,25 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     async function initResearch() {
+        // 1. 确保 session 存在，否则数据库会拒绝
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return alert('请先登录');
+
+        // 2. 读取 uid
         const urlParams = new URLSearchParams(window.location.search);
         const uid = urlParams.get('uid');
-        if (!uid) return alert('缺少玩家视角 ID');
-
         const container = document.getElementById('projects-container');
+        
+        if (!uid || uid === 'undefined') {
+            return container.innerHTML = '<div style="color:red; text-align:center;">缺少视角ID</div>';
+        }
 
-        // 1. 拿取项目数据
+        // 3. 直接拿数据
         const { data: projects, error } = await supabaseClient
             .from('research_projects')
             .select('*')
             .eq('user_id', uid)
-            .order('status', { ascending: false }); // 让已完成的排下面
-
-        if (error) return container.innerHTML = '<div style="color:red">读取数据失败</div>';
-        if (!projects || projects.length === 0) return container.innerHTML = '<div style="text-align:center; color:#666;">当前领地尚未开启任何研发项目。</div>';
-
-        // 2. 拿取雇员数据 (用于显示头像)
-        const { data: emps } = await supabaseClient.from('employees').select('id, name, avatar_url').eq('user_id', uid);
+            .order('status', { ascending: false });
 
         let html = '';
         projects.forEach(p => {
