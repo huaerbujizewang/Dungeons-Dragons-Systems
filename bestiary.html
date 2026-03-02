@@ -210,28 +210,27 @@
     // --- 2. 页面加载与鉴权 ---
     async function initBestiary() {
         const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) {
-            alert('终端未连接，请先登录系统');
-            window.location.href = 'index.html';
-            return;
-        }
-        currentUserEmail = session.user.email;
+        if (!session) return alert('请先登录');
+        const urlParams = new URLSearchParams(window.location.search);
+        const uid = urlParams.get('uid');
+        if (!uid || uid === 'undefined') return document.getElementById('enemies-container').innerHTML = '缺少视角ID';
+
+        const { data: profile } = await supabaseClient.from('profiles').select('email').eq('id', uid).single();
+        const targetEmail = profile ? profile.email : session.user.email;
 
         try {
             const { data, error } = await supabaseClient.from('bestiary').select('*');
             if (error) throw error;
             
-            // 权限过滤：all 或 匹配邮箱
             allEnemies = data.filter(enemy => 
-                enemy.visible_to.includes('all') || 
-                enemy.visible_to.includes(currentUserEmail)
+                (enemy.visible_to || []).includes('all') || 
+                (enemy.visible_to || []).includes(targetEmail)
             );
 
             renderTabs();
             renderEnemies();
         } catch (e) {
-            console.error("图鉴加载失败", e);
-            document.getElementById('enemies-container').innerHTML = '<div style="color:red; padding: 20px;">读取敌人数据失败，请确认 enemies.json 是否存在且格式正确。</div>';
+            console.error("加载失败", e);
         }
     }
 
