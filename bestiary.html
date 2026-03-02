@@ -218,8 +218,8 @@
         currentUserEmail = session.user.email;
 
         try {
-            const res = await fetch('enemies.json');
-            const data = await res.json();
+            const { data, error } = await supabaseClient.from('bestiary').select('*');
+            if (error) throw error;
             
             // 权限过滤：all 或 匹配邮箱
             allEnemies = data.filter(enemy => 
