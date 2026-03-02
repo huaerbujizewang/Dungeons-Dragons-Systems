@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>工程研发中心 - D&D</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --border: #333; --bg: #0a0a0c; --accent: #3498db; }
+        body { font-family: "Consolas", "PingFang SC", sans-serif; background: var(--bg); color: #ecf0f1; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid var(--accent); padding-bottom: 15px; margin-bottom: 30px; align-items: flex-end; }
+        .title { font-size: 2em; color: var(--accent); font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
+        .btn-back { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: 0.2s; }
+        .btn-back:hover { background: var(--accent); color: #fff; }
+
+        .proj-card { background: #111; border: 1px solid #333; border-left: 4px solid var(--accent); padding: 20px; margin-bottom: 20px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .proj-card.finished { border-left-color: #2ecc71; }
+        .proj-card.paused { border-left-color: #e67e22; }
+
+        .proj-title { font-size: 1.4em; font-weight: bold; color: #fff; margin-bottom: 5px; }
+        .proj-desc { font-size: 0.9em; color: #aaa; line-height: 1.5; margin-bottom: 15px; }
+        
+        /* 科幻感进度条 */
+        .progress-box { background: #000; border: 1px solid #444; height: 24px; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; }
+        .progress-bar { height: 100%; background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 10px, #2980b9 10px, #2980b9 20px); transition: width 0.5s ease-out; width: 0%; }
+        .progress-bar.finished { background: #2ecc71; }
+        .progress-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; line-height: 24px; font-size: 0.85em; font-weight: bold; color: #fff; text-shadow: 0 1px 2px #000; }
+        
+        .meta-info { display: flex; justify-content: space-between; font-size: 0.85em; color: #888; margin-top: 10px; }
+        
+        .staff-area { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #333; }
+        .staff-title { font-size: 0.8em; color: #777; margin-bottom: 8px; text-transform: uppercase; }
+        .avatar-group { display: flex; gap: 10px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #555; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="title">R&D / 科研与工程中心</div>
+        <button class="btn-back" onclick="window.location.href='index.html'">返回终端</button>
+    </div>
+
+    <div id="projects-container">
+        <div style="text-align:center; color:#666; padding: 50px;">正在连接工程节点...</div>
+    </div>
+</div>
+
+<script>
+    // 替换为你的 Supabase 凭据
+    const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function initResearch() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const uid = urlParams.get('uid');
+        if (!uid) return alert('缺少玩家视角 ID');
+
+        const container = document.getElementById('projects-container');
+
+        // 1. 拿取项目数据
+        const { data: projects, error } = await supabaseClient
+            .from('research_projects')
+            .select('*')
+            .eq('user_id', uid)
+            .order('status', { ascending: false }); // 让已完成的排下面
+
+        if (error) return container.innerHTML = '<div style="color:red">读取数据失败</div>';
+        if (!projects || projects.length === 0) return container.innerHTML = '<div style="text-align:center; color:#666;">当前领地尚未开启任何研发项目。</div>';
+
+        // 2. 拿取雇员数据 (用于显示头像)
+        const { data: emps } = await supabaseClient.from('employees').select('id, name, avatar_url').eq('user_id', uid);
+
+        let html = '';
+        projects.forEach(p => {
+            const pct = Math.min(100, Math.floor((p.current_progress / p.max_progress) * 100));
+            const isFinished = p.status === '已完成';
+            const isPaused = p.speed_per_day === 0 && !isFinished;
+            
+            let cardClass = isFinished ? 'finished' : (isPaused ? 'paused' : '');
+            let barClass = isFinished ? 'finished' : '';
+            
+            let speedText = isFinished ? '已封存' : (isPaused ? '进程已暂停' : `预计每日推进 +${p.speed_per_day}`);
+
+            // 拼装参与的雇员头像
+            let staffHtml = '<span style="color:#555; font-size:0.9em;">系统自动化演算中 / 无需专员接入</span>';
+            if (p.assigned_employees && p.assigned_employees.length > 0 && emps) {
+                staffHtml = p.assigned_employees.map(eid => {
+                    const e = emps.find(x => x.id === eid);
+                    return e ? `<img src="${e.avatar_url}" class="avatar" title="${e.name}">` : '';
+                }).join('');
+            }
+
+            html += `
+            <div class="proj-card ${cardClass}">
+                <div class="proj-title">${p.name} <span style="font-size:0.5em; padding:2px 8px; background:#333; border-radius:10px; vertical-align:middle; color:#aaa;">${p.status}</span></div>
+                <div class="proj-desc">${p.description || '无详细资料。'}</div>
+                
+                <div class="progress-box">
+                    <div class="progress-bar ${barClass}" style="width: ${pct}%"></div>
+                    <div class="progress-text">${p.current_progress} / ${p.max_progress} (${pct}%)</div>
+                </div>
+                
+                <div class="meta-info">
+                    <span>${speedText}</span>
+                    <span style="color:#e67e22;">SYS. SECURE</span>
+                </div>
+
+                <div class="staff-area">
+                    <div class="staff-title">当前指派专员 (Assigned Personnel)</div>
+                    <div class="avatar-group">${staffHtml}</div>
+                </div>
+            </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    window.onload = initResearch;
+</script>
+
+</body>
+</html>
