@@ -49,32 +49,49 @@
 </div>
 
 <script>
-    // 替换为你的 Supabase 凭据
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     async function initResearch() {
-        // 1. 确保 session 存在，否则数据库会拒绝
+        // 1. 确保 session 存在
         const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) return alert('请先登录');
-
-        // 2. 读取 uid
-        const urlParams = new URLSearchParams(window.location.search);
-        const uid = urlParams.get('uid');
-        const container = document.getElementById('projects-container');
-        
-        if (!uid || uid === 'undefined') {
-            return container.innerHTML = '<div style="color:red; text-align:center;">缺少视角ID</div>';
+        if (!session) {
+            alert('未检测到终端权限，请先登录');
+            window.location.href = 'index.html';
+            return;
         }
 
-        // 3. 直接拿数据
+        // 2. 智能判定：默认看自己的 ID。如果传了别人的 uid，才去看别人的。
+        const urlParams = new URLSearchParams(window.location.search);
+        let targetUid = urlParams.get('uid');
+        
+        if (!targetUid || targetUid === 'undefined' || targetUid === 'null') {
+            targetUid = session.user.id; 
+        }
+
+        const container = document.getElementById('projects-container');
+
+        // 3. 拿取项目数据
         const { data: projects, error } = await supabaseClient
             .from('research_projects')
             .select('*')
-            .eq('user_id', uid)
-            .order('status', { ascending: false });
+            .eq('user_id', targetUid)
+            .order('status', { ascending: false }); 
 
+        if (error) {
+            console.error(error);
+            return container.innerHTML = '<div style="color:red">读取数据失败</div>';
+        }
+        
+        if (!projects || projects.length === 0) {
+            return container.innerHTML = '<div style="text-align:center; color:#666; margin-top: 50px;">当前领地尚未开启任何研发项目。</div>';
+        }
+
+        // 4. 拿取雇员数据
+        const { data: emps } = await supabaseClient.from('employees').select('id, name, avatar_url').eq('user_id', targetUid);
+
+        // --- 下面这段是你原有的 HTML 渲染逻辑，原封不动保留 ---
         let html = '';
         projects.forEach(p => {
             const pct = Math.min(100, Math.floor((p.current_progress / p.max_progress) * 100));
@@ -91,7 +108,7 @@
             if (p.assigned_employees && p.assigned_employees.length > 0 && emps) {
                 staffHtml = p.assigned_employees.map(eid => {
                     const e = emps.find(x => x.id === eid);
-                    return e ? `<img src="${e.avatar_url}" class="avatar" title="${e.name}">` : '';
+                    return e ? `<img src="${e.avatar_url || 'https://via.placeholder.com/40'}" class="avatar" title="${e.name}">` : '';
                 }).join('');
             }
 
