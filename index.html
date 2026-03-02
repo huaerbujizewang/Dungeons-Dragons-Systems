@@ -1124,58 +1124,74 @@
                 <button onclick="randomRestock()" style="width:100%; margin-top:10px; background:#8e44ad; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">🎲 随机进货 (标准包)</button>
                 <div style="font-size:0.8em; color:#666; text-align:center; margin-top:5px;">包含: 2传说, 12极珍稀, 20珍稀, 30非普通, 10普通</div>
             </div>
-            <div class="admin-box" style="border:1px solid #3498db; padding:15px; border-radius:8px; background:#f0f9ff; margin-top:20px;">
-            <h3 style="margin-top:0; color:#2980b9;">🔬 科研与工程委派</h3>
-            <div style="font-size:0.8em; color:#666; margin-bottom:10px;">先在上方[玩家资产]选定玩家。分配雇员后，其状态将锁死为"科研中"且无法参战。</div>
-                
-            <div style="background:#fff; padding:10px; border-radius:4px; border:1px solid #b3d7ff; margin-bottom:15px;">
-                <strong style="font-size:0.9em; color:#2980b9;">➕ 委派新项目</strong>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px;">
-                    <input type="text" id="adm-res-name" placeholder="项目名称 (如: 驱逐舰逆向)" style="grid-column: 1/3;">
-                    <input type="number" id="adm-res-max" placeholder="目标总进度 (如: 10000)">
-                    <input type="number" id="adm-res-speed" placeholder="每日推进速度 (如: 50)">
-                    <textarea id="adm-res-desc" placeholder="项目背景描述..." style="grid-column: 1/3; height:40px;"></textarea>
-                </div>
-                 <button onclick="adminCreateResearch()" style="width:100%; margin-top:5px; background:#3498db; color:white; border:none; padding:8px; border-radius:4px;">下发项目给该玩家</button>
-              </div>
+            
 
-              <strong style="font-size:0.9em; color:#2980b9;">🛠️ 进度控制与人员调配</strong>
-              <div id="adm-res-list" style="margin-top:5px; max-height:300px; overflow-y:auto; font-size:0.9em;">
-                  请先选择玩家以加载项目...
-             </div>
-        </div>
-
-         <div class="admin-box" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fffcf0; margin-top:20px;">
+            <div class="admin-box" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fffcf0; margin-top:20px;">
                 <h3 style="margin-top:0; color:#e74c3c;">💀 怪物图鉴在线编辑器</h3>
                 
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <select id="adm-monster-select" style="flex:1; padding:5px;" onchange="loadMonsterForEdit()">
+                    <select id="adm-monster-select" style="flex:1; padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="loadMonsterForEdit()">
                         <option value="">-- 选择已有怪物进行编辑，或留空以新增 --</option>
                     </select>
-                    <button onclick="deleteMonster()" style="background:#c0392b; color:white; border:none; padding:5px 10px; border-radius:4px;">❌ 删除</button>
+                    <button onclick="deleteMonster()" style="background:#c0392b; color:white; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">❌ 删除</button>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                     <input type="hidden" id="edit-mon-id">
-                    <input type="text" id="edit-mon-name" placeholder="怪物名称 (如: 曼松)">
-                    <input type="text" id="edit-mon-faction" placeholder="阵营 (如: 散塔林会)">
-                    <select id="edit-mon-threat" style="padding:5px;">
+                    
+                    <input type="text" id="edit-mon-name" placeholder="怪物名称 (如: 曼松)" style="padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    <input type="text" id="edit-mon-faction" placeholder="阵营势力 (如: 散塔林会)" style="padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    
+                    <select id="edit-mon-threat" style="padding:6px; border:1px solid #ccc; border-radius:4px;">
                         <option value="杂兵">杂兵</option>
                         <option value="精英">精英</option>
                         <option value="首领">首领</option>
                     </select>
-                    <input type="text" id="edit-mon-status" placeholder="身份标签 (如: 领主)">
-                    <input type="text" id="edit-mon-avatar" placeholder="头像 URL" style="grid-column: 1/3;">
-                    <input type="text" id="edit-mon-stand" placeholder="立绘 URL" style="grid-column: 1/3;">
-                    <input type="text" id="edit-mon-visible" placeholder="可见权限 (如: all 或 玩家邮箱，用逗号分隔)" style="grid-column: 1/3;">
+                    <input type="text" id="edit-mon-status" placeholder="身份标签 (如: 领主/法师)" style="padding:6px; border:1px solid #ccc; border-radius:4px;">
                     
-                    <div style="grid-column: 1/3; font-size:0.8em; color:#666; margin-top:5px;">Stat Block (JSON格式的数据面板)：</div>
-                    <textarea id="edit-mon-statblock" style="grid-column: 1/3; height:150px; font-family:monospace;" placeholder='{"hp": "100", "ac": "15", ...}'></textarea>
+                    <div style="grid-column: 1/3; display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px dashed #ccc; border-radius: 4px;">
+                        <img id="edit-mon-avatar-preview" src="https://via.placeholder.com/50" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid #eee;">
+                        <div style="flex:1;">
+                            <div style="font-size:0.85em; color:#666; font-weight:bold; margin-bottom:4px;">上传怪物头像 (至 Supabase Storage)</div>
+                            <input type="file" id="edit-mon-avatar-file" accept="image/*" onchange="previewMonsterAvatar(event)" style="font-size:0.85em; width:100%;">
+                            <input type="hidden" id="edit-mon-avatar-url"> </div>
+                    </div>
+                    
+                    <input type="text" id="edit-mon-stand" placeholder="立绘 GitHub 路径 (如: assets/bestiary/dragon.png)" style="grid-column: 1/3; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    
+                    <input type="text" id="edit-mon-visible" placeholder="可见权限 (填 all 或 玩家邮箱，用英文逗号分隔)" style="grid-column: 1/3; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    
+                    <div style="grid-column: 1/3; font-size:0.85em; color:#666; margin-top:5px; font-weight:bold;">Stat Block (严格的 JSON 格式面板数据)：</div>
+                    <textarea id="edit-mon-statblock" style="grid-column: 1/3; height:180px; font-family:monospace; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder='{&#10;  "hp": "100",&#10;  "ac": "15"&#10;}'></textarea>
                 </div>
 
-                <button onclick="saveMonster()" style="width:100%; margin-top:10px; background:#e74c3c; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">
-                    💾 保存 / 录入怪物
+                <button onclick="saveMonster()" style="width:100%; margin-top:12px; background:#e74c3c; color:white; border:none; padding:12px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:1.05em;">
+                    💾 保存 / 录入怪物至数据库
                 </button>
+            </div>
+
+
+            <div class="admin-box" style="border:1px solid #3498db; padding:15px; border-radius:8px; background:#f0f9ff; margin-top:20px;">
+                <h3 style="margin-top:0; color:#2980b9;">🔬 科研与工程委派控制台</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:12px;">提示：请先在上方【玩家资产操控】选定目标玩家。雇员一旦调入科研，将被强制锁死无法参战。</div>
+                
+                <div style="background:#fff; padding:12px; border-radius:4px; border:1px solid #b3d7ff; margin-bottom:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                    <strong style="font-size:0.95em; color:#2980b9; display:block; margin-bottom:8px;">➕ 给该玩家委派新项目</strong>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                        <input type="text" id="adm-res-name" placeholder="工程名称 (如: 驱逐舰逆向)" style="grid-column: 1/3; padding:6px; border:1px solid #ccc; border-radius:3px;">
+                        <input type="number" id="adm-res-max" placeholder="目标总进度 (如: 10000)" style="padding:6px; border:1px solid #ccc; border-radius:3px;">
+                        <input type="number" id="adm-res-speed" placeholder="每日基础速度 (如: 50)" style="padding:6px; border:1px solid #ccc; border-radius:3px;">
+                        <textarea id="adm-res-desc" placeholder="项目机密背景描述..." style="grid-column: 1/3; height:50px; padding:6px; border:1px solid #ccc; border-radius:3px; font-family:inherit;"></textarea>
+                    </div>
+                    <button onclick="adminCreateResearch()" style="width:100%; margin-top:10px; background:#3498db; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">
+                        🚀 下发项目
+                    </button>
+                </div>
+
+                <strong style="font-size:0.95em; color:#2980b9;">🛠️ 进度干预与人员调配</strong>
+                <div id="adm-res-list" style="margin-top:8px; max-height:400px; overflow-y:auto; font-size:0.9em; padding-right:5px;">
+                    <div style="color:#999; text-align:center; padding:20px;">请先在上方列表选择一个玩家...</div>
+                </div>
             </div>
 
 
@@ -1371,12 +1387,20 @@
     // 选中怪物时，回填数据到输入框
     function loadMonsterForEdit() {
         const id = document.getElementById('adm-monster-select').value;
+        
+        // 每次切换时先清空文件选择器
+        document.getElementById('edit-mon-avatar-file').value = ''; 
+
         if (!id) {
-            // 清空表单用于新增
-            document.querySelectorAll('#edit-mon-id, #edit-mon-name, #edit-mon-faction, #edit-mon-status, #edit-mon-avatar, #edit-mon-stand, #edit-mon-statblock').forEach(el => el.value = '');
+            document.querySelectorAll('#edit-mon-id, #edit-mon-name, #edit-mon-faction, #edit-mon-status, #edit-mon-stand, #edit-mon-statblock').forEach(el => el.value = '');
             document.getElementById('edit-mon-visible').value = 'all';
+            
+            // 新增状态下，恢复默认占位图
+            document.getElementById('edit-mon-avatar-preview').src = 'https://via.placeholder.com/50';
+            document.getElementById('edit-mon-avatar-url').value = '';
             return;
         }
+        
         const m = adminMonsters.find(x => x.id == id);
         if(m) {
             document.getElementById('edit-mon-id').value = m.id;
@@ -1384,19 +1408,24 @@
             document.getElementById('edit-mon-faction').value = m.faction || '';
             document.getElementById('edit-mon-threat').value = m.threat_level || '杂兵';
             document.getElementById('edit-mon-status').value = m.status || '';
-            document.getElementById('edit-mon-avatar').value = m.avatar_url || '';
             document.getElementById('edit-mon-stand').value = m.stand_url || '';
             document.getElementById('edit-mon-visible').value = (m.visible_to || ['all']).join(',');
             document.getElementById('edit-mon-statblock').value = JSON.stringify(m.stat_block || {}, null, 2);
+            
+            // 回填头像图片和隐藏的旧URL
+            document.getElementById('edit-mon-avatar-preview').src = m.avatar_url || 'https://via.placeholder.com/50';
+            document.getElementById('edit-mon-avatar-url').value = m.avatar_url || '';
         }
     }
 
-    // 在线保存/修改 (复刻你的雇员保存逻辑)
+    // 在线保存/修改
     async function saveMonster() {
         const id = document.getElementById('edit-mon-id').value;
         const visibleStr = document.getElementById('edit-mon-visible').value || 'all';
         const visibleArr = visibleStr.split(',').map(s => s.trim());
         
+        if (!document.getElementById('edit-mon-name').value) return alert('请至少填写怪物名称！');
+
         let statBlock = {};
         try {
             const rawStat = document.getElementById('edit-mon-statblock').value;
@@ -1405,31 +1434,56 @@
             return alert('⚠️ Stat Block 的 JSON 格式有误，请检查标点符号！');
         }
 
+        showLoading();
+
+        // --- 新增：处理头像文件上传 (复用你现有的 avatars 存储桶) ---
+        let finalAvatarUrl = document.getElementById('edit-mon-avatar-url').value; // 默认使用旧URL
+        const avatarFile = document.getElementById('edit-mon-avatar-file').files[0];
+
+        if (avatarFile) {
+            const fileExt = avatarFile.name.split('.').pop();
+            const fileName = `monster_${Date.now()}.${fileExt}`;
+            
+            // 假设你的存储桶名字叫 'avatars' (如果不叫这个，请改成你雇员上传用的那个桶名)
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                .from('avatars') 
+                .upload(fileName, avatarFile);
+
+            if (uploadError) {
+                hideLoading();
+                return alert('⚠️ 头像上传失败: ' + uploadError.message);
+            }
+            
+            // 获取公开下载链接
+            const { data: { publicUrl } } = supabaseClient.storage
+                .from('avatars')
+                .getPublicUrl(fileName);
+                
+            finalAvatarUrl = publicUrl; // 用新上传的链接覆盖
+        }
+        // --- 上传处理结束 ---
+
         const payload = {
             name: document.getElementById('edit-mon-name').value,
             faction: document.getElementById('edit-mon-faction').value,
             threat_level: document.getElementById('edit-mon-threat').value,
             status: document.getElementById('edit-mon-status').value,
-            avatar_url: document.getElementById('edit-mon-avatar').value,
-            stand_url: document.getElementById('edit-mon-stand').value,
+            avatar_url: finalAvatarUrl, // 保存最终的头像 URL
+            stand_url: document.getElementById('edit-mon-stand').value, // 立绘直接存填进去的 GitHub 路径
             visible_to: visibleArr,
             stat_block: statBlock
         };
 
-        if (!payload.name) return alert('请至少填写怪物名称！');
-
-        showLoading();
         if (id) {
-            // 更新现有
             await supabaseClient.from('bestiary').update(payload).eq('id', id);
             alert('修改成功！');
         } else {
-            // 新增
             await supabaseClient.from('bestiary').insert([payload]);
             alert('新增怪物成功！');
         }
+        
         hideLoading();
-        loadAdminMonsters(); // 刷新列表
+        loadAdminMonsters(); 
     }
 
     async function deleteMonster() {
@@ -4921,7 +4975,8 @@ async function getRobustIP() {
         document.getElementById('notice-center-modal').style.display = 'flex';
     }
 
-    // === DM 科研控制逻辑 ===
+    // 科研与工程控制逻辑
+
     async function loadAdminResearch() {
         const listDiv = document.getElementById('adm-res-list');
         if (!selectedUserId) return listDiv.innerHTML = '请先选择玩家';
@@ -4929,50 +4984,63 @@ async function getRobustIP() {
         listDiv.innerHTML = '读取中...';
         
         // 查项目
-        const { data: projs } = await supabaseClient.from('research_projects').select('*').eq('user_id', selectedUserId);
-        // 查雇员（用来做下拉框分配）
+        const { data: projs, error: pErr } = await supabaseClient.from('research_projects').select('*').eq('user_id', selectedUserId).order('status', { ascending: false });
+        // 查雇员
         const { data: emps } = await supabaseClient.from('employees').select('id, name, status').eq('user_id', selectedUserId);
         
-        if (!projs || projs.length === 0) return listDiv.innerHTML = '<div style="color:#999;">该玩家暂无科研项目。</div>';
+        if (pErr || !projs || projs.length === 0) return listDiv.innerHTML = '<div style="color:#999;">该玩家暂无科研项目。</div>';
 
         let html = '';
         projs.forEach(p => {
-            // 雇员下拉框 (只显示“在职”的，可以被拉去搞科研)
+            // 雇员下拉框 (只显示“在职”的)
             let empOptions = `<option value="">-- 选择雇员调入 --</option>`;
             if(emps) emps.filter(e => e.status === '在职').forEach(e => {
                 empOptions += `<option value="${e.id}">${e.name}</option>`;
             });
 
-            // 当前参与的雇员列表
+            // 当前参与的雇员
             let assignedHtml = '';
             if (p.assigned_employees && p.assigned_employees.length > 0 && emps) {
                 assignedHtml = p.assigned_employees.map(eid => {
                     const emp = emps.find(e => e.id === eid);
                     return emp ? `<span style="background:#eee; padding:2px 6px; border-radius:12px; margin-right:4px; font-size:0.85em;">
-                        ${emp.name} <span style="color:red; cursor:pointer;" onclick="adminRemoveResEmp(${p.id}, ${eid})" title="撤回该雇员">×</span>
+                        ${emp.name} <span style="color:red; cursor:pointer; font-weight:bold;" onclick="adminRemoveResEmp(${p.id}, ${eid})" title="撤回该雇员">×</span>
                     </span>` : '';
                 }).join('');
             } else {
                 assignedHtml = '<span style="color:#999; font-size:0.8em;">(暂无人员)</span>';
             }
 
+            const statusColor = p.status === '已完成' ? 'green' : (p.speed_per_day === 0 ? '#e67e22' : '#3498db');
+
             html += `
                 <div style="background:#fff; padding:10px; border:1px dashed #ccc; margin-bottom:10px; border-radius:4px;">
-                    <div style="font-weight:bold; color:#333;">${p.name} <span style="font-size:0.8em; color:${p.status==='已完成'?'green':'#e67e22'}">(${p.status})</span></div>
-                    <div style="font-size:0.85em; color:#666; margin:4px 0;">进度: ${p.current_progress} / ${p.max_progress}</div>
+                    <div style="font-weight:bold; color:#333; display:flex; justify-content:space-between;">
+                        <span>${p.name} <span style="font-size:0.8em; color:${statusColor}">(${p.status})</span></span>
+                        ${p.status === '已完成' ? `<button onclick="adminDeleteResearch(${p.id})" style="font-size:0.7em; background:#e74c3c; color:white; border:none; border-radius:3px;">删除</button>` : ''}
+                    </div>
                     
-                    <div style="display:flex; gap:5px; align-items:center; margin-bottom:8px;">
-                        <span style="font-size:0.8em;">每日速度:</span>
-                        <input type="number" id="spd_${p.id}" value="${p.speed_per_day}" style="width:60px; padding:2px;">
-                        <button onclick="adminUpdateResSpeed(${p.id})" style="font-size:0.8em; padding:2px 8px;">修改速度</button>
+                    <div style="display:flex; gap:10px; align-items:center; margin:8px 0; font-size:0.85em;">
+                        <div style="display:flex; align-items:center; gap:4px; background:#f8f9fa; padding:4px; border-radius:4px; border:1px solid #eee;">
+                            当前进度: 
+                            <input type="number" id="prog_${p.id}" value="${p.current_progress}" style="width:70px; padding:2px; border:1px solid #ccc;">
+                            / ${p.max_progress}
+                            <button onclick="adminUpdateResProgress(${p.id}, ${p.max_progress})" style="font-size:0.9em; padding:2px 6px; cursor:pointer;">💾 改</button>
+                        </div>
                     </div>
 
-                    <div style="background:#fafafa; padding:5px; border-radius:4px;">
-                        <div style="font-size:0.8em; margin-bottom:4px;">参与人员: ${assignedHtml}</div>
+                    <div style="display:flex; gap:5px; align-items:center; margin-bottom:8px; font-size:0.85em;">
+                        每日推进速度:
+                        <input type="number" id="spd_${p.id}" value="${p.speed_per_day}" style="width:60px; padding:2px; border:1px solid #ccc;">
+                        <button onclick="adminUpdateResSpeed(${p.id})" style="font-size:0.9em; padding:2px 6px; cursor:pointer;">💾 改</button>
+                    </div>
+
+                    <div style="background:#fafafa; padding:6px; border-radius:4px; border:1px solid #eee;">
+                        <div style="font-size:0.8em; margin-bottom:6px;">参与人员: ${assignedHtml}</div>
                         ${p.status !== '已完成' ? `
                         <div style="display:flex; gap:5px;">
-                            <select id="sel_emp_${p.id}" style="flex:1; font-size:0.8em;">${empOptions}</select>
-                            <button onclick="adminAddResEmp(${p.id})" style="font-size:0.8em; padding:2px 8px; background:#2ecc71; color:white; border:none; border-radius:2px;">编入</button>
+                            <select id="sel_emp_${p.id}" style="flex:1; font-size:0.8em; padding:2px;">${empOptions}</select>
+                            <button onclick="adminAddResEmp(${p.id})" style="font-size:0.8em; padding:2px 10px; background:#2ecc71; color:white; border:none; border-radius:2px; cursor:pointer;">征调入所</button>
                         </div>` : ''}
                     </div>
                 </div>`;
@@ -4980,7 +5048,7 @@ async function getRobustIP() {
         listDiv.innerHTML = html;
     }
 
-    // DM下发新项目
+    // 1. 下发新项目
     async function adminCreateResearch() {
         if (!selectedUserId) return alert('请先选择玩家');
         const name = document.getElementById('adm-res-name').value;
@@ -4992,48 +5060,66 @@ async function getRobustIP() {
 
         showLoading();
         await supabaseClient.from('research_projects').insert([{ user_id: selectedUserId, name, max_progress: max, speed_per_day: speed, description: desc }]);
-        await logAction('DM操作', `给玩家下发了科研项目 [${name}]`);
+        await logAction('DM操作', `下发了科研项目 [${name}]`);
         hideLoading();
-        alert('项目下发成功！');
+        
+        document.getElementById('adm-res-name').value = ''; // 清空输入框
         loadAdminResearch();
     }
 
-    // 修改速度
+    // 2. [新增] 手动修改当前进度
+    async function adminUpdateResProgress(pid, maxProg) {
+        let newProg = parseInt(document.getElementById(`prog_${pid}`).value);
+        if (isNaN(newProg) || newProg < 0) return alert('请输入有效的进度数值');
+        
+        let newStatus = '研发中';
+        // 如果 DM 输入的进度大于等于满进度，自动将其标为完成
+        if (newProg >= maxProg) {
+            newProg = maxProg;
+            newStatus = '已完成';
+        }
+
+        showLoading();
+        await supabaseClient.from('research_projects').update({ current_progress: newProg, status: newStatus }).eq('id', pid);
+        hideLoading();
+        alert('✅ 进度修改成功！');
+        loadAdminResearch();
+    }
+
+    // 3. 修改每日速度
     async function adminUpdateResSpeed(pid) {
         const speed = parseInt(document.getElementById(`spd_${pid}`).value);
+        if (isNaN(speed) || speed < 0) return alert('速度必须是有效数字');
         showLoading();
         await supabaseClient.from('research_projects').update({ speed_per_day: speed }).eq('id', pid);
         hideLoading();
-        alert('速度已更新');
+        alert('✅ 速度已更新！');
+        loadAdminResearch();
     }
 
-    // 调入人员（锁死状态）
+    // 4. 调入人员（锁死为 科研中）
     async function adminAddResEmp(pid) {
         const eid = parseInt(document.getElementById(`sel_emp_${pid}`).value);
         if (!eid) return;
 
         showLoading();
-        // 1. 获取当前项目信息
         const { data: p } = await supabaseClient.from('research_projects').select('assigned_employees, name').eq('id', pid).single();
         let emps = p.assigned_employees || [];
         if (!emps.includes(eid)) emps.push(eid);
 
-        // 2. 更新项目表
         await supabaseClient.from('research_projects').update({ assigned_employees: emps }).eq('id', pid);
+        await supabaseClient.from('employees').update({ status: '科研中' }).eq('id', eid); // 锁死
         
-        // 3. 将雇员状态锁死为 "科研中"
-        await supabaseClient.from('employees').update({ status: '科研中' }).eq('id', eid);
-        
-        await logAction('DM操作', `将雇员(${eid}) 调入项目 [${p.name}]，状态已锁死。`);
         hideLoading();
         loadAdminResearch(); 
-        loadEmployees(); 
+        loadEmployees(); // 刷新主界面的雇员列表，玩家立刻就看不见他了
     }
 
-    // 撤出人员
+    // 5. 撤出人员（恢复为 在职）
     async function adminRemoveResEmp(pid, eid) {
-        if(!confirm('确定将该雇员从项目中撤出并恢复待命状态吗？')) return;
+        if(!confirm('确定将该雇员从项目中撤出并恢复自由待命状态吗？')) return;
         showLoading();
+        
         const { data: p } = await supabaseClient.from('research_projects').select('assigned_employees').eq('id', pid).single();
         let emps = (p.assigned_employees || []).filter(id => id !== eid);
 
@@ -5043,6 +5129,22 @@ async function getRobustIP() {
         hideLoading();
         loadAdminResearch();
         loadEmployees();
+    }
+    
+    // 6. [新增] 删除已废弃/已完成的项目
+    async function adminDeleteResearch(pid) {
+        if(!confirm('确定要彻底删除这个工程记录吗？')) return;
+        showLoading();
+        await supabaseClient.from('research_projects').delete().eq('id', pid);
+        hideLoading();
+        loadAdminResearch();
+    }
+
+    function previewMonsterAvatar(event) {
+        const file = event.target.files[0];
+        if (file) {
+            document.getElementById('edit-mon-avatar-preview').src = URL.createObjectURL(file);
+        }
     }
 
 
