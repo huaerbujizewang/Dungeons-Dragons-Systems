@@ -536,7 +536,7 @@
         white-space: pre-wrap; /* 保留换行 */
     }
 
-    /* --- 新增：战斗板块的分隔标题 --- */
+    /* --- 战斗板块的分隔标题 --- */
     .combat-section-title {
         font-size: 0.85em;
         font-weight: bold;
@@ -5025,7 +5025,7 @@ async function getRobustIP() {
                 <div style="background:#fff; padding:10px; border:1px dashed #ccc; margin-bottom:10px; border-radius:4px;">
                     <div style="font-weight:bold; color:#333; display:flex; justify-content:space-between;">
                         <span>${p.name} <span style="font-size:0.8em; color:${statusColor}">(${p.status})</span></span>
-                        ${p.status === '已完成' ? `<button onclick="adminDeleteResearch(${p.id})" style="font-size:0.7em; background:#e74c3c; color:white; border:none; border-radius:3px;">删除</button>` : ''}
+                        <button onclick="adminDeleteResearch(${p.id})" style="font-size:0.75em; background:#c0392b; color:white; border:none; border-radius:3px; padding: 2px 8px; cursor:pointer;" title="彻底删除此项目">❌ 删除</button>
                     </div>
                     
                     <div style="display:flex; gap:10px; align-items:center; margin:8px 0; font-size:0.85em;">
@@ -5089,7 +5089,7 @@ async function getRobustIP() {
         loadAdminResearch(); // 重新读取列表
     }
 
-    // 2. [新增] 手动修改当前进度
+    // 2. 手动修改当前进度
     async function adminUpdateResProgress(pid, maxProg) {
         let newProg = parseInt(document.getElementById(`prog_${pid}`).value);
         if (isNaN(newProg) || newProg < 0) return alert('请输入有效的进度数值');
@@ -5153,13 +5153,27 @@ async function getRobustIP() {
         loadEmployees();
     }
     
-    // 6. [新增] 删除已废弃/已完成的项目
+    // 6.删除已废弃/已完成的项目
     async function adminDeleteResearch(pid) {
-        if(!confirm('确定要彻底删除这个工程记录吗？')) return;
+        if(!confirm('⚠️ 确定要彻底删除这个工程记录吗？\n（如果有雇员正在该项目中，他们将被自动恢复为“在职”待命状态）')) return;
         showLoading();
+        
+        // 1. 先查出这个项目里有没有被锁死的雇员
+        const { data: p } = await supabaseClient.from('research_projects').select('assigned_employees').eq('id', pid).single();
+        
+        // 2. 如果有人，挨个把他们的状态改回“在职”
+        if (p && p.assigned_employees && p.assigned_employees.length > 0) {
+            for (let eid of p.assigned_employees) {
+                await supabaseClient.from('employees').update({ status: '在职' }).eq('id', eid);
+            }
+        }
+
+        // 3. 扫清人员后，安全地删除项目本身
         await supabaseClient.from('research_projects').delete().eq('id', pid);
+        
         hideLoading();
-        loadAdminResearch();
+        loadAdminResearch(); 
+        loadEmployees();     
     }
 
     function previewMonsterAvatar(event) {
