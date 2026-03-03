@@ -39,7 +39,7 @@
 
 <div class="container">
     <div class="header">
-        <div class="title">科研与工程中心</div>
+        <div class="title">R&D / 科研与工程中心</div>
         <button class="btn-back" onclick="window.location.href='index.html'">返回终端</button>
     </div>
 
@@ -76,8 +76,18 @@
         const { data: projects, error } = await supabaseClient
             .from('research_projects')
             .select('*')
-            .eq('user_id', targetUid)
-            .order('status', { ascending: false }); 
+            .eq('user_id', targetUid);
+
+        // 双重排序：未完成的在上面，并且总进度(max_progress)越大的越靠前
+        if (projects) {
+            projects.sort((a, b) => {
+                const aIsDone = a.status === '已完成';
+                const bIsDone = b.status === '已完成';
+                if (aIsDone && !bIsDone) return 1;  
+                if (!aIsDone && bIsDone) return -1; 
+                return b.max_progress - a.max_progress; 
+            });
+        }
 
         if (error) {
             console.error(error);
@@ -142,4 +152,3 @@
 
 </body>
 </html>
-
