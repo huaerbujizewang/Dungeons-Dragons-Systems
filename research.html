@@ -21,11 +21,43 @@
         .proj-title { font-size: 1.4em; font-weight: bold; color: #fff; margin-bottom: 5px; }
         .proj-desc { font-size: 0.9em; color: #aaa; line-height: 1.5; margin-bottom: 15px; }
         
-        /* 科幻感进度条 */
+       /* ================= 进度条动画 ================= */
+        /* 定义条纹滚动的关键帧 */
+        @keyframes stripe-scroll {
+            from { background-position: 40px 0; }
+            to { background-position: 0 0; }
+        }
+
         .progress-box { background: #000; border: 1px solid #444; height: 24px; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; }
-        .progress-bar { height: 100%; background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 10px, #2980b9 10px, #2980b9 20px); transition: width 0.5s ease-out; width: 0%; }
-        .progress-bar.finished { background: #2ecc71; }
+        
+        /* 研发中：蓝色滚动条纹 */
+        .progress-bar { 
+            height: 100%; 
+            transition: width 0.5s ease-out; 
+            width: 0%; 
+            /* 使用 background-image 和 background-size 配合实现无缝衔接的条纹 */
+            background-color: var(--accent); /* 底色：亮蓝色 */
+            background-image: linear-gradient(45deg, #2980b9 25%, transparent 25%, transparent 50%, #2980b9 50%, #2980b9 75%, transparent 75%, transparent);
+            background-size: 40px 40px; /* 设定一个纹理块的大小 */
+            /* 激活滚动动画：2秒走完一个周期，匀速(linear)，无限循环(infinite) */
+            animation: stripe-scroll 1.5s linear infinite; 
+        }
+
+        /* 已完成：纯绿色，停止动画 */
+        .progress-bar.finished { 
+            background: #2ecc71; 
+            animation: none;
+        }
+
+        /* 已暂停：让进度条变灰且停止运转 */
+        .proj-card.paused .progress-bar {
+            background-color: #555; /* 灰色底 */
+            background-image: linear-gradient(45deg, #444 25%, transparent 25%, transparent 50%, #444 50%, #444 75%, transparent 75%, transparent);
+            animation: none; 
+        }
+
         .progress-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; line-height: 24px; font-size: 0.85em; font-weight: bold; color: #fff; text-shadow: 0 1px 2px #000; }
+        /* ================================================== */
         
         .meta-info { display: flex; justify-content: space-between; font-size: 0.85em; color: #888; margin-top: 10px; }
         
@@ -138,7 +170,7 @@
                 </div>
 
                 <div class="staff-area">
-                    <div class="staff-title">当前指派专员</div>
+                    <div class="staff-title">研究专员</div>
                     <div class="avatar-group">${staffHtml}</div>
                 </div>
             </div>`;
