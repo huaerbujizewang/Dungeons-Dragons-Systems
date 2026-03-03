@@ -4992,7 +4992,18 @@ async function getRobustIP() {
         listDiv.innerHTML = '读取中...';
         
         // 查项目
-        const { data: projs, error: pErr } = await supabaseClient.from('research_projects').select('*').eq('user_id', selectedUserId).order('status', { ascending: false });
+        const { data: projs, error: pErr } = await supabaseClient.from('research_projects').select('*').eq('user_id', selectedUserId);
+        
+        // 双重排序
+        if (projs) {
+            projs.sort((a, b) => {
+                const aIsDone = a.status === '已完成';
+                const bIsDone = b.status === '已完成';
+                if (aIsDone && !bIsDone) return 1;
+                if (!aIsDone && bIsDone) return -1;
+                return b.max_progress - a.max_progress; 
+            });
+        }
         // 查雇员
         const { data: emps } = await supabaseClient.from('employees').select('id, name, status').eq('user_id', selectedUserId);
         
