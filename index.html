@@ -1148,20 +1148,18 @@
                     </select>
                     <input type="text" id="edit-mon-status" placeholder="身份标签 (如: 领主/法师)" style="padding:6px; border:1px solid #ccc; border-radius:4px;">
                     
-                    <div style="grid-column: 1/3; display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px dashed #ccc; border-radius: 4px;">
-                        <img id="edit-mon-avatar-preview" src="https://via.placeholder.com/50" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid #eee;">
+                    <div style="grid-column: 1/3; display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <img id="edit-mon-avatar-preview" src="https://via.placeholder.com/50" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid #ccc;">
                         <div style="flex:1;">
-                            <div style="font-size:0.85em; color:#666; font-weight:bold; margin-bottom:4px;">1. 上传小头像 (至 Supabase)</div>
-                            <input type="file" id="edit-mon-avatar-file" accept="image/*" onchange="previewMonsterAvatar(event)" style="font-size:0.85em; width:100%;">
-                            <input type="hidden" id="edit-mon-avatar-url"> 
+                            <div style="font-size:0.85em; color:#666; font-weight:bold; margin-bottom:4px;">1. 怪物小头像 (填写 GitHub 相对路径)</div>
+                            <input type="text" id="edit-mon-avatar-url" placeholder="如: assets/bestiary/avatars/dragon.png" oninput="document.getElementById('edit-mon-avatar-preview').src = this.value || 'https://via.placeholder.com/50'" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:0.85em;">
                         </div>
                     </div>
 
-                    <div style="grid-column: 1/3; display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px dashed #ccc; border-radius: 4px;">
+                    <div style="grid-column: 1/3; display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                         <div style="flex:1;">
-                            <div style="font-size:0.85em; color:#666; font-weight:bold; margin-bottom:4px;">2. 上传半身/全幅立绘 (至 Supabase)</div>
-                            <input type="file" id="edit-mon-stand-file" accept="image/*" style="font-size:0.85em; width:100%;">
-                            <input type="hidden" id="edit-mon-stand-url"> 
+                            <div style="font-size:0.85em; color:#666; font-weight:bold; margin-bottom:4px;">2. 半身/全幅立绘 (填写 GitHub 相对路径)</div>
+                            <input type="text" id="edit-mon-stand-url" placeholder="如: assets/bestiary/stands/dragon_full.png" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:0.85em;">
                         </div>
                     </div>
                     
@@ -1390,24 +1388,18 @@
         adminMonsters.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name} (${m.faction})</option>`);
     }
 
-    // 选中怪物时，回填数据到输入框
+    // 加载怪物到表单
     function loadMonsterForEdit() {
         const id = document.getElementById('adm-monster-select').value;
-        
-        // 每次切换时清空文件选择器
-        document.getElementById('edit-mon-avatar-file').value = ''; 
-        document.getElementById('edit-mon-stand-file').value = ''; 
 
         if (!id) {
-            document.querySelectorAll('#edit-mon-id, #edit-mon-name, #edit-mon-faction, #edit-mon-status, #edit-mon-statblock').forEach(el => el.value = '');
+            document.querySelectorAll('#edit-mon-id, #edit-mon-name, #edit-mon-faction, #edit-mon-status, #edit-mon-statblock, #edit-mon-avatar-url, #edit-mon-stand-url').forEach(el => el.value = '');
             document.getElementById('edit-mon-visible').value = 'all';
             document.getElementById('edit-mon-avatar-preview').src = 'https://via.placeholder.com/50';
-            document.getElementById('edit-mon-avatar-url').value = '';
-            document.getElementById('edit-mon-stand-url').value = '';
             return;
         }
         
-        const m = adminMonsters.find(x => x.id == id); // 注意这里用了 == 容错
+        const m = adminMonsters.find(x => x.id == id);
         if(m) {
             document.getElementById('edit-mon-id').value = m.id;
             document.getElementById('edit-mon-name').value = m.name || '';
@@ -1417,12 +1409,14 @@
             document.getElementById('edit-mon-visible').value = (m.visible_to || ['all']).join(',');
             document.getElementById('edit-mon-statblock').value = JSON.stringify(m.stat_block || {}, null, 2);
             
-            document.getElementById('edit-mon-avatar-preview').src = m.avatar_url || 'https://via.placeholder.com/50';
+            // 直接回填路径文本，并触发头像预览更新
             document.getElementById('edit-mon-avatar-url').value = m.avatar_url || '';
             document.getElementById('edit-mon-stand-url').value = m.stand_url || '';
+            document.getElementById('edit-mon-avatar-preview').src = m.avatar_url || 'https://via.placeholder.com/50';
         }
     }
 
+    // 保存怪物到数据库
     async function saveMonster() {
         const id = document.getElementById('edit-mon-id').value;
         const visibleStr = document.getElementById('edit-mon-visible').value || 'all';
@@ -1435,42 +1429,28 @@
         
         if (rawStat.trim()) {
             try {
-                // 宽容模式：自动清理由于手误导致在 } 或 ] 前面多写的逗号
+                // 宽容解析：修复多余逗号
                 rawStat = rawStat.replace(/,\s*([\]}])/g, '$1');
                 statBlock = JSON.parse(rawStat);
             } catch(e) {
                 console.error("JSON 解析失败:", e);
-                return alert(`⚠️ JSON 格式有误，保存终止！\n\n报错详情: ${e.message}\n\n请检查是否漏了引号、括号，或者多写了符号。`);
+                return alert(`⚠️ JSON 格式有误，保存终止！\n\n报错详情: ${e.message}`);
             }
         }
 
         showLoading();
 
-        // 1. 处理小头像上传
-        let finalAvatarUrl = document.getElementById('edit-mon-avatar-url').value; 
-        const avatarFile = document.getElementById('edit-mon-avatar-file').files[0];
-        if (avatarFile) {
-            const fileName = `mon_ava_${Date.now()}`;
-            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, avatarFile);
-            if (!error) finalAvatarUrl = supabaseClient.storage.from('avatars').getPublicUrl(data.path).data.publicUrl;
-        }
-
-        // 2. 处理大立绘上传
-        let finalStandUrl = document.getElementById('edit-mon-stand-url').value; 
-        const standFile = document.getElementById('edit-mon-stand-file').files[0];
-        if (standFile) {
-            const fileName = `mon_std_${Date.now()}`;
-            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, standFile);
-            if (!error) finalStandUrl = supabaseClient.storage.from('avatars').getPublicUrl(data.path).data.publicUrl;
-        }
+        // 直接读取文本路径
+        const finalAvatarUrl = document.getElementById('edit-mon-avatar-url').value.trim();
+        const finalStandUrl = document.getElementById('edit-mon-stand-url').value.trim();
 
         const payload = {
             name: document.getElementById('edit-mon-name').value,
             faction: document.getElementById('edit-mon-faction').value,
             threat_level: document.getElementById('edit-mon-threat').value,
             status: document.getElementById('edit-mon-status').value,
-            avatar_url: finalAvatarUrl,
-            stand_url: finalStandUrl,
+            avatar_url: finalAvatarUrl, 
+            stand_url: finalStandUrl,   
             visible_to: visibleArr,
             stat_block: statBlock
         };
@@ -1492,6 +1472,8 @@
             loadAdminMonsters(); 
         }
     }
+
+
 
     async function deleteMonster() {
         const id = document.getElementById('adm-monster-select').value;
