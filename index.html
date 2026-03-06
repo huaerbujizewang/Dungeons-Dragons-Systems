@@ -2252,17 +2252,16 @@ async function loadGold() {
         p.style.display = p.style.display === 'block' ? 'none' : 'block';
 
         if (p.style.display === 'block') {
-            const securityPanel = document.getElementById('security-panel-container');
-            loadPendingRequests(); 
-            if (securityPanel) {
-                // 只有 Root 能看网安
-                securityPanel.style.display = (currentUserRole === 'root') ? 'flex' : 'none';
+            if (typeof loadPendingRequests === 'function') {
+                loadPendingRequests(); 
             }
             
-            loadAdminMonsters();
-        }
-        if (p.style.display === 'block' && currentUserRole === 'root') {
-            loadAllAccounts(); // 自动加载账号
+            if (currentUserRole === 'root' && typeof loadAllAccounts === 'function') {
+                loadAllAccounts();
+            }
+
+            loadAdminMonsters(); 
+            loadAdminResearch(); 
         }
     }
 // --- 集市加载 ---
@@ -2398,45 +2397,43 @@ async function loadGold() {
 
     // --- 加载待审批请求 ---
     async function loadPendingRequests() {
-        const box = document.getElementById('approval-box');
-        const list = document.getElementById('approval-list');
-        
-        // 1. 查询所有状态为 '申请解雇' 的雇员
-        // 如果是 Root，查所有；如果是 DM，查自己负责玩家的 (利用 RLS 或筛选)
-        let query = supabaseClient.from('employees').select('*, profiles(email)').eq('status', '申请解雇');
-        
-        if (currentUserRole === 'dm') {
-            // 这里依赖 profiles 表的 RLS 或者我们手动过滤
-            // 简单起见，我们假设 RLS 已经配置好，DM 只能读到自己负责的玩家的雇员
-        }
+        const listDiv = document.getElementById('pending-requests-list');
+        if (!listDiv) return;
 
-        const { data: requests, error } = await query;
+        const { data, error } = await supabaseClient
+            .from('employees')
+            .select('*, profiles:user_id(email)') 
+            .eq('status', '申请解雇');
 
-        // 2. 控制盒子显隐
-        if (!requests || requests.length === 0) {
-            box.style.display = 'none'; // 没有请求就隐藏盒子，保持界面清爽
+        if (error) {
+            console.error("加载申请失败 (400错误通常源于此处):", error);
+            listDiv.innerHTML = `<div style="color:red; font-size:0.8em;">加载失败: ${error.message}</div>`;
             return;
         }
-        
-        box.style.display = 'block'; // 有请求才显示
-        list.innerHTML = '';
 
-        // 3. 渲染列表
-        requests.forEach(req => {
-            const ownerEmail = req.profiles ? req.profiles.email : '未知买家';
-            list.innerHTML += `
-                <div style="border-bottom:1px dashed #eca; padding:8px 0; display:flex; justify-content:space-between; align-items:center;">
+        if (!data || data.length === 0) {
+            listDiv.innerHTML = '<div style="color:#999; font-size:0.85em; padding:10px;">暂无待处理的解雇申请。</div>';
+            return;
+        }
+
+        // 渲染列表
+        let html = '';
+        data.forEach(item => {
+            const playerEmail = item.profiles ? item.profiles.email : '未知玩家';
+            html += `
+                <div style="background:#fff; padding:10px; border:1px solid #eee; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong>${req.name}</strong> <span style="font-size:0.8em; color:#666;">(${req.salary} GP)</span><br>
-                        <span style="font-size:0.75em; color:#999;">雇主: ${ownerEmail}</span>
+                        <div style="font-weight:bold;">${item.name}</div>
+                        <div style="font-size:0.75em; color:#888;">所属玩家: ${playerEmail}</div>
                     </div>
                     <div style="display:flex; gap:5px;">
-                        <button onclick="approveFire(${req.id}, true)" style="background:#2ecc71; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">批准</button>
-                        <button onclick="approveFire(${req.id}, false)" style="background:#e74c3c; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">驳回</button>
+                        <button onclick="handleFireRequest(${item.id}, 'approve')" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">准许</button>
+                        <button onclick="handleFireRequest(${item.id}, 'reject')" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
                     </div>
                 </div>
             `;
         });
+        listDiv.innerHTML = html;
     }
 
     // --- 处理审批 ---
