@@ -1308,7 +1308,7 @@
 
             <div class="admin-box" style="border:1px solid #822000; padding:15px; border-radius:8px; background:#fffcf0;">
                 <h3 style="margin-top:0; color:#822000;">📜 角色卡数据录入 (JSON)</h3>
-                <select id="adm-sheet-list" style="width:100%; margin-bottom:10px;"></select>
+                <select id="adm-sheet-list" onchange="updateStatBlockSelect()" style="width:100%; margin-bottom:10px;"></select>
                 <textarea id="adm-sheet-json" placeholder="在此粘贴 JSON 数据..." style="width:100%; height:150px; font-family:monospace; font-size:0.8em;"></textarea>
                 <div style="display:flex; gap:10px; margin-top:5px;">
                 <button onclick="saveCharacterSheet()" style="flex:1; background:#822000; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">
@@ -2394,6 +2394,7 @@ async function loadGold() {
         }
         hideLoading();
     }
+    
 
     // --- 加载待审批请求 ---
     async function loadPendingRequests() {
@@ -2610,14 +2611,26 @@ async function loadGold() {
 
         // 刷新雇员头像列表
         const { data: emps } = await supabaseClient.from('employees').select('id, name').eq('user_id', selectedUserId);
+        
         const empSelect = document.getElementById('adm-emp-list');
+        const sheetSelect = document.getElementById('adm-sheet-list'); // 找到角色卡下拉框
+        
         empSelect.innerHTML = '';
+        sheetSelect.innerHTML = ''; // 同时清空
+        
         if (emps && emps.length > 0) {
-            emps.forEach(e => empSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`);
+            emps.forEach(e => {
+                const opt = `<option value="${e.id}">${e.name}</option>`;
+                empSelect.innerHTML += opt;
+                sheetSelect.innerHTML += opt; // 同时填入数据
+            });
         } else {
-            empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
+            const none = '<option value="">(该玩家无雇员)</option>';
+            empSelect.innerHTML = none;
+            sheetSelect.innerHTML = none;
         }
-        updateStatBlockSelect(selectedUserId);
+
+        updateStatBlockSelect(selectedUserId); // 原有的调用保持不变
         loadEmpForRarity(selectedUserId);
         loadAdminResearch();
     }
@@ -3689,7 +3702,7 @@ async function loadLoginLogs() {
     // --- DM 控制台功能：加载雇员到下拉框 ---
 
     async function updateStatBlockSelect() {
-        const empId = document.getElementById('adm-emp-list').value;
+        const empId = document.getElementById('adm-sheet-list').value;
         if (!empId) return;
 
         const { data: emp, error } = await supabaseClient
