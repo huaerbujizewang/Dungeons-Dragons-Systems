@@ -210,7 +210,7 @@
             <div class="dossier-tabs">
                 <button class="dossier-tab-btn active" onclick="switchDossierTab('basic')">基础档案</button>
                 <button class="dossier-tab-btn" onclick="switchDossierTab('combat')">战斗属性</button>
-                <button class="dossier-tab-btn" onclick="switchDossierTab('resume')">侦查情报</button>
+                <button class="dossier-tab-btn" onclick="switchDossierTab('resume')">现有情报</button>
                 <button class="dossier-tab-btn" onclick="closeModal('dossier-modal')" style="margin-left:auto; color:#666;">✕ 关闭</button>
             </div>
 
@@ -226,7 +226,7 @@
                             <span id="info-race" class="info-val">--</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">【阵营/势力】</span>
+                            <span class="info-label">【所属势力】</span>
                             <span id="info-origin" class="info-val">--</span>
                         </div>
                         <div class="info-item" style="grid-column: 1 / -1;">
@@ -239,17 +239,17 @@
                 <div id="dossier-pane-combat" class="dossier-pane">
                     <div class="combat-top-bar">
                         <div class="combat-stat-box hp">
-                            <span class="stat-label-top">HP / 生命值</span>
+                            <span class="stat-label-top">MAX HP</span>
                             <div id="combat-hp" class="stat-val-top">0</div>
                             <div id="combat-hp-note" class="stat-note-top"></div>
                         </div>
                         <div class="combat-stat-box ac">
-                            <span class="stat-label-top">AC / 护甲</span>
+                            <span class="stat-label-top">ARMOR</span>
                             <div id="combat-ac" class="stat-val-top">10</div>
                             <div id="combat-ac-note" class="stat-note-top"></div>
                         </div>
                         <div class="combat-stat-box spd" style="border-color:#2ecc71; background: linear-gradient(to bottom, #2c2c2c, #222);">
-                            <span class="stat-label-top">SPD / 速度</span>
+                            <span class="stat-label-top">SPEED</span>
                             <div id="combat-speed" class="stat-val-top">30尺</div>
                             <div id="combat-speed-note" class="stat-note-top"></div>
                         </div>
