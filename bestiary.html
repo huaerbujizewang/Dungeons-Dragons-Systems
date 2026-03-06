@@ -335,16 +335,28 @@
     // --- 4. 渲染怪物网格卡片 ---
     function renderEnemies() {
         const container = document.getElementById('enemies-container');
-        const searchInput = document.getElementById('search-input').value.toLowerCase();
-        const factionFilter = document.getElementById('faction-filter').value;
+        
+        // 1. 安全读取：防 null 报错 
+        const searchEl = document.getElementById('search-input');
+        const searchInput = searchEl ? searchEl.value.toLowerCase() : '';
 
-        // 1. 先按条件过滤怪物
+        const factionEl = document.getElementById('faction-filter');
+        const factionFilter = factionEl ? factionEl.value : '';
+
+        // 2. 核心过滤逻辑
         let filtered = allEnemies.filter(e => {
-            const matchTab = currentTab === 'all' || e.threat_level === currentTab;
+            let activeTab = 'all';
+            if (typeof currentFaction !== 'undefined') activeTab = currentFaction;
+            else if (typeof currentTab !== 'undefined') activeTab = currentTab;
+            
+            const matchTab = (activeTab === 'all' || activeTab === '全部') ? true : (e.faction === activeTab);
+            
             const matchSearch = e.name.toLowerCase().includes(searchInput) || 
                                 (e.faction && e.faction.toLowerCase().includes(searchInput));
-            const matchFaction = !factionFilter || e.faction === factionFilter; 
-            return matchTab && matchSearch && matchFaction;
+                                
+            const matchDropdown = !factionFilter || e.faction === factionFilter;
+
+            return matchTab && matchSearch && matchDropdown;
         });
 
         if (filtered.length === 0) {
@@ -352,14 +364,14 @@
             return;
         }
 
-        // 2. 先把所有过滤出的怪物按 CR 进行全局降序排序 (大的在前)
+        // 3. 全局降序排序 (CR 大的在前)
         filtered.sort((a, b) => {
             const crA = (a.stat_block && a.stat_block.cr !== undefined) ? Number(a.stat_block.cr) : 0;
             const crB = (b.stat_block && b.stat_block.cr !== undefined) ? Number(b.stat_block.cr) : 0;
             return crB - crA; 
         });
 
-        // 3. 将排好序的怪物按势力归类 (归类后依然保持内部 CR 降序)
+        // 4. 按势力归类
         const factionGroups = {};
         filtered.forEach(enemy => {
             const factionName = enemy.faction || '无归属 / 野外势力';
@@ -369,24 +381,29 @@
             factionGroups[factionName].push(enemy);
         });
 
-        // 4. 拼装 HTML
+        // 5. 拼装 HTML
         let html = '';
         for (const [faction, enemies] of Object.entries(factionGroups)) {
-            // 画出势力分割头
-            html += `<div class="faction-header">🛡️ ${faction}</div>`;
+            // 如果已经在顶部精确筛选了某个阵营，就不再重复画这个阵营的表头了
+            let activeTab = 'all';
+            if (typeof currentFaction !== 'undefined') activeTab = currentFaction;
+            else if (typeof currentTab !== 'undefined') activeTab = currentTab;
             
-            // 依次画出该势力下的怪物卡片
+            if (activeTab === 'all' || activeTab === '全部') {
+                html += `<div class="faction-header">🛡️ ${faction}</div>`;
+            }
+            
             enemies.forEach(e => {
                 const sb = e.stat_block || {};
                 const crVal = sb.cr !== undefined ? sb.cr : '?';
                 
                 html += `
-                <div class="card emp-card-content" onclick="openEnemyDossier('${e.id}')" style="cursor:pointer;">
+                <div class="card emp-card-content" onclick="openEnemyDossier('${e.id}')" style="cursor:pointer; position:relative;">
                     <div class="cr-badge">CR ${crVal}</div>
                     <img src="${e.avatar_url || 'https://via.placeholder.com/80'}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:2px solid #ccc;">
                     <div style="font-weight:bold; font-size:1.1em; margin-bottom:5px;">${e.name}</div>
                     <div style="font-size:0.85em; color:#666; margin-bottom:8px;">${e.faction || '未知'} - ${e.status || '无标签'}</div>
-                    <div style="font-size:0.8em; color:#e74c3c; font-weight:bold;">${e.threat_level}</div>
+                    <div style="font-size:0.8em; color:#e74c3c; font-weight:bold;">${e.threat_level || '未知威胁'}</div>
                 </div>`;
             });
         }
@@ -560,10 +577,19 @@
     window.onload = initBestiary;
 </script>
 
-<div class="system-note">
-        <h4>📜 档案客观性声明</h4>
+<div onclick="document.getElementById('bestiary-note-box').style.display = 'block'" 
+         style="position: fixed; bottom: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: #bbb; padding: 8px 15px; border-radius: 20px; border: 1px solid #444; cursor: pointer; font-size: 0.85em; font-weight: bold; z-index: 99; backdrop-filter: blur(5px);">
+        ℹ️ 档案说明
+    </div>
+
+    <div id="bestiary-note-box" class="system-note" style="display: none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h4 style="margin:0; color:#c0392b; display:flex; align-items:center; gap:5px;">📜 档案客观性声明</h4>
+            <button onclick="document.getElementById('bestiary-note-box').style.display = 'none'" 
+                    style="background:none; border:none; cursor:pointer; font-size:1.2em; color:#999; padding:0;">✕</button>
+        </div>
         <p>本系统记录的档案数据只有死人才绝对客观真实，活人可能存在变强或变弱的情况。</p>
-        <p>同时，也只有死人才会有完整档案，活人的档案可能存在误判，信息遗漏，或其他未知情况。</p>
+        <p>同时，也只有死人才有完整档案，活人的档案可能存在误判、信息遗漏，或其他未知情况。</p>
     </div>
 
 </body>
