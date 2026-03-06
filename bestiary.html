@@ -384,7 +384,7 @@
         // 5. 拼装 HTML
         let html = '';
         for (const [faction, enemies] of Object.entries(factionGroups)) {
-            // 如果已经在顶部精确筛选了某个阵营，就不再重复画这个阵营的表头了
+            // 画阵营表头
             let activeTab = 'all';
             if (typeof currentFaction !== 'undefined') activeTab = currentFaction;
             else if (typeof currentTab !== 'undefined') activeTab = currentTab;
@@ -392,6 +392,8 @@
             if (activeTab === 'all' || activeTab === '全部') {
                 html += `<div class="faction-header">🛡️ ${faction}</div>`;
             }
+            
+            html += `<div class="shop-grid" style="margin-bottom: 30px;">`;
             
             enemies.forEach(e => {
                 const sb = e.stat_block || {};
@@ -406,6 +408,9 @@
                     <div style="font-size:0.8em; color:#e74c3c; font-weight:bold;">${e.threat_level || '未知威胁'}</div>
                 </div>`;
             });
+            
+            // 闭合网格容器
+            html += `</div>`;
         }
 
         container.innerHTML = html;
