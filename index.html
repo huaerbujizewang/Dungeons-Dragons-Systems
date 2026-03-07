@@ -1650,7 +1650,7 @@
 
         // 2. 状态权重配置
         const statusWeight = {
-            '在职': 1, '休假': 2, '特殊状态': 3, '离职': 4, '申请解雇': 5
+            '在职': 1, '科研中': 2, '休假': 3, '特殊状态': 4, '离职': 5, '申请解雇': 6
         };
 
         // --- 排序权重计算 ---
@@ -1683,9 +1683,9 @@
 
         // 计算总薪资
         const totalSalary = data
-            .filter(e => e.status === '在职' && e.salary > 0)
+            .filter(e => (e.status === '在职' || e.status === '科研中') && e.salary > 0)
             .reduce((sum, e) => sum + e.salary, 0);
-
+        
         // 分组并排序
         const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
         const hirelings = data.filter(e => e.role !== '核心队友').sort(sortLogic);
@@ -1697,7 +1697,8 @@
                 // 状态色
                 const config = { color: '#666' };
                 if(e.status === '在职') config.color = '#2ecc71';
-                else if(e.status === '休假') config.color = '#3498db';
+                else if(e.status === '科研中') config.color = '#3498db'; 
+                else if(e.status === '休假') config.color = '#f1c40f';
                 else if(e.status === '特殊状态') config.color = '#9b59b6';
                 else if(e.status === '离职') config.color = '#95a5a6';
                 else if(e.status === '申请解雇') config.color = '#e67e22';
@@ -2184,7 +2185,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
             
             if (confirmPay) {
                 // 执行扣款逻辑
-                const { data: emps } = await supabaseClient.from('employees').select('salary').eq('user_id', viewingUserId).eq('status', '在职');
+                const { data: emps } = await supabaseClient.from('employees').select('salary').eq('user_id', viewingUserId).in('status', ['在职', '科研中']);
                 if (emps && emps.length > 0) {
                     const totalSalary = emps.reduce((sum, e) => sum + e.salary, 0);
                     if (totalSalary > 0) {
@@ -2916,7 +2917,7 @@ async function advanceTime() {
             supabaseClient.from('city_stats').select('*').eq('user_id', targetUserId).maybeSingle(),
             supabaseClient.from('city_expenses').select('*').eq('user_id', targetUserId),
             supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId),
-            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('status', '在职')
+            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).in('status', ['在职', '科研中'])
         ]);
 
         const stats = statsRes.data || { population: 0, subsidy: 0, tax_rate: 1.2 };
