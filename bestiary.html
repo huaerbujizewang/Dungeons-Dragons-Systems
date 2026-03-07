@@ -373,11 +373,22 @@
             return;
         }
 
-        // 3. 全局降序排序 (CR 大的在前)
+        // 3. 全局降序双重排序 (主条件：CR 大的在前；副条件：CR相同时，首领 > 精英 > 杂兵)
+        const threatWeights = { '首领': 3, '精英': 2, '杂兵': 1 };
+        
         filtered.sort((a, b) => {
             const crA = (a.stat_block && a.stat_block.cr !== undefined) ? Number(a.stat_block.cr) : 0;
             const crB = (b.stat_block && b.stat_block.cr !== undefined) ? Number(b.stat_block.cr) : 0;
-            return crB - crA; 
+            
+            // 如果 CR 不一样，直接按 CR 排
+            if (crA !== crB) {
+                return crB - crA; 
+            } 
+            
+            // 如果 CR 一样，就比对威胁等级的权重
+            const weightA = threatWeights[a.threat_level] || 0;
+            const weightB = threatWeights[b.threat_level] || 0;
+            return weightB - weightA;
         });
 
         // 4. 按势力归类
