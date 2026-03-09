@@ -112,6 +112,9 @@
 .ctrl-unknown { fill: rgba(149, 165, 166, 0.3); } /* 未知灰 */
 .ctrl-unknown:hover { fill: rgba(149, 165, 166, 0.6); }
 
+.ctrl-neutral { fill: rgba(241, 196, 15, 0.45); } /* 中立黄 */
+.ctrl-neutral:hover { fill: rgba(241, 196, 15, 0.7); }
+
 .war-bar-container { display: flex; flex-direction: column; align-items: center; width: 140px; padding-top: 40px; }
 
 .war-bar-bg {
@@ -5546,31 +5549,30 @@ function applyMapControl(controlData) {
     polygons.forEach(poly => {
         const regionName = poly.getAttribute('data-region');
         
-        // 如果 JSON 里配置了这个区域的归属
         if (regionName && controlData[regionName]) {
             const faction = controlData[regionName];
             poly.setAttribute('data-faction', faction);
             
-            // 清除旧颜色
-            poly.classList.remove('ctrl-alliance', 'ctrl-empire', 'ctrl-unknown');
+            // 清除所有旧颜色 (增加了 ctrl-neutral)
+            poly.classList.remove('ctrl-alliance', 'ctrl-empire', 'ctrl-unknown', 'ctrl-neutral');
             
-            // 赋予新颜色 (支持多种名称叫法)
+            // 赋予新颜色 (增加中立判断)
             if (faction.includes('联军')) {
                 poly.classList.add('ctrl-alliance');
             } else if (faction.includes('帝国')) {
                 poly.classList.add('ctrl-empire');
+            } else if (faction.includes('中立')) {
+                poly.classList.add('ctrl-neutral'); // 涂上黄色
             } else {
                 poly.classList.add('ctrl-unknown');
             }
             
-            // 更新鼠标悬停时的 title 提示
             const titleNode = poly.querySelector('title');
             if (titleNode) titleNode.textContent = `${regionName} (${faction})`;
             
         } else {
-            // 如果 JSON 里没写这个区域，默认置为“未知势力”
             poly.setAttribute('data-faction', '未知势力');
-            poly.classList.remove('ctrl-alliance', 'ctrl-empire');
+            poly.classList.remove('ctrl-alliance', 'ctrl-empire', 'ctrl-neutral');
             poly.classList.add('ctrl-unknown');
             const titleNode = poly.querySelector('title');
             if (titleNode) titleNode.textContent = `${regionName} (未知势力)`;
@@ -5578,7 +5580,7 @@ function applyMapControl(controlData) {
     });
 }
 
-// --- 6. 地图区域点击触发弹窗 (修复点不开的问题) ---
+// --- 6. 地图区域点击触发弹窗 ---
 function showRegionInfo(regionName, element) {
     const faction = element.getAttribute('data-faction') || '未知势力';
     
@@ -5586,15 +5588,17 @@ function showRegionInfo(regionName, element) {
     const factionEl = document.getElementById('region-faction-display');
     factionEl.innerText = faction;
     
-    // 根据阵营变更弹窗文字颜色和发光效果
     if (faction.includes('联军')) {
-        factionEl.style.color = '#3498db'; // 联军蓝
+        factionEl.style.color = '#3498db'; 
         factionEl.style.textShadow = '0 0 15px rgba(52,152,219,0.6)';
     } else if (faction.includes('帝国')) {
-        factionEl.style.color = '#e74c3c'; // 帝国红
+        factionEl.style.color = '#e74c3c'; 
         factionEl.style.textShadow = '0 0 15px rgba(231,76,60,0.6)';
+    } else if (faction.includes('中立')) {
+        factionEl.style.color = '#f1c40f'; 
+        factionEl.style.textShadow = '0 0 15px rgba(241,196,15,0.6)';
     } else {
-        factionEl.style.color = '#bdc3c7'; // 未知灰
+        factionEl.style.color = '#bdc3c7'; 
         factionEl.style.textShadow = 'none';
     }
     
