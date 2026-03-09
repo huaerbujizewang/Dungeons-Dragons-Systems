@@ -5312,12 +5312,19 @@ async function getRobustIP() {
         }
     }
 
-    // --- 1. 战局主函数（传入总名称） ---
+// ==========================================
+// 战局系统核心逻辑 (共4个函数，直接覆盖粘贴)
+// ==========================================
+
+// --- 1. 战局主函数 ---
 async function loadWarSituation() {
     const warPanel = document.getElementById('war-room-panel');
     const warTabBtn = document.getElementById('war-tab-btn');
-    if (![ '739477825@qq.com'].includes(currentUserEmail)) {
-        if (warTabBtn) warTabBtn.style.display = 'none'; return;
+    
+    // 权限校验 (可以自行加上 master 邮箱)
+    if (!['739477825@qq.com'].includes(currentUserEmail)) {
+        if (warTabBtn) warTabBtn.style.display = 'none'; 
+        return;
     }
     if (warTabBtn) { warTabBtn.style.display = 'inline-block'; }
 
@@ -5326,13 +5333,13 @@ async function loadWarSituation() {
         if (!res.ok) throw new Error("JSON Fetch Failed");
         const data = await res.json();
 
-        // 帝国方：固定写“帝国远征军”
+        // 帝国方
         renderWarPhotos('empire-photos', data.empire.photos, 'left');
         document.getElementById('empire-bar').style.height = `${data.empire.readiness}%`;
         document.getElementById('empire-readiness-text').innerText = `${data.empire.readiness}%`;
         renderWarFactions('empire-factions', '帝国远征军', data.empire.factions); 
 
-        // 联军方：固定写“费伦联军”
+        // 联军方
         renderWarPhotos('alliance-photos', data.alliance.photos, 'right');
         document.getElementById('alliance-bar').style.height = `${data.alliance.readiness}%`;
         document.getElementById('alliance-readiness-text').innerText = `${data.alliance.readiness}%`;
@@ -5341,14 +5348,53 @@ async function loadWarSituation() {
     } catch (e) { console.warn("战局数据错误:", e); }
 }
 
-// --- 2. 势力渲染：化繁为简，只显示一个可点击的按钮 ---
+// --- 2. 照片渲染：绝对面积等距均分 (你刚才漏掉的函数) ---
+function renderWarPhotos(containerId, photosList, align) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (!photosList || photosList.length === 0) return;
+
+    const total = photosList.length;
+    
+    // 最大排布高度 850px，照片本身 130px
+    const maxTrackHeight = 850; 
+    const maxTrackWidth = 40;   
+    const photoH = 130;         
+    const startTop = 20;
+
+    // 智能均分间距：无论几张图，第一张都在最顶，最后一张都在最底
+    const spreadY = total > 1 ? (maxTrackHeight - photoH) / (total - 1) : 0;
+    const spreadX = total > 1 ? maxTrackWidth / (total - 1) : 0;
+
+    photosList.forEach((photo, index) => {
+        const offsetY = startTop + (index * spreadY); 
+        const offsetX = index * spreadX;              
+        const rotate = (Math.random() * 6 - 3); // 轻微随机倾斜增加真实感
+
+        const isDead = photo.is_dead ? `<div class="war-dead-mark">✕</div>` : '';
+        const horizontalAlign = align === 'left' ? `left: ${offsetX}px;` : `right: ${offsetX}px;`;
+
+        container.innerHTML += `
+            <div class="war-photo-item" style="
+                top: ${offsetY}px; 
+                ${horizontalAlign} 
+                transform: rotate(${rotate}deg); 
+                z-index: ${index};">
+                <img src="${photo.url}" class="war-photo-img" onerror="this.src='https://via.placeholder.com/100x130?text=?'">
+                ${isDead}
+            </div>
+        `;
+    });
+}
+
+// --- 3. 势力渲染：极简交互按钮 ---
 function renderWarFactions(containerId, title, factionList) {
     const wrapper = document.getElementById(containerId);
     
-    // 把 JSON 里的数组转成字符串传给弹窗函数
+    // 把 JSON 数组转成字符串传递给点击事件
     const listStr = JSON.stringify(factionList).replace(/"/g, '&quot;');
     
-    // 渲染出一个极其整洁的交互按钮，不带括号
+    // 生成完全对称的按钮
     wrapper.innerHTML = `
         <div class="war-faction-btn" onclick="openFactionModal('${title}', '${listStr}')">
             ${title}
@@ -5356,14 +5402,12 @@ function renderWarFactions(containerId, title, factionList) {
     `;
 }
 
-// --- 3. 弹出势力详情面板 ---
+// --- 4. 弹出势力详情名单 ---
 function openFactionModal(title, listStr) {
     const factionList = JSON.parse(listStr.replace(/&quot;/g, '"'));
     
-    // 设置标题
     document.getElementById('faction-modal-title').innerText = title;
     
-    // 渲染列表（每个势力变成一张清晰的小卡片）
     const listContainer = document.getElementById('faction-modal-list');
     listContainer.innerHTML = factionList.map(f => `
         <div style="padding: 12px; background: #fff; border: 1px solid #ddd; font-weight: bold; color: #333; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -5371,9 +5415,9 @@ function openFactionModal(title, listStr) {
         </div>
     `).join('');
     
-    // 显示弹窗
     document.getElementById('faction-modal').style.display = 'flex';
 }
+
 
     
 
@@ -5404,6 +5448,7 @@ function openFactionModal(title, listStr) {
 
 </body>
 </html>
+
 
 
 
