@@ -50,11 +50,33 @@
     text-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
 
+.war-map-container {
+    width: 100%;
+    flex: 1; 
+    margin-top: 25px;
+    border: 2px dashed #bdc3c7; 
+    border-radius: 8px;
+    background: rgba(255,255,255,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #7f8c8d;
+    font-size: 1.2em;
+    font-weight: bold;
+    letter-spacing: 2px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+}
+
 .war-bar-container { display: flex; flex-direction: column; align-items: center; width: 140px; padding-top: 40px; }
 
 .war-bar-bg {
-    width: 50px; height: 500px; flex: none;
-    background: #e0e0e0; border: 2px solid #7f8c8d; position: relative; margin-bottom: 10px;
+    width: 50px; 
+    height: 820px;
+    flex: none;
+    background: #e0e0e0; 
+    border: 2px solid #7f8c8d; 
+    position: relative; 
+    margin-bottom: 10px;
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
 }
 .war-bar-fill { position: absolute; bottom: 0; left: 0; width: 100%; background: #e74c3c; transition: height 1.5s ease-out; }
@@ -88,12 +110,14 @@
 }
 
 .war-center-text {
-    flex: 1;
-    max-width: 350px;
-    padding: 0 20px;
+    flex: 1; 
+    max-width: 800px; 
+    padding: 0 30px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start; 
+    align-items: center;
+    margin-top: 30px;
 }
 
 
@@ -768,6 +792,10 @@
             <strong style="display: block; text-align: center; margin-top: 15px; font-size: 1.05em; color: #c0392b;">
                 必须在帝国完全展开其战争机器前锁定胜局。
             </strong>
+
+            <div id="war-map-slot" class="war-map-container">
+                [ 楚尔特战术地图 SVG 预留位 ]
+            </div>
         </div>
 
         <div class="war-bar-container">
