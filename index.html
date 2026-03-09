@@ -5485,7 +5485,7 @@ async function loadWarSituation() {
     } catch (e) { console.warn("战局数据错误:", e); }
 }
 
-// --- 2. 照片渲染：绝对面积等距均分---
+// --- 2. 照片渲染：垂直平行瀑布流 ---
 function renderWarPhotos(containerId, photosList, align) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
@@ -5493,23 +5493,27 @@ function renderWarPhotos(containerId, photosList, align) {
 
     const total = photosList.length;
     
-    // 最大排布高度 850px，照片本身 130px
+    // Y轴最大排布高度 850px，照片高度 130px
     const maxTrackHeight = 850; 
-    const maxTrackWidth = 40;   
     const photoH = 130;         
     const startTop = 20;
 
-    // 智能均分间距：无论几张图，第一张都在最顶，最后一张都在最底
+    // Y轴智能均分间距
     const spreadY = total > 1 ? (maxTrackHeight - photoH) / (total - 1) : 0;
-    const spreadX = total > 1 ? maxTrackWidth / (total - 1) : 0;
 
     photosList.forEach((photo, index) => {
         const offsetY = startTop + (index * spreadY); 
-        const offsetX = index * spreadX;              
-        const rotate = (Math.random() * 6 - 3); // 轻微随机倾斜增加真实感
+        
+        // 带一点点随机的左右错位（-4 到 4 像素）
+        const offsetX = (Math.random() * 8 - 4); 
+        
+        // 轻微随机倾斜 (-3 到 3 度)
+        const rotate = (Math.random() * 6 - 3); 
 
         const isDead = photo.is_dead ? `<div class="war-dead-mark">✕</div>` : '';
-        const horizontalAlign = align === 'left' ? `left: ${offsetX}px;` : `right: ${offsetX}px;`;
+        
+        // 让照片死死贴住左/右边缘的 10px 位置，呈绝对垂直的平行线落下
+        const horizontalAlign = align === 'left' ? `left: ${10 + offsetX}px;` : `right: ${10 + offsetX}px;`;
 
         container.innerHTML += `
             <div class="war-photo-item" style="
