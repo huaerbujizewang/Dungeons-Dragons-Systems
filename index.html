@@ -835,7 +835,7 @@
         <div class="war-center-text" style="margin-top: 80px;">
             <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1.3em; letter-spacing: 1px; text-align: center;">楚尔特战局</h3>
             <p style="margin: 0; font-size: 0.9em; color: #555; line-height: 1.6; text-align: justify;">
-                异界帝国的钢铁巨兽已在楚尔特抛锚，这支不属于费伦的军队正以碾压之势粉碎既有秩序。为了对抗这一未知的恐怖，联军集结了空前的力量。
+                异界侵略者的钢铁巨兽已在楚尔特抛锚，这支不属于费伦的军队正以碾压之势粉碎既有秩序。为了对抗这一未知的恐怖，联军集结了空前的力量。
             </p>
             <strong style="display: block; text-align: center; margin-top: 15px; font-size: 1.05em; color: #c0392b;">
                 必须在帝国完全展开其战争机器前锁定胜局。
@@ -5440,7 +5440,7 @@ async function loadWarSituation() {
     const warTabBtn = document.getElementById('war-tab-btn');
     
     // 权限校验 (可以自行加上 master 邮箱)
-    if (!['739477825@qq.com'].includes(currentUserEmail)) {
+    if (!['739477825@qq.com','master@almorel.com'].includes(currentUserEmail)) {
         if (warTabBtn) warTabBtn.style.display = 'none'; 
         return;
     }
