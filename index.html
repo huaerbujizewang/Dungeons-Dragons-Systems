@@ -17,7 +17,120 @@
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
         body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #fff; color: #333; margin: 0; padding: 0; height: 100vh; }
-    
+/* --- 战局态势面板样式 --- */
+.war-photos {
+    position: relative;
+    width: 160px; /* 照片墙区域宽度 */
+    height: 100%;
+}
+
+.war-photo-item {
+    position: absolute;
+    width: 75px;
+    height: 100px;
+    background: #fff;
+    padding: 4px; /* 白色相框边距 */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    border: 1px solid #ddd;
+    filter: grayscale(100%) contrast(1.1); /* 黑白滤镜+高对比度 */
+    transition: transform 0.2s, z-index 0.2s;
+}
+
+.war-photo-item:hover {
+    transform: scale(1.1) rotate(0deg) !important;
+    z-index: 10 !important;
+}
+
+.war-photo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #ccc;
+}
+
+/* 阵亡红叉 */
+.war-dead-mark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #e74c3c;
+    font-size: 4em;
+    font-weight: bold;
+    font-family: sans-serif;
+    pointer-events: none;
+    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.war-bar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100px;
+    height: 100%;
+}
+
+.war-bar-bg {
+    width: 40px;
+    flex: 1; 
+    background: #e0e0e0;
+    border: 2px solid #7f8c8d;
+    position: relative;
+    margin-bottom: 10px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.war-bar-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #e74c3c; 
+    transition: height 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 参战势力文字标签容器 */
+.war-factions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    width: 120px; /* 比进度条稍微宽一点 */
+    margin-top: 5px;
+}
+
+/* 势力文字牌 */
+.war-faction-tag {
+    background: #2c3e50; /* 深灰蓝色底 */
+    color: #ecf0f1;
+    font-size: 0.7em;
+    padding: 3px 6px;
+    border-radius: 2px;
+    white-space: nowrap;
+    border: 1px solid #1a252f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* 可以用伪类给退出的势力加个划线样式 */
+.war-faction-tag.withdrawn {
+    background: #7f8c8d;
+    color: #bdc3c7;
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.war-center-text {
+    flex: 1;
+    max-width: 350px;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
         #login-section {
             position: fixed;
             top: 50%;
@@ -637,6 +750,38 @@
 
 <!-- 主界面 -->
 <div id="main-section" class="container" style="display:none;">
+    <div id="war-room-panel" style="display:none; margin-bottom: 30px; background: #f4f6f8; border: 2px solid #bdc3c7; border-radius: 8px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden; height: 320px;">
+        <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px); pointer-events: none;"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 100%; position: relative; z-index: 1;">
+        
+            <div id="empire-photos" class="war-photos left-photos"></div>
+
+            <div class="war-bar-container">
+                <div class="war-bar-bg">
+                    <div id="empire-bar" class="war-bar-fill" style="height: 0%;"></div>
+                </div>
+                <div id="empire-factions" class="war-factions"></div>
+            </div>
+
+            <div class="war-center-text">
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1.3em; letter-spacing: 1px;">贝路利安堡绞肉机 / 战局演进</h3>
+                <p style="margin: 0; font-size: 0.9em; color: #555; line-height: 1.6; text-align: justify;">
+                    异界帝国的钢铁巨兽已在楚尔特抛锚，这支不属于费伦的军队正以碾压之势粉碎既有秩序，为了对抗这一未知的恐怖，联军集结了空前的力量。<strong>必须在帝国完全展开其战争机器前锁定胜局。</strong>
+                </p>
+            </div>
+
+            <div class="war-bar-container">
+                <div class="war-bar-bg">
+                    <div id="alliance-bar" class="war-bar-fill" style="height: 0%;"></div>
+                </div>
+                <div id="alliance-factions" class="war-factions"></div>
+            </div>
+
+            <div id="alliance-photos" class="war-photos right-photos"></div>
+        </div>
+    </div>
+
     <div class="nav">
         <button class="tab-btn active" onclick="switchTab('shop')">商城</button>
     <button class="tab-btn" onclick="switchTab('team')">队伍</button>
@@ -2081,6 +2226,7 @@ async function login() {
             // 初始化全局变量
             myId = user.id;
             currentUserEmail = user.email;
+            loadWarSituation();
             
             // 检查管理员权限
             const { data: adminData } = await supabaseClient
@@ -4918,6 +5064,8 @@ async function getRobustIP() {
         }
     }
 
+
+
     // 2. 点击铃铛时，打开列表面板
     function openNoticeCenter() {
         const container = document.getElementById('notice-list-container');
@@ -5186,6 +5334,73 @@ async function getRobustIP() {
             document.getElementById('edit-mon-avatar-preview').src = URL.createObjectURL(file);
         }
     }
+
+    // --- 加载战局态势 ---
+async function loadWarSituation() {
+    const warPanel = document.getElementById('war-room-panel');
+    if (currentUserEmail !== 'master@almorel.com') {
+        warPanel.style.display = 'none';
+        return;
+    }
+    warPanel.style.display = 'block';
+
+    try {
+        const url = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/war_situation.json?t=' + new Date().getTime();
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("JSON Fetch Failed");
+        const data = await res.json();
+
+        // 1. 渲染帝国方 (左侧)
+        renderWarPhotos('empire-photos', data.empire.photos, 'left');
+        document.getElementById('empire-bar').style.height = `${data.empire.readiness}%`;
+        renderWarFactions('empire-factions', data.empire.factions); // <--- 改用 faction
+
+        // 2. 渲染联军方 (右侧)
+        renderWarPhotos('alliance-photos', data.alliance.photos, 'right');
+        document.getElementById('alliance-bar').style.height = `${data.alliance.readiness}%`;
+        renderWarFactions('alliance-factions', data.alliance.factions); // <--- 改用 faction
+
+    } catch (e) {
+        console.warn("战局态势数据拉取失败:", e);
+    }
+}
+
+// 辅助函数：渲染错落的照片
+function renderWarPhotos(containerId, photosList, align) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (!photosList) return;
+
+    const total = photosList.length;
+    photosList.forEach((photo, index) => {
+        // 动态计算错落感：根据张数均匀散开
+        const spreadX = align === 'left' ? 12 : -12; // 左边往右叠，右边往左叠
+        const offsetX = index * spreadX;
+        const offsetY = index * 5; // 稍微往下沉一点
+        const rotate = (Math.random() * 10 - 5); // -5度到5度随机倾斜
+
+        const isDead = photo.is_dead ? `<div class="war-dead-mark">✕</div>` : '';
+
+        container.innerHTML += `
+            <div class="war-photo-item" style="left: ${align === 'left' ? offsetX + 'px' : 'auto'}; right: ${align === 'right' ? Math.abs(offsetX) + 'px' : 'auto'}; top: ${offsetY}px; transform: rotate(${rotate}deg); z-index: ${index};">
+                <img src="${photo.url}" class="war-photo-img" onerror="this.src='https://via.placeholder.com/75x100?text=No+Img'">
+                ${isDead}
+            </div>
+        `;
+    });
+}
+
+// 辅助函数：渲染 5:3 国旗
+function renderWarFactions(containerId, factionList) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (!factionList) return;
+
+    factionList.forEach(faction => {
+        // 如果你需要表现某方退出了，可以在 json 里配成对象，这里简单起见假设传的都是纯字符串
+        container.innerHTML += `<div class="war-faction-tag">${faction}</div>`;
+    });
+}
 
     
 
