@@ -23,11 +23,25 @@
 .war-photo-item {
     position: absolute; width: 100px; height: 130px;
     background: #fff; padding: 5px; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-    border: 1px solid #ddd; filter: grayscale(100%) contrast(1.1);
+    border: 1px solid #ddd; 
     transition: transform 0.2s, z-index 0.2s;
 }
 
-.war-photo-item:hover { transform: scale(1.15) rotate(0deg) !important; z-index: 100 !important; }
+.war-photo-item:hover { 
+    transform: scale(1.15) rotate(0deg) !important; 
+    z-index: 100 !important; 
+}
+
+.war-bar-fill { 
+    position: absolute; bottom: 0; left: 0; width: 100%; 
+    transition: height 1.5s ease-out; 
+}
+
+#empire-bar { background: #e74c3c; }
+#alliance-bar { background: #3498db; }
+
+#empire-readiness-text { color: #e74c3c; }
+#alliance-readiness-text { color: #3498db; }
 
 .war-photo-img {
     width: 100%;
@@ -879,7 +893,7 @@
             <div class="war-bar-bg">
                 <div id="alliance-bar" class="war-bar-fill" style="height: 0%;"></div>
             </div>
-            <div class="readiness-text">凝聚力: <span id="alliance-readiness-text" style="color:#e74c3c;">0%</span></div>
+            <div class="readiness-text">凝聚力: <span id="alliance-readiness-text">0%</span></div>
             <div id="alliance-factions" class="war-factions-wrapper"></div>
         </div>
 
@@ -5562,6 +5576,29 @@ function applyMapControl(controlData) {
             if (titleNode) titleNode.textContent = `${regionName} (未知势力)`;
         }
     });
+}
+
+// --- 6. 地图区域点击触发弹窗 (修复点不开的问题) ---
+function showRegionInfo(regionName, element) {
+    const faction = element.getAttribute('data-faction') || '未知势力';
+    
+    document.getElementById('region-name-display').innerText = regionName;
+    const factionEl = document.getElementById('region-faction-display');
+    factionEl.innerText = faction;
+    
+    // 根据阵营变更弹窗文字颜色和发光效果
+    if (faction.includes('联军')) {
+        factionEl.style.color = '#3498db'; // 联军蓝
+        factionEl.style.textShadow = '0 0 15px rgba(52,152,219,0.6)';
+    } else if (faction.includes('帝国')) {
+        factionEl.style.color = '#e74c3c'; // 帝国红
+        factionEl.style.textShadow = '0 0 15px rgba(231,76,60,0.6)';
+    } else {
+        factionEl.style.color = '#bdc3c7'; // 未知灰
+        factionEl.style.textShadow = 'none';
+    }
+    
+    document.getElementById('region-info-modal').style.display = 'flex';
 }
 
 
