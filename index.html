@@ -191,7 +191,21 @@
         #login-section button:hover { background: #34495e; transform: translateY(-1px); }
 
         /* --- 主界面布局 --- */
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .container { 
+            max-width: 100%; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+
+        .nav, .section {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* 3. 唯独给战局面板开放特权，让它单独撑开到 1400px */
+        #war-section {
+            max-width: 1400px;
+        }
         
         /* 导航 */
         .nav { display: flex; gap: 15px; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 30px; align-items: center; }
