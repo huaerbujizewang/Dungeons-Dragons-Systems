@@ -18,28 +18,16 @@
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
         body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #fff; color: #333; margin: 0; padding: 0; height: 100vh; }
 /* --- 战局态势面板样式 --- */
-.war-photos {
-    position: relative;
-    width: 120px;
-    height: 100%;
-}
+.war-photos { position: relative; width: 150px; height: 100%; }
 
 .war-photo-item {
-    position: absolute;
-    width: 100px;  
-    height: 130px;
-    background: #fff;
-    padding: 5px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-    border: 1px solid #ddd;
-    filter: grayscale(100%) contrast(1.1);
+    position: absolute; width: 100px; height: 130px;
+    background: #fff; padding: 5px; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    border: 1px solid #ddd; filter: grayscale(100%) contrast(1.1);
     transition: transform 0.2s, z-index 0.2s;
 }
 
-.war-photo-item:hover {
-    transform: scale(1.15) rotate(0deg) !important;
-    z-index: 100 !important;
-}
+.war-photo-item:hover { transform: scale(1.15) rotate(0deg) !important; z-index: 100 !important; }
 
 .war-photo-img {
     width: 100%;
@@ -62,58 +50,36 @@
     text-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
 
-.war-bar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 130px;
-    height: 100%;
-    padding-top: 50px;
-}
+.war-bar-container { display: flex; flex-direction: column; align-items: center; width: 140px; padding-top: 40px; }
 
 .war-bar-bg {
-    width: 50px;
-    height: 600px; 
-    flex: none;
-    background: #e0e0e0;
-    border: 2px solid #7f8c8d;
-    position: relative;
-    margin-bottom: 20px;
+    width: 50px; height: 500px; flex: none;
+    background: #e0e0e0; border: 2px solid #7f8c8d; position: relative; margin-bottom: 10px;
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
 }
+.war-bar-fill { position: absolute; bottom: 0; left: 0; width: 100%; background: #e74c3c; transition: height 1.5s ease-out; }
 
-.war-bar-fill {
-    position: absolute; bottom: 0; left: 0; width: 100%;
-    background: #e74c3c; 
-    transition: height 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
+/* 准备度文字 */
+.readiness-text { font-size: 0.9em; font-weight: bold; color: #2c3e50; margin-bottom: 15px; text-align: center; }
 
 .war-factions-wrapper {
-    width: 100%;
-    height: 250px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    overflow: hidden; 
+    width: 130px; 
+    height: 250px; /* 死框高度 */
+    display: flex; justify-content: center; align-items: flex-start;
+    overflow: hidden; /* 隐藏溢出 */
 }
 
+/* 真实的装载容器，由它进行缩放变形 */
 .war-factions {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    width: 100%; 
-    transform-origin: top center; 
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    width: 100%; transform-origin: top center; /* 缩放基准点 */
 }
 
 .war-faction-tag {
-    background: #2c3e50; color: #ecf0f1; font-size: 0.8em;
-    padding: 5px 0; border-radius: 2px; white-space: nowrap;
-    border: 1px solid #1a252f; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    font-weight: bold; letter-spacing: 1px;
-    width: 100%; text-align: center; box-sizing: border-box;
-    flex-shrink: 0;
+    background: #2c3e50; color: #ecf0f1; font-size: 0.8em; padding: 5px 0;
+    border-radius: 2px; white-space: nowrap; border: 1px solid #1a252f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3); font-weight: bold; letter-spacing: 1px;
+    width: 100%; text-align: center; box-sizing: border-box; flex-shrink: 0;
 }
 
 /* 可以用伪类给退出的势力加个划线样式 */
@@ -785,7 +751,7 @@
     <div id="war-room-panel" style="margin-bottom: 30px; background: #f4f6f8; border: 2px solid #bdc3c7; border-radius: 8px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden; height: 1000px;">
     <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px); pointer-events: none;"></div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%; position: relative; z-index: 1;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; height: 100%; position: relative; z-index: 1;">
         
         <div id="empire-photos" class="war-photos left-photos"></div>
 
@@ -793,13 +759,14 @@
             <div class="war-bar-bg">
                 <div id="empire-bar" class="war-bar-fill" style="height: 0%;"></div>
             </div>
+            <div class="readiness-text">准备度: <span id="empire-readiness-text" style="color:#e74c3c;">0%</span></div>
             <div id="empire-factions" class="war-factions-wrapper"></div>
         </div>
 
-        <div class="war-center-text">
+        <div class="war-center-text" style="margin-top: 80px;">
             <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1.3em; letter-spacing: 1px; text-align: center;">楚尔特战局</h3>
             <p style="margin: 0; font-size: 0.9em; color: #555; line-height: 1.6; text-align: justify;">
-                异界入侵者的钢铁巨兽已在楚尔特抛锚，这支不属于费伦的军队正以碾压之势粉碎既有秩序。为了对抗这一未知的恐怖，联军集结了空前的力量。
+                异界帝国的钢铁巨兽已在楚尔特抛锚，这支不属于费伦的军队正以碾压之势粉碎既有秩序。为了对抗这一未知的恐怖，联军集结了空前的力量。
             </p>
             <strong style="display: block; text-align: center; margin-top: 15px; font-size: 1.05em; color: #c0392b;">
                 必须在帝国完全展开其战争机器前锁定胜局。
@@ -810,6 +777,7 @@
             <div class="war-bar-bg">
                 <div id="alliance-bar" class="war-bar-fill" style="height: 0%;"></div>
             </div>
+            <div class="readiness-text">凝聚力: <span id="alliance-readiness-text" style="color:#e74c3c;">0%</span></div>
             <div id="alliance-factions" class="war-factions-wrapper"></div>
         </div>
 
@@ -5349,64 +5317,58 @@ async function getRobustIP() {
 
     // --- 加载战局态势 ---
 async function loadWarSituation() {
+    const warPanel = document.getElementById('war-room-panel');
     const warTabBtn = document.getElementById('war-tab-btn');
-    const shopTabBtn = document.getElementById('shop-tab-btn');
-    
-    // 权限校验：允许多个指定邮箱查看战局
-    const allowedEmails = ['739477825@qq.com'];
-    
-    if (!allowedEmails.includes(currentUserEmail)) {
-        if (warTabBtn) warTabBtn.style.display = 'none';
-        switchTab('shop'); // 普通玩家依然默认进入商城，且看不到战局按钮
-        return;
+    if (!['739477825@qq.com'].includes(currentUserEmail)) {
+        if (warTabBtn) warTabBtn.style.display = 'none'; return;
     }
-    
-    // 如果是最高统帅或指定 DM
-    if (warTabBtn) {
-        warTabBtn.style.display = 'inline-block';
-        switchTab('war'); // 你们登录后，第一眼默认进入战局面板
-    }
+    if (warTabBtn) { warTabBtn.style.display = 'inline-block'; }
 
     try {
-        const url = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/war_situation.json?t=' + new Date().getTime();
-        const res = await fetch(url);
+        const res = await fetch('https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/war_situation.json?t=' + Date.now());
         if (!res.ok) throw new Error("JSON Fetch Failed");
         const data = await res.json();
 
-        // 1. 渲染帝国方 (左侧)
+        // 帝国方
         renderWarPhotos('empire-photos', data.empire.photos, 'left');
         document.getElementById('empire-bar').style.height = `${data.empire.readiness}%`;
+        document.getElementById('empire-readiness-text').innerText = `${data.empire.readiness}%`;
         renderWarFactions('empire-factions', data.empire.factions); 
 
-        // 2. 渲染联军方 (右侧)
+        // 联军方
         renderWarPhotos('alliance-photos', data.alliance.photos, 'right');
         document.getElementById('alliance-bar').style.height = `${data.alliance.readiness}%`;
+        document.getElementById('alliance-readiness-text').innerText = `${data.alliance.readiness}%`;
         renderWarFactions('alliance-factions', data.alliance.factions); 
 
-    } catch (e) {
-        console.warn("战局态势数据拉取失败:", e);
-    }
+    } catch (e) { console.warn("战局数据错误:", e); }
 }
 
 // 辅助函数：渲染阶梯式展开的照片
 function renderWarPhotos(containerId, photosList, align) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    if (!photosList) return;
+    if (!photosList || photosList.length === 0) return;
 
-    // 【完全拉开】照片高130px，间距160px，空隙比照片本身还大！
-    const spreadY = 160; 
-    const startTop = 40; // 统一下沉40px
+    const total = photosList.length;
+    
+    // 【核心定义】照片区域的最大占地限制
+    const maxTrackHeight = 850; // 头尾照片之间的总占地高度必须是 850px
+    const maxTrackWidth = 40;   // 横向阶梯的总宽度占地 40px
+    const photoH = 130;         // 单张照片的高度
+    const startTop = 20;
+
+    // 【算法】不管有几张照片，计算出等距间隙，让它们铺满 850px 长度
+    const spreadY = total > 1 ? (maxTrackHeight - photoH) / (total - 1) : 0;
+    const spreadX = total > 1 ? maxTrackWidth / (total - 1) : 0;
 
     photosList.forEach((photo, index) => {
-        const offsetY = startTop + (index * spreadY);
-        // 保留极为微小的倾斜增加真实感
+        const offsetY = startTop + (index * spreadY); // Y轴严格均分
+        const offsetX = index * spreadX;              // X轴严格均分
         const rotate = (Math.random() * 6 - 3); 
 
         const isDead = photo.is_dead ? `<div class="war-dead-mark">✕</div>` : '';
-
-        // 【绝对平行】左边死贴左边，右边死贴右边，不向中心靠拢
-        const horizontalAlign = align === 'left' ? `left: 10px;` : `right: 10px;`;
+        const horizontalAlign = align === 'left' ? `left: ${offsetX}px;` : `right: ${offsetX}px;`;
 
         container.innerHTML += `
             <div class="war-photo-item" style="
@@ -5420,14 +5382,12 @@ function renderWarPhotos(containerId, photosList, align) {
         `;
     });
 }
-
 // 辅助函数：势力
 function renderWarFactions(containerId, factionList) {
     const wrapper = document.getElementById(containerId);
     wrapper.innerHTML = '';
     if (!factionList) return;
 
-    // 创建内部真实容器
     const innerDiv = document.createElement('div');
     innerDiv.className = 'war-factions';
     
@@ -5437,17 +5397,15 @@ function renderWarFactions(containerId, factionList) {
     
     wrapper.appendChild(innerDiv);
 
-    // 渲染完成后计算高度，如果超出250px，就按比例暴力缩放！
     setTimeout(() => {
         const wrapperHeight = wrapper.clientHeight; 
         const contentHeight = innerDiv.scrollHeight; 
-        
+
         if (contentHeight > wrapperHeight) {
-            // 算出一个小于1的缩放倍率
-            const scaleRatio = wrapperHeight / contentHeight;
+            const scaleRatio = wrapperHeight / contentHeight; 
             innerDiv.style.transform = `scale(${scaleRatio})`;
         }
-    }, 10);
+    }, 50);
 }
 
     
