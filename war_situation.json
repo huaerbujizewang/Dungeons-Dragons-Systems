@@ -2,31 +2,33 @@
   "empire": {
     "readiness": 20,
     "photos": [
-      { "url": "assets/photos/empire1.jpg", "is_dead": false },
-      { "url": "assets/photos/empire2.jpg", "is_dead": false },
-      { "url": "assets/photos/empire3.jpg", "is_dead": false },
-      { "url": "assets/photos/empire4.jpg", "is_dead": false },
-      { "url": "assets/photos/empire5.jpg", "is_dead": false }
+      { "url": "assets/photos/AA1.jpg", "is_dead": false },
+      { "url": "assets/photos/AA2.jpg", "is_dead": false },
+      { "url": "assets/photos/AA3.jpg", "is_dead": false },
+      { "url": "assets/photos/AA4.jpg", "is_dead": false },
+      { "url": "assets/photos/AA5.jpg", "is_dead": false }
     ],
-    "flags": [
-      "assets/flags/empire_main.jpg"
+    "factions": [
+      "帝国远征军"
     ]
   },
   "alliance": {
     "readiness": 100,
     "photos": [
-      { "url": "assets/photos/alliance1.jpg", "is_dead": false },
-      { "url": "assets/photos/alliance2.jpg", "is_dead": false },
-      { "url": "assets/photos/alliance3.jpg", "is_dead": false },
-      { "url": "assets/photos/alliance4.jpg", "is_dead": true }, 
-      { "url": "assets/photos/alliance5.jpg", "is_dead": false },
-      { "url": "assets/photos/alliance6.jpg", "is_dead": false }
+      { "url": "assets/photos/BB1.jpg", "is_dead": false },
+      { "url": "assets/photos/BB2.jpg", "is_dead": false },
+      { "url": "assets/photos/BB3.jpg", "is_dead": false },
+      { "url": "assets/photos/BB4.jpg", "is_dead": false },
+      { "url": "assets/photos/BB5.jpg", "is_dead": false },
+      { "url": "assets/photos/BB6.jpg", "is_dead": false },
     ],
-    "flags": [
-      "assets/flags/waterdeep.jpg",
-      "assets/flags/thay.jpg",
-      "assets/flags/hells.jpg",
-      "assets/flags/metal_dragons.jpg"
+    "factions": [
+      "领主联盟",
+      "金属龙议会",
+      "艾尔莫瑞尔",
+      "九层地狱",
+      "红袍法师",
+      "楚尔特蛇人"
     ]
   }
 }
