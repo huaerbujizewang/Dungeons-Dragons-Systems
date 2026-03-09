@@ -63,10 +63,38 @@
 .readiness-text { font-size: 0.9em; font-weight: bold; color: #2c3e50; margin-bottom: 15px; text-align: center; }
 
 .war-factions-wrapper {
-    width: 130px; 
-    height: 250px; /* 死框高度 */
-    display: flex; justify-content: center; align-items: flex-start;
-    overflow: hidden; /* 隐藏溢出 */
+    width: 140px;
+    height: 42px; /* 绝对死框：就是你截图里那个按钮的高度 */
+    background: #2c3e50; /* 统一的深蓝灰底色 */
+    border: 1px solid #1a252f;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* 绝对不让内容顶出去 */
+    margin-top: 8px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+/* 内部用于承载所有文字的真实容器 */
+.war-factions-inner {
+    display: flex;
+    flex-wrap: wrap; /* 允许名字换行 */
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    transform-origin: center center; /* 以中心为基准进行缩放 */
+}
+
+/* 单个势力的名字排版 */
+.war-faction-text {
+    color: #ecf0f1;
+    font-size: 0.9em;
+    font-weight: bold;
+    white-space: nowrap; /* 保证单个名字不被切断 */
+    line-height: 1.2;
 }
 
 /* 真实的装载容器，由它进行缩放变形 */
@@ -5386,26 +5414,39 @@ function renderWarPhotos(containerId, photosList, align) {
 function renderWarFactions(containerId, factionList) {
     const wrapper = document.getElementById(containerId);
     wrapper.innerHTML = '';
-    if (!factionList) return;
+    if (!factionList || factionList.length === 0) return;
 
+    // 创建内部容器
     const innerDiv = document.createElement('div');
-    innerDiv.className = 'war-factions';
-    
-    factionList.forEach(faction => {
-        innerDiv.innerHTML += `<div class="war-faction-tag">${faction}</div>`;
+    innerDiv.className = 'war-factions-inner';
+
+    // 把所有势力名字渲染进去，中间用小点隔开更像一份军事名单
+    factionList.forEach((faction, index) => {
+        const separator = index < factionList.length - 1 ? '<span style="color:#7f8c8d; margin:0 4px;">·</span>' : '';
+        innerDiv.innerHTML += `<div class="war-faction-text">${faction}${separator}</div>`;
     });
-    
+
     wrapper.appendChild(innerDiv);
 
+    // 等待文字渲染后，执行压缩算法
     setTimeout(() => {
-        const wrapperHeight = wrapper.clientHeight; 
-        const contentHeight = innerDiv.scrollHeight; 
+        // 获取外层死框的宽高
+        const maxWidth = wrapper.clientWidth - 8; 
+        const maxHeight = wrapper.clientHeight - 4;
+        
+        // 获取里面那坨文字的真实宽高
+        const contentWidth = innerDiv.scrollWidth;
+        const contentHeight = innerDiv.scrollHeight;
 
-        if (contentHeight > wrapperHeight) {
-            const scaleRatio = wrapperHeight / contentHeight; 
-            innerDiv.style.transform = `scale(${scaleRatio})`;
+        // 如果文字溢出了死框，强行计算出缩放比例并压小
+        if (contentWidth > maxWidth || contentHeight > maxHeight) {
+            const scaleX = maxWidth / contentWidth;
+            const scaleY = maxHeight / contentHeight;
+            // 取最小的比例，确保无论横向还是纵向都绝对塞得进去
+            const scale = Math.min(scaleX, scaleY); 
+            innerDiv.style.transform = `scale(${scale})`;
         }
-    }, 50);
+    }, 20); // 20ms 足够浏览器计算 DOM 宽高
 }
 
     
