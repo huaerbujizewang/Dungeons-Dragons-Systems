@@ -5347,7 +5347,7 @@ async function loadWarSituation() {
     const shopTabBtn = document.getElementById('shop-tab-btn');
     
     // 权限校验：允许多个指定邮箱查看战局
-    const allowedEmails = ['master@almorel.com', '739477825@qq.com'];
+    const allowedEmails = ['739477825@qq.com'];
     
     if (!allowedEmails.includes(currentUserEmail)) {
         if (warTabBtn) warTabBtn.style.display = 'none';
