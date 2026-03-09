@@ -750,6 +750,7 @@
 
 <!-- 主界面 -->
 <div id="main-section" class="container" style="display:none;">
+    <div id="war-section" class="section">
     <div id="war-room-panel" style="display:none; margin-bottom: 30px; background: #f4f6f8; border: 2px solid #bdc3c7; border-radius: 8px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden; height: 320px;">
         <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px); pointer-events: none;"></div>
 
@@ -765,7 +766,7 @@
             </div>
 
             <div class="war-center-text">
-                <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1.3em; letter-spacing: 1px;">贝路利安堡绞肉机 / 战局演进</h3>
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1.3em; letter-spacing: 1px;">楚尔特战局</h3>
                 <p style="margin: 0; font-size: 0.9em; color: #555; line-height: 1.6; text-align: justify;">
                     异界帝国的钢铁巨兽已在楚尔特抛锚，这支不属于费伦的军队正以碾压之势粉碎既有秩序，为了对抗这一未知的恐怖，联军集结了空前的力量。<strong>必须在帝国完全展开其战争机器前锁定胜局。</strong>
                 </p>
@@ -781,9 +782,11 @@
             <div id="alliance-photos" class="war-photos right-photos"></div>
         </div>
     </div>
+    </div>
 
     <div class="nav">
-        <button class="tab-btn active" onclick="switchTab('shop')">商城</button>
+    <button id="war-tab-btn" class="tab-btn" onclick="switchTab('war')" style="display:none; color:#e74c3c; font-weight:bold; border: 1px solid #e74c3c33;">战局</button>
+    <button class="tab-btn active" onclick="switchTab('shop')">商城</button>
     <button class="tab-btn" onclick="switchTab('team')">队伍</button>
     <button class="tab-btn" onclick="switchTab('inventory')">背包</button>
     <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
@@ -5337,12 +5340,23 @@ async function getRobustIP() {
 
     // --- 加载战局态势 ---
 async function loadWarSituation() {
-    const warPanel = document.getElementById('war-room-panel');
-    if (currentUserEmail !== 'master@almorel.com') {
-        warPanel.style.display = 'none';
+    const warTabBtn = document.getElementById('war-tab-btn');
+    const shopTabBtn = document.getElementById('shop-tab-btn');
+    
+    // 权限校验：允许多个指定邮箱查看战局
+    const allowedEmails = ['master@almorel.com', '739477825@qq.com'];
+    
+    if (!allowedEmails.includes(currentUserEmail)) {
+        if (warTabBtn) warTabBtn.style.display = 'none';
+        switchTab('shop'); // 普通玩家依然默认进入商城，且看不到战局按钮
         return;
     }
-    warPanel.style.display = 'block';
+    
+    // 如果是最高统帅或指定 DM
+    if (warTabBtn) {
+        warTabBtn.style.display = 'inline-block';
+        switchTab('war'); // 你们登录后，第一眼默认进入战局面板
+    }
 
     try {
         const url = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/war_situation.json?t=' + new Date().getTime();
@@ -5353,12 +5367,12 @@ async function loadWarSituation() {
         // 1. 渲染帝国方 (左侧)
         renderWarPhotos('empire-photos', data.empire.photos, 'left');
         document.getElementById('empire-bar').style.height = `${data.empire.readiness}%`;
-        renderWarFactions('empire-factions', data.empire.factions); // <--- 改用 faction
+        renderWarFactions('empire-factions', data.empire.factions); 
 
         // 2. 渲染联军方 (右侧)
         renderWarPhotos('alliance-photos', data.alliance.photos, 'right');
         document.getElementById('alliance-bar').style.height = `${data.alliance.readiness}%`;
-        renderWarFactions('alliance-factions', data.alliance.factions); // <--- 改用 faction
+        renderWarFactions('alliance-factions', data.alliance.factions); 
 
     } catch (e) {
         console.warn("战局态势数据拉取失败:", e);
