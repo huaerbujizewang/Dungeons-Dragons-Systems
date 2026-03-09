@@ -1,0 +1,32 @@
+{
+  "empire": {
+    "readiness": 20,
+    "photos": [
+      { "url": "assets/photos/empire1.jpg", "is_dead": false },
+      { "url": "assets/photos/empire2.jpg", "is_dead": false },
+      { "url": "assets/photos/empire3.jpg", "is_dead": false },
+      { "url": "assets/photos/empire4.jpg", "is_dead": false },
+      { "url": "assets/photos/empire5.jpg", "is_dead": false }
+    ],
+    "flags": [
+      "assets/flags/empire_main.jpg"
+    ]
+  },
+  "alliance": {
+    "readiness": 100,
+    "photos": [
+      { "url": "assets/photos/alliance1.jpg", "is_dead": false },
+      { "url": "assets/photos/alliance2.jpg", "is_dead": false },
+      { "url": "assets/photos/alliance3.jpg", "is_dead": false },
+      { "url": "assets/photos/alliance4.jpg", "is_dead": true }, 
+      { "url": "assets/photos/alliance5.jpg", "is_dead": false },
+      { "url": "assets/photos/alliance6.jpg", "is_dead": false }
+    ],
+    "flags": [
+      "assets/flags/waterdeep.jpg",
+      "assets/flags/thay.jpg",
+      "assets/flags/hells.jpg",
+      "assets/flags/metal_dragons.jpg"
+    ]
+  }
+}
