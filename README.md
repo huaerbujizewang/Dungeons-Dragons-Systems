@@ -114,8 +114,8 @@ select admin_random_restock((select id from auth.users where email = 'master@alm
 -- 全服公共随机上架 (参数填 null)
 select admin_random_restock(null);
 ```
-
--- 下架某个人的所有商品
+#### 下架某个人的所有商品
+```sql
 DELETE FROM shop_items 
 WHERE user_id = (SELECT id FROM auth.users WHERE email = 'master@almorel.com');
 ```
