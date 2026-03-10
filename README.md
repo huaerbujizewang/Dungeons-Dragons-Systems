@@ -115,6 +115,11 @@ select admin_random_restock((select id from auth.users where email = 'master@alm
 select admin_random_restock(null);
 ```
 
+-- 下架某个人的所有商品
+DELETE FROM shop_items 
+WHERE user_id = (SELECT id FROM auth.users WHERE email = 'master@almorel.com');
+```
+
 #### 往图鉴 (Compendium) 添加新物品
 这样以后你在后台搜素时就能搜到它。
 ```sql
