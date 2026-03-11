@@ -6107,6 +6107,11 @@ async function drawTwoCards(faction) {
     await supabaseClient.from('war_decks')
         .update({ draw_pile: drawPile, hand: hand, discard_pile: discardPile })
         .eq('faction', faction);
+
+    // 同步更新本地的前端数据
+    warDecks[faction].draw_pile = drawPile;
+    warDecks[faction].hand = hand;
+    warDecks[faction].discard_pile = discardPile;
     
     await addWarLog(`【${faction === 'alliance' ? '联军' : '帝国'}】抽取了 ${drawnCards.length} 张卡牌。`);
     
@@ -6120,26 +6125,46 @@ async function changePhase(newPhase) {
     await supabaseClient.from('war_state').update({ current_phase: newPhase }).eq('id', 1);
 }
 
+// 结束当前回合
 async function endWarTurn() {
-    if (!confirm('确定结束本阵营的回合吗？')) return;
     showLoading();
-    
-    let nextFaction = warState.active_faction === 'alliance' ? 'empire' : 'alliance';
-    let nextTurn = warState.current_turn;
-    
-    // 如果是帝国结束，回合数 +1 (假设一轮是联军+帝国)
-    if (warState.active_faction === 'empire') {
-        nextTurn++;
+    try {
+        // 1. 计算下一个阵营和回合数
+        // 如果当前是联军，下一个就是帝国；如果当前是帝国，一轮结束，回合数+1，切回联军。
+        const nextFaction = warState.active_faction === 'alliance' ? 'empire' : 'alliance';
+        const nextTurn = warState.active_faction === 'empire' ? warState.current_turn + 1 : warState.current_turn;
+
+        // 2. 更新数据库
+        await supabaseClient.from('war_state').update({
+            active_faction: nextFaction,
+            current_phase: 'discard', // 下个阵营从弃牌阶段开始
+            current_turn: nextTurn
+        }).eq('id', 1);
+
+        // 3. 更新本地状态
+        warState.active_faction = nextFaction;
+        warState.current_phase = 'discard';
+        warState.current_turn = nextTurn;
+
+        // 4. 写战报
+        const currentFactionName = warState.active_faction === 'empire' ? '联军' : '帝国';
+        const nextFactionName = nextFaction === 'alliance' ? '联军' : '帝国';
+        await addWarLog(`【系统】${currentFactionName}回合结束。`);
+        
+        if (warState.active_faction === 'empire') {
+            await addWarLog(`【系统】第 ${nextTurn} 回合开始！`);
+        }
+        await addWarLog(`【系统】当前行动权交接给：${nextFactionName}。等待进入弃牌阶段...`);
+
+        // 5. 重新渲染全局 UI (隐藏当前手牌，显示对方界面等)
+        renderWarUI(); 
+        
+    } catch (e) {
+        console.error("结束回合失败:", e);
+        alert("操作失败，请重试！");
+    } finally {
+        hideLoading();
     }
-
-    await supabaseClient.from('war_state').update({
-        active_faction: nextFaction,
-        current_phase: 'discard',
-        current_turn: nextTurn
-    }).eq('id', 1);
-
-    await addWarLog(`================= 第 ${nextTurn} 回合：${nextFaction === 'alliance' ? '联军' : '帝国'} 阶段开始 =================`);
-    hideLoading();
 }
 
 
