@@ -5876,41 +5876,53 @@ async function fetchWarData() {
     renderWarUI();
 }
 
-async function fetchWarLogs() {
+window.fetchWarLogs = async function() {
     const { data } = await supabaseClient.from('war_logs').select('*').order('created_at', { ascending: false }).limit(30);
     const box = document.getElementById('war-logs-box');
-    box.innerHTML = data.map(log => {
-        const time = new Date(log.created_at).toLocaleTimeString();
-        return `<div class="log-line"><span class="log-time">[${time}]</span>${log.log_text}</div>`;
-    }).join('');
-}
+    if (box && data) {
+        box.innerHTML = data.map(log => {
+            const time = new Date(log.created_at).toLocaleTimeString();
+            return `<div class="log-line"><span class="log-time">[${time}]</span>${log.log_text}</div>`;
+        }).join('');
+    }
+};
 
 // 专门记录战报
-async function addWarLog(text) {
+window.addWarLog = async function(text) {
     await supabaseClient.from('war_logs').insert([{ log_text: text }]);
-}
+    await fetchWarLogs(); 
+};
 
 // --- 渲染 UI ---
-function renderWarUI() {
+window.renderWarUI = function() {
     // 1. 状态栏
     document.getElementById('ws-turn').innerText = warState.current_turn;
     const activeSpan = document.getElementById('ws-active-faction');
     activeSpan.innerText = warState.active_faction === 'alliance' ? '费伦联军' : '帝国远征军';
     activeSpan.style.background = warState.active_faction === 'alliance' ? '#3498db' : '#e74c3c';
 
-    // 阶段名称解析
     const phaseNames = { 'discard': '4.1 弃牌阶段', 'draw': '4.2 抽牌阶段', 'action': '4.3 行动/打牌阶段' };
     document.getElementById('ws-phase-info').innerHTML = `当前阶段: <strong style="color:#8e44ad">${phaseNames[warState.current_phase]}</strong>`;
 
+    // 【新增核心修复】：每次 UI 刷新时，强制同步进度条的高度和文字！
+    const empReadiness = warState.empire_readiness || 0;
+    const aliReadiness = warState.alliance_readiness || 0;
+    
+    document.getElementById('empire-bar').style.height = `${empReadiness}%`;
+    document.getElementById('empire-readiness-text').innerText = `${empReadiness}%`;
+    
+    document.getElementById('alliance-bar').style.height = `${aliReadiness}%`;
+    document.getElementById('alliance-readiness-text').innerText = `${aliReadiness}%`;
+
     // 2. 按钮权限逻辑
     const btnContainer = document.getElementById('ws-actions-container');
-    const isMyTurn = (warState.active_faction === myWarFaction) || (currentUserEmail === '739477825@qq.com'); // DM 可以代打双方
+    const isMyTurn = (warState.active_faction === myWarFaction) || (currentUserEmail === '739477825@qq.com');
     const actingFaction = warState.active_faction;
     
     let buttonsHtml = '';
     if (isMyTurn) {
         if (warState.current_phase === 'discard') {
-            const handCount = warDecks[actingFaction].hand.length;
+            const handCount = warDecks[actingFaction]?.hand?.length || 0;
             if (handCount > 1) {
                 buttonsHtml = `<button class="action-btn disabled">当前手牌 ${handCount} 张，请先点击弃牌</button>`;
             } else {
@@ -5926,10 +5938,10 @@ function renderWarUI() {
     }
     btnContainer.innerHTML = buttonsHtml;
 
-    // 3. 渲染手牌区 (权限判定)
+    // 3. 渲染手牌区
     renderHand('alliance', document.getElementById('cards-alliance'));
     renderHand('empire', document.getElementById('cards-empire'));
-}
+};
 
 function renderHand(faction, container) {
     const deck = warDecks[faction];
