@@ -5997,9 +5997,9 @@ function handleCardClick(faction, cardId) {
         `;
 
         if (faction === 'empire') {
-            const bonus = card.readiness_bonus || 2;
+            const defaultDiscardBonus = 2; // 固定弃牌收益为 2
             menuHtml += `<hr style="margin:10px 0; border:0; border-top:1px dashed #ccc;">
-                         <button class="card-menu-btn empire-bonus" onclick="discardForReadiness(${bonus})">⚙️ 弃牌并提升 ${bonus}% 整备度</button>`;
+                 <button class="card-menu-btn empire-bonus" onclick="discardForReadiness(${defaultDiscardBonus})">⚙️ 弃牌并提升 ${defaultDiscardBonus}% 整备度</button>`;
         }
 
         document.getElementById('cam-buttons').innerHTML = menuHtml;
@@ -6024,9 +6024,29 @@ async function processDiscard(faction, cardId, logText) {
 }
 
 // 4.3 玩法A：发动事件
-function playCardEvent(faction) {
-    const cardName = allWarCards[selectedCardId].name;
-    processDiscard(faction, selectedCardId, `发动了事件卡：[${cardName}]`);
+async function playCardEvent(faction) {
+    const card = allWarCards[selectedCardId];
+    let logMsg = `发动了事件卡：[${card.name}]`;
+
+    if (faction === 'empire') {
+        // 读取数据库里配好的卡牌专属收益（没填就是0）
+        const playBonus = card.readiness_bonus || 0; 
+        
+        if (playBonus > 0) {
+            let newReadiness = warState.empire_readiness + playBonus;
+            if (newReadiness > 100) newReadiness = 100;
+
+            // 更新数据库
+            await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
+            // 更新本地缓存
+            warState.empire_readiness = newReadiness; 
+            
+            logMsg += `，帝国整备度提升 ${playBonus}%！(当前:${newReadiness}%)`;
+        }
+    }
+
+    // 将卡牌移入弃牌堆并写入日志
+    processDiscard(faction, selectedCardId, logMsg);
 }
 
 // 4.3 玩法B：作为资源弃牌
@@ -6042,6 +6062,8 @@ async function discardForReadiness(bonus) {
     if (newReadiness > 100) newReadiness = 100;
 
     await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
+    warState.empire_readiness = newReadiness;
+    
     processDiscard('empire', selectedCardId, `弃置了 [${cardName}]，帝国整备度提升 ${bonus}%！(当前:${newReadiness}%)`);
 }
 
