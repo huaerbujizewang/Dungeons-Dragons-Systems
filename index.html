@@ -5654,37 +5654,34 @@ async function loadWarSituation() {
     const warPanel = document.getElementById('war-room-panel');
     const warTabBtn = document.getElementById('war-tab-btn');
     
-    // 权限校验 (可以自行加上 master 邮箱)
+    // 权限校验 (非 DM/Master 隐藏入口)
     if (!['739477825@qq.com','master@almorel.com'].includes(currentUserEmail)) {
         if (warTabBtn) warTabBtn.style.display = 'none'; 
         return;
     }
     if (warTabBtn) { warTabBtn.style.display = 'inline-block'; }
-    await initWarEngine(); 
 
+    // 【第一步】：先去拉取只存在于 JSON 里的静态视觉数据
     try {
         const res = await fetch('https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/war_situation.json?t=' + Date.now());
         if (!res.ok) throw new Error("JSON Fetch Failed");
         const data = await res.json();
 
-        // 帝国方渲染
+        // 仅保留照片和势力的渲染，彻底删除原来关于 readiness 的 DOM 操作
         renderWarPhotos('empire-photos', data.empire.photos, 'left');
-        document.getElementById('empire-bar').style.height = `${data.empire.readiness}%`;
-        document.getElementById('empire-readiness-text').innerText = `${data.empire.readiness}%`;
         renderWarFactions('empire-factions', '帝国远征军', data.empire.factions); 
 
-        // 联军方渲染
         renderWarPhotos('alliance-photos', data.alliance.photos, 'right');
-        document.getElementById('alliance-bar').style.height = `${data.alliance.readiness}%`;
-        document.getElementById('alliance-readiness-text').innerText = `${data.alliance.readiness}%`;
         renderWarFactions('alliance-factions', '费伦联军', data.alliance.factions); 
 
-        // 【新增】：应用地图动态控制权
+        // 应用地图动态控制权
         if (data.map_control) {
             applyMapControl(data.map_control);
         }
+    } catch (e) { console.warn("静态 JSON 视觉数据加载失败:", e); }
 
-    } catch (e) { console.warn("战局数据错误:", e); }
+    // 【第二步】：启动军推引擎，从 SQL 数据库拉取真实的准备度并接管进度条
+    await initWarEngine(); 
 }
 
 // --- 2. 照片渲染：垂直平行瀑布流 ---
