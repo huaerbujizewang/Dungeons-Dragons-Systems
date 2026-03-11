@@ -6122,7 +6122,30 @@ async function drawTwoCards(faction) {
 
 // 阶段切换与回合结束
 async function changePhase(newPhase) {
-    await supabaseClient.from('war_state').update({ current_phase: newPhase }).eq('id', 1);
+    console.log(`[战局引擎] 尝试切换到阶段: ${newPhase}`); // 加上这句，点击没反应就能在控制台看出来
+    showLoading();
+    try {
+        // 1. 更新数据库
+        const { error } = await supabaseClient.from('war_state')
+            .update({ current_phase: newPhase })
+            .eq('id', 1);
+            
+        if (error) throw error;
+
+        // 2. 更新本地状态
+        warState.current_phase = newPhase;
+
+        // 3. 播报战报日志
+        const phaseNames = { 'discard': '弃牌阶段', 'draw': '抽牌阶段', 'action': '行动阶段' };
+        await addWarLog(`【系统】${warState.active_faction === 'alliance' ? '联军' : '帝国'} 进入 ${phaseNames[newPhase]}。`);
+        renderWarUI(); 
+        
+    } catch (e) {
+        console.error("切换阶段失败:", e);
+        alert("切换阶段失败，请检查控制台！");
+    } finally {
+        hideLoading();
+    }
 }
 
 // 结束当前回合
