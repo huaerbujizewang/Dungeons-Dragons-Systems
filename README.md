@@ -200,7 +200,7 @@ and user_id = (select id from auth.users where email = 'master@almorel.com');
 -- 允许所有登录用户查看所有表 (仅用于排查问题)
 create policy "Emergency Read All" on profiles for select using (auth.role() = 'authenticated');
 create policy "Emergency Read Inventory" on user_inventory for select using (auth.role() = 'authenticated');
-
+```
 
 ### 8. 🃏 军推卡牌与战局管理
 
