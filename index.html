@@ -861,20 +861,27 @@
     font-weight: bold;
 }
 
-/* 战报日志区 */
+/* 战报日志区：自适应拉伸并优化阅读体验 */
 .war-logs-container {
-    height: 150px;
-    background: #fff;
+    flex: 1; 
+    min-height: 480px; 
+    background: #fafafa;
     border: 1px solid #ddd;
     border-radius: 6px;
     overflow-y: auto;
-    padding: 10px;
+    padding: 15px;
     font-family: 'Consolas', monospace;
-    font-size: 0.9em;
-    color: #444;
+    font-size: 0.95em; 
+    color: #333;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
-.log-line { margin-bottom: 6px; border-bottom: 1px dashed #f0f0f0; padding-bottom: 4px; }
-.log-time { color: #999; font-size: 0.8em; margin-right: 8px; }
+.log-line { 
+    margin-bottom: 8px; 
+    border-bottom: 1px solid #eee; 
+    padding-bottom: 8px; 
+    line-height: 1.6; 
+}
+.log-time { color: #888; font-size: 0.85em; margin-right: 8px; }
 
 /* 动作控制台按钮 */
 .war-actions { display: flex; gap: 10px; justify-content: center; }
@@ -5943,15 +5950,14 @@ window.renderWarUI = function() {
     renderHand('empire', document.getElementById('cards-empire'));
 };
 
-function renderHand(faction, container) {
+window.renderHand = function(faction, container) {
     const deck = warDecks[faction];
+    if (!deck) return; // 防报错
     document.getElementById(`deck-count-${faction}`).innerText = `牌库: ${deck.draw_pile.length} | 弃牌: ${deck.discard_pile.length}`;
     
-    // 权限：DM(7394...) 看全部；联军(master...) 只能看联军，帝国牌显示背面。
-    const canSee = currentUserEmail === '739477825@qq.com' || myWarFaction === faction;
+    const canSee = currentUserEmail === '739477825@qq.com' || window.myWarFaction === faction;
 
     if (!canSee) {
-        // 显示牌背
         container.innerHTML = deck.hand.map(id => `
             <div class="war-card ${faction}" style="background:#555; justify-content:center; align-items:center;">
                 <span style="color:#fff; font-size:2em;">?</span>
@@ -5960,22 +5966,18 @@ function renderHand(faction, container) {
         return;
     }
 
-    // 显示正面
     container.innerHTML = deck.hand.map(id => {
         const card = allWarCards[id];
         if (!card) return '';
-        const bonusHtml = (card.faction === 'empire' && card.readiness_bonus > 0) 
-            ? `<div class="card-bonus">弃牌:+${card.readiness_bonus}%整备</div>` : '';
-
+        
         return `
             <div class="war-card ${faction}" onclick="handleCardClick('${faction}', '${id}')">
                 <div class="card-header">${card.name}</div>
                 <div class="card-body">${card.effect}</div>
-                ${bonusHtml}
             </div>
         `;
     }).join('');
-}
+};
 
 
 // ==================== 交互与规则执行 (加入防抖与即时渲染) ====================
@@ -6047,11 +6049,14 @@ window.processDiscard = async function(faction, cardId, logText) {
     }
 };
 
-// 玩法A：发动事件 (完全数据驱动)
+// 玩法A：发动事件
 window.playCardEvent = async function(faction) {
-    closeModal('card-action-menu'); // 提前关掉弹窗，防止重复点
+    closeModal('card-action-menu'); 
     const card = allWarCards[selectedCardId];
-    let logMsg = `发动了事件卡：[${card.name}]`;
+    
+    // 直接将卡牌效果展示在战报日志中
+    let logMsg = `打出了事件卡：[${card.name}]<br><span style="color:#666; font-size:0.9em;">(效果：${card.effect})</span>`;
+    
     const bonus = card.readiness_bonus || 0;
 
     if (bonus !== 0) {
@@ -6060,11 +6065,13 @@ window.playCardEvent = async function(faction) {
         if (newReadiness < 0) newReadiness = 0;
 
         await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
-        warState.empire_readiness = newReadiness; // 即时同步本地
+        warState.empire_readiness = newReadiness; 
         
         const actionText = bonus > 0 ? `提升了 ${bonus}%` : `下降了 ${Math.abs(bonus)}%`;
-        logMsg += `，帝国整备度${actionText}！(当前:${newReadiness}%)`;
+        // 追加数值影响
+        logMsg += `<br>➡️ 帝国整备度${actionText}！(当前:${newReadiness}%)`;
     }
+    
     await processDiscard(faction, selectedCardId, logMsg);
 };
 
