@@ -5827,60 +5827,29 @@ function showRegionInfo(regionName, element) {
     document.getElementById('region-info-modal').style.display = 'flex';
 }
 
-// ==================== 战棋推演卡牌引擎 ====================
+// ==================== 数据驱动：卡牌核心引擎 ====================
 
-let warState = {};
-let warDecks = {};
-let allWarCards = {}; 
-let myWarFaction = null; // 'alliance' 或 'empire'
-let selectedCardId = null;
+let isWarProcessing = false; 
 
-// 在 checkUser() 成功且邮箱符合时，启动军推引擎
-async function initWarEngine() {
-    const isMaster = currentUserEmail === 'master@almorel.com';
-    const isDM = currentUserEmail === '739477825@qq.com';
-    
-    if (!isMaster && !isDM) return; // 只有这两个邮箱能启动引擎
-    
-    document.getElementById('war-command-console').style.display = 'flex';
-    myWarFaction = isMaster ? 'alliance' : 'empire';
-    
-    // 1. 加载所有卡牌字典 (放入内存方便查询)
-    const { data: cards } = await supabaseClient.from('war_cards').select('*');
-    cards.forEach(c => allWarCards[c.id] = c);
+// 1. 基础工具：洗牌与时机判定
+window.shuffleArray = function(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
 
-    // 2. 挂载实时监听
-    supabaseClient.channel('war_room_channel')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'war_state' }, fetchWarData)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'war_decks' }, fetchWarData)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'war_logs' }, fetchWarLogs)
-        .subscribe();
+window.isCardPlayable = function(card) {
+    const timing = card.play_timing || 'any';
+    if (timing === 'any') return true;
+    const isMyTurn = warState.active_faction === card.faction;
+    if (timing === 'own' && isMyTurn) return true;
+    if (timing === 'enemy' && !isMyTurn) return true;
+    return false;
+};
 
-    // 3. 初始拉取数据
-    await fetchWarData();
-    await fetchWarLogs();
-}
-
-// 建议在 loadWarSituation() 的末尾调用 initWarEngine();
-
-async function fetchWarData() {
-    // 获取状态
-    const { data: stateData } = await supabaseClient.from('war_state').select('*').eq('id', 1).single();
-    warState = stateData;
-    
-    // 获取牌堆
-    const { data: decksData } = await supabaseClient.from('war_decks').select('*');
-    decksData.forEach(d => warDecks[d.faction] = d);
-
-    // 顺便把整备度更新到 UI (替代原 JSON 里的固定值)
-    document.getElementById('empire-bar').style.height = `${warState.empire_readiness}%`;
-    document.getElementById('empire-readiness-text').innerText = `${warState.empire_readiness}%`;
-    document.getElementById('alliance-bar').style.height = `${warState.alliance_readiness}%`;
-    document.getElementById('alliance-readiness-text').innerText = `${warState.alliance_readiness}%`;
-
-    renderWarUI();
-}
-
+// 2. 战报日志系统 (即时刷新)
 window.fetchWarLogs = async function() {
     const { data } = await supabaseClient.from('war_logs').select('*').order('created_at', { ascending: false }).limit(30);
     const box = document.getElementById('war-logs-box');
@@ -5892,15 +5861,41 @@ window.fetchWarLogs = async function() {
     }
 };
 
-// 专门记录战报
 window.addWarLog = async function(text) {
     await supabaseClient.from('war_logs').insert([{ log_text: text }]);
     await fetchWarLogs(); 
 };
 
-// --- 渲染 UI ---
+// 3. UI 渲染 (包含悬挂任务与手牌置灰)
+window.renderHand = function(faction, container) {
+    const deck = warDecks[faction];
+    if (!deck) return;
+    document.getElementById(`deck-count-${faction}`).innerText = `牌库: ${deck.draw_pile?.length||0} | 弃牌: ${deck.discard_pile?.length||0}`;
+    
+    const canSee = currentUserEmail === '739477825@qq.com' || window.myWarFaction === faction;
+    if (!canSee) {
+        container.innerHTML = deck.hand.map(id => `<div class="war-card ${faction}" style="background:#555; justify-content:center; align-items:center;"><span style="color:#fff; font-size:2em;">?</span></div>`).join('');
+        return;
+    }
+
+    container.innerHTML = deck.hand.map(id => {
+        const card = allWarCards[id];
+        if (!card) return '';
+        
+        const playable = isCardPlayable(card);
+        const opacity = playable ? '1' : '0.6';
+        const filter = playable ? 'none' : 'grayscale(1)';
+        
+        return `
+            <div class="war-card ${faction}" onclick="handleCardClick('${faction}', '${id}')" style="opacity:${opacity}; filter:${filter};">
+                <div class="card-header">${card.name}</div>
+                <div class="card-body">${card.effect}</div>
+            </div>
+        `;
+    }).join('');
+};
+
 window.renderWarUI = function() {
-    // 1. 状态栏
     document.getElementById('ws-turn').innerText = warState.current_turn;
     const activeSpan = document.getElementById('ws-active-faction');
     activeSpan.innerText = warState.active_faction === 'alliance' ? '费伦联军' : '帝国远征军';
@@ -5909,17 +5904,13 @@ window.renderWarUI = function() {
     const phaseNames = { 'discard': '4.1 弃牌阶段', 'draw': '4.2 抽牌阶段', 'action': '4.3 行动/打牌阶段' };
     document.getElementById('ws-phase-info').innerHTML = `当前阶段: <strong style="color:#8e44ad">${phaseNames[warState.current_phase]}</strong>`;
 
-    // 【新增核心修复】：每次 UI 刷新时，强制同步进度条的高度和文字！
     const empReadiness = warState.empire_readiness || 0;
     const aliReadiness = warState.alliance_readiness || 0;
-    
     document.getElementById('empire-bar').style.height = `${empReadiness}%`;
     document.getElementById('empire-readiness-text').innerText = `${empReadiness}%`;
-    
     document.getElementById('alliance-bar').style.height = `${aliReadiness}%`;
     document.getElementById('alliance-readiness-text').innerText = `${aliReadiness}%`;
 
-    // 2. 按钮权限逻辑
     const btnContainer = document.getElementById('ws-actions-container');
     const isMyTurn = (warState.active_faction === myWarFaction) || (currentUserEmail === '739477825@qq.com');
     const actingFaction = warState.active_faction;
@@ -5928,11 +5919,8 @@ window.renderWarUI = function() {
     if (isMyTurn) {
         if (warState.current_phase === 'discard') {
             const handCount = warDecks[actingFaction]?.hand?.length || 0;
-            if (handCount > 1) {
-                buttonsHtml = `<button class="action-btn disabled">当前手牌 ${handCount} 张，请先点击弃牌</button>`;
-            } else {
-                buttonsHtml = `<button class="action-btn primary" onclick="changePhase('draw')">弃牌完毕，进入抽牌阶段</button>`;
-            }
+            if (handCount > 1) buttonsHtml = `<button class="action-btn disabled">当前手牌 ${handCount} 张，请先点击弃牌</button>`;
+            else buttonsHtml = `<button class="action-btn primary" onclick="changePhase('draw')">弃牌完毕，进入抽牌阶段</button>`;
         } else if (warState.current_phase === 'draw') {
             buttonsHtml = `<button class="action-btn primary" onclick="drawTwoCards('${actingFaction}')">抽取 2 张卡牌</button>`;
         } else if (warState.current_phase === 'action') {
@@ -5943,88 +5931,88 @@ window.renderWarUI = function() {
     }
     btnContainer.innerHTML = buttonsHtml;
 
-    // 3. 渲染手牌区
+    // 渲染悬挂任务区
+    let questWrapper = document.getElementById('war-quests-wrapper');
+    if (!questWrapper) {
+        questWrapper = document.createElement('div');
+        questWrapper.id = 'war-quests-wrapper';
+        btnContainer.parentNode.insertBefore(questWrapper, btnContainer.nextSibling);
+    }
+    
+    const activeQuests = warState.active_quests || [];
+    if (activeQuests.length > 0) {
+        let questHtml = `<div style="background:#fff3cd; border:1px solid #ffe69c; border-radius:6px; padding:15px; margin-top:15px; width:100%;">
+            <h4 style="margin-top:0; color:#856404;">⏳ 待判定任务区</h4>
+            <div style="display:flex; flex-direction:column; gap:10px;">`;
+        
+        activeQuests.forEach(id => {
+            const c = allWarCards[id];
+            if(!c) return;
+            const isDM = currentUserEmail === '739477825@qq.com';
+            const btnArea = isDM ? `
+                <button onclick="resolveQuest('${id}', true)" style="background:#2ecc71; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">✅ 达成</button>
+                <button onclick="resolveQuest('${id}', false)" style="background:#e74c3c; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">❌ 失败</button>
+            ` : `<span style="font-size:0.8em; color:#856404; font-weight:bold;">等待 DM 判定...</span>`;
+            
+            questHtml += `
+                <div style="background:#fff; border:1px dashed #ffe69c; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <span style="font-weight:bold; color:${c.faction==='alliance'?'#3498db':'#e74c3c'};">[${c.name}]</span>
+                        <span style="font-size:0.85em; color:#666;"> - ${c.effect}</span>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-left:15px;">${btnArea}</div>
+                </div>`;
+        });
+        questWrapper.innerHTML = questHtml + `</div></div>`;
+    } else {
+        questWrapper.innerHTML = '';
+    }
+
     renderHand('alliance', document.getElementById('cards-alliance'));
     renderHand('empire', document.getElementById('cards-empire'));
 };
 
-window.renderHand = function(faction, container) {
-    const deck = warDecks[faction];
-    if (!deck) return; // 防报错
-    document.getElementById(`deck-count-${faction}`).innerText = `牌库: ${deck.draw_pile.length} | 弃牌: ${deck.discard_pile.length}`;
-    
-    const canSee = currentUserEmail === '739477825@qq.com' || window.myWarFaction === faction;
-
-    if (!canSee) {
-        container.innerHTML = deck.hand.map(id => `
-            <div class="war-card ${faction}" style="background:#555; justify-content:center; align-items:center;">
-                <span style="color:#fff; font-size:2em;">?</span>
-            </div>
-        `).join('');
-        return;
-    }
-
-    container.innerHTML = deck.hand.map(id => {
-        const card = allWarCards[id];
-        if (!card) return '';
-        
-        return `
-            <div class="war-card ${faction}" onclick="handleCardClick('${faction}', '${id}')">
-                <div class="card-header">${card.name}</div>
-                <div class="card-body">${card.effect}</div>
-            </div>
-        `;
-    }).join('');
-};
-
-
-// ==================== 交互与规则执行 (加入防抖与即时渲染) ====================
-
-// 核心：防重复点击锁
-let isWarProcessing = false; 
-
-// 点击卡牌：弹出选项
+// 4. 卡牌交互操作
 window.handleCardClick = function(faction, cardId) {
-    if (isWarProcessing) return; // 锁住时禁止操作
-
-    const isMyTurn = (warState.active_faction === faction) && 
-                     (warState.active_faction === myWarFaction || currentUserEmail === '739477825@qq.com');
-    if (!isMyTurn) return alert('现在不是该势力的出牌时机！');
+    if (isWarProcessing) return; 
+    const isOwner = (window.myWarFaction === faction || currentUserEmail === '739477825@qq.com');
+    if (!isOwner) return alert('权限不足，无法操作！');
 
     selectedCardId = cardId;
     const card = allWarCards[cardId];
+    document.getElementById('cam-title').innerText = `使用: ${card.name}`;
+    
+    let menuHtml = '';
 
-    if (warState.current_phase === 'discard') {
-        if (confirm(`丢弃卡牌 [${card.name}] ？`)) {
-            processDiscard(faction, cardId, `在弃牌阶段丢弃了 [${card.name}]`);
-        }
-    } else if (warState.current_phase === 'action') {
-        document.getElementById('cam-title').innerText = `使用: ${card.name}`;
-        
-        let menuHtml = `
-            <button class="card-menu-btn event" onclick="playCardEvent('${faction}')">💥 发动卡牌事件</button>
-            <hr style="margin:10px 0; border:0; border-top:1px dashed #ccc;">
-            <div style="font-size:0.8em; color:#999; margin-bottom:5px;">作为资源弃置以支付：</div>
-            <button class="card-menu-btn" onclick="discardForResource('${faction}', '支付补员')">⚔️ 支付补员</button>
-            <button class="card-menu-btn" onclick="discardForResource('${faction}', '额外传送移动')">🌀 额外传送移动</button>
-            <button class="card-menu-btn" onclick="discardForResource('${faction}', '从混乱中恢复')">🛡️ 从混乱中恢复</button>
-            <button class="card-menu-btn" onclick="discardForResource('${faction}', '发起反击')">🗡️ 发起反击</button>
-        `;
-
-        if (faction === 'empire') {
-            const discardBonus = 2; // 弃置固定加2点
-            menuHtml += `<hr style="margin:10px 0; border:0; border-top:1px dashed #ccc;">
-                         <button class="card-menu-btn empire-bonus" onclick="discardForReadiness(${discardBonus})">⚙️ 弃牌并提升 ${discardBonus}% 整备度</button>`;
-        }
-
-        document.getElementById('cam-buttons').innerHTML = menuHtml;
-        document.getElementById('card-action-menu').style.display = 'flex';
-    } else {
-        alert('抽牌阶段请先抽牌！');
+    if (warState.current_phase === 'discard' && warState.active_faction === faction) {
+        menuHtml += `<button class="card-menu-btn" style="background:#e67e22; color:white;" onclick="processDiscard('${faction}', '${cardId}', '在弃牌阶段丢弃了 [${card.name}]')">🗑️ 弃置不要的牌</button><hr style="margin:10px 0; border:0; border-top:1px dashed #ccc;">`;
     }
+    
+    if (window.isCardPlayable(card)) {
+        menuHtml += `<button class="card-menu-btn event" onclick="playCardEvent('${faction}')">💥 发动卡牌事件</button>`;
+    } else {
+        menuHtml += `<button class="card-menu-btn" disabled style="background:#eee; color:#aaa; cursor:not-allowed;">⏳ 时机未到，无法发动</button>`;
+    }
+
+    menuHtml += `
+        <hr style="margin:10px 0; border:0; border-top:1px dashed #ccc;">
+        <div style="font-size:0.8em; color:#999; margin-bottom:5px;">作为资源弃置以支付：</div>
+        <button class="card-menu-btn" onclick="discardForResource('${faction}', '支付补员')">⚔️ 支付补员</button>
+        <button class="card-menu-btn" onclick="discardForResource('${faction}', '额外传送移动')">🌀 额外传送移动</button>
+        <button class="card-menu-btn" onclick="discardForResource('${faction}', '从混乱中恢复')">🛡️ 从混乱中恢复</button>
+        <button class="card-menu-btn" onclick="discardForResource('${faction}', '发起反击')">🗡️ 发起反击</button>
+    `;
+
+    if (faction === 'empire') {
+        menuHtml += `<hr style="margin:10px 0; border:0; border-top:1px dashed #ccc;">
+                     <button class="card-menu-btn empire-bonus" onclick="discardForReadiness(2)">⚙️ 弃牌并提升 2% 整备度</button>`;
+    }
+
+    document.getElementById('cam-buttons').innerHTML = menuHtml;
+    document.getElementById('card-action-menu').style.display = 'flex';
 };
 
-// 核心流转逻辑：弃牌处理
+// 5. 结算与底层数据操作
 window.processDiscard = async function(faction, cardId, logText) {
     if (isWarProcessing) return;
     isWarProcessing = true;
@@ -6034,11 +6022,8 @@ window.processDiscard = async function(faction, cardId, logText) {
         deck.hand = deck.hand.filter(id => id !== cardId);
         deck.discard_pile.push(cardId);
         
-        // 1. 更新数据库
         await supabaseClient.from('war_decks').update({ hand: deck.hand, discard_pile: deck.discard_pile }).eq('faction', faction);
         if (logText) await addWarLog(`【${faction === 'alliance' ? '联军' : '帝国'}】${logText}`);
-        
-        // 2. 本地状态已是最新，立刻渲染UI！
         renderWarUI();
     } finally {
         closeModal('card-action-menu');
@@ -6047,127 +6032,165 @@ window.processDiscard = async function(faction, cardId, logText) {
     }
 };
 
-// 玩法A：发动事件
-window.playCardEvent = async function(faction) {
-    closeModal('card-action-menu'); 
-    const card = allWarCards[selectedCardId];
-    
-    // 直接将卡牌效果展示在战报日志中
-    let logMsg = `打出了事件卡：[${card.name}]<br><span style="color:#666; font-size:0.9em;">(效果：${card.effect})</span>`;
-    
-    const bonus = card.readiness_bonus || 0;
-
-    if (bonus !== 0) {
-        let newReadiness = warState.empire_readiness + bonus;
-        if (newReadiness > 100) newReadiness = 100;
-        if (newReadiness < 0) newReadiness = 0;
-
-        await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
-        warState.empire_readiness = newReadiness; 
-        
-        const actionText = bonus > 0 ? `提升了 ${bonus}%` : `下降了 ${Math.abs(bonus)}%`;
-        // 追加数值影响
-        logMsg += `<br>➡️ 帝国整备度${actionText}！(当前:${newReadiness}%)`;
-    }
-    
-    await processDiscard(faction, selectedCardId, logMsg);
-};
-
-// 玩法B：作为资源弃置
 window.discardForResource = async function(faction, resourceType) {
     const cardName = allWarCards[selectedCardId].name;
     await processDiscard(faction, selectedCardId, `将 [${cardName}] 作为代价弃置，用于【${resourceType}】`);
 };
 
-// 玩法C：帝国专属提升整备度 (Discard固定参数)
 window.discardForReadiness = async function(bonus) {
     closeModal('card-action-menu');
     const cardName = allWarCards[selectedCardId].name;
     let newReadiness = warState.empire_readiness + bonus;
     if (newReadiness > 100) newReadiness = 100;
-
     await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
-    warState.empire_readiness = newReadiness; // 同步本地
-
+    warState.empire_readiness = newReadiness; 
     await processDiscard('empire', selectedCardId, `弃置了 [${cardName}]，帝国整备度提升 ${bonus}%！(当前:${newReadiness}%)`);
 };
 
-// 抽牌阶段 (容错防崩溃版)
-window.drawTwoCards = async function(faction) {
-    if (isWarProcessing) return;
-    isWarProcessing = true;
-    showLoading();
-    
+window.executeDraw = async function(faction, count) {
     let deck = warDecks[faction];
     let drawPile = [...deck.draw_pile];
     let discardPile = [...deck.discard_pile];
     let hand = [...deck.hand];
-
-    const shuffle = (array) => {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    };
-
     let drawnCards = [];
+
+    for (let i = 0; i < count; i++) {
+        if (drawPile.length === 0) {
+            if (discardPile.length === 0) break; 
+            drawPile = window.shuffleArray([...discardPile]);
+            discardPile = [];
+            await addWarLog(`【系统】${faction === 'alliance' ? '联军' : '帝国'} 牌库耗尽，已重新洗牌。`);
+        }
+        const cid = drawPile.shift();
+        hand.push(cid);
+        const cObj = allWarCards[cid];
+        if(cObj) drawnCards.push(cObj.name);
+    }
+    
+    await supabaseClient.from('war_decks').update({ draw_pile: drawPile, hand: hand, discard_pile: discardPile }).eq('faction', faction);
+    warDecks[faction].draw_pile = drawPile;
+    warDecks[faction].hand = hand;
+    warDecks[faction].discard_pile = discardPile;
+    return drawnCards;
+};
+
+// 6. 核心：打出卡牌事件
+window.playCardEvent = async function(faction) {
+    if (isWarProcessing) return;
+    isWarProcessing = true;
+    showLoading();
     
     try {
-        for (let i = 0; i < 2; i++) {
-            if (drawPile.length === 0) {
-                if (discardPile.length === 0) break; 
-                drawPile = shuffle([...discardPile]);
-                discardPile = [];
-                await addWarLog(`【系统】${faction === 'alliance' ? '联军' : '帝国'} 牌库耗尽，已重新洗牌。`);
-            }
-            const cardId = drawPile.shift(); 
-            hand.push(cardId);
-            
-            const cardObj = allWarCards[cardId];
-            if (cardObj) {
-                drawnCards.push(cardObj.name);
-            } else {
-                console.warn(`警告: 数据库无此卡牌ID -> ${cardId}`);
-            }
+        closeModal('card-action-menu'); 
+        const card = allWarCards[selectedCardId];
+        let logMsg = `打出了事件卡：[${card.name}]<br><span style="color:#666; font-size:0.9em;">(效果：${card.effect})</span>`;
+        
+        const bonus = card.readiness_bonus || 0;
+        if (bonus !== 0) {
+            let newReadiness = warState.empire_readiness + bonus;
+            if (newReadiness > 100) newReadiness = 100;
+            if (newReadiness < 0) newReadiness = 0;
+            await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
+            warState.empire_readiness = newReadiness; 
+            logMsg += `<br>➡️ 帝国整备度变化了！(当前:${newReadiness}%)`;
         }
 
-        // 写入数据库
-        await supabaseClient.from('war_decks')
-            .update({ draw_pile: drawPile, hand: hand, discard_pile: discardPile })
-            .eq('faction', faction);
-        
-        await addWarLog(`【${faction === 'alliance' ? '联军' : '帝国'}】抽取了 ${drawnCards.length} 张卡牌。`);
-        
-        // 立刻同步本地状态
-        warDecks[faction].draw_pile = drawPile;
-        warDecks[faction].hand = hand;
-        warDecks[faction].discard_pile = discardPile;
+        if (card.draw_cards > 0) {
+            const drawn = await executeDraw(faction, card.draw_cards);
+            logMsg += `<br>🃏 附带效果触发：抽取了 ${drawn.length} 张牌！`;
+        }
 
-        isWarProcessing = false; // 先解锁，因为 changePhase 里还有一层锁
-        await changePhase('action');
-
-    } catch(e) {
-        console.error("抽牌失败:", e);
+        if (card.is_quest) {
+            let quests = [...(warState.active_quests || [])];
+            quests.push(selectedCardId);
+            await supabaseClient.from('war_state').update({ active_quests: quests }).eq('id', 1);
+            warState.active_quests = quests;
+            logMsg += `<br>⏳ <b>【已挂载到判定区】</b>：等待 DM 进行判定...`;
+            
+            let deck = warDecks[faction];
+            deck.hand = deck.hand.filter(id => id !== selectedCardId);
+            await supabaseClient.from('war_decks').update({ hand: deck.hand }).eq('faction', faction);
+            
+            await addWarLog(`【${faction === 'alliance' ? '联军' : '帝国'}】${logMsg}`);
+        } else {
+            isWarProcessing = false;
+            await processDiscard(faction, selectedCardId, logMsg);
+            return; 
+        }
+        
+        renderWarUI();
+    } catch (e) {
+        alert("操作异常，请重试！");
+    } finally {
         isWarProcessing = false;
         hideLoading();
     }
 };
 
-// 切换阶段
+window.resolveQuest = async function(cardId, isSuccess) {
+    if (isWarProcessing) return;
+    isWarProcessing = true;
+    showLoading();
+    
+    try {
+        const card = allWarCards[cardId];
+        let logMsg = `【判定结算】任务卡 [${card.name}] 判定为：${isSuccess ? '✅ 已完成' : '❌ 未完成'}`;
+        
+        if (!isSuccess && card.quest_fail_bonus !== 0) {
+            let newReadiness = warState.empire_readiness + card.quest_fail_bonus;
+            if (newReadiness > 100) newReadiness = 100;
+            if (newReadiness < 0) newReadiness = 0;
+            
+            await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
+            warState.empire_readiness = newReadiness;
+            
+            const actionText = card.quest_fail_bonus > 0 ? `提升了 ${card.quest_fail_bonus}%` : `下降了 ${Math.abs(card.quest_fail_bonus)}%`;
+            logMsg += `<br>➡️ 触发惩罚：帝国整备度${actionText}！(当前:${newReadiness}%)`;
+        }
+        
+        let quests = (warState.active_quests || []).filter(id => id !== cardId);
+        await supabaseClient.from('war_state').update({ active_quests: quests }).eq('id', 1);
+        warState.active_quests = quests;
+        
+        let deck = warDecks[card.faction];
+        deck.discard_pile.push(cardId);
+        await supabaseClient.from('war_decks').update({ discard_pile: deck.discard_pile }).eq('faction', card.faction);
+        
+        await addWarLog(logMsg);
+        renderWarUI();
+    } catch(e) {
+        alert("判定失败！");
+    } finally {
+        isWarProcessing = false;
+        hideLoading();
+    }
+};
+
+// 7. 回合与阶段流转
+window.drawTwoCards = async function(faction) {
+    if (isWarProcessing) return;
+    isWarProcessing = true;
+    showLoading();
+    try {
+        const drawn = await executeDraw(faction, 2);
+        await addWarLog(`【${faction === 'alliance' ? '联军' : '帝国'}】抽取了 ${drawn.length} 张卡牌。`);
+        isWarProcessing = false; 
+        await changePhase('action');
+    } catch(e) {
+        isWarProcessing = false;
+        hideLoading();
+    }
+};
+
 window.changePhase = async function(newPhase) {
     if (isWarProcessing) return;
     isWarProcessing = true;
     showLoading();
     try {
         await supabaseClient.from('war_state').update({ current_phase: newPhase }).eq('id', 1);
-        
-        // 关键：更新本地变量并立刻刷新UI
         warState.current_phase = newPhase;
-        
         const phaseNames = { 'discard': '弃牌阶段', 'draw': '抽牌阶段', 'action': '行动阶段' };
         await addWarLog(`【系统】进入 ${phaseNames[newPhase]}。`);
-        
         renderWarUI(); 
     } finally {
         isWarProcessing = false;
@@ -6175,7 +6198,6 @@ window.changePhase = async function(newPhase) {
     }
 };
 
-// 结束回合
 window.endWarTurn = async function() {
     if (isWarProcessing) return;
     if (!confirm('确定结束本阵营的回合吗？')) return;
@@ -6185,10 +6207,7 @@ window.endWarTurn = async function() {
     try {
         let nextFaction = warState.active_faction === 'alliance' ? 'empire' : 'alliance';
         let nextTurn = warState.current_turn;
-        
-        if (warState.active_faction === 'empire') {
-            nextTurn++;
-        }
+        if (warState.active_faction === 'empire') nextTurn++;
 
         await supabaseClient.from('war_state').update({
             active_faction: nextFaction,
@@ -6196,13 +6215,11 @@ window.endWarTurn = async function() {
             current_turn: nextTurn
         }).eq('id', 1);
 
-        // 关键：本地数据同步并渲染
         warState.active_faction = nextFaction;
         warState.current_phase = 'discard';
         warState.current_turn = nextTurn;
 
         await addWarLog(`================= 第 ${nextTurn} 回合：${nextFaction === 'alliance' ? '联军' : '帝国'} 开始 =================`);
-        
         renderWarUI();
     } finally {
         isWarProcessing = false;
