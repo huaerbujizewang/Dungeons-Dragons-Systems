@@ -200,3 +200,52 @@ and user_id = (select id from auth.users where email = 'master@almorel.com');
 -- 允许所有登录用户查看所有表 (仅用于排查问题)
 create policy "Emergency Read All" on profiles for select using (auth.role() = 'authenticated');
 create policy "Emergency Read Inventory" on user_inventory for select using (auth.role() = 'authenticated');
+
+
+### 8. 🃏 军推卡牌与战局管理
+
+#### 录入新卡牌 (添加至卡牌图鉴)
+```sql
+-- id 建议以 a_ 或 e_ 开头以区分阵营。readiness_bonus 仅帝国生效。
+insert into war_cards (id, faction, name, effect, readiness_bonus) values
+('a_01', 'alliance', '竖琴手急报', '（事件）揭示一个相邻区域的敌军动向。', 0),
+('e_01', 'empire', '强行军指令', '（事件）目标部队立刻进行一次额外的移动。', 3);
+```
+
+#### 配置或补充抽牌堆 (Draw Pile)
+在游戏开始前，或需要给某一方强行塞牌时使用。数组左侧为牌顶。
+```sql
+-- 覆盖联军的抽牌堆
+update war_decks 
+set draw_pile = '["a_01", "a_02", "a_03"]'::jsonb 
+where faction = 'alliance';
+
+-- 覆盖帝国的抽牌堆
+update war_decks 
+set draw_pile = '["e_01", "e_02"]'::jsonb 
+where faction = 'empire';
+```
+
+#### 紧急修改进度条 (整备度/凝聚力)
+```sql
+update war_state 
+set empire_readiness = 30, alliance_readiness = 90 
+where id = 1;
+```
+
+#### 重置战局 (重开一局)
+```sql
+-- 1. 重置回合、阶段与行动方
+update war_state 
+set current_turn = 1, active_faction = 'alliance', current_phase = 'discard' 
+where id = 1;
+
+-- 2. 清空双方的手牌与弃牌堆
+update war_decks 
+set hand = '[]'::jsonb, discard_pile = '[]'::jsonb;
+
+-- 注意：重置后，需重新执行上方的【配置抽牌堆】语句来发牌。
+```
+```
+
+---
