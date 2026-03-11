@@ -232,6 +232,20 @@ update war_state
 set empire_readiness = 30, alliance_readiness = 90 
 where id = 1;
 ```
+#### 洗入新增手牌
+```sql
+UPDATE war_decks SET 
+    draw_pile = (SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) FROM war_cards WHERE faction = 'alliance'), 
+    hand = '[]'::jsonb, 
+    discard_pile = '[]'::jsonb 
+WHERE faction = 'alliance';
+
+UPDATE war_decks SET 
+    draw_pile = (SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) FROM war_cards WHERE faction = 'empire'), 
+    hand = '[]'::jsonb, 
+    discard_pile = '[]'::jsonb 
+WHERE faction = 'empire';
+```
 
 #### 重置战局 (重开一局)
 ```sql
@@ -249,3 +263,4 @@ set hand = '[]'::jsonb, discard_pile = '[]'::jsonb;
 ```
 
 ---
+
