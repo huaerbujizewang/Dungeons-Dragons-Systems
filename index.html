@@ -5828,7 +5828,62 @@ function showRegionInfo(regionName, element) {
 }
 
 // ==================== 数据驱动：卡牌核心引擎 ====================
+let warState = {};      
+let warDecks = {};      
+let allWarCards = {};   
+let selectedCardId = null;
+window.myWarFaction = null; 
 
+// 核心启动入口
+window.initWarEngine = async function() {
+    console.log("[战局引擎] 正在连接指挥部...");
+    try {
+        const { data: cards } = await supabaseClient.from('war_cards').select('*');
+        cards.forEach(c => allWarCards[c.id] = c);
+
+        if (currentUserEmail === '739477825@qq.com') {
+            window.myWarFaction = 'alliance'; 
+        }
+
+        await fetchWarData();
+        initWarRealtime();
+
+        document.getElementById('war-command-console').style.display = 'block';
+        
+        console.log("[战局引擎] 启动成功，指挥链路已建立。");
+    } catch (e) {
+        console.error("战局引擎启动失败:", e);
+    }
+};
+
+window.fetchWarData = async function() {
+    const { data: state } = await supabaseClient.from('war_state').select('*').eq('id', 1).single();
+    warState = state;
+
+    const { data: decks } = await supabaseClient.from('war_decks').select('*');
+    decks.forEach(d => warDecks[d.faction] = d);
+    renderWarUI();
+    fetchWarLogs();
+};
+
+function initWarRealtime() {
+    supabaseClient
+        .channel('war_room_sync')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'war_state' }, (payload) => {
+            console.log("[实时同步] 战局状态变更");
+            warState = payload.new;
+            renderWarUI();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'war_decks' }, (payload) => {
+            console.log("[实时同步] 牌堆数据更新");
+            warDecks[payload.new.faction] = payload.new;
+            renderWarUI();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'war_logs' }, () => {
+            fetchWarLogs();
+        })
+        .subscribe();
+}
 let isWarProcessing = false; 
 
 // 1. 基础工具：洗牌与时机判定
