@@ -6028,21 +6028,24 @@ async function playCardEvent(faction) {
     const card = allWarCards[selectedCardId];
     let logMsg = `发动了事件卡：[${card.name}]`;
 
-    if (faction === 'empire') {
-        // 读取数据库里配好的卡牌专属收益（没填就是0）
-        const playBonus = card.readiness_bonus || 0; 
-        
-        if (playBonus > 0) {
-            let newReadiness = warState.empire_readiness + playBonus;
-            if (newReadiness > 100) newReadiness = 100;
+    const bonus = card.readiness_bonus || 0;
 
-            // 更新数据库
-            await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
-            // 更新本地缓存
-            warState.empire_readiness = newReadiness; 
-            
-            logMsg += `，帝国整备度提升 ${playBonus}%！(当前:${newReadiness}%)`;
-        }
+    // 只要有数值变动，就自动触发整备度结算
+    if (bonus !== 0) {
+        // 无论加减，直接做数学运算
+        let newReadiness = warState.empire_readiness + bonus;
+        
+        // 边界限制 (0 ~ 100)
+        if (newReadiness > 100) newReadiness = 100;
+        if (newReadiness < 0) newReadiness = 0;
+
+        // 写入数据库与本地同步
+        await supabaseClient.from('war_state').update({ empire_readiness: newReadiness }).eq('id', 1);
+        warState.empire_readiness = newReadiness; 
+        
+        // 动态生成战报文本
+        const actionText = bonus > 0 ? `提升了 ${bonus}%` : `下降了 ${Math.abs(bonus)}%`;
+        logMsg += `，帝国整备度${actionText}！(当前:${newReadiness}%)`;
     }
 
     // 将卡牌移入弃牌堆并写入日志
