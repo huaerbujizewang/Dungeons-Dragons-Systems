@@ -6286,19 +6286,43 @@ window.endWarTurn = async function() {
     try {
         let nextFaction = warState.active_faction === 'alliance' ? 'empire' : 'alliance';
         let nextTurn = warState.current_turn;
-        if (warState.active_faction === 'empire') nextTurn++;
+        
+        if (warState.active_faction === 'empire') {
+            nextTurn++;
+        }
+
+        let newReadiness = warState.empire_readiness;
+        let upkeepLog = "";
+        
+        // 当下一个行动方是帝国时（帝国回合开始），自动加 3
+        if (nextFaction === 'empire') {
+            newReadiness += 3;
+            if (newReadiness > 100) newReadiness = 100; // 封顶 100
+            upkeepLog = `帝国增加了 3 点整备度！(当前: ${newReadiness}%)`;
+        }
+        // ==========================================================
 
         await supabaseClient.from('war_state').update({
             active_faction: nextFaction,
             current_phase: 'discard',
-            current_turn: nextTurn
+            current_turn: nextTurn,
+            empire_readiness: newReadiness // 将新整备度写入数据库
         }).eq('id', 1);
 
+        // 本地数据同步
         warState.active_faction = nextFaction;
         warState.current_phase = 'discard';
         warState.current_turn = nextTurn;
+        warState.empire_readiness = newReadiness; 
 
+        // 播报标准回合日志
         await addWarLog(`================= 第 ${nextTurn} 回合：${nextFaction === 'alliance' ? '联军' : '帝国'} 开始 =================`);
+        
+        // 播报自动恢复日志
+        if (upkeepLog) {
+            await addWarLog(`【系统】⚙️ ${upkeepLog}`);
+        }
+        
         renderWarUI();
     } finally {
         isWarProcessing = false;
