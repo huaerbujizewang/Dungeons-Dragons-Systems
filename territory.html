@@ -526,30 +526,34 @@
     }
 
     // --- 图表渲染 ---
-    // --- 更新后的图表渲染 ---
 function renderCharts() {
+    // --- 1. 处理种族数据排序 ---
+    const rawRaceData = [
+        { label: '人类', value: 61.3, color: '#2c3e50' },
+        { label: '矮人', value: 11.0, color: '#7f8c8d' },
+        { label: '半精灵', value: 6.8, color: '#e67e22' },
+        { label: '精灵', value: 3.7, color: '#27ae60' },
+        { label: '地精', value: 3.0, color: '#8e44ad' },
+        { label: '兽人', value: 2.5, color: '#f1c40f' },
+        { label: '提夫林', value: 2.5, color: '#800000' },
+        { label: '龙裔', value: 3.2, color: '#B22222' },
+        { label: '侏儒', value: 2.0, color: '#c0392b' },
+        { label: '阿斯莫', value: 1.5, color: '#FFD700' },
+        { label: '狐妖', value: 1.3, color: '#ff9ff3' },
+        { label: '狗头人', value: 1.0, color: '#8B4513' },
+        { label: '龙', value: 0.2, color: '#E5E4E2' }
+    ];
+
+    // 按照 value 降序排列
+    rawRaceData.sort((a, b) => b.value - a.value);
 
     new Chart(document.getElementById('raceChart'), {
         type: 'doughnut',
         data: {
-            labels: ['人类', '矮人', '半精灵', '精灵', '地精', '兽人', '提夫林', '龙裔', '侏儒', '阿斯莫', '狐妖', '狗头人', '龙'],
+            labels: rawRaceData.map(d => d.label),
             datasets: [{
-                data: [62.5, 11.0, 6.8, 3.7, 3.0, 2.5, 2.5, 2.0, 2.0, 1.5, 1.3, 1.0, 0.2],
-                backgroundColor: [
-                    '#2c3e50', // 人类
-                    '#7f8c8d', // 矮人
-                    '#e67e22', // 半精灵
-                    '#27ae60', // 精灵
-                    '#8e44ad', // 地精 
-                    '#f1c40f', // 兽人
-                    '#800000', // 提夫林 
-                    '#B22222', // 龙裔
-                    '#c0392b', // 侏儒
-                    '#FFD700', // 阿斯莫 
-                    '#ff9ff3', // 狐妖
-                    '#8B4513', // 狗头人
-                    '#E5E4E2', // 真龙
-                ],
+                data: rawRaceData.map(d => d.value),
+                backgroundColor: rawRaceData.map(d => d.color),
                 borderWidth: 0
             }]
         },
@@ -563,25 +567,31 @@ function renderCharts() {
         }
     });
 
+    // --- 2. 处理宗教数据排序 ---
+    const rawFaithData = [
+        { label: '巴哈姆特', value: 71, color: '#D7BE69' },
+        { label: '渥金', value: 8, color: '#f1c40f' },
+        { label: '洛山达', value: 6, color: '#f39c12' },
+        { label: '塞伦涅', value: 4, color: '#bdc3c7' },
+        { label: '欧格玛', value: 3, color: '#3498db' },
+        { label: '密丝特拉', value: 2, color: '#9b59b6' },
+        { label: '淑妮', value: 2, color: '#e84393' },
+        { label: '坦帕斯', value: 1, color: '#7f8c8d' },
+        { label: '贡德', value: 1, color: '#d35400' },
+        { label: '海姆', value: 1, color: '#2980b9' },
+        { label: '其他', value: 1, color: '#ecf0f1' }
+    ];
+
+    // 按照 value 降序排列
+    rawFaithData.sort((a, b) => b.value - a.value);
+
     new Chart(document.getElementById('faithChart'), {
         type: 'pie',
         data: {
-            labels: ['巴哈姆特', '渥金', '洛山达', '塞伦涅', '欧格玛', '密丝特拉', '淑妮', '坦帕斯', '贡德', '海姆', '其他'],
+            labels: rawFaithData.map(d => d.label),
             datasets: [{
-                data: [71, 8, 6, 4, 3, 2, 2, 1, 1, 1, 1],
-                backgroundColor: [
-                    '#D7BE69', // 巴哈姆特 - 圣洁金
-                    '#f1c40f', // 渥金
-                    '#f39c12', // 洛山达
-                    '#bdc3c7', // 塞伦涅
-                    '#3498db', // 欧格玛
-                    '#9b59b6', // 密丝特拉
-                    '#e84393', // 淑妮
-                    '#7f8c8d', // 坦帕斯
-                    '#d35400', // 贡德
-                    '#2980b9', // 海姆
-                    '#ecf0f1'  // 其他
-                ],
+                data: rawFaithData.map(d => d.value),
+                backgroundColor: rawFaithData.map(d => d.color),
                 borderWidth: 0
             }]
         },
