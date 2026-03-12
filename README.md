@@ -265,16 +265,33 @@ WHERE faction = 'empire';
 
 #### 重置战局 (重开一局)
 ```sql
--- 1. 重置回合、阶段与行动方
-update war_state 
-set current_turn = 1, active_faction = 'alliance', current_phase = 'discard' 
-where id = 1;
+-- 1. 重置战局全局状态 (回到第1回合、联军弃牌阶段、清空悬挂任务、恢复初始整备度)
+UPDATE war_state 
+SET current_turn = 1, 
+    active_faction = 'alliance', 
+    current_phase = 'discard',
+    empire_readiness = 20,    -- 假设帝国初始整备度是 20
+    alliance_readiness = 100, -- 假设联军初始凝聚力是 100
+    active_quests = '[]'::jsonb
+WHERE id = 1;
 
--- 2. 清空双方的手牌与弃牌堆
-update war_decks 
-set hand = '[]'::jsonb, discard_pile = '[]'::jsonb;
+-- 2. 联军牌堆重置 (清空手牌/弃牌，将图鉴里所有联军卡牌全自动洗入抽牌堆)
+UPDATE war_decks 
+SET draw_pile = (SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) FROM war_cards WHERE faction = 'alliance'),
+    hand = '[]'::jsonb,
+    discard_pile = '[]'::jsonb
+WHERE faction = 'alliance';
 
--- 注意：重置后，需重新执行上方的【配置抽牌堆】语句来发牌。
+-- 3. 帝国牌堆重置 (清空手牌/弃牌，将图鉴里所有帝国卡牌全自动洗入抽牌堆)
+UPDATE war_decks 
+SET draw_pile = (SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) FROM war_cards WHERE faction = 'empire'),
+    hand = '[]'::jsonb,
+    discard_pile = '[]'::jsonb
+WHERE faction = 'empire';
+
+-- 4. (可选) 清空上一局的战报日志，让公屏清爽干干净净
+TRUNCATE TABLE war_logs RESTART IDENTITY;
+INSERT INTO war_logs (log_text) VALUES ('【系统】旧的战局已归档。全新楚尔特战役推演正式启动！');
 ```
 ```
 
