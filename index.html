@@ -5977,7 +5977,8 @@ window.renderWarUI = function() {
             if (handCount > 1) buttonsHtml = `<button class="action-btn disabled">当前手牌 ${handCount} 张，请先点击弃牌</button>`;
             else buttonsHtml = `<button class="action-btn primary" onclick="changePhase('draw')">弃牌完毕，进入抽牌阶段</button>`;
         } else if (warState.current_phase === 'draw') {
-            buttonsHtml = `<button class="action-btn primary" onclick="drawTwoCards('${actingFaction}')">抽取 2 张卡牌</button>`;
+            const drawCount = window.calculateDrawCount(actingFaction);
+            buttonsHtml = `<button class="action-btn primary" onclick="drawPhaseCards('${actingFaction}')">抽取 ${drawCount} 张卡牌</button>`;
         } else if (warState.current_phase === 'action') {
             buttonsHtml = `<button class="action-btn danger" onclick="endWarTurn()">结束回合</button>`;
         }
@@ -6221,17 +6222,40 @@ window.resolveQuest = async function(cardId, isSuccess) {
     }
 };
 
+
+// 动态计算当前阵营该抽几张牌
+window.calculateDrawCount = function(faction) {
+    let count = 2; // 默认基础抽 2 张
+    if (faction === 'empire') {
+        const readiness = warState.empire_readiness || 0;
+        if (readiness > 80) {
+            count = 4; // 超过80%多抽2张
+        } else if (readiness > 60) {
+            count = 3; // 超过60%多抽1张
+        }
+    }
+    return count;
+};
+
 // 7. 回合与阶段流转
-window.drawTwoCards = async function(faction) {
+window.drawPhaseCards = async function(faction) {
     if (isWarProcessing) return;
     isWarProcessing = true;
     showLoading();
     try {
-        const drawn = await executeDraw(faction, 2);
-        await addWarLog(`【${faction === 'alliance' ? '联军' : '帝国'}】抽取了 ${drawn.length} 张卡牌。`);
+        const count = window.calculateDrawCount(faction);
+        const drawn = await executeDraw(faction, count);
+        
+        let extraMsg = '';
+        if (faction === 'empire' && count > 2) {
+            extraMsg = `<span style="color:#e67e22; font-size:0.9em;">（高整备度加成，额外抽取了 ${count - 2} 张）</span>`;
+        }
+        
+        await addWarLog(`【${faction === 'alliance' ? '联军' : '帝国'}】抽取了 ${drawn.length} 张卡牌。<br>${extraMsg}`);
         isWarProcessing = false; 
         await changePhase('action');
     } catch(e) {
+        console.error("抽牌异常:", e);
         isWarProcessing = false;
         hideLoading();
     }
