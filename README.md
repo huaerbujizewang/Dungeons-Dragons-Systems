@@ -102,6 +102,22 @@ set unit_cost = 450
 where name like '%铁矿%' and user_id = (select id from auth.users where email = 'master@almorel.com');
 ```
 
+
+#### 修改现有人员的数量
+```sql
+-- 给已有的市政杂工数量 +2 (外交部1 + 情报部1)
+update city_expenses 
+set count = count + 2 
+where name = '市政杂工' 
+and user_id = (select id from auth.users where email = 'master@almorel.com');
+
+-- 给已有的市政文职人员数量 +3 (外交部2 + 情报部1)
+update city_expenses 
+set count = count + 3 
+where name = '市政文职人员' 
+and user_id = (select id from auth.users where email = 'master@almorel.com');
+```
+
 ---
 
 ### 4. 🏬 集市与图鉴管理
