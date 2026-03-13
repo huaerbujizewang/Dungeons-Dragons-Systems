@@ -105,11 +105,14 @@
 
     let userProfile = null;
     let employeeMap = {}; 
-    let voterEmployees = []; // 仅存储有投票权的人
+    let voterEmployees = []; 
     let totalVotersCount = 0;
     let currentVoter = null; 
 
-    // 白名单
+    // 表决限期（天数）
+    const EXPIRE_DAYS = 5;
+    const EXPIRE_MS = EXPIRE_DAYS * 24 * 60 * 60 * 1000;
+
     const authorizedVoters = [
         '伊凡·乾', '凋命', '伯勒斯', '薇艾拉', 
         '格拉西斯', '维西里安', '玛尔佐拉'
@@ -122,7 +125,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('uid') || user.id;
 
-        // 加载国库
         const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', targetId).single();
         if (prof) {
             userProfile = prof;
@@ -132,24 +134,17 @@
         const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         
         if (emps) { 
-            // 过滤：只保留白名单里的角色
             voterEmployees = emps.filter(emp => authorizedVoters.includes(emp.name));
-            
-            // 动态数学逻辑：根据实际人数计算
             totalVotersCount = voterEmployees.length;
-            const majorityReq = Math.floor(totalVotersCount / 2) + 1; // 多数决阈值
-            document.getElementById('majority-req').innerText = majorityReq;
+            document.getElementById('majority-req').innerText = totalVotersCount;
 
-            // 制作头像映射表供议案流使用
             emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
-            
             renderLoginScreen(targetId);
         }
 
         setupRealtime(targetId);
     }
 
-    // 只显示有投票权的人
     function renderLoginScreen(targetId) {
         const grid = document.getElementById('login-grid');
         grid.innerHTML = '';
@@ -163,7 +158,6 @@
         });
     }
 
-    // 直登逻辑
     function selectVoter(name, targetId) {
         currentVoter = { name: name };
         document.getElementById('login-section').style.display = 'none';
@@ -174,14 +168,76 @@
         loadProposals(targetId);
     }
 
+    // 处理逾期议案的自动结算逻辑
+    async function autoSettleExpiredProposal(proposal, allVotes) {
+        const propVotes = allVotes.filter(v => v.proposal_id === proposal.id);
+        const approves = propVotes.filter(v => v.vote_type === 'approve').length;
+        const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
+
+        let finalDecision = null;
+        let finalReason = '';
+
+        // 按当前票型结算 (0:0 也会被判为废案打回)
+        if (approves > rejects) {
+            finalDecision = 'approved';
+            finalReason = `⏳ 议案已逾期 (${EXPIRE_DAYS}天)。最终票数 ${approves}赞成 : ${rejects}反对，法案自动通过并执行。`;
+        } else if (rejects > approves) {
+            finalDecision = 'rejected';
+            finalReason = `⏳ 议案已逾期 (${EXPIRE_DAYS}天)。最终票数 ${approves}赞成 : ${rejects}反对，法案被自动否决。`;
+        } else {
+            finalDecision = 'rejected';
+            finalReason = `⏳ 议案已逾期 (${EXPIRE_DAYS}天)。最终票数战平 (${approves} : ${rejects})，法案自动打回重批。`;
+        }
+
+        if (finalDecision === 'approved' && proposal.cost !== 0) {
+            const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
+            
+            if (proposal.cost > 0 && currentProf.gold_gp < proposal.cost) {
+                finalDecision = 'rejected';
+                finalReason = `⏳ 议案逾期且已获多数赞成，但【国库资金不足】，被财务官强制驳回。`;
+            } else {
+                const newGold = currentProf.gold_gp - proposal.cost;
+                await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
+                userProfile.gold_gp = newGold; // 同步本地金币
+            }
+        }
+
+        await supabaseClient.from('city_proposals').update({
+            status: finalDecision,
+            decision_reason: finalReason,
+            decided_at: new Date().toISOString()
+        }).eq('id', proposal.id);
+    }
+
     async function loadProposals(userId) {
-        const [propsRes, votesRes] = await Promise.all([
+        document.getElementById('loading').style.display = 'block';
+
+        let [propsRes, votesRes] = await Promise.all([
             supabaseClient.from('city_proposals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
             supabaseClient.from('proposal_votes').select('*') 
         ]);
 
-        const list = propsRes.data || [];
+        let list = propsRes.data || [];
         const allVotes = votesRes.data || [];
+        const nowMs = new Date().getTime();
+        let hasJustSettled = false;
+
+        // 检查所有 Pending 议案，把超时的强行结案
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].status === 'pending') {
+                const createdAtMs = new Date(list[i].created_at).getTime();
+                if (nowMs - createdAtMs > EXPIRE_MS) {
+                    await autoSettleExpiredProposal(list[i], allVotes);
+                    hasJustSettled = true;
+                }
+            }
+        }
+
+        // 如果刚才发生过系统自动结算，立刻重新拉取最新数据，防止玩家看到过期状态
+        if (hasJustSettled) {
+            const refreshedProps = await supabaseClient.from('city_proposals').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+            list = refreshedProps.data || [];
+        }
 
         document.getElementById('loading').style.display = 'none';
         const pendingBox = document.getElementById('pending-list');
@@ -192,18 +248,15 @@
 
         list.forEach(item => {
             const avatarUrl = employeeMap[item.proposer_name] || 'https://via.placeholder.com/70';
+            const propVotes = allVotes.filter(v => v.proposal_id === item.id);
+            const approves = propVotes.filter(v => v.vote_type === 'approve').length;
+            const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
             
             let costHtml = '';
             if (item.cost > 0) costHtml = `<div class="cost-tag" style="color: #c0392b;">💰 -${item.cost.toLocaleString()}</div>`;
             else if (item.cost < 0) costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(item.cost).toLocaleString()}</div>`;
             else costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 0 预算</div>`;
 
-            // 过滤出当前议案的所有投票记录
-            const propVotes = allVotes.filter(v => v.proposal_id === item.id);
-            const approves = propVotes.filter(v => v.vote_type === 'approve').length;
-            const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
-            
-            // 组装议员个人批注的 HTML
             let notesHtml = '';
             if (propVotes.length > 0) {
                 notesHtml = `
@@ -234,6 +287,9 @@
                     `;
                 }
 
+                // 计算并显示死线
+                const expireDateStr = new Date(new Date(item.created_at).getTime() + EXPIRE_MS).toLocaleString();
+
                 pendingBox.innerHTML += `
                     <div class="proposal-card">
                         <div class="avatar-box">
@@ -244,13 +300,15 @@
                             <div>
                                 <div class="prop-title">${item.title}</div>
                                 <div class="prop-desc">${item.description}</div>
-                                ${notesHtml} </div>
+                                ${notesHtml}
+                            </div>
                             <div class="action-bar" style="margin-top:15px;">
                                 ${costHtml}
                                 <div class="btn-group">
                                     <div class="vote-stats">
-                                        进度: <span class="vote-count approve">${approves} 赞成</span> | 
+                                        <span class="vote-count approve">${approves} 赞成</span> | 
                                         <span class="vote-count reject">${rejects} 反对</span>
+                                        <div style="font-size: 0.8em; color: #e67e22; margin-top: 4px;">⏳ 截止: ${expireDateStr}</div>
                                     </div>
                                     ${actionButtons}
                                 </div>
@@ -262,7 +320,7 @@
                 const isApproved = item.status === 'approved';
                 const statusTag = isApproved 
                     ? `<span class="status-badge status-approved">已批准</span>`
-                    : `<span class="status-badge status-rejected">${item.decision_reason.includes('平票') ? '平票打回' : '已否决'}</span>`;
+                    : `<span class="status-badge status-rejected">${item.decision_reason.includes('平票') || item.decision_reason.includes('战平') ? '平票打回' : '已否决'}</span>`;
                 
                 const dateStr = item.decided_at ? new Date(item.decided_at).toLocaleString() : '';
                 historyBox.innerHTML += `
@@ -276,8 +334,8 @@
                                 ${statusTag}
                             </div>
                             <div class="prop-desc" style="color:#888;">${item.description}</div>
-                            
-                            ${notesHtml} <div class="decision-note" style="margin-top:10px;">📝 系统最终判定：${item.decision_reason}</div>
+                            ${notesHtml}
+                            <div class="decision-note" style="margin-top:10px;">📝 系统最终判定：${item.decision_reason}</div>
                             <div class="decision-time">归档时间: ${dateStr}</div>
                         </div>
                     </div>`;
@@ -289,44 +347,42 @@
         if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
     }
 
-    // 自动结算逻辑
     async function castVote(proposalId, voteType, cost) {
         const actionName = voteType === 'approve' ? '赞成' : '反对';
         const defaultReason = voteType === 'approve' ? '同意执行。' : '暂缓议案。';
         
-        // 恢复批注弹窗
-        const reason = prompt(`您决定 [${actionName}] 该提案。\n\n请输入您的决策理由/批注 (可选):`, defaultReason);
-        if (reason === null) return; // 如果玩家点取消，则中止投票
+        const reason = prompt(`您决定 [${actionName}] 该提案。\n\n请输入您的决策理由/批注:`, defaultReason);
+        if (reason === null) return; 
 
         const { error: insertErr } = await supabaseClient.from('proposal_votes').insert({
             proposal_id: proposalId,
             voter_name: currentVoter.name,
             vote_type: voteType,
-            vote_reason: reason // 将批注写入数据库
+            vote_reason: reason 
         });
         
-        if (insertErr) {
-            console.error(insertErr);
-            return alert('投票失败！可能您已经投过票，或者数据库提案表尚未建立。');
-        }
+        if (insertErr) return alert('投票失败！可能您已经投过票，或者网络出现了波动。');
 
         const { data: latestVotes } = await supabaseClient.from('proposal_votes').select('*').eq('proposal_id', proposalId);
         const approves = latestVotes.filter(v => v.vote_type === 'approve').length;
         const rejects = latestVotes.filter(v => v.vote_type === 'reject').length;
-        const majorityRequired = Math.floor(totalVotersCount / 2) + 1;
-
+        
+        const totalVotesCast = approves + rejects;
         let finalDecision = null;
         let finalReason = '';
 
-        if (approves >= majorityRequired) {
-            finalDecision = 'approved';
-            finalReason = `议会多数决达成 (${approves}/${totalVotersCount})：法案通过并执行。`;
-        } else if (rejects >= majorityRequired) {
-            finalDecision = 'rejected';
-            finalReason = `议会多数决达成 (${rejects}/${totalVotersCount})：法案被否决。`;
-        } else if (totalVotersCount % 2 === 0 && (approves + rejects === totalVotersCount) && approves === rejects) {
-            finalDecision = 'rejected'; 
-            finalReason = `议会票数战平 (${approves}:${rejects})：法案被打回重批。`;
+        // 判定条件：已投票人数 === 拥有投票权的总人数
+        if (totalVotesCast === totalVotersCount) {
+            if (approves > rejects) {
+                finalDecision = 'approved';
+                finalReason = `全员投票完毕 (${approves}赞成 : ${rejects}反对)：法案正式通过并执行。`;
+            } else if (rejects > approves) {
+                finalDecision = 'rejected';
+                finalReason = `全员投票完毕 (${approves}赞成 : ${rejects}反对)：法案被正式否决。`;
+            } else {
+                finalDecision = 'rejected'; 
+                finalReason = `全员投票完毕，票数战平 (${approves} : ${rejects})：法案被打回重批。`;
+            }
         }
 
         if (finalDecision) {
@@ -336,7 +392,7 @@
                 if (cost > 0 && currentProf.gold_gp < cost) {
                     alert('⚠️ 警告：议案虽已获多数赞成，但国库资金不足以支付！议案已被财务官强制驳回。');
                     finalDecision = 'rejected';
-                    finalReason = `议会通过，但【国库资金不足】，法案被财务官强制驳回。`;
+                    finalReason = `全员投票通过，但国库资金不足，法案被财务官强制驳回。`;
                 } else {
                     const newGold = currentProf.gold_gp - cost;
                     await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
