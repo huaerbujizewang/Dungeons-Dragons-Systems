@@ -315,7 +315,7 @@
             supabaseClient.from('city_stats').select('*').eq('user_id', userId).maybeSingle(),
             supabaseClient.from('city_expenses').select('*').eq('user_id', userId),
             supabaseClient.from('city_incomes').select('*').eq('user_id', userId),
-            supabaseClient.from('employees').select('salary').eq('user_id', userId).eq('status', '在职')
+            supabaseClient.from('employees').select('salary').eq('user_id', userId).in('status', ['在职', '科研中'])
         ]);
 
         const stats = statsRes.data || { population: 0, subsidy: 0, tax_rate: 1.2 };
