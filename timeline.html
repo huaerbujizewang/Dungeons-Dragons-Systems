@@ -224,40 +224,37 @@
                 alert('检测到位面波动（未登录），请先进行身份验证');
                 window.location.href = 'index.html';
             } else {
-                loadTimelineData(user.email);
+                loadTimelineData(); 
             }
         }
 
-        async function loadTimelineData(userEmail) {
+        async function loadTimelineData() {
             const track = document.getElementById('timeline-track');
             const statusMsg = document.getElementById('status-msg');
 
             try {
-                const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error("无法读取时间线数据");
-                const data = await response.json();
 
-                const filteredData = data.filter(ev => {
-                    if (!ev.allowed_emails || ev.allowed_emails.length === 0) {
-                        return true;
-                    }
-                    return ev.allowed_emails.includes(userEmail);
-                });
+                const { data, error } = await supabaseClient
+                    .from('timeline_events')
+                    .select('*')
+                    .order('id', { ascending: true }); 
 
-                if (!filteredData || filteredData.length === 0) {
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
                     statusMsg.innerText = "你的权限不足以窥探这些记忆，或回廊空空如也。";
                     return;
                 }
 
                 statusMsg.style.display = 'none';
                 track.style.display = 'flex';
-                renderTimeline(filteredData); 
-                
+                renderTimeline(data); 
+
             } catch (error) {
-                console.error(error);
+                console.error("阿卡夏记录读取失败:", error);
                 statusMsg.innerHTML = `
                     <div style="color:#e74c3c;">链接中断</div>
-                    <div style="font-size:0.7em; margin-top:10px;">${error.message}</div>
+                    <div style="font-size:0.7em; margin-top:10px;">${error.message || '魔法网络波动'}</div>
                 `;
             }
         }
