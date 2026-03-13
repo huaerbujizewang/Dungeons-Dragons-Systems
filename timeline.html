@@ -26,235 +26,255 @@
             z-index: 100; pointer-events: none; 
             display: flex; justify-content: space-between; align-items: center;
         }
-        .back-btn {
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.3);
-            padding: 10px 20px;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
+        .back-btn { 
+            padding: 8px 20px; border: 1px solid #444; 
+            background: rgba(0,0,0,0.5); cursor: pointer; 
+            text-decoration: none; color: #888; border-radius: 4px; 
+            font-weight: bold; transition: 0.3s; pointer-events: auto;
+            backdrop-filter: blur(5px);
+            font-family: "PingFang SC", sans-serif;
+            letter-spacing: 1px;
+        }
+        .back-btn:hover { background: #f1c40f; color: #000; border-color: #f1c40f; }
+
+        .page-title {
+            color: #555; font-family: 'Georgia', serif; 
+            letter-spacing: 8px; font-size: 0.9em; margin: 0;
             pointer-events: auto;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: 0.3s;
         }
-        .back-btn:hover { background: rgba(255,255,255,0.3); }
 
-        /* --- 核心容器：水平滑动轨道 --- */
-        .timeline-viewport {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            overflow-x: auto;
-            overflow-y: hidden;
-            scroll-behavior: smooth;
-            cursor: grab;
-            padding: 0 10vw; /* 左右留白，防止第一张和最后一张贴边 */
+        /* --- 横向画廊视口 --- */
+        .gallery-viewport {
+            width: 100%; height: 100%;
+            display: flex; align-items: center;
+            overflow-x: auto; overflow-y: hidden;
+            /* 隐藏各种浏览器的滚动条 */
+            -ms-overflow-style: none; scrollbar-width: none; 
         }
-        .timeline-viewport:active { cursor: grabbing; }
-        /* 隐藏滚动条 */
-        .timeline-viewport::-webkit-scrollbar { display: none; }
+        .gallery-viewport::-webkit-scrollbar { display: none; }
+        
+        /* 拖拽时的鼠标指针样式 */
+        .gallery-viewport.active {
+            cursor: grabbing;
+        }
 
+        /* --- 时间线轨道 --- */
         .timeline-track {
-            display: flex;
-            gap: 60px; /* 卡片间距 */
-            height: 70%;
-            align-items: center;
+            display: flex; align-items: center;
+            padding: 0 50vw 0 15vw; /* 起点留白，终点留出半个屏幕的深邃感 */
+            gap: 8vw; /* 图片之间的间距 */
+            height: 100%; position: relative;
         }
 
-        /* --- 电影感卡片设计 --- */
+        /* 贯穿中心的横向暗线 */
+        .timeline-track::before {
+            content: ''; position: absolute; 
+            top: 50%; left: 0; right: 0; height: 1px; 
+            background: linear-gradient(to right, transparent, #333 5%, #333 95%, transparent);
+            z-index: 0; transform: translateY(-50%);
+        }
+
+        /* --- 电影画幅卡片 --- */
         .timeline-item {
-            flex-shrink: 0;
-            width: 450px; /* 默认宽度 */
-            height: 100%;
-            position: relative;
-            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            position: relative; z-index: 1;
+            width: 65vw; /* 占据屏幕宽度的 65% */
+            max-width: 1100px; min-width: 600px;
+            flex-shrink: 0; /* 防止被 flex 挤压 */
         }
 
         .cinematic-card {
-            width: 100%;
-            height: 100%;
-            background: #111;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
-            border: 1px solid rgba(255,255,255,0.05);
-            cursor: pointer;
+            width: 100%; aspect-ratio: 16 / 9; 
+            position: relative; border-radius: 4px; overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            border: 1px solid #111; transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            cursor: zoom-in; 
+            filter: grayscale(20%) contrast(1.1); /* 默认带一点电影胶片的低饱和度 */
+        }
+        
+        .cinematic-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(0,0,0,1);
+            border-color: #333;
+            filter: grayscale(0%) contrast(1.1); /* 悬浮时恢复全彩 */
         }
 
         .cinematic-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: grayscale(0.3) brightness(0.8);
-            transition: 0.8s;
+            width: 100%; height: 100%; object-fit: cover;
+            transition: opacity 0.5s;
         }
 
-        .cinematic-card:hover .cinematic-img {
-            filter: grayscale(0) brightness(1.1);
-            transform: scale(1.05);
-        }
-
-        /* --- 日期遮罩层 --- */
+        /* 极简底部遮罩与日期 */
         .cinematic-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            padding: 40px 30px;
+            position: absolute; bottom: 0; left: 0; width: 100%;
             background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
+            padding: 40px; box-sizing: border-box;
+            text-align: center; pointer-events: none;
         }
 
         .card-date {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 2px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            color: #d4af37; /* 黄金色 */
+            font-family: 'Georgia', serif; font-size: 1.4em; color: #f1c40f;
+            letter-spacing: 6px; margin: 0; opacity: 0.85;
+            text-shadow: 0 2px 15px rgba(0,0,0,1);
         }
 
-        /* --- 状态消息 --- */
-        #status-msg {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.2rem;
-            color: #666;
-            letter-spacing: 4px;
-        }
-
-        /* --- 剧场预览 (Lightbox) --- */
+        /* --- 剧场模式 (Lightbox全屏查看) --- */
         #lightbox {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: 0.4s;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.98); z-index: 2000;
+            align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.4s;
+            cursor: zoom-out;
         }
-
-        #lightbox-img {
-            max-width: 90%;
-            max-height: 85%;
+        #lightbox img {
+            max-width: 95vw; max-height: 95vh; object-fit: contain;
             box-shadow: 0 0 50px rgba(0,0,0,1);
         }
-
         #lightbox-caption {
-            position: absolute;
-            bottom: 30px;
-            color: #d4af37;
-            font-size: 1.5rem;
-            letter-spacing: 2px;
+            position: absolute; bottom: 40px; left: 0; width: 100%;
+            text-align: center; color: #f1c40f; font-size: 1.5em; letter-spacing: 6px;
+            font-family: 'Georgia', serif; text-shadow: 0 2px 10px #000; pointer-events: none;
+            opacity: 0.8;
         }
 
+        #status-msg { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #666; font-size: 1.2em; font-family: "PingFang SC", sans-serif; letter-spacing: 2px;
+        }
     </style>
 </head>
 <body>
 
-    <nav class="back-nav">
-        <a href="index.html" class="back-btn">← 离开回廊</a>
-        <div style="color:rgba(255,255,255,0.3); font-size: 0.8rem; letter-spacing: 5px;">CHRONICLE OF FAERÛN</div>
-    </nav>
+    <div class="back-nav">
+        <a href="index.html" class="back-btn">⬅ 离开</a>
+        <h1 class="page-title">CHRONICLES OF FAERÛN</h1>
+    </div>
 
-    <div id="status-msg">正在回溯位面记忆...</div>
-
-    <div class="timeline-viewport" id="viewport">
+    <div class="gallery-viewport" id="gallery-viewport">
+        <div id="status-msg">正在链接阿卡夏记录...</div>
         <div class="timeline-track" id="timeline-track" style="display:none;">
             </div>
     </div>
 
     <div id="lightbox" onclick="closeLightbox()">
-        <img id="lightbox-img" src="" alt="Full View">
+        <img id="lightbox-img" src="" alt="Full Screen Event">
         <div id="lightbox-caption"></div>
     </div>
 
     <script>
-        // --- 基础配置 ---
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/refs/heads/main/timeline.json';
+        
+        const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/timelinea.json';
 
-        // --- 拖拽逻辑变量 ---
-        let isDragging = false;
+        // --- 核心交互：丝滑滚轮 + 鼠标拖拽 ---
+        const viewport = document.getElementById('gallery-viewport');
+        
+        let isDown = false;
         let startX;
         let scrollLeft;
-        const viewport = document.getElementById('viewport');
+        let isDragging = false; 
 
-        // --- 鉴权与数据加载 ---
+        // 滚轮逻辑
+        viewport.addEventListener('wheel', (evt) => {
+            evt.preventDefault();
+            if (evt.deltaX !== 0) {
+                viewport.scrollLeft += evt.deltaX; 
+            } else {
+                viewport.scrollLeft += evt.deltaY * 1.5; 
+            }
+        }, { passive: false });
+
+        // 鼠标拖拽逻辑
+        viewport.addEventListener('mousedown', (e) => {
+            isDown = true;
+            isDragging = false; 
+            viewport.classList.add('active');
+            startX = e.pageX - viewport.offsetLeft;
+            scrollLeft = viewport.scrollLeft;
+        });
+
+        viewport.addEventListener('mouseleave', () => {
+            isDown = false;
+            viewport.classList.remove('active');
+        });
+
+        viewport.addEventListener('mouseup', () => {
+            isDown = false;
+            viewport.classList.remove('active');
+        });
+
+        viewport.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - viewport.offsetLeft;
+            const walk = (x - startX) * 2; 
+            
+            if (Math.abs(walk) > 5) {
+                isDragging = true; 
+            }
+            viewport.scrollLeft = scrollLeft - walk;
+        });
+
+        // --- 数据加载与渲染 ---
         async function init() {
-            try {
-                // 1. 获取当前登录用户
-                const { data: { user } } = await supabaseClient.auth.getUser();
-                
-                if (!user) {
-                    alert('检测到位面波动（未登录），请先进行身份验证');
-                    window.location.href = 'index.html';
-                    return;
-                }
-
-                // 2. 加载数据并根据邮箱过滤
-                loadTimelineData(user.email);
-
-            } catch (error) {
-                console.error(error);
-                document.getElementById('status-msg').innerText = "身份校验失败。";
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            
+            if (!user) {
+                alert('检测到位面波动（未登录），请先进行身份验证');
+                window.location.href = 'index.html';
+            } else {
+                // 将当前用户传递给加载函数进行过滤判定
+                loadTimelineData(user);
             }
         }
 
-        async function loadTimelineData(userEmail) {
+        async function loadTimelineData(user) {
             const track = document.getElementById('timeline-track');
             const statusMsg = document.getElementById('status-msg');
 
             try {
-                // 带上时间戳防止 GitHub 缓存
                 const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error("无法读取档案馆数据");
+                if (!response.ok) throw new Error("无法读取时间线数据");
                 const allData = await response.json();
 
-                // 3. 核心判定逻辑：过滤出允许该邮箱查看的内容
+                // --- 核心判定逻辑注入：只保留你有权看到的剧情 ---
                 const filteredData = allData.filter(ev => {
-                    // 如果没设白名单，则所有人（已登录）可见
-                    if (!ev.allowed_emails || ev.allowed_emails.length === 0) {
-                        return true;
-                    }
-                    // 检查当前用户是否在白名单内
-                    return ev.allowed_emails.includes(userEmail);
+                    // 如果该剧情没设权限字段，默认所有人（已登录）可见
+                    if (!ev.allowed_emails || ev.allowed_emails.length === 0) return true;
+                    // 如果设置了权限，检查当前登录账号是否在白名单内
+                    return ev.allowed_emails.includes(user.email);
                 });
 
                 if (!filteredData || filteredData.length === 0) {
-                    statusMsg.innerText = "你的权限不足以窥探这些记忆。";
+                    statusMsg.innerText = "你的权限不足以窥探这些记忆，或回廊空空如也。";
                     return;
                 }
 
                 statusMsg.style.display = 'none';
                 track.style.display = 'flex';
-                renderTimeline(filteredData);
-                initDragScroll(); // 渲染后开启拖拽
+                renderTimeline(filteredData); // 渲染过滤后的数据
 
             } catch (error) {
                 console.error(error);
-                statusMsg.innerText = "时空链接中断：" + error.message;
+                statusMsg.innerHTML = `
+                    <div style="color:#e74c3c;">链接中断</div>
+                    <div style="font-size:0.7em; margin-top:10px;">${error.message}</div>
+                `;
             }
         }
 
-        function renderTimeline(data) {
+        function renderTimeline(events) {
             const track = document.getElementById('timeline-track');
-            track.innerHTML = ''; 
-
-            data.forEach(ev => {
+            track.innerHTML = ''; // 清空可能残留的内容
+            
+            events.forEach(ev => {
+                const imgSrc = ev.image || 'https://via.placeholder.com/1600x900/111/444?text=IMAGE+MISSING';
+                
                 const html = `
                     <div class="timeline-item">
-                        <div class="cinematic-card" onclick="openLightbox('${ev.image}', '${ev.date}')">
-                            <img src="${ev.image}" class="cinematic-img" loading="lazy" alt="Memory" draggable="false">
+                        <div class="cinematic-card" onclick="openLightbox('${imgSrc}', '${ev.date}')">
+                            <img src="${imgSrc}" class="cinematic-img" loading="lazy" alt="Memory" draggable="false">
                             <div class="cinematic-overlay">
                                 <div class="card-date">${ev.date || ''}</div>
                             </div>
@@ -265,40 +285,13 @@
             });
         }
 
-        // --- 水平拖拽滚动 ---
-        function initDragScroll() {
-            viewport.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                viewport.classList.add('active');
-                startX = e.pageX - viewport.offsetLeft;
-                scrollLeft = viewport.scrollLeft;
-            });
-            viewport.addEventListener('mouseleave', () => { isDragging = false; });
-            viewport.addEventListener('mouseup', () => { 
-                setTimeout(() => isDragging = false, 50); // 延迟重置防止立即触发点击
-            });
-            viewport.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                e.preventDefault();
-                const x = e.pageX - viewport.offsetLeft;
-                const walk = (x - startX) * 2; // 滚动速度倍率
-                viewport.scrollLeft = scrollLeft - walk;
-            });
-
-            // 滚轮支持
-            viewport.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                viewport.scrollLeft += e.deltaY;
-            });
-        }
-
-        // --- 剧场预览模式 ---
+        // --- 剧场模式 ---
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightbox-img');
         const lightboxCaption = document.getElementById('lightbox-caption');
 
         function openLightbox(imgSrc, date) {
-            if (isDragging) return; // 拖拽时不触发预览
+            if (isDragging) return; // 拖拽时不触发点击
             
             lightboxImg.src = imgSrc;
             lightboxCaption.innerText = date; 
