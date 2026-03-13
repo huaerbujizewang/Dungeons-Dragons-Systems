@@ -257,24 +257,31 @@
         }
 
         async function loadNewspapers() {
-            try {
-                const response = await fetch(JSON_URL);
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                allNewsData = await response.json();
-                
-                renderBrandNav();
-                
-                if (allNewsData.length > 0) {
-                    selectBrand(0);
-                } else {
-                    document.getElementById('paperSheet').innerHTML = "<div style='text-align:center; padding-top:50px;'>无数据</div>";
-                }
-            } catch (error) {
-                console.error("数据加载失败:", error);
-                const sheet = document.getElementById('paperSheet');
-                sheet.innerHTML = `<div style="color:#a83f39; text-align:center; padding:50px;">无法读取报纸数据。</div>`;
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return; 
+
+        const response = await fetch(JSON_URL);
+        if (!response.ok) throw new Error("无法连接至档案馆");
+        const rawData = await response.json();
+
+        allNewsData = rawData.filter(brand => {
+            if (!brand.allowed_emails || brand.allowed_emails.length === 0) {
+                return true; 
             }
+            return brand.allowed_emails.includes(user.email);
+        });
+
+        renderBrandNav();
+        if (allNewsData.length > 0) {
+            selectBrand(0);
+        } else {
+            document.getElementById('paperSheet').innerHTML = "<div style='text-align:center; padding-top:100px;'>你没有任何报纸的阅读权限。</div>";
         }
+    } catch (error) {
+        console.error("加载失败:", error);
+    }
+}
 
         function renderBrandNav() {
             const nav = document.getElementById('brandNav');
