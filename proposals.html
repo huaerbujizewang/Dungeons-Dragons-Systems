@@ -105,9 +105,15 @@
 
     let userProfile = null;
     let employeeMap = {}; 
-    let allEmployees = [];
+    let voterEmployees = []; // 仅存储有投票权的人
     let totalVotersCount = 0;
-    let currentVoter = null; // 当前登录人的信息
+    let currentVoter = null; 
+
+    // 白名单
+    const authorizedVoters = [
+        '伊凡·乾', '凋命', '伯勒斯', '薇艾拉', 
+        '格拉西斯', '维西里安', '玛尔佐拉'
+    ];
 
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -123,73 +129,55 @@
             document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
         }
 
-        // --- 硬编码具有投票权的城主名单 ---
-        const authorizedVoters = [
-            '伊凡家', '凋命枯生', '伯勒斯', '薇艾拉', 
-            '格拉西斯', '维西里安', '玛尔佐拉'
-        ];
-        const DEFAULT_PIN = '1234'; 
-
         const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         
         if (emps) { 
-            // 在前端动态拼接权限和密码
-            allEmployees = emps.map(emp => ({
-                ...emp,
-                is_voter: authorizedVoters.includes(emp.name),
-                pin_code: DEFAULT_PIN
-            }));
-
-            // 重新计算有投票权的人数（现在固定是 8 人）
-            totalVotersCount = allEmployees.filter(e => e.is_voter).length;
+            // 过滤：只保留白名单里的角色
+            voterEmployees = emps.filter(emp => authorizedVoters.includes(emp.name));
             
-            // 8人的多数决是 5 票 (Math.floor(8/2) + 1)
-            document.getElementById('majority-req').innerText = Math.floor(totalVotersCount / 2) + 1;
+            // 动态数学逻辑：根据实际人数计算
+            totalVotersCount = voterEmployees.length;
+            const majorityReq = Math.floor(totalVotersCount / 2) + 1; // 多数决阈值
+            document.getElementById('majority-req').innerText = majorityReq;
 
+            // 制作头像映射表供议案流使用
             emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
+            
             renderLoginScreen(targetId);
         }
 
         setupRealtime(targetId);
     }
 
+    // 只显示有投票权的人
     function renderLoginScreen(targetId) {
         const grid = document.getElementById('login-grid');
         grid.innerHTML = '';
-        allEmployees.forEach(emp => {
-            const roleTag = emp.is_voter ? '' : '<div class="dm-tag">观察位 (无投票权)</div>';
+        voterEmployees.forEach(emp => {
             grid.innerHTML += `
-                <div class="login-card" onclick="attemptLogin('${emp.name}', '${emp.pin_code}', ${emp.is_voter}, '${targetId}')">
+                <div class="login-card" onclick="selectVoter('${emp.name}', '${targetId}')">
                     <img src="${emp.avatar_url || 'https://via.placeholder.com/80'}">
                     <div class="name">${emp.name}</div>
-                    ${roleTag}
                 </div>
             `;
         });
     }
 
-    function attemptLogin(name, correctPin, isVoter, targetId) {
-        const input = prompt(`请输入 [${name}] 的 4 位 PIN 码:`);
-        if (input === null) return;
+    // 直登逻辑
+    function selectVoter(name, targetId) {
+        currentVoter = { name: name };
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('main-section').style.display = 'block';
+        document.getElementById('user-status').style.display = 'block';
+        document.getElementById('current-voter-name').innerText = name;
         
-        if (input === correctPin || input === 'admin' /* 后门防忘 */) {
-            currentVoter = { name, isVoter };
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('main-section').style.display = 'block';
-            document.getElementById('user-status').style.display = 'block';
-            document.getElementById('current-voter-name').innerText = name;
-            
-            loadProposals(targetId);
-        } else {
-            alert('❌ PIN 码错误！');
-        }
+        loadProposals(targetId);
     }
 
     async function loadProposals(userId) {
-        // 1. 并发获取议案和所有的投票记录
         const [propsRes, votesRes] = await Promise.all([
             supabaseClient.from('city_proposals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-            supabaseClient.from('proposal_votes').select('*') // 在实际中如果记录极多可加 filter，跑团够用了
+            supabaseClient.from('proposal_votes').select('*') 
         ]);
 
         const list = propsRes.data || [];
@@ -213,16 +201,13 @@
             if (item.status === 'pending') {
                 hasPending = true;
                 
-                // 统计当前议案的票数
                 const propVotes = allVotes.filter(v => v.proposal_id === item.id);
                 const approves = propVotes.filter(v => v.vote_type === 'approve').length;
                 const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
                 const myVote = propVotes.find(v => v.voter_name === currentVoter.name);
 
                 let actionButtons = '';
-                if (!currentVoter.isVoter) {
-                    actionButtons = `<button class="btn-voted">您处于观察模式</button>`;
-                } else if (myVote) {
+                if (myVote) {
                     const myChoice = myVote.vote_type === 'approve' ? '✅ 赞成' : '❌ 反对';
                     actionButtons = `<button class="btn-voted">您已投: ${myChoice}</button>`;
                 } else {
@@ -286,25 +271,23 @@
         if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
     }
 
+    // ✅ 4. 自动结算逻辑 (支持任意人数扩展)
     async function castVote(proposalId, voteType, cost) {
         if (!confirm(`确定投出【${voteType === 'approve' ? '赞成' : '反对'}】票吗？投出后不可更改。`)) return;
 
-        // 1. 写入个人投票
         const { error: insertErr } = await supabaseClient.from('proposal_votes').insert({
             proposal_id: proposalId,
             voter_name: currentVoter.name,
             vote_type: voteType
         });
         
-        if (insertErr) {
-            console.error(insertErr);
-            return alert('投票失败，您可能已经在别的设备投过了。');
-        }
+        if (insertErr) return alert('投票失败，您可能已经在别的设备投过了。');
 
-        // 2. 拉取最新票数，进行自动结算判定
         const { data: latestVotes } = await supabaseClient.from('proposal_votes').select('*').eq('proposal_id', proposalId);
         const approves = latestVotes.filter(v => v.vote_type === 'approve').length;
         const rejects = latestVotes.filter(v => v.vote_type === 'reject').length;
+        
+        // 多数决
         const majorityRequired = Math.floor(totalVotersCount / 2) + 1;
 
         let finalDecision = null;
@@ -317,30 +300,25 @@
             finalDecision = 'rejected';
             finalReason = `议会多数决达成 (${rejects}/${totalVotersCount})：法案被否决。`;
         } else if (totalVotersCount % 2 === 0 && (approves + rejects === totalVotersCount) && approves === rejects) {
-            // 偶数机制：所有人都投了，且平票
-            finalDecision = 'rejected'; // 在系统里作为废案处理
+            // 平票触发
+            finalDecision = 'rejected'; 
             finalReason = `议会票数战平 (${approves}:${rejects})：法案被打回重批。`;
         }
 
-        // 3. 满足条件，触发最终结算
         if (finalDecision) {
-            // 如果是通过，执行资金变动
             if (finalDecision === 'approved' && cost !== 0) {
-                // 读取最新资金防并发
                 const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
                 
                 if (cost > 0 && currentProf.gold_gp < cost) {
-                    alert('⚠️ 警告：议案虽已获多数赞成，但国库资金不足以支付！议案将被强制阻断或转为坏账，请通知 DM 介入处理。');
-                    // 资金不足阻断通过，直接强行标为打回
+                    alert('⚠️ 警告：议案虽已获多数赞成，但国库资金不足以支付！议案已被财务官强制驳回。');
                     finalDecision = 'rejected';
-                    finalReason = `议会通过，但【国库资金不足】，法案被财务官强制驳回。`;
+                    finalReason = `议会通过，但资金不足，法案被财务官强制驳回。`;
                 } else {
                     const newGold = currentProf.gold_gp - cost;
                     await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
                 }
             }
 
-            // 更新议案状态
             await supabaseClient.from('city_proposals').update({
                 status: finalDecision,
                 decision_reason: finalReason,
@@ -348,12 +326,10 @@
             }).eq('id', proposalId);
         }
 
-        // 刷新列表（即使没有达到结算阈值，也要刷新进度条）
         loadProposals(userProfile.id);
     }
 
     function setupRealtime(targetId) {
-        // 监听提案表和投票表，只要有人点票，全员网页自动刷新进度
         supabaseClient.channel('city_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'city_proposals' }, () => {
                 if(currentVoter) loadProposals(targetId); refreshGoldDisplay(targetId);
