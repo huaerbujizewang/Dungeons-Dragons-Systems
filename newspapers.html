@@ -266,35 +266,46 @@
         }
 
         async function loadNewspapers() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('news_data')
-                    .select('*')
-                    .order('date_code', { ascending: true });
+    try {
+        // 1. 获取所有你有权查看的文章，按时间倒序排列
+        const { data, error } = await supabaseClient
+            .from('news_articles')
+            .select('*')
+            .order('date_code', { ascending: false });
 
-                if (error) throw error;
+        if (error) throw error;
 
-                allNewsData = data.map(row => row.brand_info);
-                
-                renderBrandNav();
-                
-                if (allNewsData.length > 0) {
-                    selectBrand(0);
-                } else {
-                    document.getElementById('paperSheet').innerHTML = "<div style='text-align:center; padding-top:100px; color:#666;'>你的权限不足以窥探这些卷宗，或档案馆空空如也。</div>";
-                }
-            } catch (error) {
-                console.error("数据加载失败:", error);
-                const sheet = document.getElementById('paperSheet');
-                sheet.innerHTML = `
-                    <div style="color:#a83f39; text-align:center; padding:50px;">
-                        <h2>连接中断</h2>
-                        <p>无法读取报纸数据。</p>
-                        <small>${error.message}</small>
-                    </div>
-                `;
+        // 2. 将扁平的文章列表按照 brand_id 进行逻辑分组
+        const brandsMap = new Map();
+        data.forEach(article => {
+            if (!brandsMap.has(article.brand_id)) {
+                brandsMap.set(article.brand_id, {
+                    name: article.brand_name,
+                    styleClass: article.style_class,
+                    titleEn: article.title_en,
+                    titleCn: article.title_cn,
+                    articles: [] // 这个品牌下的文章集合
+                });
             }
-        }
+            // 往这个品牌里塞入当前文章的数据
+            brandsMap.get(article.brand_id).articles.push({
+                headline: article.headline,
+                subhead: article.subhead,
+                date: article.date_text,
+                content: article.content
+            });
+        });
+
+        // 3. 转换回原本的 allNewsData 结构
+        allNewsData = Array.from(brandsMap.values());
+        
+        renderBrandNav();
+        if (allNewsData.length > 0) selectBrand(0);
+
+    } catch (error) {
+        console.error("卷宗解析失败:", error);
+    }
+}
 
         function renderBrandNav() {
             const nav = document.getElementById('brandNav');
