@@ -241,7 +241,6 @@
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/refs/heads/main/news.json';
         
         let allNewsData = [];
 
@@ -249,7 +248,7 @@
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) {
-                    alert("请先登录！");
+                    alert("检测到位面波动（未登录），请先进行身份验证！");
                     window.location.href = 'index.html'; 
                     return; 
                 }
@@ -268,16 +267,21 @@
 
         async function loadNewspapers() {
             try {
-                const response = await fetch(JSON_URL);
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                allNewsData = await response.json();
+                const { data, error } = await supabaseClient
+                    .from('news_data')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (error) throw error;
+
+                allNewsData = data.map(row => row.brand_info);
                 
                 renderBrandNav();
                 
                 if (allNewsData.length > 0) {
                     selectBrand(0);
                 } else {
-                    document.getElementById('paperSheet').innerHTML = "<div style='text-align:center; padding-top:50px;'>无数据</div>";
+                    document.getElementById('paperSheet').innerHTML = "<div style='text-align:center; padding-top:100px; color:#666;'>你的权限不足以窥探这些卷宗，或档案馆空空如也。</div>";
                 }
             } catch (error) {
                 console.error("数据加载失败:", error);
