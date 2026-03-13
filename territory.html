@@ -474,7 +474,7 @@
             .from('employees')
             .select('salary')
             .eq('user_id', userId)
-            .eq('status', '在职'); 
+            .in('status', ['在职', '科研中']);
 
         if (error) {
             console.error("无法同步雇员数据:", error);
