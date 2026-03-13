@@ -15,9 +15,17 @@
 
         .section-title { font-weight: bold; margin: 30px 0 15px; color: #555; border-left: 4px solid #8e44ad; padding-left: 10px; }
         
+        /* 登录界面的头像墙 */
+        #login-section { text-align: center; margin-top: 50px; }
+        .login-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 30px; }
+        .login-card { cursor: pointer; background: var(--card-bg); border: 2px solid transparent; border-radius: 10px; padding: 15px; width: 100px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .login-card:hover { border-color: #8e44ad; transform: translateY(-5px); }
+        .login-card img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+        .login-card .name { margin-top: 10px; font-weight: bold; font-size: 0.9em; }
+        .dm-tag { font-size: 0.7em; color: #c0392b; border: 1px solid #c0392b; border-radius: 3px; padding: 1px 4px; margin-top: 5px; display: inline-block; }
+
         /* 提案卡片 */
-        .proposal-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: flex; gap: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: 0.2s; }
-        .proposal-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .proposal-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: flex; gap: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
         
         .avatar-box { flex-shrink: 0; text-align: center; width: 80px; }
         .avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; margin-bottom: 5px; }
@@ -28,44 +36,28 @@
         .prop-desc { font-size: 0.95em; color: #555; line-height: 1.6; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 4px; border-left: 3px solid #ddd; }
         
         .action-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #eee; padding-top: 15px; }
-        .cost-tag { font-family: monospace; font-weight: bold; font-size: 1.1em; display: flex; align-items: center; gap: 5px; }
+        .cost-tag { font-family: monospace; font-weight: bold; font-size: 1.1em; }
         
-        /* 按钮 */
-        .btn-group { display: flex; gap: 10px; }
+        /* 投票进度条 */
+        .vote-stats { font-size: 0.85em; color: #555; display: flex; align-items: center; gap: 15px; background: #f4f1ea; padding: 5px 15px; border-radius: 20px;}
+        .vote-count.approve { color: #27ae60; font-weight: bold; }
+        .vote-count.reject { color: #c0392b; font-weight: bold; }
+        
+        .btn-group { display: flex; gap: 10px; align-items: center; }
         button { cursor: pointer; border: none; padding: 8px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; }
         .btn-approve { background: #27ae60; color: white; }
-        .btn-approve:hover { background: #219150; }
         .btn-reject { background: #c0392b; color: white; }
-        .btn-reject:hover { background: #a93226; }
+        .btn-voted { background: #bdc3c7; color: #fff; cursor: not-allowed; }
         
-        /* 历史记录样式优化 */
         .history-card { opacity: 0.8; background: #fcfcfc; border-left: 4px solid transparent; }
         .history-card.approved { border-left-color: #27ae60; }
         .history-card.rejected { border-left-color: #c0392b; }
-        
         .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
         .status-approved { background: #d5f5e3; color: #27ae60; }
         .status-rejected { background: #fadbd8; color: #c0392b; }
         
-        /* 批注框样式 */
-        .decision-note { 
-            margin-top: 10px; 
-            padding: 10px; 
-            background: #fffbe6; 
-            border: 1px solid #f1c40f; 
-            border-radius: 4px; 
-            font-size: 0.9em; 
-            color: #7f6000; 
-            display: flex;
-            align-items: flex-start;
-            gap: 10px; 
-            line-height: 1.6;
-        }
-        .decision-label { flex-shrink: 0; font-weight: bold; white-space: nowrap; display: flex; align-items: center; }
-        .decision-text { word-break: break-all; text-align: justify; }
+        .decision-note { margin-top: 10px; padding: 10px; background: #fffbe6; border: 1px solid #f1c40f; border-radius: 4px; font-size: 0.9em; color: #7f6000; }
         .decision-time { font-size: 0.8em; color: #999; margin-top: 5px; text-align: right; }
-
-        #loading { text-align: center; color: #999; margin-top: 50px; }
     </style>
 </head>
 <body>
@@ -73,23 +65,36 @@
 <div class="container">
     <div class="header">
         <h1 style="margin:0;">💼 领地政务厅</h1>
+        <div id="user-status" style="display:none; font-weight: bold; color: #2980b9;">
+            当前登录: <span id="current-voter-name"></span>
+            <a href="#" onclick="location.reload()" style="margin-left:10px; font-size:0.8em; color:#7f8c8d;">[登出]</a>
+        </div>
         <a href="index.html" class="back-btn">⬅ 返回主控台</a>
     </div>
 
-    <div style="text-align: right; margin-bottom: 20px; font-weight: bold; color: #d35400;">
-        当前国库: <span id="current-gold">Loading...</span> GP
+    <div id="login-section">
+        <h2>请验证您的城主身份</h2>
+        <p style="color: #777;">选择您的角色并输入对应的 PIN 码进入议事厅</p>
+        <div class="login-grid" id="login-grid">
+            </div>
     </div>
 
-    <div id="loading">正在加载...</div>
+    <div id="main-section" style="display:none;">
+        <div style="text-align: right; margin-bottom: 20px; font-weight: bold; color: #d35400;">
+            当前国库: <span id="current-gold">...</span> GP
+        </div>
 
-    <div id="pending-section" style="display:none;">
-        <div class="section-title">🔴 待审批议案</div>
-        <div id="pending-list"></div>
-    </div>
+        <div id="loading" style="text-align:center; color:#999;">正在同步议会卷宗...</div>
 
-    <div id="history-section" style="display:none;">
-        <div class="section-title">🗄️ 历史决策档案</div>
-        <div id="history-list"></div>
+        <div id="pending-section" style="display:none;">
+            <div class="section-title">🔴 待审议案 (需要 <span id="majority-req"></span> 票多数决)</div>
+            <div id="pending-list"></div>
+        </div>
+
+        <div id="history-section" style="display:none;">
+            <div class="section-title">🗄️ 历史决策档案</div>
+            <div id="history-list"></div>
+        </div>
     </div>
 </div>
 
@@ -100,65 +105,133 @@
 
     let userProfile = null;
     let employeeMap = {}; 
+    let allEmployees = [];
+    let totalVotersCount = 0;
+    let currentVoter = null; // 当前登录人的信息
 
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
+        if (!user) { alert('请先登录主账号'); window.location.href = 'index.html'; return; }
 
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('uid') || user.id;
 
+        // 加载国库
         const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', targetId).single();
         if (prof) {
             userProfile = prof;
             document.getElementById('current-gold').innerText = prof.gold_gp.toLocaleString();
         }
 
-        const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
-        if (emps) { emps.forEach(e => employeeMap[e.name] = e.avatar_url); }
+        // --- 硬编码具有投票权的城主名单 ---
+        const authorizedVoters = [
+            '伊凡家', '凋命枯生', '伯勒斯', '薇艾拉', 
+            '格拉西斯', '维西里安', '玛尔佐拉'
+        ];
+        const DEFAULT_PIN = '1234'; 
 
-        loadProposals(targetId);
+        const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
+        
+        if (emps) { 
+            // 在前端动态拼接权限和密码
+            allEmployees = emps.map(emp => ({
+                ...emp,
+                is_voter: authorizedVoters.includes(emp.name),
+                pin_code: DEFAULT_PIN
+            }));
+
+            // 重新计算有投票权的人数（现在固定是 8 人）
+            totalVotersCount = allEmployees.filter(e => e.is_voter).length;
+            
+            // 8人的多数决是 5 票 (Math.floor(8/2) + 1)
+            document.getElementById('majority-req').innerText = Math.floor(totalVotersCount / 2) + 1;
+
+            emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
+            renderLoginScreen(targetId);
+        }
+
         setupRealtime(targetId);
     }
 
-    async function loadProposals(userId) {
-        const { data: list, error } = await supabaseClient
-            .from('city_proposals')
-            .select('*')
-            .eq('user_id', userId)
-            .order('decided_at', { ascending: false, nullsFirst: true })
-            .order('created_at', { ascending: false });
+    function renderLoginScreen(targetId) {
+        const grid = document.getElementById('login-grid');
+        grid.innerHTML = '';
+        allEmployees.forEach(emp => {
+            const roleTag = emp.is_voter ? '' : '<div class="dm-tag">观察位 (无投票权)</div>';
+            grid.innerHTML += `
+                <div class="login-card" onclick="attemptLogin('${emp.name}', '${emp.pin_code}', ${emp.is_voter}, '${targetId}')">
+                    <img src="${emp.avatar_url || 'https://via.placeholder.com/80'}">
+                    <div class="name">${emp.name}</div>
+                    ${roleTag}
+                </div>
+            `;
+        });
+    }
 
-        if (error) return alert('加载失败');
+    function attemptLogin(name, correctPin, isVoter, targetId) {
+        const input = prompt(`请输入 [${name}] 的 4 位 PIN 码:`);
+        if (input === null) return;
+        
+        if (input === correctPin || input === 'admin' /* 后门防忘 */) {
+            currentVoter = { name, isVoter };
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('main-section').style.display = 'block';
+            document.getElementById('user-status').style.display = 'block';
+            document.getElementById('current-voter-name').innerText = name;
+            
+            loadProposals(targetId);
+        } else {
+            alert('❌ PIN 码错误！');
+        }
+    }
+
+    async function loadProposals(userId) {
+        // 1. 并发获取议案和所有的投票记录
+        const [propsRes, votesRes] = await Promise.all([
+            supabaseClient.from('city_proposals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+            supabaseClient.from('proposal_votes').select('*') // 在实际中如果记录极多可加 filter，跑团够用了
+        ]);
+
+        const list = propsRes.data || [];
+        const allVotes = votesRes.data || [];
 
         document.getElementById('loading').style.display = 'none';
         const pendingBox = document.getElementById('pending-list');
         const historyBox = document.getElementById('history-list');
-        pendingBox.innerHTML = '';
-        historyBox.innerHTML = '';
+        pendingBox.innerHTML = ''; historyBox.innerHTML = '';
 
-        let hasPending = false;
-        let hasHistory = false;
+        let hasPending = false, hasHistory = false;
 
         list.forEach(item => {
             const avatarUrl = employeeMap[item.proposer_name] || 'https://via.placeholder.com/70';
             
-            // --- 修改点1：颜色与显示逻辑更新 ---
             let costHtml = '';
-            if (item.cost > 0) {
-                // 花钱：红色
-                costHtml = `<div class="cost-tag" style="color: #c0392b;">💰 -${item.cost.toLocaleString()} GP</div>`;
-            } else if (item.cost < 0) {
-                // 赚钱：绿色 (负负得正)
-                costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(item.cost).toLocaleString()} GP</div>`;
-            } else {
-                // 0元：黄色 (琥珀色以增加辨识度)
-                costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 无需额外预算</div>`;
-            }
-            // ---------------------------------
+            if (item.cost > 0) costHtml = `<div class="cost-tag" style="color: #c0392b;">💰 -${item.cost.toLocaleString()}</div>`;
+            else if (item.cost < 0) costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(item.cost).toLocaleString()}</div>`;
+            else costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 0 预算</div>`;
 
             if (item.status === 'pending') {
                 hasPending = true;
+                
+                // 统计当前议案的票数
+                const propVotes = allVotes.filter(v => v.proposal_id === item.id);
+                const approves = propVotes.filter(v => v.vote_type === 'approve').length;
+                const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
+                const myVote = propVotes.find(v => v.voter_name === currentVoter.name);
+
+                let actionButtons = '';
+                if (!currentVoter.isVoter) {
+                    actionButtons = `<button class="btn-voted">您处于观察模式</button>`;
+                } else if (myVote) {
+                    const myChoice = myVote.vote_type === 'approve' ? '✅ 赞成' : '❌ 反对';
+                    actionButtons = `<button class="btn-voted">您已投: ${myChoice}</button>`;
+                } else {
+                    actionButtons = `
+                        <button class="btn-approve" onclick="castVote(${item.id}, 'approve', ${item.cost})">✅ 赞成</button>
+                        <button class="btn-reject" onclick="castVote(${item.id}, 'reject', ${item.cost})">❌ 反对</button>
+                    `;
+                }
+
                 pendingBox.innerHTML += `
                     <div class="proposal-card">
                         <div class="avatar-box">
@@ -173,8 +246,11 @@
                             <div class="action-bar">
                                 ${costHtml}
                                 <div class="btn-group">
-                                    <button class="btn-approve" onclick="handleDecision(${item.id}, 'approved', ${item.cost}, '${item.title}')">✅ 批准</button>
-                                    <button class="btn-reject" onclick="handleDecision(${item.id}, 'rejected', 0, '${item.title}')">❌ 否决</button>
+                                    <div class="vote-stats">
+                                        进度: <span class="vote-count approve">${approves} 赞成</span> | 
+                                        <span class="vote-count reject">${rejects} 反对</span>
+                                    </div>
+                                    ${actionButtons}
                                 </div>
                             </div>
                         </div>
@@ -184,22 +260,13 @@
                 const isApproved = item.status === 'approved';
                 const statusTag = isApproved 
                     ? `<span class="status-badge status-approved">已批准</span>`
-                    : `<span class="status-badge status-rejected">已否决</span>`;
+                    : `<span class="status-badge status-rejected">${item.decision_reason.includes('平票') ? '平票打回' : '已否决'}</span>`;
                 
-                const dateStr = item.decided_at ? new Date(item.decided_at).toLocaleString() : '未知日期';
-                
-                const reasonHtml = item.decision_reason 
-                    ? `<div class="decision-note">
-                         <span class="decision-label">📝 领主批注：</span>
-                         <span class="decision-text">${item.decision_reason}</span>
-                       </div>` 
-                    : '';
-
+                const dateStr = item.decided_at ? new Date(item.decided_at).toLocaleString() : '';
                 historyBox.innerHTML += `
                     <div class="proposal-card history-card ${item.status}">
                         <div class="avatar-box">
                             <img src="${avatarUrl}" class="avatar" style="filter:grayscale(80%)">
-                            <div class="proposer-name">${item.proposer_name}</div>
                         </div>
                         <div class="content-box">
                             <div style="display:flex; justify-content:space-between;">
@@ -207,80 +274,93 @@
                                 ${statusTag}
                             </div>
                             <div class="prop-desc" style="color:#888;">${item.description}</div>
-                            
-                            ${reasonHtml}
-                            <div class="decision-time">决策时间: ${dateStr}</div>
+                            <div class="decision-note">📝 最终判定：${item.decision_reason}</div>
+                            <div class="decision-time">归档时间: ${dateStr}</div>
                         </div>
                     </div>`;
             }
         });
 
-        if (hasPending) document.getElementById('pending-section').style.display = 'block';
-        if (hasHistory) document.getElementById('history-section').style.display = 'block';
+        document.getElementById('pending-section').style.display = hasPending ? 'block' : 'none';
+        document.getElementById('history-section').style.display = hasHistory ? 'block' : 'none';
         if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
     }
 
-    // --- 修改点2：决策逻辑支持赚钱 ---
-    async function handleDecision(id, decision, cost, title) {
-        const actionName = decision === 'approved' ? '批准' : '否决';
-        const defaultReason = decision === 'approved' ? '同意执行。' : '暂缓议案。';
-        
-        const reason = prompt(`您决定 [${actionName}] 提案：${title}\n\n请输入决策理由/批注 (可选):`, defaultReason);
-        
-        if (reason === null) return; 
+    async function castVote(proposalId, voteType, cost) {
+        if (!confirm(`确定投出【${voteType === 'approve' ? '赞成' : '反对'}】票吗？投出后不可更改。`)) return;
 
-        // 资金变动逻辑
-        // 只要是批准，且金额不为0 (无论是赚钱还是花钱)，都要更新金币
-        if (decision === 'approved' && cost !== 0) {
-            // 只有当是花钱(cost>0)且钱不够时，才拦截
-            if (cost > 0 && userProfile.gold_gp < cost) {
-                return alert('国库资金不足，无法批准！');
+        // 1. 写入个人投票
+        const { error: insertErr } = await supabaseClient.from('proposal_votes').insert({
+            proposal_id: proposalId,
+            voter_name: currentVoter.name,
+            vote_type: voteType
+        });
+        
+        if (insertErr) {
+            console.error(insertErr);
+            return alert('投票失败，您可能已经在别的设备投过了。');
+        }
+
+        // 2. 拉取最新票数，进行自动结算判定
+        const { data: latestVotes } = await supabaseClient.from('proposal_votes').select('*').eq('proposal_id', proposalId);
+        const approves = latestVotes.filter(v => v.vote_type === 'approve').length;
+        const rejects = latestVotes.filter(v => v.vote_type === 'reject').length;
+        const majorityRequired = Math.floor(totalVotersCount / 2) + 1;
+
+        let finalDecision = null;
+        let finalReason = '';
+
+        if (approves >= majorityRequired) {
+            finalDecision = 'approved';
+            finalReason = `议会多数决达成 (${approves}/${totalVotersCount})：法案通过并执行。`;
+        } else if (rejects >= majorityRequired) {
+            finalDecision = 'rejected';
+            finalReason = `议会多数决达成 (${rejects}/${totalVotersCount})：法案被否决。`;
+        } else if (totalVotersCount % 2 === 0 && (approves + rejects === totalVotersCount) && approves === rejects) {
+            // 偶数机制：所有人都投了，且平票
+            finalDecision = 'rejected'; // 在系统里作为废案处理
+            finalReason = `议会票数战平 (${approves}:${rejects})：法案被打回重批。`;
+        }
+
+        // 3. 满足条件，触发最终结算
+        if (finalDecision) {
+            // 如果是通过，执行资金变动
+            if (finalDecision === 'approved' && cost !== 0) {
+                // 读取最新资金防并发
+                const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
+                
+                if (cost > 0 && currentProf.gold_gp < cost) {
+                    alert('⚠️ 警告：议案虽已获多数赞成，但国库资金不足以支付！议案将被强制阻断或转为坏账，请通知 DM 介入处理。');
+                    // 资金不足阻断通过，直接强行标为打回
+                    finalDecision = 'rejected';
+                    finalReason = `议会通过，但【国库资金不足】，法案被财务官强制驳回。`;
+                } else {
+                    const newGold = currentProf.gold_gp - cost;
+                    await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
+                }
             }
-            
-            // 核心数学：减去负数 = 加上正数
-            const newGold = userProfile.gold_gp - cost;
-            
-            const { error } = await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
-            if (error) return alert('资金变动失败');
-            
-            userProfile.gold_gp = newGold;
-            document.getElementById('current-gold').innerText = newGold.toLocaleString();
-        }
 
-        const { error: updateErr } = await supabaseClient
-            .from('city_proposals')
-            .update({ 
-                status: decision,
-                decision_reason: reason,
+            // 更新议案状态
+            await supabaseClient.from('city_proposals').update({
+                status: finalDecision,
+                decision_reason: finalReason,
                 decided_at: new Date().toISOString()
-            })
-            .eq('id', id);
-
-        if (updateErr) {
-            alert('操作失败');
-        } else {
-            alert('公文已归档。');
-            location.reload(); 
+            }).eq('id', proposalId);
         }
+
+        // 刷新列表（即使没有达到结算阈值，也要刷新进度条）
+        loadProposals(userProfile.id);
     }
 
     function setupRealtime(targetId) {
-        const proposalChannel = supabaseClient
-            .channel('proposal_realtime')
-            .on(
-                'postgres_changes', 
-                { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'city_proposals',
-                    filter: `user_id=eq.${targetId}` 
-                }, 
-                (payload) => {
-                    console.log('检测到位面波动，提案表已更新:', payload);
-                    loadProposals(targetId); 
-                    refreshGoldDisplay(targetId);
-                }
-            )
+        // 监听提案表和投票表，只要有人点票，全员网页自动刷新进度
+        supabaseClient.channel('city_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'city_proposals' }, () => {
+                if(currentVoter) loadProposals(targetId); refreshGoldDisplay(targetId);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes' }, () => {
+                if(currentVoter) loadProposals(targetId);
+            })
             .subscribe();
     }
 
