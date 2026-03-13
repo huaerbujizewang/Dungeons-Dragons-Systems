@@ -68,7 +68,7 @@
             width: 100%; 
             max-width: 1200px; 
             margin: 0 auto; 
-            min-height: 0; /* 关键：允许Flex子项滚动 */
+            min-height: 0; 
             overflow: hidden; 
         }
 
@@ -101,7 +101,7 @@
             flex: 1; 
             background-color: #222; 
             padding: 20px; 
-            overflow-y: auto; /* 开启垂直滚动 */
+            overflow-y: auto; 
             display: flex; 
             justify-content: center; 
         }
@@ -117,14 +117,13 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.5); 
             animation: fadeIn 0.5s ease; 
             position: relative; 
-            margin-bottom: 50px; /* 底部留白，防止滚动到底部太挤 */
+            margin-bottom: 50px; 
         }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .paper-header { text-align: center; border-bottom: 3px double var(--ink-color); margin-bottom: 30px; padding-bottom: 10px; }
         
-        /* 报头字体 */
         .font-gothic { font-family: 'UnifrakturMaguntia', cursive; font-size: 1.2rem; }
         .font-serif { font-family: 'Cinzel', serif; }
         .font-bold { font-family: 'Noto Serif SC', serif; font-weight: 900; }
@@ -137,7 +136,6 @@
         .headline { font-family: 'Noto Serif SC', serif; font-weight: 900; font-size: 2.2rem; margin-bottom: 15px; text-align: center; line-height: 1.3; }
         .sub-headline { font-style: italic; font-size: 1.2rem; color: #444; margin-bottom: 25px; border-left: 4px solid var(--highlight); padding-left: 15px; }
         
-        /* --- 正文排版 --- */
         .article-body { 
             font-size: 1.05rem; 
             line-height: 1.8; 
@@ -145,7 +143,6 @@
             color: var(--ink-color);
         }
         
-        /* 解析后的HTML样式 */
         .article-body h3 {
             margin-top: 40px;
             margin-bottom: 15px;
@@ -158,14 +155,13 @@
         }
         .article-body p {
             margin-bottom: 1.5em;
-            text-indent: 2em; /* 首行缩进 */
+            text-indent: 2em; 
         }
         .article-body strong {
             color: #000;
             font-weight: 900;
         }
 
-        /* --- 返回按钮样式 --- */
         .back-btn {
             background: #a83f39; 
             color: #fff;
@@ -182,9 +178,7 @@
             margin-right: auto; 
         }
         
-        .back-btn:hover {
-            background: #8e322d;
-        }
+        .back-btn:hover { background: #8e322d; }
         
         .back-btn svg {
             margin-right: 8px;
@@ -193,15 +187,12 @@
             fill: currentColor;
         }
         
-        /* 创建一个中间容器来放品牌按钮，保持居中 */
         .nav-brand-container {
             display: flex;
             height: 100%;
             margin: 0 auto; 
-            transform: translateX(-40px); /* 微调补偿返回按钮的宽度，让品牌视觉居中 */
+            transform: translateX(-40px); 
         }
-
-        
 
         #auth-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Cinzel'; flex-direction: column;}
     </style>
@@ -231,7 +222,6 @@
             <div id="paperSheet" class="paper-sheet">
                 <div style="text-align: center; padding-top: 100px;">
                     正在获取资讯...<br>
-                    <span style="font-size:0.8em; color:#666;">Fetch from GitHub...</span>
                 </div>
             </div>
         </main>
@@ -241,6 +231,7 @@
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/refs/heads/main/newsa.json';
         
         let allNewsData = [];
 
@@ -248,7 +239,7 @@
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) {
-                    alert("检测到位面波动（未登录），请先进行身份验证！");
+                    alert("请先登录！");
                     window.location.href = 'index.html'; 
                     return; 
                 }
@@ -266,51 +257,28 @@
         }
 
         async function loadNewspapers() {
-    try {
-        // 1. 获取所有你有权查看的文章，按时间倒序排列
-        const { data, error } = await supabaseClient
-            .from('news_articles')
-            .select('*')
-            .order('date_code', { ascending: false });
-
-        if (error) throw error;
-
-        // 2. 将扁平的文章列表按照 brand_id 进行逻辑分组
-        const brandsMap = new Map();
-        data.forEach(article => {
-            if (!brandsMap.has(article.brand_id)) {
-                brandsMap.set(article.brand_id, {
-                    name: article.brand_name,
-                    styleClass: article.style_class,
-                    titleEn: article.title_en,
-                    titleCn: article.title_cn,
-                    articles: [] // 这个品牌下的文章集合
-                });
+            try {
+                const response = await fetch(JSON_URL);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                allNewsData = await response.json();
+                
+                renderBrandNav();
+                
+                if (allNewsData.length > 0) {
+                    selectBrand(0);
+                } else {
+                    document.getElementById('paperSheet').innerHTML = "<div style='text-align:center; padding-top:50px;'>无数据</div>";
+                }
+            } catch (error) {
+                console.error("数据加载失败:", error);
+                const sheet = document.getElementById('paperSheet');
+                sheet.innerHTML = `<div style="color:#a83f39; text-align:center; padding:50px;">无法读取报纸数据。</div>`;
             }
-            // 往这个品牌里塞入当前文章的数据
-            brandsMap.get(article.brand_id).articles.push({
-                headline: article.headline,
-                subhead: article.subhead,
-                date: article.date_text,
-                content: article.content
-            });
-        });
-
-        // 3. 转换回原本的 allNewsData 结构
-        allNewsData = Array.from(brandsMap.values());
-        
-        renderBrandNav();
-        if (allNewsData.length > 0) selectBrand(0);
-
-    } catch (error) {
-        console.error("卷宗解析失败:", error);
-    }
-}
+        }
 
         function renderBrandNav() {
             const nav = document.getElementById('brandNav');
             nav.innerHTML = '';
-            
             allNewsData.forEach((brand, index) => {
                 const btn = document.createElement('button');
                 btn.className = `news-brand-btn ${brand.styleClass || ''}`;
@@ -327,19 +295,12 @@
             if (activeBtn) activeBtn.classList.add('active');
 
             const brandData = allNewsData[index];
-            const articles = brandData.articles || [];
-            renderArticleList(articles, brandData);
+            renderArticleList(brandData.articles || [], brandData);
         }
 
         function renderArticleList(articles, brandInfo) {
             const listContainer = document.getElementById('articleList');
             listContainer.innerHTML = '';
-
-            if (articles.length === 0) {
-                listContainer.innerHTML = '<div style="padding:20px; color:#666; text-align:center;">暂无文章</div>';
-                renderPaper(null, brandInfo);
-                return;
-            }
 
             articles.forEach((article) => {
                 const div = document.createElement('div');
@@ -359,67 +320,36 @@
             if (listContainer.firstChild) listContainer.firstChild.click();
         }
 
-        // --- 简单的 Markdown 解析器 ---
         function simpleMarkdownParser(text) {
             if (!text) return '';
-            
-            // 1. 处理标题 (### Title)
-            // 将 "### 内容" 替换为 "<h3>内容</h3>"
             let html = text.replace(/^###\s+(.*$)/gm, '<h3>$1</h3>');
-            
-            // 2. 处理粗体 (**Bold**)
             html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // 3. 处理段落 (双换行)
-            // 先按双换行分割，然后给每段加 <p>
-            // 如果某行已经是 <h3> 开头，就不加 <p>
             let paragraphs = html.split(/\n\s*\n/);
-            
-            let finalHtml = paragraphs.map(p => {
+            return paragraphs.map(p => {
                 p = p.trim();
                 if (!p) return '';
-                if (p.startsWith('<h3')) return p; // 标题保持原样
-                return `<p>${p}</p>`; // 普通文本包在 p 标签里
+                if (p.startsWith('<h3')) return p;
+                return `<p>${p}</p>`;
             }).join('');
-
-            return finalHtml;
         }
 
         function renderPaper(article, brandInfo) {
             const sheet = document.getElementById('paperSheet');
             const titleClass = brandInfo.styleClass || 'font-serif';
-
-            // 滚动回顶部
             document.querySelector('.paper-viewport').scrollTop = 0;
 
-            if (!article) {
-                sheet.innerHTML = `
-                    <header class="paper-header">
-                        <h1 class="paper-title ${titleClass}">${brandInfo.name}</h1>
-                        <div class="paper-meta"><span>${brandInfo.name} 编辑部</span></div>
-                    </header>
-                    <div style="text-align:center; padding:50px;">今日休刊</div>
-                `;
-                return;
-            }
-
-            // 使用解析器处理内容
-            const parsedContent = simpleMarkdownParser(article.content);
+            if (!article) return;
 
             sheet.innerHTML = `
                 <header class="paper-header">
                     <h1 class="paper-title ${titleClass}">${brandInfo.titleEn || brandInfo.name}</h1>
-                    <div style="font-family: 'Noto Serif SC'; font-size: 1.5rem; margin-top: -5px; margin-bottom: 5px;">${brandInfo.titleCn || brandInfo.name}</div>
-                    <div class="paper-meta">
-                        <span>${article.date}</span>
-                        <span>${brandInfo.name} 编辑部</span>
-                    </div>
+                    <div style="font-family: 'Noto Serif SC'; font-size: 1.5rem;">${brandInfo.titleCn || brandInfo.name}</div>
+                    <div class="paper-meta"><span>${article.date}</span> <span>${brandInfo.name} 编辑部</span></div>
                 </header>
-                
                 <article>
                     <div class="headline">${article.headline}</div>
                     ${article.subhead ? `<div class="sub-headline">${article.subhead}</div>` : ''}
-                    <div class="article-body">${parsedContent}</div>
+                    <div class="article-body">${simpleMarkdownParser(article.content)}</div>
                 </article>
             `;
         }
