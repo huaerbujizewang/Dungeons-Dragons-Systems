@@ -13,7 +13,7 @@
             color: #ecf0f1; 
             margin: 0; 
             padding: 0; 
-            overflow: hidden; 
+            overflow: hidden; /* 彻底禁止浏览器的默认滚动 */
             width: 100vw;
             height: 100vh;
         }
@@ -224,11 +224,11 @@
                 alert('检测到位面波动（未登录），请先进行身份验证');
                 window.location.href = 'index.html';
             } else {
-                loadTimelineData();
+                loadTimelineData(user.email);
             }
         }
 
-        async function loadTimelineData() {
+        async function loadTimelineData(userEmail) {
             const track = document.getElementById('timeline-track');
             const statusMsg = document.getElementById('status-msg');
 
@@ -237,15 +237,22 @@
                 if (!response.ok) throw new Error("无法读取时间线数据");
                 const data = await response.json();
 
-                if (!data || data.length === 0) {
-                    statusMsg.innerText = "回廊空空如也。";
+                const filteredData = data.filter(ev => {
+                    if (!ev.allowed_emails || ev.allowed_emails.length === 0) {
+                        return true;
+                    }
+                    return ev.allowed_emails.includes(userEmail);
+                });
+
+                if (!filteredData || filteredData.length === 0) {
+                    statusMsg.innerText = "你的权限不足以窥探这些记忆，或回廊空空如也。";
                     return;
                 }
 
                 statusMsg.style.display = 'none';
                 track.style.display = 'flex';
-                renderTimeline(data);
-
+                renderTimeline(filteredData); 
+                
             } catch (error) {
                 console.error(error);
                 statusMsg.innerHTML = `
