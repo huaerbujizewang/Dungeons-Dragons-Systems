@@ -270,7 +270,7 @@
                 const { data, error } = await supabaseClient
                     .from('news_data')
                     .select('*')
-                    .order('id', { ascending: true });
+                    .order('date_code', { ascending: true });
 
                 if (error) throw error;
 
