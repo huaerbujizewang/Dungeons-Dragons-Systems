@@ -198,12 +198,29 @@
             else if (item.cost < 0) costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(item.cost).toLocaleString()}</div>`;
             else costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 0 预算</div>`;
 
+            // 过滤出当前议案的所有投票记录
+            const propVotes = allVotes.filter(v => v.proposal_id === item.id);
+            const approves = propVotes.filter(v => v.vote_type === 'approve').length;
+            const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
+            
+            // 组装议员个人批注的 HTML
+            let notesHtml = '';
+            if (propVotes.length > 0) {
+                notesHtml = `
+                <div style="margin-top: 15px; font-size: 0.9em; background: #fdfbf7; padding: 10px; border: 1px dashed #dcd6cc; border-radius: 4px;">
+                    <div style="font-weight: bold; margin-bottom: 5px; color: #7f8c8d;">📜 议员批注记录：</div>
+                    ${propVotes.map(v => `
+                        <div style="margin-bottom: 4px;">
+                            <b>${v.voter_name}</b> 
+                            <span style="color:${v.vote_type === 'approve' ? '#27ae60' : '#c0392b'}">[${v.vote_type === 'approve' ? '赞成' : '反对'}]</span>: 
+                            <span style="color:#555;">${v.vote_reason || '无'}</span>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
             if (item.status === 'pending') {
                 hasPending = true;
-                
-                const propVotes = allVotes.filter(v => v.proposal_id === item.id);
-                const approves = propVotes.filter(v => v.vote_type === 'approve').length;
-                const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
                 const myVote = propVotes.find(v => v.voter_name === currentVoter.name);
 
                 let actionButtons = '';
@@ -227,8 +244,8 @@
                             <div>
                                 <div class="prop-title">${item.title}</div>
                                 <div class="prop-desc">${item.description}</div>
-                            </div>
-                            <div class="action-bar">
+                                ${notesHtml} </div>
+                            <div class="action-bar" style="margin-top:15px;">
                                 ${costHtml}
                                 <div class="btn-group">
                                     <div class="vote-stats">
@@ -259,7 +276,8 @@
                                 ${statusTag}
                             </div>
                             <div class="prop-desc" style="color:#888;">${item.description}</div>
-                            <div class="decision-note">📝 最终判定：${item.decision_reason}</div>
+                            
+                            ${notesHtml} <div class="decision-note" style="margin-top:10px;">📝 系统最终判定：${item.decision_reason}</div>
                             <div class="decision-time">归档时间: ${dateStr}</div>
                         </div>
                     </div>`;
@@ -271,23 +289,30 @@
         if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
     }
 
-    // ✅ 4. 自动结算逻辑 (支持任意人数扩展)
+    // 自动结算逻辑
     async function castVote(proposalId, voteType, cost) {
-        if (!confirm(`确定投出【${voteType === 'approve' ? '赞成' : '反对'}】票吗？投出后不可更改。`)) return;
+        const actionName = voteType === 'approve' ? '赞成' : '反对';
+        const defaultReason = voteType === 'approve' ? '同意执行。' : '暂缓议案。';
+        
+        // 恢复批注弹窗
+        const reason = prompt(`您决定 [${actionName}] 该提案。\n\n请输入您的决策理由/批注 (可选):`, defaultReason);
+        if (reason === null) return; // 如果玩家点取消，则中止投票
 
         const { error: insertErr } = await supabaseClient.from('proposal_votes').insert({
             proposal_id: proposalId,
             voter_name: currentVoter.name,
-            vote_type: voteType
+            vote_type: voteType,
+            vote_reason: reason // 将批注写入数据库
         });
         
-        if (insertErr) return alert('投票失败，您可能已经在别的设备投过了。');
+        if (insertErr) {
+            console.error(insertErr);
+            return alert('投票失败！可能您已经投过票，或者数据库提案表尚未建立。');
+        }
 
         const { data: latestVotes } = await supabaseClient.from('proposal_votes').select('*').eq('proposal_id', proposalId);
         const approves = latestVotes.filter(v => v.vote_type === 'approve').length;
         const rejects = latestVotes.filter(v => v.vote_type === 'reject').length;
-        
-        // 多数决
         const majorityRequired = Math.floor(totalVotersCount / 2) + 1;
 
         let finalDecision = null;
@@ -300,7 +325,6 @@
             finalDecision = 'rejected';
             finalReason = `议会多数决达成 (${rejects}/${totalVotersCount})：法案被否决。`;
         } else if (totalVotersCount % 2 === 0 && (approves + rejects === totalVotersCount) && approves === rejects) {
-            // 平票触发
             finalDecision = 'rejected'; 
             finalReason = `议会票数战平 (${approves}:${rejects})：法案被打回重批。`;
         }
@@ -312,7 +336,7 @@
                 if (cost > 0 && currentProf.gold_gp < cost) {
                     alert('⚠️ 警告：议案虽已获多数赞成，但国库资金不足以支付！议案已被财务官强制驳回。');
                     finalDecision = 'rejected';
-                    finalReason = `议会通过，但资金不足，法案被财务官强制驳回。`;
+                    finalReason = `议会通过，但【国库资金不足】，法案被财务官强制驳回。`;
                 } else {
                     const newGold = currentProf.gold_gp - cost;
                     await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
