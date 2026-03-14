@@ -2646,19 +2646,26 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         const isMonthChanged = (y !== currentDate.year) || (m !== currentDate.month);
         
         if (isMonthChanged) {
-            const confirmPay = confirm(`⚠️ 检测到月份变化！\n\n是否触发该玩家的 [月度自动扣薪]？\n\n[确定] = 扣钱并跳转\n[取消] = 不扣钱，仅跳转`);
+            const confirmPay = confirm(`⚠️ 检测到跨月调整！\n\n是否触发该玩家的 [城市月度财务结算]？\n(将自动计算所有税收、贸易、基建与人员薪资)\n\n[确定] = 结算财务并跳转\n[取消] = 仅跳转时间，不结算财务`);
             
             if (confirmPay) {
-                // 执行扣款逻辑
-                const { data: emps } = await supabaseClient.from('employees').select('salary').eq('user_id', viewingUserId).in('status', ['在职', '科研中']);
-                if (emps && emps.length > 0) {
-                    const totalSalary = emps.reduce((sum, e) => sum + e.salary, 0);
-                    if (totalSalary > 0) {
-                        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
-                        await supabaseClient.from('profiles').update({ gold_gp: prof.gold_gp - totalSalary }).eq('id', viewingUserId);
-                        await logAction('系统扣款', `时间跃迁触发扣薪：${totalSalary} GP`);
-                        alert(`已扣除 ${totalSalary} GP`);
-                    }
+                showLoading(); 
+                const netIncome = await calculateCityNetIncome(viewingUserId);
+                
+                if (netIncome !== 0) {
+                    const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
+                    const newGold = prof.gold_gp + netIncome; 
+                    
+                    await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
+                    
+                    const logMsg = netIncome > 0 
+                        ? `时间跃迁触发结算：城市盈利，国库增加 ${netIncome} GP` 
+                        : `时间跃迁触发结算：城市赤字，国库扣除 ${Math.abs(netIncome)} GP`;
+                        
+                    await logAction('系统结算', logMsg);
+                    alert(logMsg);
+                } else {
+                    alert("本月城市收支平衡，净利润为 0 GP。");
                 }
             }
         }
@@ -6367,16 +6374,16 @@ window.endWarTurn = async function() {
 </script>
 
 <div id="faction-modal" class="modal" onclick="if(event.target === this) closeModal('faction-modal')">
-    <div class="modal-box" style="width: 350px; text-align: center; background: #fdf1dc; border: 2px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <div class="modal-box" style="width: 350px; text-align: center; background: #fdf1dc; border: 2px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden !important; display: flex; flex-direction: column; max-height: 80vh; padding: 20px;">
         
-        <h3 id="faction-modal-title" style="margin-top:0; color: #822000; border-bottom: 2px solid #822000; padding-bottom: 10px; font-size: 1.4em; letter-spacing: 2px;">
+        <h3 id="faction-modal-title" style="margin-top:0; color: #822000; border-bottom: 2px solid #822000; padding-bottom: 10px; font-size: 1.4em; letter-spacing: 2px; flex-shrink: 0;">
             势力名单
         </h3>
         
-        <div id="faction-modal-list" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 0; max-height: 400px; overflow-y: auto;">
+        <div id="faction-modal-list" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 5px 30px 5px; flex: 1; overflow-y: auto;">
         </div>
         
-        <button onclick="closeModal('faction-modal')" style="margin-top: 15px; width: 100%; padding: 10px; background: #333; color: #fff; border: none; border-radius: 4px; font-weight: bold; font-size: 1.1em; cursor: pointer;">
+        <button onclick="closeModal('faction-modal')" style="margin-top: 15px; width: 100%; padding: 10px; background: #333; color: #fff; border: none; border-radius: 4px; font-weight: bold; font-size: 1.1em; cursor: pointer; flex-shrink: 0;">
             关闭
         </button>
     </div>
