@@ -5841,8 +5841,18 @@ window.initWarEngine = async function() {
         const { data: cards } = await supabaseClient.from('war_cards').select('*');
         cards.forEach(c => allWarCards[c.id] = c);
 
+        // 2. 绑定当前玩家的阵营
         if (currentUserEmail === '739477825@qq.com') {
-            window.myWarFaction = 'alliance'; 
+            window.myWarFaction = 'alliance'; // DM 默认视角 (DM在渲染代码里自带全视权限)
+        } 
+        else if (currentUserEmail === 'master@almorel.com') {
+            window.myWarFaction = 'alliance';
+        } 
+        else if (currentUserEmail === '739477825@qq.com') {
+            window.myWarFaction = 'empire';
+        } 
+        else {
+            window.myWarFaction = 'observer'; // 其他吃瓜群众默认旁观，只能看暗牌
         }
 
         await fetchWarData();
