@@ -5754,11 +5754,28 @@ function openFactionModal(title, listStr) {
     document.getElementById('faction-modal-title').innerText = title;
     
     const listContainer = document.getElementById('faction-modal-list');
-    listContainer.innerHTML = factionList.map(f => `
-        <div style="padding: 12px; background: #fff; border: 1px solid #ddd; font-weight: bold; color: #333; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            ${f}
-        </div>
-    `).join('');
+    listContainer.innerHTML = factionList.map(f => {
+        // 兼容处理：判断它是纯文本，还是带 defeated 标记的对象
+        const name = typeof f === 'object' ? f.name : f;
+        const isDefeated = typeof f === 'object' && f.defeated === true;
+
+        if (isDefeated) {
+            // 被击溃的样式：文字变灰 + 贯穿红斜杠 + 整体半透明
+            return `
+            <div style="position: relative; padding: 12px; background: #f4f4f4; border: 1px solid #ddd; font-weight: bold; color: #999; border-radius: 4px; overflow: hidden;">
+                <span style="text-decoration: line-through;">${name}</span>
+                <div style="position: absolute; top: 50%; left: -10%; width: 120%; height: 3px; background: rgba(231, 76, 60, 0.7); transform: rotate(-8deg); pointer-events: none;"></div>
+            </div>
+            `;
+        } else {
+            // 正常的势力样式
+            return `
+            <div style="padding: 12px; background: #fff; border: 1px solid #ddd; font-weight: bold; color: #333; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                ${name}
+            </div>
+            `;
+        }
+    }).join('');
     
     document.getElementById('faction-modal').style.display = 'flex';
 }
