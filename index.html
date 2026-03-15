@@ -6387,7 +6387,14 @@ window.endWarTurn = async function() {
 };
 
 
-    
+    // 强制踢人
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        console.log("Auth Event:", event);
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+            alert('身份凭证已失效或账号被锁定，请重新登录。');
+            window.location.reload(); 
+        }
+    });
 
 
     
