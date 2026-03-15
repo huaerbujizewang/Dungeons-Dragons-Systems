@@ -5955,11 +5955,11 @@ window.addWarLog = async function(text) {
     await fetchWarLogs(); 
 };
 
-// 3. UI 渲染 (包含悬挂任务与手牌置灰)
+// 3. UI 渲染
 window.renderHand = function(faction, container) {
     const deck = warDecks[faction];
     if (!deck) return;
-    document.getElementById(`deck-count-${faction}`).innerText = `牌库: ${deck.draw_pile?.length||0} | 弃牌: ${deck.discard_pile?.length||0}`;
+    document.getElementById(`deck-count-${faction}`).innerHTML = `牌库: ${deck.draw_pile?.length||0} | 弃牌: ${deck.discard_pile?.length||0} <a href="javascript:void(0);" onclick="shuffleDeck('${faction}')" style="color:#e67e22; margin-left:8px; font-weight:bold; text-decoration:none;">[洗牌]</a>`;
     
     const canSee = currentUserEmail === '739477825@qq.com' || window.myWarFaction === faction;
     if (!canSee) {
@@ -6290,6 +6290,28 @@ window.drawPhaseCards = async function(faction) {
         await changePhase('action');
     } catch(e) {
         console.error("抽牌异常:", e);
+        isWarProcessing = false;
+        hideLoading();
+    }
+};
+
+// DM 手动洗牌功能
+window.shuffleDeck = async function(faction) {
+    if (isWarProcessing) return;
+    if (!confirm(`确定要洗切【${faction === 'alliance' ? '联军' : '帝国'}】的抽牌堆吗？`)) return;
+    
+    isWarProcessing = true;
+    showLoading();
+    try {
+        let deck = warDecks[faction];
+        deck.draw_pile = window.shuffleArray([...deck.draw_pile]);
+        await supabaseClient.from('war_decks').update({ draw_pile: deck.draw_pile }).eq('faction', faction);
+        await addWarLog(`【系统】🎲 DM 手动洗切了 ${faction === 'alliance' ? '联军' : '帝国'} 的牌库。`);
+        renderWarUI();
+    } catch(e) {
+        console.error(e);
+        alert('洗牌失败');
+    } finally {
         isWarProcessing = false;
         hideLoading();
     }
