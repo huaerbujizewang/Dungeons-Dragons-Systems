@@ -6,7 +6,7 @@
       { "url": "assets/photos/AA2.jpg", "is_dead": false },
       { "url": "assets/photos/AA3.jpg", "is_dead": true },
       { "url": "assets/photos/AA4.jpg", "is_dead": false },
-      { "url": "assets/photos/AA5.jpg", "is_dead": false }
+      { "url": "assets/photos/AA5.jpg", "is_dead": true }
     ],
     "factions": [
       "洛萨维亚帝国"
@@ -17,9 +17,9 @@
     "photos": [
       { "url": "assets/photos/BB1.jpg", "is_dead": false },
       { "url": "assets/photos/BB2.jpg", "is_dead": false },
-      { "url": "assets/photos/BB3.jpg", "is_dead": false },
+      { "url": "assets/photos/BB3.jpg", "is_dead": true },
       { "url": "assets/photos/BB4.jpg", "is_dead": false },
-      { "url": "assets/photos/BB5.jpg", "is_dead": false },
+      { "url": "assets/photos/BB5.jpg", "is_dead": true },
       { "url": "assets/photos/BB6.jpg", "is_dead": false }
     ],
     "factions": [
@@ -48,12 +48,12 @@
     "南扎路港以南": "帝国人",
     "南扎路港以北": "帝国人",
     "贝路利安堡": "费伦联军",
-    "贝路利安堡以南": "帝国人",
+    "贝路利安堡以南": "费伦联军",
     "贝路利安堡以北": "费伦联军",
     "贝路利安堡以东": "费伦联军",
     "麦兹罗及周围": "费伦联军",
     "桑拉奇山脉及周边": "未知",
-    "南扎路港以东": "帝国人",
+    "南扎路港以东": "费伦联军",
     "南扎路港以西": "帝国人",
     "死灵之地": "费伦联军",
     "基切尔海湾": "帝国人",
