@@ -2114,7 +2114,7 @@
 
         // 2. 状态权重配置
         const statusWeight = {
-            '在职': 1, '科研中': 2, '休假': 3, '特殊状态': 4, '离职': 5, '申请解雇': 6
+            '在职': 1, '科研中': 2, '休假': 3, '特殊状态': 4, '申请解雇': 5, '离职': 6, '违规': 7
         };
 
         // --- 排序权重计算 ---
@@ -2164,6 +2164,7 @@
                 else if(e.status === '科研中') config.color = '#3498db'; 
                 else if(e.status === '休假') config.color = '#f1c40f';
                 else if(e.status === '特殊状态') config.color = '#9b59b6';
+                else if(e.status === '违规') config.color = '#c0392b'; 
                 else if(e.status === '离职') config.color = '#95a5a6';
                 else if(e.status === '申请解雇') config.color = '#e67e22';
 
