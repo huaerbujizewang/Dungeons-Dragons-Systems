@@ -33,17 +33,10 @@
 
         .content-box { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
         .prop-title { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
-        .prop-desc { 
-            font-size: 0.95em; 
-            color: #555; 
-            line-height: 1.6; 
-            margin-bottom: 15px; 
-            background: #f9f9f9; 
-            padding: 10px; 
-            border-radius: 4px; 
-            border-left: 3px solid #ddd; 
-            white-space: pre-wrap; 
-        }
+        .prop-desc { font-size: 0.95em; color: #555; line-height: 1.6; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 4px; border-left: 3px solid #ddd; white-space: pre-wrap; word-wrap: break-word; }
+
+        .vote-reason-text { white-space: pre-wrap; word-wrap: break-word; color:#555; display: inline-block; vertical-align: top; width: calc(100% - 80px); }
+        .decision-note { white-space: pre-wrap; margin-top: 10px; padding: 10px; background: #fffbe6; border: 1px solid #f1c40f; border-radius: 4px; font-size: 0.9em; color: #7f6000; }
         
         .action-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #eee; padding-top: 15px; }
         .cost-tag { font-family: monospace; font-weight: bold; font-size: 1.1em; }
@@ -126,6 +119,19 @@
     const authorizedVoters = [
         '伊凡·乾', '凋命', '伯勒斯', '薇艾拉', '格拉西斯'
     ];
+
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+                }[tag] || tag)
+        );
+    }
 
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -275,7 +281,7 @@
                         <div style="margin-bottom: 4px;">
                             <b>${v.voter_name}</b> 
                             <span style="color:${v.vote_type === 'approve' ? '#27ae60' : '#c0392b'}">[${v.vote_type === 'approve' ? '赞成' : '反对'}]</span>: 
-                            <span style="color:#555;">${v.vote_reason || '无'}</span>
+                            <span style="color:#555;">${escapeHTML(v.vote_reason || '无')}</span>
                         </div>
                     `).join('')}
                 </div>`;
@@ -307,8 +313,8 @@
                         </div>
                         <div class="content-box">
                             <div>
-                                <div class="prop-title">${item.title}</div>
-                                <div class="prop-desc">${item.description}</div>
+                                <div class="prop-title">${escapeHTML(item.title)}</div>
+                                <div class="prop-desc">${escapeHTML(item.description)}</div>
                                 ${notesHtml}
                             </div>
                             <div class="action-bar" style="margin-top:15px;">
@@ -339,10 +345,10 @@
                         </div>
                         <div class="content-box">
                             <div style="display:flex; justify-content:space-between;">
-                                <div class="prop-title">${item.title}</div>
+                                <div class="prop-title">${escapeHTML(item.title)}</div>
                                 ${statusTag}
                             </div>
-                            <div class="prop-desc" style="color:#888;">${item.description}</div>
+                            <div class="prop-desc" style="color:#888;">${escapeHTML(item.description)}</div>
                             ${notesHtml}
                             <div class="decision-note" style="margin-top:10px;">📝 系统最终判定：${item.decision_reason}</div>
                             <div class="decision-time">归档时间: ${dateStr}</div>
