@@ -2006,6 +2006,11 @@
                 console.log('装备穿戴有更新');
                 loadTeam();
             })
+            // 6. 科研进度条变动 (Research 表)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'research_projects', filter: `user_id=eq.${targetId}` }, (payload) => {
+            console.log('科研进度有变动');
+            loadAdminResearch(); 
+            })
             .subscribe();
     }
 
@@ -3342,26 +3347,36 @@ async function advanceTime() {
             const { data: projects } = await supabaseClient.from('research_projects')
                 .select('*')
                 .eq('user_id', viewingUserId)
-                .eq('status', '研发中');
+                .or('status.eq.研发中,status.eq.进行中'); // 容错处理：兼容两种写法
 
             if (projects && projects.length > 0) {
                 for (let p of projects) {
-                    if (p.speed_per_day > 0) {
-                        let newProg = p.current_progress + p.speed_per_day;
-                        let newStatus = '研发中';
-                        
-                        if (newProg >= p.max_progress) {
-                            newProg = p.max_progress;
+                    // 强制转为数字，防止字符串拼接
+                    const currentSpd = Number(p.speed_per_day) || 0;
+                    const currentProg = Number(p.current_progress) || 0;
+                    const maxProg = Number(p.max_progress) || 0;
+
+                    if (currentSpd > 0) {
+                        let newProg = currentProg + currentSpd;
+                        let newStatus = p.status;
+            
+                        if (newProg >= maxProg) {
+                            newProg = maxProg;
                             newStatus = '已完成';
                             await logAction('科研突破', `[${p.name}] 研发已完成！`);
                         }
-                        
+            
+                        // 执行更新
                         await supabaseClient.from('research_projects')
                             .update({ current_progress: newProg, status: newStatus })
                             .eq('id', p.id);
                     }
                 }
             }
+// 循环结束后，手动刷新一下 DM 控制台里的科研列表显示
+if (typeof loadAdminResearch === 'function') {
+    loadAdminResearch();
+}
 
             // 3. 更新数据库 (只更新 viewingUserId 的时间)
             await supabaseClient
@@ -5548,12 +5563,13 @@ async function getRobustIP() {
         showLoading();
         // 核心：加上 { error } 的接收
         const { error } = await supabaseClient.from('research_projects').insert([{ 
-            user_id: selectedUserId, 
-            name: name, 
-            max_progress: max, 
-            speed_per_day: speed, 
-            description: desc 
-        }]);
+        user_id: selectedUserId, 
+        name: name, 
+        max_progress: max, 
+        speed_per_day: speed, 
+        description: desc,
+        status: '研发中'
+    }]);
         
         // 如果数据库拦截了，直接弹窗告诉你为什么
         if (error) {
