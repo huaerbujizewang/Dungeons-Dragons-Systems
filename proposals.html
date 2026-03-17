@@ -61,6 +61,25 @@
         
         .decision-note { margin-top: 10px; padding: 10px; background: #fffbe6; border: 1px solid #f1c40f; border-radius: 4px; font-size: 0.9em; color: #7f6000; }
         .decision-time { font-size: 0.8em; color: #999; margin-top: 5px; text-align: right; }
+
+        /* 自定义弹窗样式 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-box {
+            background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 450px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 15px;
+        }
+        .modal-title { font-weight: bold; color: #2c3e50; white-space: pre-wrap; line-height: 1.5; }
+        .modal-box textarea {
+            width: 100%; height: 150px; padding: 10px; border: 1px solid #ccc; border-radius: 4px;
+            font-family: inherit; font-size: 0.95em; resize: vertical; box-sizing: border-box;
+        }
+        .modal-box textarea:focus { outline: none; border-color: #8e44ad; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-cancel { background: #95a5a6; color: white; }
+        .btn-submit { background: #2980b9; color: white; }
     </style>
 </head>
 <body>
@@ -97,6 +116,17 @@
         <div id="history-section" style="display:none;">
             <div class="section-title">🗄️ 历史决策档案</div>
             <div id="history-list"></div>
+        </div>
+    </div>
+</div>
+
+<div id="vote-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <div id="vote-modal-title" class="modal-title"></div>
+        <textarea id="vote-modal-text" placeholder="在此输入您的详细批注..."></textarea>
+        <div class="modal-actions">
+            <button class="btn-cancel" id="vote-btn-cancel">取消</button>
+            <button class="btn-submit" id="vote-btn-confirm">确认提交</button>
         </div>
     </div>
 </div>
@@ -367,14 +397,34 @@
         const actionName = voteType === 'approve' ? '赞成' : '反对';
         const defaultReason = voteType === 'approve' ? '同意执行。' : '暂缓议案。';
         
-        const reason = prompt(`您决定 [${actionName}] 该提案。\n\n请输入您的决策理由/批注:`, defaultReason);
-        if (reason === null) return; 
+        // 唤起自定义弹窗并等待玩家操作
+const reason = await new Promise((resolve) => {
+    const modal = document.getElementById('vote-modal');
+    document.getElementById('vote-modal-title').innerText = `您决定 [${actionName}] 该提案。\n请输入您的决策理由/批注:`;
+    const textarea = document.getElementById('vote-modal-text');
+    textarea.value = defaultReason;
+    
+    modal.style.display = 'flex';
+    textarea.focus();
+
+    document.getElementById('vote-btn-confirm').onclick = () => {
+        modal.style.display = 'none';
+        resolve(textarea.value);
+    };
+    document.getElementById('vote-btn-cancel').onclick = () => {
+        modal.style.display = 'none';
+        resolve(null);
+    };
+});
+
+if (reason === null) return; // 玩家点击了取消
+const userVoteReason = reason.trim() === '' ? '未发表意见' : reason;
 
         const { error: insertErr } = await supabaseClient.from('proposal_votes').insert({
             proposal_id: proposalId,
             voter_name: currentVoter.name,
             vote_type: voteType,
-            vote_reason: reason 
+            vote_reason: userVoteReason // 【修改这里】：对应改成 userVoteReason
         });
         
         if (insertErr) return alert('投票失败！可能您已经投过票，或者网络出现了波动。');
