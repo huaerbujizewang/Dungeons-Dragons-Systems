@@ -151,7 +151,8 @@
         if (emps) { 
             voterEmployees = emps.filter(emp => authorizedVoters.includes(emp.name));
             totalVotersCount = voterEmployees.length;
-            document.getElementById('majority-req').innerText = totalVotersCount;
+            const majorityCount = Math.floor(totalVotersCount / 2) + 1;
+            document.getElementById('majority-req').innerText = majorityCount;
 
             emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
             renderLoginScreen(targetId);
