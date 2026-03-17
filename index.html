@@ -2640,52 +2640,101 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
 
     // 2. ：任意修改时间逻辑
     async function updateTimeManual() {
-        if (!viewingUserId) return alert('请先选择一个视角');
+    if (!viewingUserId) return alert('请先选择一个视角');
 
-        const y = parseInt(document.getElementById('time-year').value);
-        const m = parseInt(document.getElementById('time-month').value);
-        const d = parseInt(document.getElementById('time-day').value);
+    // 1. 获取输入的新日期
+    const nY = parseInt(document.getElementById('time-year').value);
+    const nM = parseInt(document.getElementById('time-month').value);
+    const nD = parseInt(document.getElementById('time-day').value);
 
-        if (!y || !m || !d) return alert('日期格式不对');
+    if (!nY || !nM || !nD) return alert('日期格式不对');
 
-        // 判断是否跨月（简单的逻辑：只要月份或年份变了，就提示扣款）
-        const isMonthChanged = (y !== currentDate.year) || (m !== currentDate.month);
+    // --- 计算天数差：用于科研进度精确推进 ---
+    const oldTotal = (currentDate.year * 360) + (currentDate.month * 30) + currentDate.day;
+    const newTotal = (nY * 360) + (nM * 30) + nD;
+    const daysPassed = newTotal - oldTotal;
+
+    // 2. 原版逻辑：判断是否跨月
+    const isMonthChanged = (nY !== currentDate.year) || (nM !== currentDate.month);
+    
+    if (isMonthChanged) {
+        // 严格保留你原本的文案
+        const confirmPay = confirm(`⚠️ 检测到跨月调整！\n\n是否触发该玩家的 [城市月度财务结算]？\n(将自动计算所有税收、贸易、基建与人员薪资)\n\n[确定] = 结算财务并跳转\n[取消] = 仅跳转时间，不结算财务`);
         
-        if (isMonthChanged) {
-            const confirmPay = confirm(`⚠️ 检测到跨月调整！\n\n是否触发该玩家的 [城市月度财务结算]？\n(将自动计算所有税收、贸易、基建与人员薪资)\n\n[确定] = 结算财务并跳转\n[取消] = 仅跳转时间，不结算财务`);
+        if (confirmPay) {
+            showLoading(); 
+            const netIncome = await calculateCityNetIncome(viewingUserId);
             
-            if (confirmPay) {
-                showLoading(); 
-                const netIncome = await calculateCityNetIncome(viewingUserId);
+            if (netIncome !== 0) {
+                const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
+                const newGold = prof.gold_gp + netIncome; 
                 
-                if (netIncome !== 0) {
-                    const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
-                    const newGold = prof.gold_gp + netIncome; 
+                await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
+                
+                const logMsg = netIncome > 0 
+                    ? `时间跃迁触发结算：城市盈利，国库增加 ${netIncome} GP` 
+                    : `时间跃迁触发结算：城市赤字，国库扣除 ${Math.abs(netIncome)} GP`;
                     
-                    await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
-                    
-                    const logMsg = netIncome > 0 
-                        ? `时间跃迁触发结算：城市盈利，国库增加 ${netIncome} GP` 
-                        : `时间跃迁触发结算：城市赤字，国库扣除 ${Math.abs(netIncome)} GP`;
+                await logAction('系统结算', logMsg);
+                alert(logMsg);
+            } else {
+                alert("本月城市收支平衡，净利润为 0 GP。");
+            }
+        }
+    }
+
+    // 3. 核心改进：若时间向后推进，则计算科研进度
+    showLoading();
+    try {
+        if (daysPassed > 0) {
+            const { data: projects } = await supabaseClient.from('research_projects')
+                .select('*')
+                .eq('user_id', viewingUserId)
+                .or('status.eq.研发中,status.eq.进行中');
+
+            if (projects && projects.length > 0) {
+                for (let p of projects) {
+                    const spd = Number(p.speed_per_day) || 0;
+                    if (spd > 0) {
+                        let newProg = (Number(p.current_progress) || 0) + (spd * daysPassed);
+                        let newStatus = p.status;
                         
-                    await logAction('系统结算', logMsg);
-                    alert(logMsg);
-                } else {
-                    alert("本月城市收支平衡，净利润为 0 GP。");
+                        if (newProg >= p.max_progress) {
+                            newProg = p.max_progress;
+                            newStatus = '已完成';
+                            await logAction('科研突破', `[${p.name}] 研发已完成！`);
+                        }
+                        
+                        await supabaseClient.from('research_projects')
+                            .update({ current_progress: newProg, status: newStatus })
+                            .eq('id', p.id);
+                    }
                 }
             }
         }
 
-        // 更新数据库时间
-        showLoading();
+        // 4. 更新数据库时间
         await supabaseClient.from('profiles').update({ 
-            world_date: { year: y, month: m, day: d } 
+            world_date: { year: nY, month: nM, day: nD } 
         }).eq('id', viewingUserId);
         
-        await logAction('时间跃迁', `DM 将时间调整为 FR${y}/${m}/${d}`);
+        // 同步本地变量
+        currentDate = { year: nY, month: nM, day: nD };
+
+        await logAction('时间跃迁', `DM 将时间调整为 FR${nY}/${nM}/${nD}`);
         await refreshAllData();
+        
+        // 刷新 DM 列表
+        if (typeof loadAdminResearch === 'function') loadAdminResearch();
+        
+        alert(`✅ 时空同步完成！\n时间已推进 ${daysPassed} 天，科研进度已按倍率结算。`);
+    } catch (e) {
+        console.error(e);
+        alert('同步失败');
+    } finally {
         hideLoading();
     }
+}
 
 
 async function loadGold() {
