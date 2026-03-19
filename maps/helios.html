@@ -7758,6 +7758,7 @@ function openWiki() {
     const d = countryData[currentCountryKey];
     if (!d) return;
     
+    // 填充文字
     document.getElementById('w-name').innerText = d.name;
     document.getElementById('w-history').innerText = d.wikiHistory;
     document.getElementById('w-geo').innerText = d.wikiGeo;
@@ -7765,15 +7766,16 @@ function openWiki() {
     document.getElementById('w-economy').innerText = d.wikiEconomy;
     document.getElementById('w-factions').innerText = d.wikiFactions;
 
+    // 先关闭小卡片
     closeModal();
-    wikiModal.style.display = 'flex';
+    wikiModal.style.display = 'flex'; 
     setTimeout(() => { wikiModal.classList.add('active'); }, 10);
 
-    // 新增：只有在点开维基百科时，高维污染才会爆发
+    // --- 南大陆专属劫持逻辑 ---
     const glitchLayer = document.getElementById('sou-wiki-glitch-layer');
     if (currentCountryKey === 'southern_community') {
-        glitchLayer.style.display = 'block';
-        startSouthernGlitch();
+        glitchLayer.style.display = 'block'; 
+        startSouthernGlitch(); 
     } else {
         glitchLayer.style.display = 'none';
         stopSouthernGlitch();
@@ -7782,13 +7784,13 @@ function openWiki() {
 
 function closeWiki() {
     wikiModal.classList.remove('active');
+    stopSouthernGlitch();
+    const glitchLayer = document.getElementById('sou-wiki-glitch-layer');
+    if(glitchLayer) glitchLayer.style.display = 'none';
+
     setTimeout(() => { 
         wikiModal.style.display = 'none'; 
-        
-        stopSouthernGlitch();
-        document.getElementById('sou-wiki-glitch-layer').style.display = 'none';
-        
-        openCard(currentCountryKey); 
+        openCard(currentCountryKey);
     }, 300);
 }
 
