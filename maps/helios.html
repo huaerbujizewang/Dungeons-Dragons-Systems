@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赫里奥斯地理志</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Serif+SC:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --suz-bg: #111;
+            --suz-card-bg: #25262c;
+            --suz-gold: #cba052;
+            --suz-gray: #888;
+            --suz-border: #444;
+            --suz-red: #d9534f;
+            --suz-green: #5cb85c;
+        }
+
+        body { margin: 0; padding: 0; background-color: var(--suz-bg); font-family: "PingFang SC", "Roboto", sans-serif; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; }
+
+        .floating-back-btn { position: fixed; top: 20px; left: 20px; z-index: 100; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--suz-gold); color: var(--suz-gold); padding: 10px 20px; text-decoration: none; font-family: 'Playfair Display', serif; font-size: 14px; transition: 0.3s; backdrop-filter: blur(4px); }
+        .floating-back-btn:hover { background: var(--suz-gold); color: #000; }
+
+        /* ====== 地图核心叠放逻辑 ====== */
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100vh; /* 满屏高度 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #050505;
+        }
+        
+        .map-container {
+            position: relative;
+            /* 设定最大宽度，保持原图比例 */
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 3194 / 1825; /* 极其重要：锁定你的原图比例 */
+        }
+
+        /* 底层原图 */
+        .map-base-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none; /* 让鼠标穿透图片，直接点到 SVG 上 */
+        }
+
+        /* 顶层透明 SVG 互动区 */
+        .map-interactive-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+
+        /* SVG 路径悬停动效 */
+        .region-poly { fill: transparent; stroke: transparent; cursor: pointer; transition: all 0.2s ease; }
+        .region-poly:hover { fill: rgba(203, 160, 82, 0.35); stroke: var(--suz-gold); stroke-width: 3px; }
+
+        /* ====== 第一层：概览小卡片 ====== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        
+        .suz-card { width: 420px; background-color: var(--suz-card-bg); border: 1px solid var(--suz-border); border-top: 4px solid var(--suz-gold); box-shadow: 0 20px 60px rgba(0,0,0,0.8); transform: translateY(20px); transition: transform 0.3s ease; position: relative; }
+        .modal-overlay.active .suz-card { transform: translateY(0); }
+        
+        .close-btn { position: absolute; top: 10px; right: 15px; color: var(--suz-gray); font-size: 24px; cursor: pointer; z-index: 10; transition: 0.2s; }
+        .close-btn:hover { color: #fff; }
+        
+        .suz-header { background: linear-gradient(180deg, #2a0845 0%, #0a0410 100%); padding: 25px 20px; text-align: center; border-bottom: 1px solid var(--suz-border); }
+        .suz-country-name { font-family: 'Noto Serif SC', serif; font-size: 28px; color: var(--suz-gold); letter-spacing: 1px; margin-bottom: 8px; }
+        .suz-motto { font-size: 13px; color: var(--suz-gray); font-style: italic; }
+        
+        .suz-visuals { display: flex; padding: 20px; gap: 15px; align-items: flex-start; background: rgba(0,0,0,0.2); }
+        .suz-flag-container { width: 100px; height: 66px; background-color: #000; border: 1px solid #555; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; flex-shrink: 0; }
+        .suz-flag-text { color: #555; font-size: 10px; display: block; }
+        .suz-desc { font-size: 13px; line-height: 1.5; color: #ccc; flex: 1; }
+        
+        .suz-data-grid { padding: 10px 25px 25px 25px; }
+        .suz-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        .suz-row:last-child { border-bottom: none; }
+        .suz-label { color: var(--suz-gray); font-weight: 500;}
+        .suz-value { font-weight: bold; text-align: right; color: #fff; }
+
+        .suz-action-btn { width: 100%; padding: 15px; background: #2f3036; border: none; border-top: 1px solid var(--suz-border); color: var(--suz-gray); cursor: pointer; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; transition: 0.2s; }
+        .suz-action-btn:hover { background: var(--suz-gold); color: #000; font-weight: bold; }
+
+        /* ====== 第二层：4:3 维基大弹窗 ====== */
+        .wiki-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 2000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
+        .wiki-overlay.active { display: flex; opacity: 1; }
+
+        .wiki-container { width: 80vw; max-width: 1000px; aspect-ratio: 4 / 3; max-height: 85vh; background-color: var(--suz-card-bg); border: 1px solid var(--suz-border); border-top: 4px solid var(--suz-gold); box-shadow: 0 30px 80px rgba(0,0,0,1); display: flex; transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; }
+        .wiki-overlay.active .wiki-container { transform: scale(1); }
+
+        .wiki-sidebar { width: 25%; background: #1e1f24; border-right: 1px solid var(--suz-border); padding: 30px 20px; overflow-y: auto; }
+        .wiki-nav-title { color: var(--suz-gray); font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        .wiki-nav-link { display: block; color: #ccc; text-decoration: none; padding: 10px 15px; margin-bottom: 8px; border-radius: 4px; font-size: 14px; transition: 0.2s; border-left: 3px solid transparent; }
+        .wiki-nav-link:hover { background: rgba(255,255,255,0.05); color: var(--suz-gold); border-left-color: var(--suz-gold); }
+
+        .wiki-content { width: 75%; padding: 40px 50px; overflow-y: auto; scroll-behavior: smooth; }
+        .wiki-content::-webkit-scrollbar { width: 8px; }
+        .wiki-content::-webkit-scrollbar-track { background: transparent; }
+        .wiki-content::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .wiki-content::-webkit-scrollbar-thumb:hover { background: var(--suz-gold); }
+
+        .wiki-h1 { font-family: 'Noto Serif SC', serif; font-size: 36px; color: var(--suz-gold); margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 20px; }
+        .wiki-section { margin-bottom: 40px; }
+        .wiki-h2 { color: #fff; font-size: 20px; font-family: 'Noto Serif SC', serif; margin-bottom: 15px; display: flex; align-items: center; }
+        .wiki-h2::before { content: "◆"; color: var(--suz-gold); font-size: 14px; margin-right: 10px; }
+        .wiki-text { font-size: 15px; line-height: 1.8; color: #bbb; text-align: justify; white-space: pre-wrap; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <a href="../index.html" class="floating-back-btn">⬅ 返回主界面</a>
+
+    <div class="map-wrapper">
+        <div class="map-container">
+            <img src="images/helios_map.jpg" alt="Helios Map" class="map-base-image">
+            
+            <svg viewBox="0 0 3194 1825" class="map-interactive-layer" xmlns="http://www.w3.org/2000/svg">
+                </svg>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="suz-card">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <div class="suz-header">
+                <div class="suz-country-name" id="c-name">国家名称</div>
+                <div class="suz-motto" id="c-motto">"标语/格言"</div>
+            </div>
+            <div class="suz-visuals">
+                <div class="suz-flag-container">
+                    <span id="c-flag-text" class="suz-flag-text">FLAG</span>
+                </div>
+                <div class="suz-desc" id="c-desc">概览简述</div>
+            </div>
+            <div class="suz-data-grid">
+                <div class="suz-row"><span class="suz-label">首府</span><span class="suz-value" id="c-capital">未知</span></div>
+                <div class="suz-row"><span class="suz-label">政治体制</span><span class="suz-value" id="c-gov">未知</span></div>
+                <div class="suz-row"><span class="suz-label">统治者</span><span class="suz-value" id="c-ruler">未知</span></div>
+                <div class="suz-row"><span class="suz-label">主要种族</span><span class="suz-value" id="c-race">未知</span></div>
+                <div class="suz-row"><span class="suz-label">盟友</span><span class="suz-value" style="color: var(--suz-green);" id="c-allies">无</span></div>
+                <div class="suz-row"><span class="suz-label">敌人</span><span class="suz-value" style="color: var(--suz-red);" id="c-enemies">无</span></div>
+            </div>
+            <button class="suz-action-btn" onclick="openWiki()">查看完整情报档案</button>
+        </div>
+    </div>
+
+    <div class="wiki-overlay" id="wiki-modal">
+        <div class="wiki-container">
+            <span class="close-btn" style="top: 15px; right: 20px; z-index: 3000;" onclick="closeWiki()">×</span>
+            <div class="wiki-sidebar">
+                <div class="wiki-nav-title">档案目录 (Index)</div>
+                <a href="#sec-history" class="wiki-nav-link">历史沿革</a>
+                <a href="#sec-geo" class="wiki-nav-link">地理与气候</a>
+                <a href="#sec-society" class="wiki-nav-link">社会与文化</a>
+                <a href="#sec-economy" class="wiki-nav-link">经济与资源</a>
+                <a href="#sec-factions" class="wiki-nav-link">派系与权力结构</a>
+            </div>
+            <div class="wiki-content">
+                <h1 class="wiki-h1" id="w-name">国家名称</h1>
+                <div id="sec-history" class="wiki-section"><h2 class="wiki-h2">历史沿革</h2><p class="wiki-text" id="w-history">加载中...</p></div>
+                <div id="sec-geo" class="wiki-section"><h2 class="wiki-h2">地理与气候</h2><p class="wiki-text" id="w-geo">加载中...</p></div>
+                <div id="sec-society" class="wiki-section"><h2 class="wiki-h2">社会与文化</h2><p class="wiki-text" id="w-society">加载中...</p></div>
+                <div id="sec-economy" class="wiki-section"><h2 class="wiki-h2">经济与资源</h2><p class="wiki-text" id="w-economy">加载中...</p></div>
+                <div id="sec-factions" class="wiki-section"><h2 class="wiki-h2">派系与权力结构</h2><p class="wiki-text" id="w-factions">加载中...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCountryKey = null;
+
+        // 在这里填入你赫里奥斯星系各国的设定数据
+        const countryData = {
+            "empire": {
+                name: "洛萨维亚帝国",
+                motto: "\"星河浩瀚，唯吾独尊\"",
+                desc: "占据星系核心区域的庞大势力，工业化极度发达的威权统治国家。",
+                capital: "洛萨维亚主星",
+                gov: "中央集权帝制",
+                ruler: "至高皇帝",
+                race: "帝国人, 改造体",
+                allies: "暂无",
+                enemies: "红土人民联盟, 反叛军",
+                flagText: "EMP",
+
+                wikiHistory: "详细的历史背景...",
+                wikiGeo: "详细的地理与气候...",
+                wikiSociety: "详细的社会文化...",
+                wikiEconomy: "详细的经济与资源...",
+                wikiFactions: "详细的派系..."
+            }
+        };
+
+        const modal = document.getElementById('modal');
+        const wikiModal = document.getElementById('wiki-modal');
+
+        function openCard(key) {
+            currentCountryKey = key;
+            const d = countryData[key];
+            if (!d) return;
+
+            document.getElementById('c-name').innerText = d.name;
+            document.getElementById('c-motto').innerText = d.motto;
+            document.getElementById('c-desc').innerText = d.desc;
+            document.getElementById('c-capital').innerText = d.capital;
+            document.getElementById('c-gov').innerText = d.gov;
+            document.getElementById('c-ruler').innerText = d.ruler;
+            document.getElementById('c-race').innerText = d.race;
+            document.getElementById('c-allies').innerText = d.allies;
+            document.getElementById('c-enemies').innerText = d.enemies;
+            document.getElementById('c-flag-text').innerText = d.flagText;
+
+            modal.style.display = 'flex';
+            setTimeout(() => { modal.classList.add('active'); }, 10);
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
+        }
+
+        function openWiki() {
+            const d = countryData[currentCountryKey];
+            if (!d) return;
+            document.getElementById('w-name').innerText = d.name;
+            document.getElementById('w-history').innerText = d.wikiHistory;
+            document.getElementById('w-geo').innerText = d.wikiGeo;
+            document.getElementById('w-society').innerText = d.wikiSociety;
+            document.getElementById('w-economy').innerText = d.wikiEconomy;
+            document.getElementById('w-factions').innerText = d.wikiFactions;
+
+            closeModal();
+            wikiModal.style.display = 'flex';
+            setTimeout(() => { wikiModal.classList.add('active'); }, 10);
+        }
+
+        function closeWiki() {
+            wikiModal.classList.remove('active');
+            setTimeout(() => { 
+                wikiModal.style.display = 'none'; 
+                openCard(currentCountryKey); 
+            }, 300);
+        }
+
+        modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+        wikiModal.addEventListener('click', e => { if (e.target === wikiModal) closeWiki(); });
+    </script>
+</body>
+</html>
