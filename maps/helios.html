@@ -7794,29 +7794,6 @@ function closeWiki() {
     }, 300);
 }
 
-        function openWiki() {
-            const d = countryData[currentCountryKey];
-            if (!d) return;
-            document.getElementById('w-name').innerText = d.name;
-            document.getElementById('w-history').innerText = d.wikiHistory;
-            document.getElementById('w-geo').innerText = d.wikiGeo;
-            document.getElementById('w-society').innerText = d.wikiSociety;
-            document.getElementById('w-economy').innerText = d.wikiEconomy;
-            document.getElementById('w-factions').innerText = d.wikiFactions;
-
-            closeModal();
-            wikiModal.style.display = 'flex';
-            setTimeout(() => { wikiModal.classList.add('active'); }, 10);
-        }
-
-        function closeWiki() {
-            wikiModal.classList.remove('active');
-            setTimeout(() => { 
-                wikiModal.style.display = 'none'; 
-                openCard(currentCountryKey); 
-            }, 300);
-        }
-
         modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
         wikiModal.addEventListener('click', e => { if (e.target === wikiModal) closeWiki(); });
     </script>
