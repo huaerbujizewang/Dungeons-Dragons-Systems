@@ -7020,6 +7020,7 @@
             </div>
             <div class="suz-visuals">
                 <div class="suz-flag-container">
+                    <img id="c-flag-img" src="" alt="国旗" style="width: 100%; height: 100%; object-fit: cover; display: none;">
                     <span id="c-flag-text" class="suz-flag-text">FLAG</span>
                 </div>
                 <div class="suz-desc" id="c-desc">概览简述</div>
@@ -7163,25 +7164,42 @@ const countryData = {
         const modal = document.getElementById('modal');
         const wikiModal = document.getElementById('wiki-modal');
 
-        function openCard(key) {
-            currentCountryKey = key;
-            const d = countryData[key];
-            if (!d) return;
+function openCard(key) {
+    currentCountryKey = key;
+    const d = countryData[key];
+    if (!d) return;
 
-            document.getElementById('c-name').innerText = d.name;
-            document.getElementById('c-motto').innerText = d.motto;
-            document.getElementById('c-desc').innerText = d.desc;
-            document.getElementById('c-capital').innerText = d.capital;
-            document.getElementById('c-gov').innerText = d.gov;
-            document.getElementById('c-ruler').innerText = d.ruler;
-            document.getElementById('c-race').innerText = d.race;
-            document.getElementById('c-allies').innerText = d.allies;
-            document.getElementById('c-enemies').innerText = d.enemies;
-            document.getElementById('c-flag-text').innerText = d.flagText;
+    // 1. 填充基础文字信息
+    document.getElementById('c-name').innerText = d.name;
+    document.getElementById('c-motto').innerText = d.motto;
+    document.getElementById('c-desc').innerText = d.desc;
+    document.getElementById('c-capital').innerText = d.capital;
+    document.getElementById('c-gov').innerText = d.gov;
+    document.getElementById('c-ruler').innerText = d.ruler;
+    document.getElementById('c-race').innerText = d.race;
+    document.getElementById('c-allies').innerText = d.allies;
+    document.getElementById('c-enemies').innerText = d.enemies;
 
-            modal.style.display = 'flex';
-            setTimeout(() => { modal.classList.add('active'); }, 10);
-        }
+    // 2. 核心改动：3:2 国旗逻辑
+    const flagImg = document.getElementById('c-flag-img'); // 你的图片标签
+    const flagText = document.getElementById('c-flag-text'); // 你的文字标签
+
+    // 先重置状态：默认显示文字，隐藏图片
+    flagImg.style.display = "none";
+    flagText.style.display = "block";
+    flagText.innerText = d.flagText || "FLAG";
+
+    // 如果数据里填了国旗路径，就切换显示
+    if (d.flagFile && d.flagFile !== "") {
+        flagImg.src = d.flagFile;
+        flagImg.style.display = "block";
+        flagText.style.display = "none";
+    }
+
+    // 3. 打开弹窗
+    modal.style.display = 'flex';
+    setTimeout(() => { modal.classList.add('active'); }, 10);
+}
 
         function closeModal() {
             modal.classList.remove('active');
