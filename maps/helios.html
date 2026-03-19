@@ -47,14 +47,19 @@
             pointer-events: none; 
         }
 
-        /* 顶层透明 SVG 互动区 */
-        .map-interactive-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
+        /* 核心逻辑：直接让 SVG 里的所有路径变透明 */
+        .map-interactive-layer path {
+            fill: transparent !important;       
+            stroke: none !important;            
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* 只有鼠标滑过时，才显示发光的暗金色 */
+        .map-interactive-layer path:hover {
+            fill: rgba(203, 160, 82, 0.4) !important; 
+            stroke: #cba052 !important;
+            stroke-width: 2px !important;
         }
 
         .region-poly { 
