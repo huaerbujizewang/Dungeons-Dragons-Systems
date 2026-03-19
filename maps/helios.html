@@ -7070,23 +7070,30 @@
         };
 
         window.onload = function() {
-    const paths = document.querySelectorAll('.map-interactive-layer path');
+            const paths = document.querySelectorAll('.map-interactive-layer path');
+            console.log("诊断：总共抓取到 " + paths.length + " 个路径");
 
-    paths.forEach(path => {
-        // 获取路径颜色并转为小写
-        let color = (path.getAttribute('fill') || path.style.fill || "").toLowerCase();
+            paths.forEach((path, index) => {
+                // 获取颜色的原始值
+                let rawFill = path.getAttribute('fill') || path.style.fill || "";
         
-        // 遍历对照表
-        for (const [hex, countryID] of Object.entries(colorMapping)) {
-            if (color.includes(hex.toLowerCase())) {
-                // 命中颜色，绑定身份证
-                path.classList.add('region-poly');
-                path.setAttribute('onclick', `openCard('${countryID}')`);
-                break; // 匹配到了就跳出循环，提高效率
-            }
-        }
-    });
-};
+                // 诊断：在控制台打印前5个路径的颜色，看看浏览器到底识别成了什么
+                if(index < 5) console.log("路径 " + index + " 的识别颜色为: " + rawFill);
+
+                // 统一转成小写进行判定
+                let color = rawFill.toLowerCase();
+
+                // 修正判定逻辑：兼容 Hex 和 RGB（帝国的绿色 rgb 值为 25, 154, 0）
+                if (color.includes("#199a00") || color.includes("rgb(25, 154, 0)")) {
+                    path.classList.add('region-poly');
+                    path.style.cursor = "pointer"; // 强制鼠标变手型，证明绑定成功
+                    path.onclick = function() {
+                        console.log("点击成功：触发帝国档案");
+                        openCard('empire');
+                    };
+                }
+            });
+        };
 
         // 在这里填入你赫里奥斯星系各国的设定数据
         const countryData = {
