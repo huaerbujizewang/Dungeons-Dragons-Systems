@@ -7116,10 +7116,10 @@ const colorMapping = {
         };
 
         // 在这里填入你赫里奥斯星系各国的设定数据
-        const countryData = {
+const countryData = {
     "empire": {
         name: "洛萨维亚帝国",
-        motto: "\"星河浩瀚，唯吾独尊\"", 
+        motto: "\"星河浩瀚，唯吾独尊\"",
         desc: "占据星系核心区域的庞大势力，现由最高军事委员会通过军法实施全面统治。",
         capital: "因斯卡利亚 (前首府：白城)",
         gov: "军政府",
@@ -7127,16 +7127,37 @@ const colorMapping = {
         race: "几乎所有",
         allies: "北境联盟，提尔斯王国，桑格利亚大公国，温顿公国",
         enemies: "红土人民联盟，南大陆共同体，秋津共和国，卡尔塔联邦，哥伦比亚国",
+        flagImg: "images/flags/empire.png", 
         flagText: "EMP",
-
-        // 核心文案占位符
         wikiHistory: "详细的历史背景...",
         wikiGeo: "详细的地理与气候...",
         wikiSociety: "详细的社会文化...",
         wikiEconomy: "详细的经济与资源...",
         wikiFactions: "详细的派系..."
-    }
-    // 待添加其他国家...
+    },
+    "red_soil": { name: "红土人民联盟", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "RED", wikiHistory: "详细的历史背景...", wikiGeo: "详细的地理与气候...", wikiSociety: "详细的社会文化...", wikiEconomy: "详细的经济与资源...", wikiFactions: "详细的派系..." },
+    "akitsu": { name: "秋津共和国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "AKI", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "tyrs": { name: "提尔斯王国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "TYR", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "sangria": { name: "桑格利亚大公国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "SAN", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "northern_alliance": { name: "北境联盟", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "NOR", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "silverglow": { name: "银辉圣座", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "SIL", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "winton": { name: "温顿公国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "WIN", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "liger": { name: "利盖尔联邦", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "LIG", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "columbia": { name: "哥伦比亚国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "COL", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "soma": { name: "索玛生命科技", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "SOM", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "barida": { name: "巴里达王国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "BAR", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "free_cities": { name: "自由城邦同盟", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "FRE", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "southern_community": { name: "南大陆共同体", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "SOU", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "nozella": { name: "诺泽利亚王国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "NOZ", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "pale_bone": { name: "苍骨执政府", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "BON", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "karta": { name: "卡尔塔联邦", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "KAR", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "vicenza": { name: "维申萨共和国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "VIC", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "steel_covenant": { name: "钢铁契约军事同盟", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "STE", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "elysium": { name: "极乐自由港", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "ELY", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "oakhaven": { name: "奥克海文", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "OAK", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "pale_court": { name: "苍白王庭", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "COU", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "arachnid_nation": { name: "厄拉蛛国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "ARA", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." },
+    "holy_silk": { name: "渊印圣丝教国", motto: "占位符", desc: "占位符", capital: "待定", gov: "待定", ruler: "待定", race: "待定", allies: "无", enemies: "无", flagImg: "", flagText: "SIL", wikiHistory: "...", wikiGeo: "...", wikiSociety: "...", wikiEconomy: "...", wikiFactions: "..." }
 };
 
         const modal = document.getElementById('modal');
