@@ -7108,10 +7108,17 @@
     </div>
 
     <div class="wiki-overlay" id="wiki-modal">
-        <div class="wiki-container">
-            <span class="close-btn" style="top: 15px; right: 20px; z-index: 3000;" onclick="closeWiki()">×</span>
+        <div class="wiki-container" style="position: relative; overflow: hidden;">
+            
+            <span class="close-btn" style="position: absolute; top: 15px; right: 20px; z-index: 9999;" onclick="closeWiki()">×</span>
+            
+            <div id="sou-wiki-glitch-layer" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 8000; background-color: black;">
+                <div id="sou-glitch-images-container" style="position: absolute; width: 100%; height: 100%; z-index: 8001; pointer-events: none;"></div>
+                <div id="sou-scrambled-text" style="position: absolute; bottom: 20px; left: 20px; color: lime; font-family: monospace; font-size: 16px; line-height: 1.2; text-shadow: 0 0 5px lime; font-weight: bold; z-index: 8002; pointer-events: none;"></div>
+            </div>
+
             <div class="wiki-sidebar">
-                <div class="wiki-nav-title">档案目录 (Index)</div>
+                <div class="wiki-nav-title">档案目录 Index</div>
                 <a href="#sec-history" class="wiki-nav-link">历史沿革</a>
                 <a href="#sec-geo" class="wiki-nav-link">地理与气候</a>
                 <a href="#sec-society" class="wiki-nav-link">社会与文化</a>
@@ -7126,10 +7133,6 @@
                 <div id="sec-economy" class="wiki-section"><h2 class="wiki-h2">经济与资源</h2><p class="wiki-text" id="w-economy">加载中...</p></div>
                 <div id="sec-factions" class="wiki-section"><h2 class="wiki-h2">派系与权力结构</h2><p class="wiki-text" id="w-factions">加载中...</p></div>
             </div>
-        </div>
-        <div id="sou-wiki-glitch-layer" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2999; overflow: hidden; background-color: black;">
-            <div id="sou-glitch-images-container" style="position: absolute; width: 100%; height: 100%; pointer-events: none;"></div>
-            <div id="sou-scrambled-text" style="position: absolute; bottom: 20px; left: 20px; color: lime; font-family: monospace; font-size: 16px; line-height: 1.2; text-shadow: 0 0 5px lime; font-weight: bold; pointer-events: none; z-index: 3000;"></div>
         </div>
     </div>
 
@@ -7146,12 +7149,14 @@
 }
 
 
+// 核心污染发动函数
 function startSouthernGlitch() {
     const textEl = document.getElementById('sou-scrambled-text');
     const imgContainer = document.getElementById('sou-glitch-images-container');
     imgContainer.innerHTML = ''; 
 
-    souGlitchIntervals.push(setInterval(() => {
+    // 维持乱码字符的稳定跳动
+    const textTimer = setInterval(() => {
         textEl.innerHTML = `
             &gt; FATAL ERROR: COGNITIVE HAZARD DETECTED<br>
             &gt; ${generateGlitchString(45)}<br>
@@ -7159,34 +7164,45 @@ function startSouthernGlitch() {
             &gt; ENTITY INVADING LOCAL DATASTREAM<br>
             &gt; TRACE: [${Math.random().toString(16).substring(2, 10).toUpperCase()}]
         `;
-    }, 50));
+    }, 100);
+    souGlitchIntervals.push(textTimer);
 
-    souGlitchIntervals.push(setInterval(() => {
-        const imgId = Math.floor(Math.random() * 8) + 1; 
+    // 极其不规律的图片闪烁引擎
+    function spawnImage() {
+        const imgId = Math.floor(Math.random() * 8) + 1;
         const img = document.createElement('img');
         img.src = `images/glitch/sou_glitch_${imgId}.jpg`;
         img.style.position = 'absolute';
-        
-        // 极其混沌的坐标、尺寸和形变生成
-        img.style.left = (Math.random() * 120 - 10) + '%'; 
-        img.style.top = (Math.random() * 120 - 10) + '%';
-        img.style.width = (Math.random() * 70 + 20) + '%';
+        img.style.left = (Math.random() * 100 - 10) + '%'; 
+        img.style.top = (Math.random() * 100 - 10) + '%';
+        img.style.width = (Math.random() * 60 + 30) + '%';
         img.style.transform = `rotate(${Math.random() * 360}deg) scaleX(${Math.random() > 0.5 ? 1 : -1})`;
-        img.style.opacity = Math.random() * 0.9 + 0.1;
-        img.style.filter = 'contrast(300%) grayscale(100%) invert(' + (Math.random() > 0.7 ? 100 : 0) + '%)';
+        img.style.opacity = Math.random() * 0.8 + 0.2;
+        img.style.pointerEvents = 'none';
         
         imgContainer.appendChild(img);
 
-        // 让图片出现极短时间后瞬间撕裂消失
+        // 决定这张图片在屏幕上停留多久。有的瞬间消失，有的会像卡住一样停留1.5秒。
+        const lifespan = Math.random() * 1450 + 50; 
         setTimeout(() => {
             if (imgContainer.contains(img)) img.remove();
-        }, Math.random() * 150 + 50); 
-    }, 80)); // 每隔0.08秒砸一张新图出来
+        }, lifespan);
+
+        // 决定下一张图片什么时候砸出来。可能无缝衔接，也可能停顿几百毫秒。
+        const nextSpawnTime = Math.random() * 400 + 30;
+        const timerId = setTimeout(spawnImage, nextSpawnTime);
+        souGlitchIntervals.push(timerId); 
+    }
+
+    // 启动引擎
+    spawnImage();
 }
 
-
 function stopSouthernGlitch() {
-    souGlitchIntervals.forEach(clearInterval);
+    souGlitchIntervals.forEach(timer => {
+        clearInterval(timer);
+        clearTimeout(timer); 
+    });
     souGlitchIntervals = [];
     const imgContainer = document.getElementById('sou-glitch-images-container');
     if (imgContainer) imgContainer.innerHTML = '';
