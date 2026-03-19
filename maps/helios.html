@@ -74,6 +74,8 @@
             stroke: var(--suz-gold) !important; 
             stroke-width: 2px !important; 
         }
+
+        
         /* ====== 第一层：概览小卡片 ====== */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
         .modal-overlay.active { display: flex; opacity: 1; }
@@ -124,6 +126,74 @@
         .wiki-h2 { color: #fff; font-size: 20px; font-family: 'Noto Serif SC', serif; margin-bottom: 15px; display: flex; align-items: center; }
         .wiki-h2::before { content: "◆"; color: var(--suz-gold); font-size: 14px; margin-right: 10px; }
         .wiki-text { font-size: 15px; line-height: 1.8; color: #bbb; text-align: justify; white-space: pre-wrap; margin: 0; }
+/* 南大陆专属 */
+#sou-pollution-overlay {
+    position: absolute; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    z-index: 999; 
+    display: none; 
+    overflow: hidden;
+    pointer-events: none;
+}
+
+#sou-pollution-overlay.active {
+    display: block;
+    animation: sou-screen-shake 0.1s infinite;
+}
+
+
+.sou-glitch-bg {
+    position: absolute;
+    top: -10%; left: -10%;
+    width: 120%; height: 120%; 
+    background-size: cover;
+    background-position: center;
+    opacity: 0; /* 默认透明 */
+    filter: contrast(200%) brightness(50%) grayscale(100%); 
+}
+
+/* 图片闪烁交替动画 */
+#sou-glitch-bg-1 { background-image: url('images/glitch/sou_glitch_1.jpg'); animation: sou-bg-flash-1 3s infinite; }
+#sou-glitch-bg-2 { background-image: url('images/glitch/sou_glitch_2.jpg'); animation: sou-bg-flash-2 3s infinite; }
+/* ...根据图片数量以此类推 */
+
+@keyframes sou-bg-flash-1 { 0%, 20% { opacity: 0.3; } 21%, 100% { opacity: 0; } }
+@keyframes sou-bg-flash-2 { 0%, 20% { opacity: 0; } 21%, 40% { opacity: 0.3; } 41%, 100% { opacity: 0; } }
+
+/* --- 老式电视扫描线/雪花屏叠加 --- */
+.sou-noise-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 1px,
+        transparent 1px,
+        transparent 2px
+    ); 
+    opacity: 0.5;
+}
+
+/* --- 随机乱码文本 --- */
+#sou-scrambled-text {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    color: rgba(0, 255, 0, 0.7); 
+    font-family: 'Courier New', monospace; 
+    font-size: 14px;
+    line-height: 1.2;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    animation: sou-text-pulse 0.2s infinite;
+}
+
+/* 辅助动画 */
+@keyframes sou-screen-shake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(1px, -1px); } 75% { transform: translate(-1px, 1px); } }
+@keyframes sou-text-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
@@ -7012,6 +7082,12 @@
 
     <div class="modal-overlay" id="modal">
         <div class="suz-card">
+            <div id="sou-pollution-overlay">
+                <div id="sou-glitch-bg-1" class="sou-glitch-bg"></div>
+                <div id="sou-glitch-bg-2" class="sou-glitch-bg"></div>
+                <div class="sou-noise-overlay"></div>
+                <div id="sou-scrambled-text"></div>
+            </div>
             <span class="close-btn" onclick="closeModal()">×</span>
             <div class="suz-header">
                 <div class="suz-country-name" id="c-name">国家名称</div>
@@ -7060,7 +7136,15 @@
 
     <script>
         let currentCountryKey = null;
-
+        let souGlitchInterval = null;
+        const glitchChars = "龘齉齾爩鱻麤龗灪吁臾舁𠔻臱𠔻𠔻ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789¡¿§¶☠☢☣☤☬☸";
+        function generateGlitchString(length) {
+            let result = "";
+            for (let i = 0; i < length; i++) {
+                result += glitchChars.charAt(Math.floor(Math.random() * glitchChars.length));
+            }
+            return result;
+        }
 // 颜色与国家 ID 的对照表
 const colorMapping = {
     "#199a00": "empire",             // 洛萨维亚帝国
@@ -7574,11 +7658,11 @@ function openCard(key) {
     currentCountryKey = key;
     let d = countryData[key];
 
-    // 如果还没写数据，显示一个“开发中”的占位对象，方便你测试
+    // 如果还没写数据，显示一个开发中的占位对象
     if (!d) {
         d = {
-            name: "情报待完善 (" + key + ")",
-            motto: "“该地区的详细数据尚未解密”",
+            name: "情报待完善 - " + key,
+            motto: "该地区的详细数据尚未解密",
             desc: "我们的侦察机尚未带回该地区的详细地理和政治报告。请指挥官稍后再试。",
             capital: "???",
             gov: "???",
@@ -7590,6 +7674,38 @@ function openCard(key) {
         };
     }
 
+    // 南大陆专属污染判定
+    const pollutionOverlay = document.getElementById('sou-pollution-overlay');
+    const glitchTextElement = document.getElementById('sou-scrambled-text');
+
+    if (key === 'southern_community') {
+        // 激活污染层
+        pollutionOverlay.classList.add('active');
+
+        // 定时更新乱码内容，模拟高维信号干扰
+        if (!souGlitchInterval) {
+            souGlitchInterval = setInterval(() => {
+                glitchTextElement.innerHTML = `
+                    &gt; DATA CORRUPTED<br>
+                    &gt; SIGNAL INTERFERENCE: HIGH<br>
+                    &gt; ${generateGlitchString(25)}<br>
+                    &gt; ${generateGlitchString(30)}<br>
+                    &gt; WARNING: COGNITIVE HAZARD<br>
+                    &gt; ${generateGlitchString(35)}<br>
+                    &gt; OUT_GOD_CHN: [${Math.random().toString(16).substring(2, 8).toUpperCase()}]
+                `;
+            }, 80); // 每0.08秒刷新一次乱码，闪烁感更强
+        }
+    } else {
+        // 点击其他国家：确保污染层隐藏，并清除定时器防止内存泄漏
+        pollutionOverlay.classList.remove('active');
+        if (souGlitchInterval) {
+            clearInterval(souGlitchInterval);
+            souGlitchInterval = null;
+        }
+    }
+
+    // 原有的数据填充逻辑保持不变
     document.getElementById('c-name').innerText = d.name;
     document.getElementById('c-motto').innerText = d.motto;
     document.getElementById('c-desc').innerText = d.desc;
@@ -7600,7 +7716,7 @@ function openCard(key) {
     document.getElementById('c-allies').innerText = d.allies;
     document.getElementById('c-enemies').innerText = d.enemies;
 
-    // 国旗逻辑：统一使用 flagFile 这个词
+    // 国旗逻辑
     const flagImg = document.getElementById('c-flag-img');
     const flagText = document.getElementById('c-flag-text');
 
@@ -7608,14 +7724,12 @@ function openCard(key) {
     flagText.style.display = "block";
     flagText.innerText = d.flagText || "FLAG";
 
-    // 注意：这里统一改成了 flagFile
     if (d.flagFile && d.flagFile !== "") {
         flagImg.src = d.flagFile;
         flagImg.onload = function() {
             flagImg.style.display = "block";
             flagText.style.display = "none";
         };
-        // 容错处理：如果图片路径错了加载不出来，保持文字显示
         flagImg.onerror = function() {
             console.error("国旗加载失败，请检查路径: " + d.flagFile);
         };
@@ -7625,10 +7739,19 @@ function openCard(key) {
     setTimeout(() => { modal.classList.add('active'); }, 10);
 }
 
-        function closeModal() {
-            modal.classList.remove('active');
-            setTimeout(() => { modal.style.display = 'none'; }, 300);
-        }
+function closeModal() {
+    modal.classList.remove('active');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+    
+    if (souGlitchInterval) {
+        clearInterval(souGlitchInterval);
+        souGlitchInterval = null;
+    }
+    const pollutionOverlay = document.getElementById('sou-pollution-overlay');
+    if (pollutionOverlay) {
+        pollutionOverlay.classList.remove('active');
+    }
+}
 
         function openWiki() {
             const d = countryData[currentCountryKey];
