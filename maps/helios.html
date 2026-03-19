@@ -7062,6 +7062,32 @@
     <script>
         let currentCountryKey = null;
 
+        // 颜色与国家 ID 的对照表
+        const colorMapping = {
+            "#199a00": "empire",    // 洛萨维亚帝国
+            "#ffff00": "kingdom_a", // 你之后的第二个国家颜色：ID
+            "#ff00ff": "republic_b" // 你之后的第三个国家颜色：ID
+        };
+
+        window.onload = function() {
+    const paths = document.querySelectorAll('.map-interactive-layer path');
+
+    paths.forEach(path => {
+        // 获取路径颜色并转为小写
+        let color = (path.getAttribute('fill') || path.style.fill || "").toLowerCase();
+        
+        // 遍历对照表
+        for (const [hex, countryID] of Object.entries(colorMapping)) {
+            if (color.includes(hex.toLowerCase())) {
+                // 命中颜色，绑定身份证
+                path.classList.add('region-poly');
+                path.setAttribute('onclick', `openCard('${countryID}')`);
+                break; // 匹配到了就跳出循环，提高效率
+            }
+        }
+    });
+};
+
         // 在这里填入你赫里奥斯星系各国的设定数据
         const countryData = {
             "empire": {
