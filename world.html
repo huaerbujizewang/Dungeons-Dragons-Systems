@@ -23,7 +23,8 @@
         .region-card[data-type="east"] .card-header { background: linear-gradient(135deg, #434343 0%, #000000 100%); }
         /* 剑湾卡片配色 */
         .region-card[data-type="west"] .card-header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
-
+        /* 异世界卡片配色*/
+        .region-card[data-type="alien"] .card-header { background: linear-gradient(135deg, #2a0845 0%, #0a0410 100%); }
         .card-body { padding: 25px; }
         .card-title { font-size: 1.25em; font-weight: bold; margin-bottom: 10px; color: #111; }
         .card-desc { 
@@ -34,7 +35,7 @@
     overflow: hidden; 
     display: -webkit-box; 
     -webkit-line-clamp: 3; /* 旧版浏览器/移动端支持 */
-    line-clamp: 3;         /* 标准属性支持（新增这一行） */
+    line-clamp: 3;         /* 标准属性支持 */
     -webkit-box-orient: vertical; 
 }
         .card-meta { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #eee; font-size: 0.8em; color: #999; display: flex; justify-content: space-between; }
@@ -63,7 +64,7 @@
                             塞尔帝国及其周边邻国。在大瘟疫与贸易战的阴影下，古老的法师政权正在经历前所未有的体制改革。
                         </div>
                         <div class="card-meta">
-                            <span>FR 1494 DR</span>
+                            <span>1494 DR</span>
                             <span>7 个可互动区域</span>
                         </div>
                     </div>
@@ -78,8 +79,23 @@
                             从博德之门到书卷堡垒烛堡。作为费伦最繁忙的贸易走廊，这里正面临着神权崛起、内政动荡与古老威胁的显现。
                         </div>
                         <div class="card-meta">
-                            <span>FR 1494 DR</span>
+                            <span>1494 DR</span>
                             <span>6 个可互动区域</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 卡片 3：赫里奥斯 -->
+                <a href="maps/helios.html" class="region-card" data-type="alien">
+                    <div class="card-header">☄️</div>
+                    <div class="card-body">
+                        <div class="card-title">赫里奥斯</div>
+                        <div class="card-desc">
+                            拥有三颗宜居星球的星系，也是帝国人所在的世界。这里是异界来客的居所，也是跨界威胁的源头。
+                        </div>
+                        <div class="card-meta">
+                            <span>1092 AE</span>
+                            <span>数十个可互动区域</span>
                         </div>
                     </div>
                 </a>
