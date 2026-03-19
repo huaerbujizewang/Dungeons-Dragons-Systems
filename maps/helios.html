@@ -7090,33 +7090,34 @@ const colorMapping = {
     "#fc6184": "holy_silk"           // 渊印圣丝教国
 };
 
-        window.onload = function() {
-            const paths = document.querySelectorAll('.map-interactive-layer path');
-            console.log("诊断：总共抓取到 " + paths.length + " 个路径");
+window.onload = function() {
+    const paths = document.querySelectorAll('.map-interactive-layer path');
 
-            paths.forEach((path, index) => {
-                // 获取颜色的原始值
-                let rawFill = path.getAttribute('fill') || path.style.fill || "";
+    // 将 #hex 转换成 rgb 字符串，解决浏览器识别问题
+    function hexToRgb(hex) {
+        hex = hex.replace('#', '');
+        let r = parseInt(hex.substring(0, 2), 16);
+        let g = parseInt(hex.substring(2, 4), 16);
+        let b = parseInt(hex.substring(4, 6), 16);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    paths.forEach(path => {
+        let fill = (path.getAttribute('fill') || path.style.fill || "").toLowerCase();
         
-                // 诊断：在控制台打印前5个路径的颜色，看看浏览器到底识别成了什么
-                if(index < 5) console.log("路径 " + index + " 的识别颜色为: " + rawFill);
+        for (let hex in colorMapping) {
+            let targetRgb = hexToRgb(hex);
+            // 只要十六进制对上了，或者转换后的 RGB 对上了
+            if (fill.includes(hex.toLowerCase()) || fill.includes(targetRgb)) {
+                path.classList.add('region-poly');
+                path.setAttribute('onclick', `openCard('${colorMapping[hex]}')`);
+                break;
+            }
+        }
+    });
+};
 
-                // 统一转成小写进行判定
-                let color = rawFill.toLowerCase();
-
-                // 修正判定逻辑：兼容 Hex 和 RGB（帝国的绿色 rgb 值为 25, 154, 0）
-                if (color.includes("#199a00") || color.includes("rgb(25, 154, 0)")) {
-                    path.classList.add('region-poly');
-                    path.style.cursor = "pointer"; // 强制鼠标变手型，证明绑定成功
-                    path.onclick = function() {
-                        console.log("点击成功：触发帝国档案");
-                        openCard('empire');
-                    };
-                }
-            });
-        };
-
-        // 在这里填入你赫里奥斯星系各国的设定数据
+// 在这里填入你赫里奥斯星系各国的设定数据
 const countryData = {
     "empire": {
         name: "洛萨维亚帝国",
@@ -7128,7 +7129,7 @@ const countryData = {
         race: "几乎所有",
         allies: "北境联盟，提尔斯王国，桑格利亚大公国，温顿公国",
         enemies: "红土人民联盟，南大陆共同体，秋津共和国，卡尔塔联邦，哥伦比亚国",
-        flagImg: "images/flags/empire.png", 
+        flagFile: "images/flags/empire.png", 
         flagText: "EMP",
         wikiHistory: "详细的历史背景...",
         wikiGeo: "详细的地理与气候...",
@@ -7166,10 +7167,24 @@ const countryData = {
 
 function openCard(key) {
     currentCountryKey = key;
-    const d = countryData[key];
-    if (!d) return;
+    let d = countryData[key];
 
-    // 1. 填充基础文字信息
+    // 如果还没写数据，显示一个“开发中”的占位对象，方便你测试
+    if (!d) {
+        d = {
+            name: "情报待完善 (" + key + ")",
+            motto: "“该地区的详细数据尚未解密”",
+            desc: "我们的侦察机尚未带回该地区的详细地理和政治报告。请指挥官稍后再试。",
+            capital: "???",
+            gov: "???",
+            ruler: "???",
+            race: "???",
+            allies: "暂无",
+            enemies: "暂无",
+            flagText: "???"
+        };
+    }
+
     document.getElementById('c-name').innerText = d.name;
     document.getElementById('c-motto').innerText = d.motto;
     document.getElementById('c-desc').innerText = d.desc;
@@ -7180,23 +7195,27 @@ function openCard(key) {
     document.getElementById('c-allies').innerText = d.allies;
     document.getElementById('c-enemies').innerText = d.enemies;
 
-    // 2. 核心改动：3:2 国旗逻辑
-    const flagImg = document.getElementById('c-flag-img'); // 你的图片标签
-    const flagText = document.getElementById('c-flag-text'); // 你的文字标签
+    // 国旗逻辑：统一使用 flagFile 这个词
+    const flagImg = document.getElementById('c-flag-img');
+    const flagText = document.getElementById('c-flag-text');
 
-    // 先重置状态：默认显示文字，隐藏图片
     flagImg.style.display = "none";
     flagText.style.display = "block";
     flagText.innerText = d.flagText || "FLAG";
 
-    // 如果数据里填了国旗路径，就切换显示
+    // 注意：这里统一改成了 flagFile
     if (d.flagFile && d.flagFile !== "") {
         flagImg.src = d.flagFile;
-        flagImg.style.display = "block";
-        flagText.style.display = "none";
+        flagImg.onload = function() {
+            flagImg.style.display = "block";
+            flagText.style.display = "none";
+        };
+        // 容错处理：如果图片路径错了加载不出来，保持文字显示
+        flagImg.onerror = function() {
+            console.error("国旗加载失败，请检查路径: " + d.flagFile);
+        };
     }
 
-    // 3. 打开弹窗
     modal.style.display = 'flex';
     setTimeout(() => { modal.classList.add('active'); }, 10);
 }
