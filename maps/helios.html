@@ -57,9 +57,18 @@
             z-index: 10;
         }
 
-        .region-poly { fill: transparent !important; stroke: none !important; cursor: pointer; transition: all 0.3s ease; }
-        .region-poly:hover { fill: rgba(203, 160, 82, 0.3) !important; stroke: var(--suz-gold) !important; stroke-width: 2px !important; }
+        .region-poly { 
+            fill: transparent !important; 
+            stroke: none !important; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+        }
 
+        .region-poly:hover { 
+            fill: rgba(203, 160, 82, 0.3) !important; 
+            stroke: var(--suz-gold) !important; 
+            stroke-width: 2px !important; 
+        }
         /* ====== 第一层：概览小卡片 ====== */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
         .modal-overlay.active { display: flex; opacity: 1; }
@@ -123,7 +132,7 @@
         <svg viewBox="0 0 2200 1257" class="map-interactive-layer" style="width: 100%; height: 100%; max-height: 100vh; display: block;" xmlns="http://www.w3.org/2000/svg">
             
             <image href="images/helios_map.png" width="2200" height="1257" pointer-events="none" />
-<path style="fill:#ffffff; stroke:none;" d="M0 0L0 1257L2200 1257C2195.13 1220.21 2198 1181.31 2198 1144L2198 949L2198 347L2198 103L2198 36C2198 26.86 2200.3 14.2638 2196 6C2199.19 4.88098 2199.63 3.28357 2200 0L0 0z"/>
+<path class="region-poly" d="M0 0L0 1257L2200 1257C2195.13 1220.21 2198 1181.31 2198 1144L2198 949L2198 347L2198 103L2198 36C2198 26.86 2200.3 14.2638 2196 6C2199.19 4.88098 2199.63 3.28357 2200 0L0 0z"/>
 <path style="fill:#e5e5e5; stroke:none;" d="M2199.33 4.66663C2199.28 4.7218 2199.22 5.7782 2199.67 5.33337C2199.72 5.27734 2199.78 4.22266 2199.33 4.66663z"/>
 <path style="fill:#cacaca; stroke:none;" d="M2196 6L2196 8L2198 8L2198 6L2196 6z"/>
 <path style="fill:#b9b9b9; stroke:none;" d="M2198 6C2200.8 21.0803 2199 37.6863 2199 53L2199 140L2199 410L2199 1253C2201.9 1246.08 2200 1235.48 2200 1228L2200 1171L2200 975L2200 296L2200 78L2200 25C2200 19.9403 2202.01 9.50781 2198 6z"/>
@@ -4719,7 +4728,7 @@
 <path style="fill:#879dc3; stroke:none;" d="M1894 660L1894 664C1894.71 662.24 1894.71 661.76 1894 660z"/>
 <path style="fill:#2c961e; stroke:none;" d="M731 661C732.223 662.195 732.42 662.316 734 663C732.777 661.805 732.58 661.684 731 661z"/>
 <path style="fill:#65ae59; stroke:none;" d="M880.333 661.667C880.278 661.722 880.222 662.778 880.667 662.333C880.722 662.278 880.778 661.222 880.333 661.667z"/>
-<path style="fill:#ffffff; stroke:none;" d="M881 661C881 662.797 881.014 662.521 882 664L884 664C884.986 662.521 885 662.797 885 661L881 661z"/>
+<path class="region-poly" d="M881 661C881 662.797 881.014 662.521 882 664L884 664C884.986 662.521 885 662.797 885 661L881 661z"/>
 <path style="fill:#54aa45; stroke:none;" d="M885.333 661.667C885.278 661.722 885.222 662.778 885.667 662.333C885.722 662.278 885.778 661.222 885.333 661.667z"/>
 <path style="fill:#4d8360; stroke:none;" d="M684 662C685.248 662.685 685.548 662.749 687 663C685.752 662.315 685.451 662.251 684 662z"/>
 <path style="fill:#638362; stroke:none;" d="M1000 662C1001.25 662.685 1001.55 662.749 1003 663C1001.75 662.315 1001.45 662.251 1000 662z"/>
