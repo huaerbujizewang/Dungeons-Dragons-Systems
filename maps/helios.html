@@ -7072,7 +7072,7 @@
 </svg>
 
             
-        </div>
+</div>
     </div>
 
     <div class="modal-overlay" id="modal">
@@ -7112,7 +7112,10 @@
             
             <span class="close-btn" style="position: absolute; top: 15px; right: 20px; z-index: 9999;" onclick="closeWiki()">×</span>
             
-            <div id="sou-wiki-glitch-layer" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 8000; background-color: black;">
+           <div id="sou-wiki-glitch-layer" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 8000; background-color: black;">
+                
+                <audio id="sou-glitch-audio" src="audio/glitch_sound.mp3" loop preload="auto"></audio>
+
                 <div id="sou-glitch-images-container" style="position: absolute; width: 100%; height: 100%; z-index: 8001; pointer-events: none;"></div>
                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 8003; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0px, rgba(0, 0, 0, 0) 2px, rgba(0, 255, 0, 0.08) 3px, rgba(0, 0, 0, 0.5) 4px);"></div>
                 <div id="sou-wiki-scrambled-text" style="position: absolute; bottom: 20px; left: 20px; color: lime; font-family: monospace; font-size: 16px; line-height: 1.2; text-shadow: 0 0 5px lime; font-weight: bold; z-index: 8004; pointer-events: none;"></div>
@@ -7290,7 +7293,7 @@ const countryData = {
         name: "红土人民联盟",
         motto: "“资本主义心脏的革命”",
         desc: "前身为大齐王朝政权，在推翻了腐朽的封建与资本买办后，红土联盟以激进的工团主义将整个母星的无产者锻造成了一柄足以抗衡帝国的利剑。",
-        capital: "团结城 ",
+        capital: "团结城",
         gov: "极权工团主义",
         ruler: "革命委员会",
         race: "几乎所有",
@@ -7298,11 +7301,16 @@ const countryData = {
         enemies: "洛萨维亚帝国，厄拉蛛国，渊印圣丝教国，苍白王庭，极乐自由港，钢铁契约军事同盟",
         flagFile: "images/flags/red_soil.png", 
         flagText: "RED",
-        wikiHistory: "详细的历史背景...",
-        wikiGeo: "详细的地理与气候...",
-        wikiSociety: "详细的社会文化...",
-        wikiEconomy: "详细的经济与资源...",
-        wikiFactions: "详细的派系..."
+
+        wikiFullText: `
+            <p><strong>红土人民联盟</strong>，简称<strong>红土</strong>，是盘踞于盘古大陆的极权工团主义超级大国。其广袤的领土面积达2819万平方公里，总人口约17.3亿。面对奇诡且充满致命威胁的全球环境，联盟全境实行绝对的自给自足，依靠严密的内循环维持着庞大的国家机器。在一个跨物种与魔法位阶生来便存在巨大鸿沟的世界里，红土联盟通过强硬的国家权力抹平物理与阶级差异，将全境划分为高度统筹的大区与数以千计的劳动公社，以极权制度强制实现了全社会的绝对平等。</p>
+
+            <h3>历史沿革</h3>
+            <p>联盟的前身为大齐王朝。在第一次世界大战败于洛萨维亚帝国后，大齐王朝的统治基础遭受毁灭性打击。帝国历826年，即一战结束五年后，大齐政权彻底覆灭，红土人民联盟于同年宣布建国。在推翻了封建帝制与买办阶层后，联盟以激进的工团体制迅速完成社会重构，将盘古大陆的无产者锻造成一柄抗衡帝国的利剑。在随后的第二次与第三次世界大战中，红土联盟作为反帝同盟的核心力量，与帝国展开了漫长且惨烈的绞杀。三战结束后的“神战”中，联盟倾尽全力参战，其最高领导层中的三位革命委员在决战中先后陨落。</p>
+
+            <h3>政治与社会</h3>
+            <p>神战之后，位于首都团结城的革命委员会继续严格执行集体领导制。在这套高度集中的体制下，联盟将境内几乎所有种族纳入统一的劳动编队与物资分配体系中。凭借着广袤的战略纵深与庞大体量，依然维持着运转高效的重型军事工业。</p>
+        `
     },
     "akitsu": {
         name: "秋津共和国",
