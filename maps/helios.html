@@ -7108,35 +7108,21 @@
     </div>
 
     <div class="wiki-overlay" id="wiki-modal">
-        <div class="wiki-container" style="position: relative; overflow: hidden;">
+        <div class="wiki-container" style="position: relative; overflow: hidden; display: flex; flex-direction: column;">
             
             <span class="close-btn" style="position: absolute; top: 15px; right: 20px; z-index: 9999;" onclick="closeWiki()">×</span>
             
             <div id="sou-wiki-glitch-layer" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 8000; background-color: black;">
-                <audio id="sou-glitch-audio" src="audio/glitch_sound.mp3" loop preload="auto"></audio>
                 <div id="sou-glitch-images-container" style="position: absolute; width: 100%; height: 100%; z-index: 8001; pointer-events: none;"></div>
-                
                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 8003; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0px, rgba(0, 0, 0, 0) 2px, rgba(0, 255, 0, 0.08) 3px, rgba(0, 0, 0, 0.5) 4px);"></div>
-
                 <div id="sou-wiki-scrambled-text" style="position: absolute; bottom: 20px; left: 20px; color: lime; font-family: monospace; font-size: 16px; line-height: 1.2; text-shadow: 0 0 5px lime; font-weight: bold; z-index: 8004; pointer-events: none;"></div>
             </div>
 
-            <div class="wiki-sidebar">
-                <div class="wiki-nav-title">档案目录 Index</div>
-                <a href="#sec-history" class="wiki-nav-link">历史沿革</a>
-                <a href="#sec-geo" class="wiki-nav-link">地理与气候</a>
-                <a href="#sec-society" class="wiki-nav-link">社会与文化</a>
-                <a href="#sec-economy" class="wiki-nav-link">经济与资源</a>
-                <a href="#sec-factions" class="wiki-nav-link">派系与权力结构</a>
+            <div class="wiki-content" style="width: 100%; height: 100%; padding: 40px; box-sizing: border-box; overflow-y: auto;">
+                <h1 class="wiki-h1" id="w-name" style="margin-bottom: 20px;">国家名称</h1>
+                <div id="w-fulltext" class="wiki-text" style="line-height: 1.8; font-size: 16px; color: #ccc;">加载中...</div>
             </div>
-            <div class="wiki-content">
-                <h1 class="wiki-h1" id="w-name">国家名称</h1>
-                <div id="sec-history" class="wiki-section"><h2 class="wiki-h2">历史沿革</h2><p class="wiki-text" id="w-history">加载中...</p></div>
-                <div id="sec-geo" class="wiki-section"><h2 class="wiki-h2">地理与气候</h2><p class="wiki-text" id="w-geo">加载中...</p></div>
-                <div id="sec-society" class="wiki-section"><h2 class="wiki-h2">社会与文化</h2><p class="wiki-text" id="w-society">加载中...</p></div>
-                <div id="sec-economy" class="wiki-section"><h2 class="wiki-h2">经济与资源</h2><p class="wiki-text" id="w-economy">加载中...</p></div>
-                <div id="sec-factions" class="wiki-section"><h2 class="wiki-h2">派系与权力结构</h2><p class="wiki-text" id="w-factions">加载中...</p></div>
-            </div>
+            
         </div>
     </div>
 
@@ -7276,20 +7262,29 @@ const countryData = {
     "empire": {
         name: "洛萨维亚帝国",
         motto: "“星河浩瀚，唯吾独尊”",
-        desc: "占据“地球”核心区域的庞大势力，现由最高军事委员会通过军法实施全面统治。",
-        capital: "因斯卡利亚 (前首府：白城)",
-        gov: "军政府",
+        desc: "占据本星系奥斯坎大陆核心地带的超级霸权，现由最高军事委员会通过军法实施全面统治。",
+        capital: "因斯卡利亚 (前首府白城)",
+        gov: "寡头军政府",
         ruler: "最高军事委员会",
         race: "几乎所有",
         allies: "北境联盟，提尔斯王国，桑格利亚大公国，温顿公国",
         enemies: "红土人民联盟，南大陆共同体，秋津共和国，卡尔塔联邦，哥伦比亚国，索玛生命科技",
         flagFile: "images/flags/empire.png", 
         flagText: "EMP",
-        wikiHistory: "详细的历史背景...",
-        wikiGeo: "详细的地理与气候...",
-        wikiSociety: "详细的社会文化...",
-        wikiEconomy: "详细的经济与资源...",
-        wikiFactions: "详细的派系..."
+
+        wikiFullText: `
+            <p><strong>洛萨维亚帝国</strong>，简称<strong>帝国</strong>，是位于奥斯坎大陆枢纽地带的超级霸权国家。其政治实体形成可追溯至四百七十年前的统一进程。帝国现辖93个次级行政区与3片海外飞地，总人口约22.3亿，是本星系体量最庞大的国家。作为一个由八大语区拼图构成的超巨型国家，帝国内部并不存在绝对统治地位的主体民族，呈现出高度复杂的多元融合特征。在奇诡且充满敌意的全球地缘环境下，帝国拥有高度自给自足的“内循环”经济体，对外仅维持极其有限的轻工业产品与消费品贸易。在昔日维申萨召开的世界议会中，帝国独占全场17票中的5票，长期拥有压倒性的国际话语权。</p>
+
+            <h3>历史沿革</h3>
+            <p>帝国的历史源远流长。帝国历元年，蒂尔兰部落完成政治体制演进并普及炼铁技术，正式建立蒂尔兰王国。历法200年，王国凭借兵器的绝对代差，征服了具备奇诡魔法与尚武传统的奥斯特克。受限于早期行政与通讯力量不足，广袤的领土曾一度分裂为东、西蒂尔兰王国。帝国历528年至535年，赫克托三世驾崩引发继承人战争，伊莎贝拉·洛萨维亚凭借世界上最早的谍报组织建立优势，逼迫亚瑟自杀并重新统一帝国。此后，伊莎贝拉开启了狂飙突进的扩张时代，通过履行承诺将深渊领土乌瑞克和平并入，并依托绝对制空权与深渊魔物步坦协同的立体兵团，接连征服卡法罗、安塔拉与格伦瑟。</p>
+            <p>在第一次世界大战中，伊莎贝拉以极少的战略失误击溃大齐王朝，促使大齐丢失桐花语区并引发后续的红土革命。帝国历931年第二次世界大战爆发，面对红土人民联盟、南大陆共同体与卡尔塔联邦的联合绞杀，帝国依托覆盖全国的传送法阵网络抹平了后勤压力，再次取得胜利，夺取霍桑并扩张安塔拉。第三次世界大战中，哥伦比亚国加入反帝阵营，帝国依然势如破竹攫取诸多海外条约港；唯桐花语区北部受异变带物理阻隔影响，趁机独立为秋津共和国。三战结束仅两天后，被逼至绝境的反帝同盟高层掀起“神战”。此役导致十二位神明一天之内陨落，老首都白城化为充斥致命规则怪谈的废墟。身兼九大权能的伊莎贝拉女皇肉体死亡，其散落的“和平”与“农业”神格被旁系血脉爱德华·洛萨维亚勉强容纳。</p>
+
+            <h3>地理与人口</h3>
+            <p>帝国疆域横跨多个极端气候带，自然风貌与生物多样性极其丰富。庞大的版图以八大语区为核心划分为截然不同的地理与人口板块：位于中央平原的蒂尔兰语区、盘踞东部海岸的奥斯特克语区、雄踞北部高地的格伦瑟语区、散落于西南群岛的卡法罗语区、深陷南部雨林的安塔拉语区、作为深渊核心区的中部盆地乌瑞克语区、地处东南沙漠的霍桑语区，以及历经分裂后仍受帝国绝对控制的东北岛屿桐花语区。人类与高阶深渊生物在这片土地上皆享有合法权利与贵族地位。</p>
+
+            <h3>政治与社会</h3>
+            <p>神战之后，由于伊莎贝拉女皇陨落留下的权力与法则真空过于庞大，且国内再无任何个体敢于僭越至高领袖之位，帝国将首府迁往更为现代化的因斯卡利亚，政治体制顺势过渡为由最高军事委员会主导的寡头军政府。当前帝国的最高权力由四位同时具备神明位阶的上将共同把持。</p>
+        `
     },
     "red_soil": {
         name: "红土人民联盟",
@@ -7785,11 +7780,7 @@ function openWiki() {
     
     // 填充文字
     document.getElementById('w-name').innerText = d.name;
-    document.getElementById('w-history').innerText = d.wikiHistory;
-    document.getElementById('w-geo').innerText = d.wikiGeo;
-    document.getElementById('w-society').innerText = d.wikiSociety;
-    document.getElementById('w-economy').innerText = d.wikiEconomy;
-    document.getElementById('w-factions').innerText = d.wikiFactions;
+    document.getElementById('w-fulltext').innerHTML = d.wikiFullText || "该区域的详细档案正在编撰中...";
 
     // 先关闭小卡片
     closeModal();
