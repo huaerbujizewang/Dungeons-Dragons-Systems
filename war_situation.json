@@ -2,10 +2,10 @@
   "empire": {
     "readiness": 20,
     "photos": [
-      { "url": "assets/photos/AA1.jpg", "is_dead": false },
+      { "url": "assets/photos/AA1.jpg", "is_dead": true },
       { "url": "assets/photos/AA2.jpg", "is_dead": false },
       { "url": "assets/photos/AA3.jpg", "is_dead": true },
-      { "url": "assets/photos/AA4.jpg", "is_dead": false },
+      { "url": "assets/photos/AA4.jpg", "is_dead": true },
       { "url": "assets/photos/AA5.jpg", "is_dead": true }
     ],
     "factions": [
