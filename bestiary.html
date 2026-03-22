@@ -193,10 +193,18 @@
 <div id="dossier-modal" class="modal">
     <div class="modal-box">
         <div class="dossier-left">
-            <div id="dossier-bg-blur" class="dossier-bg-blur"></div>
-            <img id="dossier-stand-img" src="" class="dossier-stand-img">
-            <div id="dossier-watermark" class="dossier-watermark">DANGER</div>
-        </div>
+    <div id="dossier-bg-blur" class="dossier-bg-blur"></div>
+    <img id="dossier-stand-img" src="" class="dossier-stand-img">
+    <div id="dossier-watermark" class="dossier-watermark">DANGER</div>
+    
+    <div id="eldritch-glitch-layer" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; background-color: #050505; overflow: hidden;">
+        <audio id="eldritch-audio" src="maps/audio/glitch_sound.mp3" loop preload="auto"></audio>
+        
+        <div id="eldritch-images-container" style="position: absolute; width: 100%; height: 100%; z-index: 11; pointer-events: none;"></div>
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 12; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0px, rgba(0, 0, 0, 0) 2px, rgba(0, 255, 0, 0.08) 3px, rgba(0, 0, 0, 0.5) 4px);"></div>
+        <div id="eldritch-text" style="position: absolute; bottom: 20px; left: 20px; color: lime; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.2; text-shadow: 0 0 5px lime; font-weight: bold; z-index: 13; pointer-events: none;"></div>
+    </div>
+</div>
 
         <div class="dossier-right">
             <div class="dossier-header">
@@ -455,11 +463,27 @@
 
         // 1. 头部与立绘处理
         const imgEl = document.getElementById('dossier-stand-img');
-        imgEl.src = enemy.stand_url || enemy.avatar_url || 'https://via.placeholder.com/300x500';
-        imgEl.onload = () => imgEl.classList.add('loaded');
-        if (imgEl.complete) imgEl.classList.add('loaded');
+        const bgBlurEl = document.getElementById('dossier-bg-blur');
 
-        document.getElementById('dossier-bg-blur').style.backgroundImage = `url('${enemy.avatar_url || imgEl.src}')`;
+        // 判断是否为克系触发条件：stand_url 填了 'A'
+        if (enemy.stand_url === 'A') {
+            imgEl.style.display = 'none'; // 隐藏正常立绘
+            bgBlurEl.style.backgroundImage = 'none'; // 清除背景模糊
+            startEldritchGlitch(); // 启动污染特效
+        } else {
+            // 【修复的正常逻辑】
+            stopEldritchGlitch(); // 必须先确保特效处于关闭状态
+            imgEl.style.display = 'block'; // 恢复图片显示（防止被上一个克系怪物隐藏）
+            
+            // 原有的立绘加载逻辑
+            imgEl.src = enemy.stand_url || enemy.avatar_url || 'https://via.placeholder.com/300x500';
+            imgEl.onload = () => imgEl.classList.add('loaded');
+            if (imgEl.complete) imgEl.classList.add('loaded');
+
+            bgBlurEl.style.backgroundImage = `url('${enemy.avatar_url || imgEl.src}')`;
+        }
+
+        // 后续数据渲染保持不变...
         document.getElementById('dossier-name').innerText = enemy.name || data.name;
         document.getElementById('dossier-meta').innerText = data.meta || '未知实体';
         document.getElementById('dossier-stars').innerText = '⚠️'.repeat(threatWeights[enemy.threat_level] || 1);
@@ -596,7 +620,91 @@
         document.getElementById(`dossier-pane-${tabName}`).classList.add('active');
     }
 
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function closeModal(id) { 
+        document.getElementById(id).style.display = 'none'; 
+        if (typeof stopEldritchGlitch === 'function') {
+            stopEldritchGlitch();
+        }
+    }
+// --- 克系污染特效引擎 ---
+let eldritchGlitchIntervals = [];
+const glitchChars = "龘齉齾爩鱻麤龗灪吁臾舁𠔻臱𠔻𠔻ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789¡¿§¶☠☢☣☤☬☸";
+
+function generateGlitchString(length) {
+    let result = "";
+    for (let i = 0; i < length; i++) {
+        result += glitchChars.charAt(Math.floor(Math.random() * glitchChars.length));
+    }
+    return result;
+}
+
+function startEldritchGlitch() {
+    const layer = document.getElementById('eldritch-glitch-layer');
+    const textEl = document.getElementById('eldritch-text');
+    const imgContainer = document.getElementById('eldritch-images-container');
+    const audioEl = document.getElementById('eldritch-audio');
+    
+    layer.style.display = 'block'; // 显示遮罩
+    imgContainer.innerHTML = ''; 
+    audioEl.play().catch(e => console.log("浏览器限制自动播放，需用户交互:", e));
+
+    // 维持乱码字符的稳定跳动
+    const textTimer = setInterval(() => {
+        textEl.innerHTML = `
+            &gt; FATAL ERROR: COGNITIVE HAZARD<br>
+            &gt; ${generateGlitchString(25)}<br>
+            &gt; ${generateGlitchString(30)}<br>
+            &gt; ENTITY DATA CORRUPTED
+        `;
+    }, 100);
+    eldritchGlitchIntervals.push(textTimer);
+
+    // 极其不规律的图片闪烁引擎
+    function spawnImage() {
+        const imgId = Math.floor(Math.random() * 15) + 1;
+        const img = document.createElement('img');
+        // 图片路径更新
+        img.src = `maps/images/glitch/sou_glitch_${imgId}.jpg`;
+        img.style.position = 'absolute';
+        img.style.left = (Math.random() * 100 - 10) + '%'; 
+        img.style.top = (Math.random() * 100 - 10) + '%';
+        img.style.width = (Math.random() * 80 + 40) + '%'; // 在图鉴的窄条里稍微放大点
+        img.style.transform = `rotate(${Math.random() * 360}deg) scaleX(${Math.random() > 0.5 ? 1 : -1})`;
+        img.style.opacity = Math.random() * 0.8 + 0.2;
+        img.style.pointerEvents = 'none';
+        
+        imgContainer.appendChild(img);
+
+        const lifespan = Math.random() * 1000 + 50; 
+        setTimeout(() => {
+            if (imgContainer.contains(img)) img.remove();
+        }, lifespan);
+
+        const nextSpawnTime = Math.random() * 400 + 30;
+        const timerId = setTimeout(spawnImage, nextSpawnTime);
+        eldritchGlitchIntervals.push(timerId); 
+    }
+    spawnImage();
+}
+
+function stopEldritchGlitch() {
+    const audioEl = document.getElementById('eldritch-audio');
+    const layer = document.getElementById('eldritch-glitch-layer');
+    const imgContainer = document.getElementById('eldritch-images-container');
+
+    if (audioEl) {
+        audioEl.pause();
+        audioEl.currentTime = 0;
+    }
+    eldritchGlitchIntervals.forEach(timer => {
+        clearInterval(timer);
+        clearTimeout(timer); 
+    });
+    eldritchGlitchIntervals = [];
+    if (imgContainer) imgContainer.innerHTML = '';
+    if (layer) layer.style.display = 'none'; // 隐藏遮罩
+}
+
 
     // 启动
     window.onload = initBestiary;
