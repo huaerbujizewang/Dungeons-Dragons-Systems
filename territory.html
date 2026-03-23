@@ -330,17 +330,14 @@
         // A. 基础人头税 (Head Tax)
         const baseTaxRaw = Math.ceil(stats.population * stats.tax_rate);
         
-        // B. 定义分类关键词
-        const taxKeywords = ['奢侈品与胭脂税', '贸易关税', '税']; 
-        const stateRunKeywords = ['官方治疗药水', '角斗场', '怪物狩猎']; 
-
+        // B. 遍历数据库收入项 (完全依赖数据库的 category 字段)
         let specializedTaxTotal = 0; // 专项税总额
         let tradeRevenue = 0;        // 产业/贸易总额
         
         let taxHtml = '';   // 税收表 HTML
         let tradeHtml = ''; // 产业表 HTML
 
-        // --- 税收表第一行：人头税 (使用新标签) ---
+        // --- 税收表第一行：人头税 ---
         taxHtml += `
             <tr>
                 <td>基础人头税</td>
@@ -354,13 +351,8 @@
             const unitPrice = i.unit_price || i.amount;
             const total = count * unitPrice;
 
-            // 1. 判断是否为税收
-            const isTax = taxKeywords.some(keyword => i.name.includes(keyword));
-
-            // 2. 判断是否为国营 (如果不是税收)
-            const isStateRun = stateRunKeywords.some(keyword => i.name.includes(keyword));
-
-            if (isTax) {
+            // 🌟 直接判断数据库返回的 category 字段
+            if (i.category === 'tax') {
                 // ---> 归入税收表
                 specializedTaxTotal += total;
                 taxHtml += `
@@ -374,11 +366,11 @@
                 tradeRevenue += total;
                 
                 let tagHtml = '';
-                if (isStateRun) {
+                if (i.category === 'state') {
                     // 国营产业 (紫色)
                     tagHtml = `<span class="tag-box tag-state">国营</span>`;
                 } else {
-                    // 对外贸易 (绿色)
+                    // 如果是 'trade' 或其他未定义情况，默认显示为贸易 (绿色)
                     tagHtml = `<span class="tag-box tag-trade">贸易</span>`;
                 }
 
@@ -393,7 +385,6 @@
         });
 
         const totalTaxIncome = baseTaxRaw + specializedTaxTotal;
-
         // ==========================================
         // 3. 支出计算
         // ==========================================
