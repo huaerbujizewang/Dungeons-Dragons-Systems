@@ -899,6 +899,39 @@
 .card-menu-btn.event:hover { background: #2980b9; }
 .card-menu-btn.empire-bonus { background: #e74c3c; color: #fff; border-color: #c0392b; }
 .card-menu-btn.empire-bonus:hover { background: #c0392b; }
+
+
+/* --- 立绘切换控件样式 --- */
+.stand-nav-btn {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #555;
+    width: 40px; height: 40px; border-radius: 50%;
+    cursor: pointer; font-size: 1.2em; z-index: 10;
+    transition: all 0.2s; display: none; /* 默认隐藏，有多张图时才显示 */
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.stand-nav-btn:hover { background: #f1c40f; color: #000; border-color: #f1c40f; transform: translateY(-50%) scale(1.1); }
+.stand-nav-btn.left { left: 15px; }
+.stand-nav-btn.right { right: 15px; }
+
+.stand-indicators {
+    position: absolute; bottom: 80px; left: 0; width: 100%;
+    display: flex; justify-content: center; gap: 8px; z-index: 10;
+}
+.stand-dot {
+    width: 8px; height: 8px; background: rgba(255,255,255,0.3);
+    border-radius: 50%; cursor: pointer; transition: 0.3s;
+}
+.stand-dot.active { 
+    background: #f1c40f; box-shadow: 0 0 8px #f1c40f; 
+    transform: scale(1.3); width: 12px; border-radius: 4px; 
+}
+
+/* 让图片切换时有平滑的淡入淡出效果 */
+.dossier-stand-img {
+    transition: opacity 0.3s ease, transform 0.3s;
+}
     </style>
 </head>
 <body>
@@ -1433,10 +1466,15 @@
 <div id="dossier-modal" class="modal">
     <div class="modal-box">
         <div class="dossier-left">
-            <div id="dossier-bg-blur" class="dossier-bg-blur"></div>
-            <img id="dossier-stand-img" src="" class="dossier-stand-img">
-            <div id="dossier-watermark" class="dossier-watermark">ARCHIVE</div>
-        </div>
+    <div id="dossier-bg-blur" class="dossier-bg-blur"></div>
+    <img id="dossier-stand-img" src="" class="dossier-stand-img">
+    <div id="dossier-watermark" class="dossier-watermark">ARCHIVE</div>
+    
+    <button class="stand-nav-btn left" id="stand-nav-left" onclick="switchStandImg(-1)">&#10094;</button>
+    <button class="stand-nav-btn right" id="stand-nav-right" onclick="switchStandImg(1)">&#10095;</button>
+    
+    <div class="stand-indicators" id="stand-indicators"></div>
+</div>
 
         <div class="dossier-right">
             <div class="dossier-header">
@@ -1962,6 +2000,8 @@
     };
     let userProfile = null;
     let currentEquipTarget = { empId: null, slotIdx: null };
+    let currentStandUrls = []; 
+    let currentStandIndex = 0; 
 
     function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
     function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
@@ -5175,80 +5215,145 @@ async function getRobustIP() {
 
     // 1. 打开档案弹窗
     async function openDossierModal(empId) {
-        const modal = document.getElementById('dossier-modal');
-        
-        // --- 在请求数据前，先清空/重置所有 UI 元素 ---
-        resetDossierUI(); 
-        
-        // 显示弹窗
-        modal.style.display = 'flex';
-        
-        // 切回第一个 Tab
-        switchDossierTab('basic');
-        
-        // 获取雇员数据
-        const { data: emp, error } = await supabaseClient
-            .from('employees')
-            .select('*')
-            .eq('id', empId)
-            .single();
+    const modal = document.getElementById('dossier-modal');
+    
+    // --- 在请求数据前，先清空/重置所有 UI 元素 ---
+    resetDossierUI(); 
+    
+    // 显示弹窗
+    modal.style.display = 'flex';
+    
+    // 切回第一个 Tab
+    switchDossierTab('basic');
+    
+    // 获取雇员数据
+    const { data: emp, error } = await supabaseClient
+        .from('employees')
+        .select('*')
+        .eq('id', empId)
+        .single();
 
-        if (error || !emp) {
-            alert("无法读取档案数据");
-            modal.style.display = 'none';
-            return;
-        }
-
-        const data = emp.stat_block || {};
-        const basic = data.basic_info || {};
-
-        // --- 渲染左侧立绘 ---
-        const standImg = emp.stand_url || emp.avatar_url || 'https://via.placeholder.com/300x500';
-        const imgEl = document.getElementById('dossier-stand-img');
-        
-        // 图片加载逻辑
-        imgEl.classList.remove('loaded'); 
-        imgEl.src = standImg;
-        imgEl.onload = () => imgEl.classList.add('loaded');
-        if (imgEl.complete) imgEl.classList.add('loaded');
-
-        // 背景模糊图
-        document.getElementById('dossier-bg-blur').style.backgroundImage = `url('${emp.avatar_url || standImg}')`;
-        // 水印
-        document.getElementById('dossier-watermark').innerText = (data.meta || 'ARCHIVE').split(' ')[0].toUpperCase();
-
-        // --- 渲染头部 ---
-        document.getElementById('dossier-name').innerText = emp.name;
-        document.getElementById('dossier-meta').innerText = data.meta || '未知实体';
-        document.getElementById('dossier-stars').innerText = '★'.repeat(emp.rarity || 3);
-        
-        // --- 渲染 Tab 1: 基础档案 ---
-        document.getElementById('info-name').innerText = emp.name;
-        document.getElementById('info-race').innerText = data.meta || '--';
-        document.getElementById('info-gender').innerText = basic.gender || '未知';
-        document.getElementById('info-size').innerText = basic.size || '中型';
-        document.getElementById('info-origin').innerText = basic.origin || '未知区域';
-        document.getElementById('info-height').innerText = basic.height || '--';
-        document.getElementById('info-birthday').innerText = basic.birthday || '--';
-        
-        // 渲染标签
-        const tagsContainer = document.getElementById('info-tags');
-        tagsContainer.innerHTML = '';
-        if (basic.tags && Array.isArray(basic.tags)) {
-            basic.tags.forEach(tag => {
-                tagsContainer.innerHTML += `<span class="tag-box">${tag}</span>`;
-            });
-        } else {
-            tagsContainer.innerHTML = '<span style="color:#666">--</span>';
-        }
-
-        // --- 渲染 Tab 2: 战斗属性 ---
-        renderCombatTab(data);
-
-        // --- 渲染 Tab 3: 客观履历 ---
-        const resumeText = data.resume || "【数据缺失】\n暂无该干员的详细履历记录。";
-        document.getElementById('resume-content').innerText = resumeText;
+    if (error || !emp) {
+        alert("无法读取档案数据");
+        modal.style.display = 'none';
+        return;
     }
+
+    const data = emp.stat_block || {};
+    const basic = data.basic_info || {};
+
+    // --- 修改：多立绘渲染逻辑 ---
+    let stands = [];
+    if (emp.stand_url) {
+        // 兼容处理：用逗号分割字符串变成数组，并过滤掉空链接
+        stands = emp.stand_url.split(',').map(u => u.trim()).filter(u => u);
+    }
+    
+    // 容错：如果数据库里完全没有立绘，用头像或者占位图兜底
+    if (stands.length === 0) {
+        stands.push(emp.avatar_url || 'https://via.placeholder.com/300x500');
+    }
+
+    // 赋值给全局变量（请确保在这之前已经在全局定义了这两个变量）
+    currentStandUrls = stands;
+    currentStandIndex = 0; // 每次打开档案重置回第一张
+    
+    // 调用新的渲染函数来处理图片、背景虚化和左右箭头切换
+    renderCurrentStand(); 
+
+    // 水印
+    document.getElementById('dossier-watermark').innerText = (data.meta || 'ARCHIVE').split(' ')[0].toUpperCase();
+
+    // --- 渲染头部 ---
+    document.getElementById('dossier-name').innerText = emp.name;
+    document.getElementById('dossier-meta').innerText = data.meta || '未知实体';
+    document.getElementById('dossier-stars').innerText = '★'.repeat(emp.rarity || 3);
+    
+    // --- 渲染 Tab 1: 基础档案 ---
+    document.getElementById('info-name').innerText = emp.name;
+    document.getElementById('info-race').innerText = data.meta || '--';
+    document.getElementById('info-gender').innerText = basic.gender || '未知';
+    document.getElementById('info-size').innerText = basic.size || '中型';
+    document.getElementById('info-origin').innerText = basic.origin || '未知区域';
+    document.getElementById('info-height').innerText = basic.height || '--';
+    document.getElementById('info-birthday').innerText = basic.birthday || '--';
+    
+    // 渲染标签
+    const tagsContainer = document.getElementById('info-tags');
+    tagsContainer.innerHTML = '';
+    if (basic.tags && Array.isArray(basic.tags)) {
+        basic.tags.forEach(tag => {
+            tagsContainer.innerHTML += `<span class="tag-box">${tag}</span>`;
+        });
+    } else {
+        tagsContainer.innerHTML = '<span style="color:#666">--</span>';
+    }
+
+    // --- 渲染 Tab 2: 战斗属性 ---
+    renderCombatTab(data);
+
+    // --- 渲染 Tab 3: 客观履历 ---
+    const resumeText = data.resume || "【数据缺失】\n暂无该干员的详细履历记录。";
+    document.getElementById('resume-content').innerText = resumeText;
+}
+
+    function renderCurrentStand() {
+    const imgEl = document.getElementById('dossier-stand-img');
+    const leftBtn = document.getElementById('stand-nav-left');
+    const rightBtn = document.getElementById('stand-nav-right');
+    const indicators = document.getElementById('stand-indicators');
+    const blurBg = document.getElementById('dossier-bg-blur');
+
+    if (currentStandUrls.length === 0) {
+        imgEl.src = 'https://via.placeholder.com/300x500';
+        blurBg.style.backgroundImage = 'none';
+        leftBtn.style.display = 'none';
+        rightBtn.style.display = 'none';
+        indicators.innerHTML = '';
+        return;
+    }
+
+    // 1. 制造淡出效果
+    imgEl.style.opacity = 0;
+    
+    // 2. 延迟 150ms 后更换图片并淡入
+    setTimeout(() => {
+        const targetUrl = currentStandUrls[currentStandIndex];
+        imgEl.src = targetUrl;
+        blurBg.style.backgroundImage = `url('${targetUrl}')`;
+        
+        imgEl.onload = () => { imgEl.style.opacity = 1; };
+        
+        // 如果是从缓存读取可能不触发 onload，加个保险
+        if (imgEl.complete) imgEl.style.opacity = 1;
+    }, 150);
+
+    // 3. 更新按钮和指示器
+    if (currentStandUrls.length > 1) {
+        leftBtn.style.display = 'flex';
+        rightBtn.style.display = 'flex';
+        indicators.innerHTML = currentStandUrls.map((_, i) => 
+            `<div class="stand-dot ${i === currentStandIndex ? 'active' : ''}" onclick="goToStandImg(${i})"></div>`
+        ).join('');
+    } else {
+        leftBtn.style.display = 'none';
+        rightBtn.style.display = 'none';
+        indicators.innerHTML = '';
+    }
+}
+
+function switchStandImg(direction) {
+    currentStandIndex += direction;
+    // 循环切换
+    if (currentStandIndex < 0) currentStandIndex = currentStandUrls.length - 1;
+    if (currentStandIndex >= currentStandUrls.length) currentStandIndex = 0;
+    renderCurrentStand();
+}
+
+function goToStandImg(index) {
+    currentStandIndex = index;
+    renderCurrentStand();
+}
 
     // 重置 UI 的辅助函数
     function resetDossierUI() {
@@ -5462,9 +5567,22 @@ async function getRobustIP() {
             const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
             
             // 4. 更新数据库 (employees 表的 stand_url 字段)
+            const { data: currentEmp } = await supabaseClient.from('employees').select('stand_url').eq('id', empId).single();
+
+            let newUrlsArray = [];
+            if (currentEmp && currentEmp.stand_url) {
+                newUrlsArray = currentEmp.stand_url.split(',').filter(u => u.trim());
+            }
+
+            // 将新上传的 URL 压入数组
+            newUrlsArray.push(urlData.publicUrl);
+
+            // 重新用逗号拼接并保存
+            const finalUrlString = newUrlsArray.join(',');
+
             const { error: dbError } = await supabaseClient
                 .from('employees')
-                .update({ stand_url: urlData.publicUrl })
+                .update({ stand_url: finalUrlString })
                 .eq('id', empId);
 
             if (dbError) throw dbError;
