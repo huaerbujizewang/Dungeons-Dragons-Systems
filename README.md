@@ -94,14 +94,23 @@ select id, '向哈鲁阿出口卷轴', 10, 200, 2000 -- amount 最好等于 coun
 from auth.users where email = 'master@almorel.com';
 ```
 
-#### 修改现有项目的数值
+#### 修改现有支出项目的数值
 ```sql
 -- 例如：铁矿涨价了
 update city_expenses 
 set unit_cost = 450 
 where name like '%铁矿%' and user_id = (select id from auth.users where email = 'master@almorel.com');
 ```
+#### 修改现有收入项目的数值
 
+```sql
+-- 例如：火绳枪贸易单价上涨 (3把 x 550 变成 3把 x 660)
+update city_incomes 
+set unit_price = 660, 
+    amount = count * 660 
+where name like '%火绳枪%' 
+and user_id = (select id from auth.users where email = 'master@almorel.com');
+```
 
 #### 修改现有人员的数量
 ```sql
