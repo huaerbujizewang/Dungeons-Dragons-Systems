@@ -173,6 +173,33 @@
             margin-bottom: 30px;
             justify-content: start; /* 强制靠左对齐 */
         }
+
+/* --- 立绘切换控件样式 --- */
+.stand-nav-btn {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #555;
+    width: 40px; height: 40px; border-radius: 50%;
+    cursor: pointer; font-size: 1.2em; z-index: 10;
+    transition: all 0.2s; display: none; /* 默认隐藏 */
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.stand-nav-btn:hover { background: #e74c3c; color: #fff; border-color: #e74c3c; transform: translateY(-50%) scale(1.1); }
+.stand-nav-btn.left { left: 15px; }
+.stand-nav-btn.right { right: 15px; }
+
+.stand-indicators {
+    position: absolute; bottom: 25px; left: 0; width: 100%;
+    display: flex; justify-content: center; gap: 8px; z-index: 10;
+}
+.stand-dot {
+    width: 8px; height: 8px; background: rgba(255,255,255,0.3);
+    border-radius: 50%; cursor: pointer; transition: 0.3s;
+}
+.stand-dot.active { 
+    background: #e74c3c; box-shadow: 0 0 8px #e74c3c; 
+    transform: scale(1.3); width: 12px; border-radius: 4px; 
+}
     </style>
 </head>
 <body>
@@ -192,11 +219,14 @@
 
 <div id="dossier-modal" class="modal">
     <div class="modal-box">
-        <div class="dossier-left">
+<div class="dossier-left">
     <div id="dossier-bg-blur" class="dossier-bg-blur"></div>
     <img id="dossier-stand-img" src="" class="dossier-stand-img">
     <div id="dossier-watermark" class="dossier-watermark">DANGER</div>
+    <button class="stand-nav-btn left" id="stand-nav-left" onclick="switchStandImg(-1)">&#10094;</button>
+    <button class="stand-nav-btn right" id="stand-nav-right" onclick="switchStandImg(1)">&#10095;</button>
     
+    <div class="stand-indicators" id="stand-indicators"></div>
     <div id="eldritch-glitch-layer" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; background-color: #050505; overflow: hidden;">
         <audio id="eldritch-audio" src="maps/audio/glitch_sound.mp3" loop preload="auto"></audio>
         
@@ -281,7 +311,8 @@
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw'; // 使用你 index.html 中的 Key
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
+    let currentStandUrls = [];
+    let currentStandIndex = 0;
     let currentUserEmail = null;
     let allEnemies = [];
     let currentFaction = '全部';
@@ -469,18 +500,29 @@
         if (enemy.stand_url === 'A') {
             imgEl.style.display = 'none'; // 隐藏正常立绘
             bgBlurEl.style.backgroundImage = 'none'; // 清除背景模糊
+            
+            // 隐藏可能存在的多图控件
+            document.getElementById('stand-nav-left').style.display = 'none';
+            document.getElementById('stand-nav-right').style.display = 'none';
+            document.getElementById('stand-indicators').innerHTML = '';
+            
             startEldritchGlitch(); // 启动污染特效
         } else {
-            // 【修复的正常逻辑】
             stopEldritchGlitch(); // 必须先确保特效处于关闭状态
-            imgEl.style.display = 'block'; // 恢复图片显示（防止被上一个克系怪物隐藏）
-            
-            // 原有的立绘加载逻辑
-            imgEl.src = enemy.stand_url || enemy.avatar_url || 'https://via.placeholder.com/300x500';
-            imgEl.onload = () => imgEl.classList.add('loaded');
-            if (imgEl.complete) imgEl.classList.add('loaded');
-
-            bgBlurEl.style.backgroundImage = `url('${enemy.avatar_url || imgEl.src}')`;
+            imgEl.style.display = 'block'; // 恢复图片显示
+            let stands = [];
+            if (enemy.stand_url) {
+                // 用逗号分割并清理两端空格，过滤掉空链接
+                stands = enemy.stand_url.split(',').map(u => u.trim()).filter(u => u);
+            }
+            // 如果图鉴没配半身立绘，那就拿它的头像当备用
+            if (stands.length === 0 && enemy.avatar_url) {
+                stands = [enemy.avatar_url];
+            }
+            currentStandUrls = stands;
+            currentStandIndex = 0;
+            // 调用多图渲染引擎
+            renderCurrentStand();
         }
 
         // 后续数据渲染保持不变...
@@ -512,7 +554,9 @@
         document.getElementById('dossier-stand-img').src = ''; 
         document.getElementById('dossier-stand-img').classList.remove('loaded');
         document.getElementById('dossier-bg-blur').style.backgroundImage = 'none';
-        
+        document.getElementById('stand-nav-left').style.display = 'none';
+        document.getElementById('stand-nav-right').style.display = 'none';
+        document.getElementById('stand-indicators').innerHTML = '';
         ['combat-hp', 'combat-ac', 'combat-speed'].forEach(id => document.getElementById(id).innerText = '--');
         ['combat-hp-note', 'combat-ac-note', 'combat-speed-note'].forEach(id => document.getElementById(id).innerText = '');
         document.getElementById('combat-stats-grid').innerHTML = '';
@@ -704,6 +748,63 @@ function stopEldritchGlitch() {
     if (imgContainer) imgContainer.innerHTML = '';
     if (layer) layer.style.display = 'none'; // 隐藏遮罩
 }
+
+    // --- 多立绘渲染与切换引擎 ---
+    function renderCurrentStand() {
+        const imgEl = document.getElementById('dossier-stand-img');
+        const leftBtn = document.getElementById('stand-nav-left');
+        const rightBtn = document.getElementById('stand-nav-right');
+        const indicators = document.getElementById('stand-indicators');
+        const blurBg = document.getElementById('dossier-bg-blur');
+
+        if (currentStandUrls.length === 0) {
+            imgEl.src = 'https://via.placeholder.com/300x500?text=No+Image';
+            blurBg.style.backgroundImage = 'none';
+            leftBtn.style.display = 'none';
+            rightBtn.style.display = 'none';
+            indicators.innerHTML = '';
+            return;
+        }
+
+        // 淡出
+        imgEl.style.opacity = 0;
+        
+        // 延迟换图并淡入
+        setTimeout(() => {
+            const targetUrl = currentStandUrls[currentStandIndex];
+            imgEl.src = targetUrl;
+            blurBg.style.backgroundImage = `url('${targetUrl}')`;
+            
+            imgEl.onload = () => { imgEl.style.opacity = 1; };
+            if (imgEl.complete) imgEl.style.opacity = 1;
+        }, 150);
+
+        // 刷新按钮与圆点
+        if (currentStandUrls.length > 1) {
+            leftBtn.style.display = 'flex';
+            rightBtn.style.display = 'flex';
+            indicators.innerHTML = currentStandUrls.map((_, i) => 
+                `<div class="stand-dot ${i === currentStandIndex ? 'active' : ''}" onclick="goToStandImg(${i})"></div>`
+            ).join('');
+        } else {
+            leftBtn.style.display = 'none';
+            rightBtn.style.display = 'none';
+            indicators.innerHTML = '';
+        }
+    }
+
+    function switchStandImg(direction) {
+        currentStandIndex += direction;
+        // 循环逻辑
+        if (currentStandIndex < 0) currentStandIndex = currentStandUrls.length - 1;
+        if (currentStandIndex >= currentStandUrls.length) currentStandIndex = 0;
+        renderCurrentStand();
+    }
+
+    function goToStandImg(index) {
+        currentStandIndex = index;
+        renderCurrentStand();
+    }
 
 
     // 启动
