@@ -1241,25 +1241,20 @@
         <div class="ak-bg-pattern"></div>
         
         <div class="ak-info-layer">
-            <div class="ak-banner-title">OPERATOR<br>RECRUITMENT</div>
-            <div class="ak-banner-subtitle">干员寻访 / 标准池</div>
-            <div style="margin-top:20px; font-size:0.8em; color:#aaa; max-width: 200px;">
-                <div style="margin-bottom:5px;">★6 概率: 0.8%</div>
-                <div style="margin-bottom:5px;">★5 概率: 3.2%</div>
-                <div>重复获取将自动转化为凭证</div>
+            <div class="ak-banner-title">CERTIFICATE<br>RECRUITMENT</div>
+            <div class="ak-banner-subtitle">凭证寻访 / 标准池</div>
+            <div style="margin-top:20px; font-size:0.8em; color:#aaa; max-width: 250px;">
+                <div style="margin-bottom:5px;">★6 凭证: 0.8%</div>
+                <div style="margin-bottom:5px;">★5 凭证: 3.2%</div>
+                <div style="margin-bottom:5px;">★4 凭证: 10.0%</div>
+                <div style="color:#f1c40f; margin-top:10px;">抽取的凭证将自动存入背包。<br>请联系 DM 进行定制定制或兑换。</div>
             </div>
             <div style="margin-top:20px; font-size:0.8em; color:#ccc;">
                  当前垫刀: <span id="pity-count-display" style="color:#f1c40f; font-weight:bold;">--</span> / 80
             </div>
         </div>
 
-        <img id="gacha-stand-img" src="https://via.placeholder.com/400x600?text=UP+Operator" class="ak-char-stand">
-
         <div class="ak-resources">
-            <div class="ak-res-box">
-                <span style="color:#f1c40f;">🎫</span>
-                <span id="cert-count-display">0</span>
-            </div>
             <div class="ak-res-box">
                 <span style="color:#f1c40f;">💰</span>
                 <span id="gacha-gold-display">0</span>
@@ -1267,29 +1262,28 @@
         </div>
 
         <div class="ak-bottom-bar">
-                <div style="display:flex; gap:10px;">
-                    <button class="ak-sub-btn" onclick="openGachaRates()">概率详情</button>
-                    <button class="ak-sub-btn" onclick="openCertShop()">凭证商店</button>
+            <div style="display:flex; gap:10px;">
+                <button class="ak-sub-btn" onclick="openGachaRates()">概率详情</button>
                 </div>
+            
+            <div style="display:flex; gap:15px; align-items:center;">
+                <div style="text-align:right; font-size:0.8em; color:#bbb; line-height:1.2;">
+                    <span style="color:#f1c40f; font-weight:bold; font-size:1.1em;">600</span> GP<br>寻访一次
+                </div>
+                <button class="ak-pull-btn" onclick="pullOperator()">
+                    <span>寻访一次</span>
+                </button>
                 
-                <div style="display:flex; gap:15px; align-items:center;">
-                    <div style="text-align:right; font-size:0.8em; color:#bbb; line-height:1.2;">
-                        <span style="color:#f1c40f; font-weight:bold; font-size:1.1em;">600</span> GP<br>寻访一次
-                    </div>
-                    <button class="ak-pull-btn" onclick="pullOperator()">
-                        <span>寻访一次</span>
-                    </button>
-                    
-                    <div style="width:1px; height:40px; background:#555; margin:0 5px;"></div>
+                <div style="width:1px; height:40px; background:#555; margin:0 5px;"></div>
 
-                    <div style="text-align:right; font-size:0.8em; color:#bbb; line-height:1.2;">
-                        <span style="color:#f1c40f; font-weight:bold; font-size:1.1em;">6000</span> GP<br>寻访十次
-                    </div>
-                    <button class="ak-pull-btn ten" onclick="pullOperatorTen()">
-                        <span>寻访十次</span>
-                    </button>
+                <div style="text-align:right; font-size:0.8em; color:#bbb; line-height:1.2;">
+                    <span style="color:#f1c40f; font-weight:bold; font-size:1.1em;">6000</span> GP<br>寻访十次
                 </div>
+                <button class="ak-pull-btn ten" onclick="pullOperatorTen()">
+                    <span>寻访十次</span>
+                </button>
             </div>
+        </div>
     </div>
 
     <div id="gacha-result-overlay" class="ak-result-overlay" onclick="closeGachaResult()">
@@ -1298,7 +1292,9 @@
         <div id="gacha-card-container" style="text-align:center; transform: scale(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
             <div id="res-stars" style="color:#f1c40f; font-size:2em; letter-spacing:5px; margin-bottom:10px; text-shadow:0 0 10px orange;">★★★★★★</div>
             
-            <img id="res-img" src="" style="height:400px; border: 4px solid #fff; box-shadow: 0 0 50px rgba(255,255,255,0.2);">
+            <div id="res-cert-box" style="height:400px; width:280px; margin: 0 auto; background: linear-gradient(135deg, #1a1a24, #0a0a0c); border: 4px solid #fff; box-shadow: 0 0 50px rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                <span id="res-icon" style="font-size: 7em; filter: drop-shadow(0 0 15px rgba(255,255,255,0.5));">🎫</span>
+            </div>
             
             <div style="background:#000; color:#fff; display:inline-block; padding:5px 30px; font-size:2em; font-weight:bold; transform:skewX(-15deg); margin-top:-20px; position:relative; border:2px solid #fff;">
                 <span id="res-name" style="display:block; transform:skewX(15deg);">NAME</span>
@@ -1306,12 +1302,12 @@
 
             <div id="res-type-tag" style="margin-top:20px; font-size:1.2em; color:#fff; font-weight:bold;"></div>
         </div>
+        
         <div id="gacha-ten-container" style="display:none; flex-direction:column; align-items:center;">
             <h2 style="color:#fff; letter-spacing:5px; margin-bottom:10px; text-shadow:0 0 10px #f1c40f;">寻访结果</h2>
             <div id="gacha-ten-grid" class="ak-ten-grid"></div>
             <div style="margin-top:30px; color:#aaa; font-size:0.8em;">点击任意处关闭</div>
         </div>
-        
     </div>
 
     <div id="gacha-weapon-panel" class="gacha-container" style="display:none; background:linear-gradient(135deg, #2c3e50 0%, #000 100%);">
@@ -4477,9 +4473,31 @@ async function getRobustIP() {
 
     // 初始化加载
     async function initGachaPanel() {
-        await Promise.all([loadPityCount(), loadCerts(), loadUpCharImage()]);
-        // 同步一下上面的金币显示
+        await loadPityCount(); 
         document.getElementById('gacha-gold-display').innerText = document.getElementById('gold-amount').innerText;
+    }
+
+    function rollCertificate(currentPity) {
+        // 1. 计算 6星概率 (基础 0.8%，65抽后每次加 5%)
+        let p6 = 0.008;
+        if (currentPity >= 65) {
+            p6 += (currentPity - 64) * 0.05; 
+        }
+        if (p6 > 1) p6 = 1;
+
+        // 2. 掷骰子
+        const roll = Math.random();
+        
+        if (roll < p6) return { rarity: 6, name: '6星凭证' };
+        
+        // 3. 如果没中6星，在剩下的概率里分配 (5星:3.2%, 4星:10%, 3星:40%, 2星:30%, 1星:16%)
+        const roll2 = Math.random() * 0.992; // 0.992 是剩下概率的总和
+        
+        if (roll2 < 0.032) return { rarity: 5, name: '5星凭证' };
+        if (roll2 < 0.132) return { rarity: 4, name: '4星凭证' }; // 0.032 + 0.10
+        if (roll2 < 0.532) return { rarity: 3, name: '3星凭证' }; // 0.132 + 0.40
+        if (roll2 < 0.832) return { rarity: 2, name: '2星凭证' }; // 0.532 + 0.30
+        return { rarity: 1, name: '1星凭证' };
     }
 
     async function loadCerts() {
@@ -4497,15 +4515,14 @@ async function getRobustIP() {
     }
 
     // 抽卡核心逻辑
-   async function pullOperator() {
-        if (!confirm('消耗 600 GP 进行一次干员寻访？')) return;
+    async function pullOperator() {
+        if (!confirm('消耗 600 GP 寻访一次？')) return;
 
         const overlay = document.getElementById('gacha-result-overlay');
         const beam = document.getElementById('gacha-beam');
         const card = document.getElementById('gacha-card-container');
         const tenContainer = document.getElementById('gacha-ten-container');
 
-        // 重置状态
         card.style.display = 'block';
         tenContainer.style.display = 'none';
         overlay.style.display = 'flex';
@@ -4513,18 +4530,20 @@ async function getRobustIP() {
         beam.style.display = 'block';
         
         try {
-            const { data, error } = await supabaseClient.rpc('rpc_gacha_pull', { p_user_id: viewingUserId });
-            
-            if (error || (data && data.status === 'error')) {
-                overlay.style.display = 'none';
-                return alert(error ? error.message : data.msg);
-            }
+            // 前端直接 Roll
+            const currentPity = parseInt(document.getElementById('pity-count-display').innerText) || 0;
+            const result = rollCertificate(currentPity);
 
-            // 确定光色
-            let color = '#fff';
-            if (data.rarity === 6) color = '#ff4e50';
-            else if (data.rarity === 5) color = '#f1c40f';
-            else if (data.rarity === 4) color = '#9b59b6';
+            // 发货扣钱
+            await processGachaTransaction([result], 600);
+
+            // 决定颜色
+            let color = '#95a5a6'; // 默认灰(1星)
+            if (result.rarity === 6) color = '#ff4e50';
+            else if (result.rarity === 5) color = '#f1c40f';
+            else if (result.rarity === 4) color = '#9b59b6';
+            else if (result.rarity === 3) color = '#3498db';
+            else if (result.rarity === 2) color = '#2ecc71';
 
             beam.style.boxShadow = `0 0 50px 20px ${color}`;
             beam.style.background = color;
@@ -4532,28 +4551,26 @@ async function getRobustIP() {
             setTimeout(() => {
                 beam.style.display = 'none';
                 
-                // --- 核心修改：优先使用立绘 (stand_url) ---
-                const resultImg = data.stand_url || data.avatar_url || 'https://via.placeholder.com/300x500';
-                document.getElementById('res-img').src = resultImg;
+                // 设置 UI
+                document.getElementById('res-cert-box').style.borderColor = color;
+                document.getElementById('res-cert-box').style.boxShadow = `0 0 50px ${color}44`;
+                document.getElementById('res-icon').style.filter = `drop-shadow(0 0 15px ${color})`;
                 
-                document.getElementById('res-name').innerText = data.name;
-                document.getElementById('res-stars').innerText = '★'.repeat(data.rarity);
+                document.getElementById('res-name').innerText = result.name;
+                document.getElementById('res-stars').innerText = '★'.repeat(result.rarity);
                 document.getElementById('res-stars').style.color = color;
-                
-                const typeTag = document.getElementById('res-type-tag');
-                if (data.status === 'duplicate') {
-                    typeTag.innerHTML = `已拥有<br><span style="font-size:0.8em; color:#aaa;">转化为高级凭证 x${data.cert_gain}</span>`;
-                } else {
-                    typeTag.innerHTML = `<span style="color:#f1c40f">NEW!</span><br><span style="font-size:0.8em; color:#aaa;">新干员入职</span>`;
-                }
+                document.getElementById('res-type-tag').innerHTML = `<span style="color:#aaa;">已自动存入背包</span>`;
 
                 card.style.transform = 'scale(1)';
-                loadGold(); loadCerts(); loadPityCount();
+                loadGold(); loadPityCount(); loadInventory();
             }, 600);
         } catch (e) {
-            overlay.style.display = 'none'; alert('通讯错误');
+            overlay.style.display = 'none'; 
+            alert(e.message === "GP 不足" ? "您的金币不足！" : "通讯错误");
         }
     }
+
+
 
     function closeGachaResult() {
         document.getElementById('gacha-result-overlay').style.display = 'none';
@@ -4954,7 +4971,7 @@ async function getRobustIP() {
 
     // --- 十连抽逻辑 ---
     async function pullOperatorTen() {
-        if (!confirm('确认消耗 6000 GP 进行十次寻访？\n(保底机制会在十连内部动态生效)')) return;
+        if (!confirm('消耗 6000 GP 进行十次寻访？')) return;
 
         const overlay = document.getElementById('gacha-result-overlay');
         const beam = document.getElementById('gacha-beam');
@@ -4962,59 +4979,54 @@ async function getRobustIP() {
         const tenContainer = document.getElementById('gacha-ten-container');
         const tenGrid = document.getElementById('gacha-ten-grid');
 
-        // 1. 准备动画
-        singleCard.style.display = 'none'; // 隐藏单抽
-        tenContainer.style.display = 'none'; // 先隐藏十连结果
+        singleCard.style.display = 'none'; 
+        tenContainer.style.display = 'none'; 
         overlay.style.display = 'flex';
-        beam.style.display = 'block'; // 播放光束
-        
-        // 默认光束是金色的，稍后根据最高星级变色
+        beam.style.display = 'block'; 
         beam.style.boxShadow = `0 0 50px 20px #f1c40f`;
         beam.style.background = '#f1c40f';
 
         try {
-            // 2. 调用十连 RPC
-            const { data, error } = await supabaseClient.rpc('rpc_gacha_pull_ten', { p_user_id: viewingUserId });
-
-            if (error || (data && data.status === 'error')) {
-                overlay.style.display = 'none';
-                return alert(error ? error.message : data.msg);
+            // 连续 Roll 10 次，动态更新保底
+            let currentPity = parseInt(document.getElementById('pity-count-display').innerText) || 0;
+            const results = [];
+            for (let i = 0; i < 10; i++) {
+                const r = rollCertificate(currentPity);
+                results.push(r);
+                if (r.rarity === 6) currentPity = 0;
+                else currentPity += 1;
             }
 
-            const results = data.data;
+            // 发货扣钱
+            await processGachaTransaction(results, 6000);
 
-            // 3. 判定最高星级来改变光束颜色
             const maxRarity = Math.max(...results.map(r => r.rarity));
             let beamColor = '#fff'; 
-            if (maxRarity === 6) beamColor = '#ff4e50'; // 有6星就是红光
+            if (maxRarity === 6) beamColor = '#ff4e50'; 
             else if (maxRarity === 5) beamColor = '#f1c40f';
             else if (maxRarity === 4) beamColor = '#9b59b6';
+            else if (maxRarity === 3) beamColor = '#3498db';
             
             beam.style.boxShadow = `0 0 50px 20px ${beamColor}`;
             beam.style.background = beamColor;
 
-            // 4. 构建网格 DOM
+            // 构建十连网格 (去掉了立绘，改用凭证图标)
             tenGrid.innerHTML = results.map((item, index) => {
                 let color = '#95a5a6';
                 if (item.rarity === 6) color = '#e74c3c';
                 else if (item.rarity === 5) color = '#f1c40f';
                 else if (item.rarity === 4) color = '#9b59b6';
                 else if (item.rarity === 3) color = '#3498db';
+                else if (item.rarity === 2) color = '#2ecc71';
 
                 const stars = '★'.repeat(item.rarity);
                 const delay = index * 0.1; 
 
-                // --- 核心修改：十连小卡片也优先用立绘 ---
-                const cardImg = item.stand_url || item.avatar_url || 'https://via.placeholder.com/100';
-
-                let tag = item.type === 'duplicate' 
-                    ? `<div style="position:absolute; top:0; right:0; background:rgba(0,0,0,0.7); color:#fff; font-size:0.7em; padding:2px 5px;">凭证+${item.cert_gain}</div>`
-                    : `<div style="position:absolute; top:0; right:0; background:#e74c3c; color:#fff; font-size:0.7em; padding:2px 5px; font-weight:bold;">NEW</div>`;
-
                 return `
                     <div class="ak-mini-card" style="border-bottom: 4px solid ${color}; animation: popIn 0.4s ease backwards ${delay}s;">
-                        ${tag}
-                        <img src="${cardImg}" onerror="this.src='https://via.placeholder.com/100'">
+                        <div style="height: 160px; background: linear-gradient(135deg, #222, #111); display:flex; align-items:center; justify-content:center; flex-direction:column;">
+                            <span style="font-size: 3.5em; filter: drop-shadow(0 0 5px ${color});">🎫</span>
+                        </div>
                         <div class="ak-mini-bar" style="background:${color}">
                             ${item.name}
                         </div>
@@ -5023,20 +5035,16 @@ async function getRobustIP() {
                 `;
             }).join('');
 
-            // 5. 显示结果
             setTimeout(() => {
-                beam.style.display = 'none'; // 关灯
-                tenContainer.style.display = 'flex'; // 开网格
+                beam.style.display = 'none'; 
+                tenContainer.style.display = 'flex'; 
                 
-                loadGold();
-                loadCerts();
-                loadPityCount();
+                loadGold(); loadPityCount(); loadInventory();
             }, 800);
 
         } catch (e) {
-            console.error(e);
             overlay.style.display = 'none';
-            alert('十连失败：网络或资金问题');
+            alert(e.message === "GP 不足" ? "您的金币不足！" : "通讯错误");
         }
     }
 
@@ -5060,6 +5068,61 @@ async function getRobustIP() {
         hideLoading();
     }
 }  
+
+
+// ✅ 处理发货、扣钱、记录日志的通用函数
+    async function processGachaTransaction(results, totalCost) {
+        // 1. 扣除金币
+        const currentGold = parseInt(document.getElementById('gold-amount').innerText.replace(/,/g, '')) || 0;
+        if (currentGold < totalCost) throw new Error("GP 不足");
+
+        // 2. 计算新保底数
+        let newPity = parseInt(document.getElementById('pity-count-display').innerText) || 0;
+        for (let r of results) {
+            if (r.rarity === 6) newPity = 0;
+            else newPity += 1;
+        }
+
+        // 3. 统计获得的凭证数量
+        const counts = {};
+        results.forEach(r => counts[r.name] = (counts[r.name] || 0) + 1);
+
+        // 4. 更新数据库：金币和保底
+        await supabaseClient.from('profiles').update({
+            gold_gp: currentGold - totalCost,
+            pity_count: newPity
+        }).eq('id', viewingUserId);
+
+        // 5. 更新数据库：发放凭证到背包
+        const itemNames = Object.keys(counts);
+        const { data: existItems } = await supabaseClient.from('user_inventory')
+            .select('*').eq('user_id', viewingUserId).in('item_name', itemNames);
+            
+        for (const name of itemNames) {
+            const qtyToAdd = counts[name];
+            const existing = existItems.find(i => i.item_name === name);
+            if (existing) {
+                await supabaseClient.from('user_inventory').update({ quantity: existing.quantity + qtyToAdd }).eq('id', existing.id);
+            } else {
+                await supabaseClient.from('user_inventory').insert([{
+                    user_id: viewingUserId, item_name: name, quantity: qtyToAdd, category: '凭证'
+                }]);
+            }
+        }
+
+        // 6. 写入抽卡记录
+        const logs = results.map(r => ({
+            user_id: viewingUserId,
+            user_email: currentUserEmail,
+            pool_type: 'operator',
+            item_name: r.name,
+            rarity: r.rarity
+        }));
+        await supabaseClient.from('gacha_records').insert(logs);
+
+        return newPity;
+    }
+
 // 搜索卡池角色（专门用于立绘上传）
     async function searchPoolCharForStand() {
         const name = document.getElementById('adm-pool-stand-search').value;
