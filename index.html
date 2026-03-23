@@ -916,7 +916,7 @@
 .stand-nav-btn.right { right: 15px; }
 
 .stand-indicators {
-    position: absolute; bottom: 80px; left: 0; width: 100%;
+    position: absolute; bottom: 25px; left: 0; width: 100%;
     display: flex; justify-content: center; gap: 8px; z-index: 10;
 }
 .stand-dot {
@@ -1779,10 +1779,17 @@
                 </div>
 
                 <div>
-                    <div style="font-size:0.85em; font-weight:bold; margin-bottom:5px; color:#8e44ad; display:flex; align-items:center;">
-                        <span style="font-size:1.2em; margin-right:5px;">🟣</span> 
-                        档案立绘
-                    </div>
+                    <div>
+    <div style="font-size:0.85em; font-weight:bold; margin-bottom:5px; color:#8e44ad; display:flex; align-items:center;">
+        <span style="font-size:1.2em; margin-right:5px;">🟣</span> 
+        档案立绘 (多图追加模式)
+    </div>
+    <div style="display:flex; gap:5px;">
+        <input type="file" id="adm-emp-stand" style="flex:1; font-size:0.8em;">
+        <button onclick="uploadExistingStand()" style="background:#8e44ad; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">追加</button>
+        <button onclick="clearExistingStand()" style="background:#e74c3c; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;" title="清空该角色所有立绘">清空</button>
+    </div>
+</div>
                     <div style="display:flex; gap:5px;">
                         <input type="file" id="adm-emp-stand" style="flex:1; font-size:0.8em;">
                         <button onclick="uploadExistingStand()" style="background:#8e44ad; color:#fff; border:none; padding:5px 10px; border-radius:4px;">更新立绘</button>
@@ -5599,6 +5606,36 @@ function goToStandImg(index) {
             hideLoading();
         }
     }
+
+    // --- 一键清空该角色的所有立绘 ---
+async function clearExistingStand() {
+    const empId = document.getElementById('adm-emp-list').value;
+    
+    if (!empId) return alert('请先在列表中选择一名雇员');
+    if (!confirm('⚠️ 警告：确定要清空该角色的所有立绘吗？此操作不可逆！')) return;
+
+    showLoading();
+    try {
+        // 将数据库中的 stand_url 字段更新为 null
+        const { error: dbError } = await supabaseClient
+            .from('employees')
+            .update({ stand_url: null })
+            .eq('id', empId);
+
+        if (dbError) throw dbError;
+        
+        alert('🗑️ 该角色的立绘已全部清空！');
+        
+        // 顺便清空一下文件选择框
+        document.getElementById('adm-emp-stand').value = '';
+
+    } catch (e) {
+        console.error(e);
+        alert('清空失败: ' + (e.message || '网络错误'));
+    } finally {
+        hideLoading();
+    }
+}
 
     // --- 雇员中心提示 ---
     function toggleSysHelp() {
