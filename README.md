@@ -88,9 +88,14 @@ from auth.users where email = 'master@almorel.com';
 
 #### 增加新的收入项目 (City Incomes)
 ```sql
--- 插入一条新的贸易收入
-insert into city_incomes (user_id, name, count, unit_price, amount)
-select id, '向哈鲁阿出口卷轴', 10, 200, 2000 -- amount 最好等于 count * unit_price
+-- 插入一条新的贸易收入 (category 设为 'trade')
+insert into city_incomes (user_id, name, count, unit_price, amount, category)
+select id, '向哈鲁阿出口卷轴', 10, 200, 2000, 'trade' -- category可选: tax(专项税), state(国营产业), trade(对外贸易)
+from auth.users where email = 'master@almorel.com';
+
+-- 插入一条新的国营收入 (category 设为 'state')
+insert into city_incomes (user_id, name, count, unit_price, amount, category)
+select id, '角斗场VIP门票', 1, 500, 500, 'state' 
 from auth.users where email = 'master@almorel.com';
 ```
 
