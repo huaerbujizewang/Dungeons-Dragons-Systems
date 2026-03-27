@@ -102,5 +102,40 @@
         ]
       }
     }
+  },
+  "herakmar": {
+    "name": "HERAKMAR",
+    "subtitle": "赫拉克玛尔城",
+    "order": {
+      "status": "脱序",
+      "color": "red",
+      "desc": "尚未建立有效统治"
+    },
+    "raceData": [
+      { "label": "火蝾螈", "value": 100, "color": "#e67e22" }
+    ],
+    "faithData": [
+      { "label": "卡署斯", "value": 100, "color": "#c0392b" }
+    ],
+    "menus": [],
+    "lore": {}
+  },
+  "dragon_mine": {
+    "name": "DRAGON HEART",
+    "subtitle": "巨龙之心矿区",
+    "order": { "status": "荒废", "color": "#999", "desc": "当前无人口占领" },
+    "raceData": [],
+    "faithData": [],
+    "menus": [],
+    "lore": {}
+  },
+  "khilku": {
+    "name": "KHILKU",
+    "subtitle": "希尔库港",
+    "order": { "status": "荒废", "color": "#999", "desc": "当前无人口占领" },
+    "raceData": [],
+    "faithData": [],
+    "menus": [],
+    "lore": {}
   }
 }
