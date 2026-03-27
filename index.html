@@ -3506,7 +3506,7 @@ if (typeof loadAdminResearch === 'function') {
         const employees = empRes.data || [];
 
         // --- 收入计算 ---
-        const taxIncome = Math.ceil(stats.population * stats.tax_rate);
+        const taxIncome = Math.ceil(stats.population * (stats.tax_rate ?? 1.2));
         
         // 贸易收入 (count * unit_price)
         const tradeIncome = incomes.reduce((sum, item) => {
