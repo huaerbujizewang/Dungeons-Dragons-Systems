@@ -49,8 +49,9 @@
     width: 100%; 
     border-collapse: collapse; 
     font-size: 0.95em; 
-    table-layout: fixed; /* 加上这行能让比例控制更严格 */
+    table-layout: fixed; /* 严格执行宽度分配 */
 }
+
 .finance-table th, .staff-table th { 
     text-align: left; 
     padding: 12px; 
@@ -58,22 +59,50 @@
     border-bottom: 2px solid #eee; 
     color: #666; 
 }
+
+/* 特殊：金额和数值相关的表头居中 */
+.finance-table th.amount-col, .staff-table th.amount-col {
+    text-align: center;
+}
+
 .finance-table td, .staff-table td { 
     padding: 12px; 
     border-bottom: 1px solid #eee; 
-    word-wrap: break-word; /* 防止长文本撑破表格 */
+    word-wrap: break-word; 
 }
 
-/* --- 3列财务表比例微调 --- */
-.finance-table th:nth-child(1), .finance-table td:nth-child(1) { width: 28%; } /* 税种/项目 */
-.finance-table th:nth-child(2), .finance-table td:nth-child(2) { width: 47%; } /* 征收标准 */
-.finance-table th:nth-child(3), .finance-table td:nth-child(3) { width: 25%; } /* 金额 */
+/* 修改金额对齐为居中 */
+.amount-col { 
+    text-align: center !important; 
+    font-family: monospace; 
+    font-weight: bold; 
+}
 
-/* --- 4列职员表比例微调 --- */
-.staff-table th:nth-child(1), .staff-table td:nth-child(1) { width: 30%; } /* 职能 */
-.staff-table th:nth-child(2), .staff-table td:nth-child(2) { width: 15%; } /* 人数 */
-.staff-table th:nth-child(3), .staff-table td:nth-child(3) { width: 25%; } /* 月薪 */
-.staff-table th:nth-child(4), .staff-table td:nth-child(4) { width: 30%; } /* 总支出 */
+/* --- 3 列财务表比例 (月度总表、税收明细) --- */
+/* 仅针对有 3 个单元格的行应用 */
+.finance-table tr td:first-child:nth-last-child(3),
+.finance-table tr th:first-child:nth-last-child(3) { width: 30%; }
+.finance-table tr td:nth-child(2):nth-last-child(2),
+.finance-table tr th:nth-child(2):nth-last-child(2) { width: 45%; }
+.finance-table tr td:nth-child(3):nth-last-child(1),
+.finance-table tr th:nth-child(3):nth-last-child(1) { width: 25%; }
+
+/* --- 4 列财务表比例 (基础设施维护、贸易与产业) --- */
+/* 仅针对有 4 个单元格的行应用，修复第 4 列挤压问题 */
+.finance-table tr td:first-child:nth-last-child(4),
+.finance-table tr th:first-child:nth-last-child(4) { width: 25%; } /* 名称 */
+.finance-table tr td:nth-child(2):nth-last-child(3),
+.finance-table tr th:nth-child(2):nth-last-child(3) { width: 15%; text-align: center; } /* 数量 */
+.finance-table tr td:nth-child(3):nth-last-child(2),
+.finance-table tr th:nth-child(3):nth-last-child(2) { width: 30%; text-align: center; } /* 单项费用 */
+.finance-table tr td:nth-child(4):nth-last-child(1),
+.finance-table tr th:nth-child(4):nth-last-child(1) { width: 30%; } /* 总支出 */
+
+/* --- 4 列职员表比例 --- */
+.staff-table th:nth-child(1), .staff-table td:nth-child(1) { width: 30%; }
+.staff-table th:nth-child(2), .staff-table td:nth-child(2) { width: 15%; text-align: center; }
+.staff-table th:nth-child(3), .staff-table td:nth-child(3) { width: 25%; text-align: center; }
+.staff-table th:nth-child(4), .staff-table td:nth-child(4) { width: 30%; }
 
         .amount-col { text-align: right; font-family: monospace; font-weight: bold; }
         .income-text { color: var(--success-color); }
