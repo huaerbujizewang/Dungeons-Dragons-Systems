@@ -23,13 +23,11 @@
         body { font-family: "PingFang SC", "Microsoft YaHei", serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         .layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
         
-        /* 内容区 */
         .main-content { padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
         .city-header { border-bottom: 2px solid var(--accent-gold); padding-bottom: 15px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: end; }
         .city-name { font-size: 2.5em; font-weight: bold; letter-spacing: 2px; color: var(--text-main); }
         .city-info { font-size: 0.9em; color: #666; font-family: sans-serif; }
 
-        /* 概览 */
         #overview-panel { display: block; animation: fadeIn 0.5s; }
         .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
         .kpi-card { background: var(--panel-bg); padding: 20px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 4px solid var(--accent-blue); text-align: center; }
@@ -37,21 +35,18 @@
         .kpi-label { color: #7f8c8d; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; }
         .kpi-sub { font-size: 0.8em; font-weight: bold; }
 
-        /* 图表区域 */
         .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
         .charts-row.full { grid-template-columns: 1fr; }
         .chart-box { background: var(--panel-bg); padding: 20px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; display: flex; flex-direction: column; }
         .chart-title { text-align: center; font-weight: bold; margin-bottom: 15px; color: var(--accent-blue); border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .canvas-container { position: relative; height: 300px; width: 100%; }
 
-        /* 数据表格样式 */
         .data-section { background: var(--panel-bg); padding: 25px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid var(--border-color); }
         .section-header { font-size: 1.2em; font-weight: bold; color: var(--accent-blue); border-left: 5px solid var(--accent-gold); padding-left: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         
         .finance-table, .staff-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
         .finance-table th, .staff-table th { text-align: left; padding: 12px; background: #f8f9fa; border-bottom: 2px solid #eee; color: #666; }
         .finance-table td, .staff-table td { padding: 12px; border-bottom: 1px solid #eee; }
-        .finance-table tr:last-child td { border-bottom: none; }
         
         .amount-col { text-align: right; font-family: monospace; font-weight: bold; }
         .income-text { color: var(--success-color); }
@@ -65,7 +60,6 @@
         .tag-cost { background: #fdeaea; color: #c0392b; } 
         .tag-special { background: #fff8e1; color: #f39c12; } 
 
-        /* 详情 */
         #detail-panel { display: none; animation: fadeIn 0.3s; height: 100%; }
         .suzerain-container { background: var(--panel-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.1); height: 100%; display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; }
         .suz-header { background: var(--accent-blue); color: #fff; padding: 15px; text-align: center; font-size: 1.2em; letter-spacing: 2px; font-weight: bold; border-bottom: 4px solid var(--accent-gold); }
@@ -76,13 +70,10 @@
         .suz-item-title { font-weight: bold; font-size: 1.1em; }
         .suz-desc-box { background: var(--accent-blue); color: #fff; padding: 25px; min-height: 140px; font-size: 0.95em; line-height: 1.6; border-top: 4px solid var(--accent-gold); box-shadow: inset 0 5px 15px rgba(0,0,0,0.2); }
 
-        /* 侧边栏及折叠菜单 */
         .sidebar { background: #fff; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; box-shadow: -5px 0 20px rgba(0,0,0,0.02); z-index: 10; }
         
-        /* 区域切换器样式 */
         .location-selector { padding: 20px 15px 10px 15px; border-bottom: 2px solid var(--accent-gold); background: #fdfcf9; }
         #location-select { width: 100%; padding: 10px; font-weight: bold; background: var(--text-main); color: #fff; border: 1px solid var(--accent-gold); border-radius: 4px; font-size: 1.05em; cursor: pointer; outline: none; }
-        #location-select:focus { box-shadow: 0 0 10px rgba(197, 160, 89, 0.5); }
 
         .menu-btn { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border: none; background: #fdfdfd; color: #666; cursor: pointer; transition: 0.2s; border-radius: 6px; font-size: 0.95em; text-align: left; font-family: inherit; width: 100%; box-sizing: border-box; margin: 0 10px; width: calc(100% - 20px); }
         .menu-btn:hover { background: #f4f1ea; color: #333; }
@@ -117,7 +108,7 @@
                 <div class="kpi-card">
                     <div class="kpi-label">管辖人口</div>
                     <div class="kpi-value" id="kpi-pop">--</div>
-                    <div style="font-size:0.8em; color:green;" id="kpi-pop-trend">▲ 稳定</div>
+                    <div style="font-size:0.8em; color:green;">▲ 稳定</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">月度净收入</div>
@@ -126,7 +117,7 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">治安指数</div>
-                    <div class="kpi-value" id="kpi-order-status" style="color:green;">--</div>
+                    <div class="kpi-value" id="kpi-order-status">--</div>
                     <div style="font-size:0.8em; color:#666;" id="kpi-order-desc">--</div>
                 </div>
             </div>
@@ -212,7 +203,7 @@
             <div class="suzerain-container">
                 <div class="suz-header" id="suz-title">...</div>
                 <div class="suz-list" id="suz-list"></div>
-                <div class="suz-desc-box" id="suz-desc">请从上方选择一项条目以查看详细报告。</div>
+                <div class="suz-desc-box" id="suz-desc">请选择条目查看详细报告。</div>
             </div>
         </div>
     </div>
@@ -251,7 +242,6 @@
     let territoryData = null;
     let chartInstances = {};
 
-    // 核心初始化：加载 JSON
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
@@ -260,36 +250,38 @@
 
         try {
             const res = await fetch('territory_data.json');
-            if(!res.ok) throw new Error("JSON file not found");
             territoryData = await res.json();
-            console.log("Territory Data Loaded Successfully");
         } catch (e) {
-            console.error("Critical: Failed to load territory_data.json. Page will be empty.");
+            console.error("JSON 加载失败");
             return;
         }
 
         await changeLocation(); 
     }
 
-    // 切换地域逻辑
     async function changeLocation() {
         currentLocation = document.getElementById('location-select').value;
         const locInfo = territoryData[currentLocation];
         if (!locInfo) return;
         
-        // 1. 更新 UI 标题
         document.getElementById('header-city-name').innerHTML = `${locInfo.name} <span style="font-size:0.5em; font-weight:normal; color:#666;">${locInfo.subtitle}</span>`;
         
-        // 2. 动态生成右侧子菜单
+        // 渲染治安 (从 JSON 读取设定)
+        if (locInfo.order) {
+            const statusEl = document.getElementById('kpi-order-status');
+            statusEl.innerText = locInfo.order.status;
+            statusEl.style.color = locInfo.order.color;
+            document.getElementById('kpi-order-desc').innerText = locInfo.order.desc;
+        }
+
         const subMenus = document.getElementById('sub-menus');
         subMenus.innerHTML = '';
-        if (locInfo.menus && locInfo.menus.length > 0) {
+        if (locInfo.menus) {
             locInfo.menus.forEach(m => {
                 subMenus.innerHTML += `<button class="menu-btn sub-btn" onclick="showCategory('${m.id}')"><div class="menu-left"><span class="menu-icon">${m.icon}</span> ${m.label}</div></button>`;
             });
         }
 
-        // 3. 渲染静态图表（从 JSON 读取数据）
         if (currentLocation !== 'overview') {
             document.getElementById('demographic-charts-row').style.display = 'grid';
             document.getElementById('tables-container').style.display = 'block';
@@ -299,7 +291,6 @@
             document.getElementById('tables-container').style.display = 'none';
         }
 
-        // 4. 加载 Supabase 动态数据 (财务)
         await loadAndRenderFinance(globalUserId); 
         await loadHistoricalTrends(globalUserId); 
         toggleOverview(true); 
@@ -309,13 +300,10 @@
         const subMenus = document.getElementById('sub-menus');
         const chevron = document.getElementById('overview-chevron');
         const overviewBtn = document.getElementById('overview-btn');
-        
         document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
         overviewBtn.classList.add('active');
-
         document.getElementById('overview-panel').style.display = 'block';
         document.getElementById('detail-panel').style.display = 'none';
-
         if (forceOpen || subMenus.style.maxHeight === '0px' || subMenus.style.maxHeight === '') {
             subMenus.style.maxHeight = '500px';
             chevron.classList.add('open');
@@ -325,26 +313,20 @@
         }
     }
 
-    // 渲染详情分类 (Lore)
     function showCategory(key) {
         document.getElementById('overview-btn').classList.remove('active');
         document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
         const activeSubBtn = document.querySelector(`button[onclick="showCategory('${key}')"]`);
         if(activeSubBtn) activeSubBtn.classList.add('active');
-
         document.getElementById('overview-panel').style.display = 'none';
         document.getElementById('detail-panel').style.display = 'block';
-        
         const locInfo = territoryData[currentLocation];
         const data = (locInfo.lore && locInfo.lore[key]) ? locInfo.lore[key] : { title: "无数据", items: [] };
-
         document.getElementById('suz-title').innerText = data.title;
         const listEl = document.getElementById('suz-list');
         const descEl = document.getElementById('suz-desc');
-        
         listEl.innerHTML = '';
         descEl.innerText = "请选择条目查看详情。";
-
         data.items.forEach(item => {
             const div = document.createElement('div');
             div.className = 'suz-item';
@@ -358,41 +340,28 @@
         });
     }
 
-    // 渲染 JSON 驱动的静态图表
     function renderStaticCharts(raceData, faithData) {
         if (!raceData || !faithData) return;
-
         if(chartInstances.race) chartInstances.race.destroy();
         if(chartInstances.faith) chartInstances.faith.destroy();
-
         chartInstances.race = new Chart(document.getElementById('raceChart'), {
             type: 'doughnut',
             data: {
                 labels: raceData.map(d => d.label),
-                datasets: [{
-                    data: raceData.map(d => d.value),
-                    backgroundColor: raceData.map(d => d.color),
-                    borderWidth: 0
-                }]
+                datasets: [{ data: raceData.map(d => d.value), backgroundColor: raceData.map(d => d.color), borderWidth: 0 }]
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } } }
         });
-
         chartInstances.faith = new Chart(document.getElementById('faithChart'), {
             type: 'pie',
             data: {
                 labels: faithData.map(d => d.label),
-                datasets: [{
-                    data: faithData.map(d => d.value),
-                    backgroundColor: faithData.map(d => d.color),
-                    borderWidth: 0
-                }]
+                datasets: [{ data: faithData.map(d => d.value), backgroundColor: faithData.map(d => d.color), borderWidth: 0 }]
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
         });
     }
 
-    // --- 财务计算引擎 (保持原逻辑，支持 location 过滤) ---
     async function loadAndRenderFinance(userId) {
         let statsQ = supabaseClient.from('city_stats').select('*').eq('user_id', userId);
         let expQ = supabaseClient.from('city_expenses').select('*').eq('user_id', userId);
@@ -407,7 +376,6 @@
         }
 
         const [statsRes, expRes, incRes, empRes] = await Promise.all([statsQ, expQ, incQ, empQ]);
-
         const statsList = statsRes.data || [];
         const expenses = expRes.data || [];
         const incomes = incRes.data || [];
@@ -439,7 +407,6 @@
 
         let staffCost = 0, buildingCost = 0, tradeCost = 0;
         let staffHtml = '', buildingHtml = '';
-
         expenses.forEach(e => {
             const cost = e.count * e.unit_cost;
             if (e.category === 'staff') {
@@ -464,22 +431,29 @@
         kpiIncome.innerText = `${netIncome} GP`;
         kpiIncome.style.color = netIncome >= 0 ? '#27ae60' : '#c0392b';
 
+        // 盈亏判断逻辑 (写死在代码中)
+        const incomeSub = document.getElementById('kpi-income-sub');
+        incomeSub.innerText = netIncome >= 0 ? "✅ 财政健康" : "⚠️ 赤字预警";
+
         if (currentLocation !== 'overview') {
             document.getElementById('tax-table-body').innerHTML = taxHtml; 
             document.getElementById('staff-table-body').innerHTML = staffHtml;
             document.getElementById('building-table-body').innerHTML = buildingHtml;
             document.getElementById('trade-table-body').innerHTML = tradeHtml;
 
+            // 汇总表标签 (写死在代码中)
             document.getElementById('finance-table-body').innerHTML = `
                 <tr><td><strong>税收总收入</strong></td><td>人头税 + 专项税</td><td class="amount-col income-text">+${totalTaxIncome}</td></tr>
-                <tr><td>补贴与援助</td><td>外部补助</td><td class="amount-col income-text">+${totalSubsidy}</td></tr>
-                <tr><td>产业/贸易营收</td><td>国营与外贸</td><td class="amount-col income-text">+${tradeRevenue}</td></tr>
-                <tr style="background:#f0f9f0;font-weight:bold;"><td colspan="2">总收入小计</td><td class="amount-col income-text">+${totalIncome}</td></tr>
-                <tr><td>职员与薪资</td><td>--</td><td class="amount-col expense-text">-${staffCost}</td></tr>
-                <tr><td>维护与损耗</td><td>--</td><td class="amount-col expense-text">-${buildingCost}</td></tr>
-                <tr><td>贸易/产业成本</td><td>--</td><td class="amount-col expense-text">-${tradeCost}</td></tr>
-                <tr><td>特殊人才雇佣</td><td>--</td><td class="amount-col expense-text">-${empCost}</td></tr>
-                <tr style="background:#fff0f0;font-weight:bold;"><td colspan="2">总支出小计</td><td class="amount-col expense-text">-${totalExpense}</td></tr>
+                <tr><td>外交补贴</td><td>外部援助</td><td class="amount-col income-text">+${totalSubsidy}</td></tr>
+                <tr><td>产业营收</td><td>国营/贸易/许可费</td><td class="amount-col income-text">+${tradeRevenue}</td></tr>
+                <tr style="background:#f0f9f0;font-weight:bold;"><td colspan="2">收入小计</td><td class="amount-col income-text">+${totalIncome}</td></tr>
+                
+                <tr><td>职员与薪资</td><td>卫兵/文职/工匠</td><td class="amount-col expense-text">-${staffCost}</td></tr>
+                <tr><td>维护与损耗</td><td>建筑/物资</td><td class="amount-col expense-text">-${buildingCost}</td></tr>
+                <tr><td>贸易/产业成本</td><td>原料进口</td><td class="amount-col expense-text">-${tradeCost}</td></tr>
+                <tr><td>特殊人才雇佣</td><td>核心团队</td><td class="amount-col expense-text">-${empCost}</td></tr>
+                <tr style="background:#fff0f0;font-weight:bold;"><td colspan="2">支出小计</td><td class="amount-col expense-text">-${totalExpense}</td></tr>
+                
                 <tr class="total-row"><td colspan="2">月度净利润</td><td class="amount-col" style="color:${netIncome>=0?'#27ae60':'#c0392b'}">${netIncome} GP</td></tr>
             `;
         }
@@ -490,11 +464,9 @@
         );
     }
 
-    // 动态收入/支出饼图
     function renderDynamicPieCharts(income, expense) {
         if(chartInstances.income) chartInstances.income.destroy();
         if(chartInstances.expense) chartInstances.expense.destroy();
-
         chartInstances.income = new Chart(document.getElementById('incomePieChart'), {
             type: 'doughnut',
             data: {
@@ -503,7 +475,6 @@
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } } }
         });
-
         chartInstances.expense = new Chart(document.getElementById('expensePieChart'), {
             type: 'doughnut',
             data: {
@@ -514,14 +485,11 @@
         });
     }
 
-    // 历史折线图 (保持聚合逻辑)
     async function loadHistoricalTrends(userId) {
         let query = supabaseClient.from('monthly_finances').select('*').eq('user_id', userId).order('year', { ascending: true }).order('month', { ascending: true });
         if (currentLocation !== 'overview') query = query.eq('location', currentLocation);
-
         const { data, error } = await query;
         if (error || !data || data.length === 0) return;
-
         const grouped = {};
         data.forEach(d => {
             const key = `${d.year}-${d.month}`;
@@ -530,10 +498,8 @@
             grouped[key].exp += Number(d.total_expense);
             grouped[key].net += Number(d.net_income);
         });
-
         const sortedArr = Object.values(grouped).slice(-12);
         const labels = sortedArr.map(d => `FR${d.year}-${d.month}月`);
-        
         if(chartInstances.trend) chartInstances.trend.destroy();
         chartInstances.trend = new Chart(document.getElementById('trendLineChart'), {
             type: 'line',
