@@ -3533,6 +3533,27 @@ if (typeof loadAdminResearch === 'function') {
         const netIncome = totalIncome - totalExpense;
         console.log(`[财务核算] User:${targetUserId} | 收入:${totalIncome} - 支出:${totalExpense} = 净利:${netIncome}`);
         
+        // ================= 自动写入历史记录表 =================
+        // 直接使用全局的 currentDate 作为结算月份
+        const recordYear = currentDate.year;
+        const recordMonth = currentDate.month;
+
+        const { error: insertErr } = await supabaseClient.from('monthly_finances').insert({
+            user_id: targetUserId,
+            year: recordYear,
+            month: recordMonth,
+            total_income: totalIncome,
+            total_expense: totalExpense,
+            net_income: netIncome
+        });
+
+        if (insertErr) {
+            console.error(`❌ 写入历史快照失败:`, insertErr.message);
+        } else {
+            console.log(`✅ 历史财务已自动录入 ${recordYear}年${recordMonth}月`);
+        }
+        // ============================================================
+
         return netIncome;
     }
 
