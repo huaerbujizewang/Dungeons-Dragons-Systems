@@ -456,7 +456,7 @@
         statsList.forEach(s => {
             totalPop += s.population;
             totalSubsidy += (s.subsidy || 0);
-            baseTaxRaw += Math.ceil(s.population * (s.tax_rate || 1.2));
+            baseTaxRaw += Math.ceil(s.population * (s.tax_rate ?? 1.2));
         });
 
         let specializedTaxTotal = 0, tradeRevenue = 0;        
