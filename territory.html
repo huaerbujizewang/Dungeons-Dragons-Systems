@@ -44,10 +44,37 @@
         .data-section { background: var(--panel-bg); padding: 25px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid var(--border-color); }
         .section-header { font-size: 1.2em; font-weight: bold; color: var(--accent-blue); border-left: 5px solid var(--accent-gold); padding-left: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         
-        .finance-table, .staff-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
-        .finance-table th, .staff-table th { text-align: left; padding: 12px; background: #f8f9fa; border-bottom: 2px solid #eee; color: #666; }
-        .finance-table td, .staff-table td { padding: 12px; border-bottom: 1px solid #eee; }
-        
+/* --- 基础表格样式 --- */
+.finance-table, .staff-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 0.95em; 
+    table-layout: fixed; /* 加上这行能让比例控制更严格 */
+}
+.finance-table th, .staff-table th { 
+    text-align: left; 
+    padding: 12px; 
+    background: #f8f9fa; 
+    border-bottom: 2px solid #eee; 
+    color: #666; 
+}
+.finance-table td, .staff-table td { 
+    padding: 12px; 
+    border-bottom: 1px solid #eee; 
+    word-wrap: break-word; /* 防止长文本撑破表格 */
+}
+
+/* --- 3列财务表比例微调 --- */
+.finance-table th:nth-child(1), .finance-table td:nth-child(1) { width: 28%; } /* 税种/项目 */
+.finance-table th:nth-child(2), .finance-table td:nth-child(2) { width: 47%; } /* 征收标准 */
+.finance-table th:nth-child(3), .finance-table td:nth-child(3) { width: 25%; } /* 金额 */
+
+/* --- 4列职员表比例微调 --- */
+.staff-table th:nth-child(1), .staff-table td:nth-child(1) { width: 30%; } /* 职能 */
+.staff-table th:nth-child(2), .staff-table td:nth-child(2) { width: 15%; } /* 人数 */
+.staff-table th:nth-child(3), .staff-table td:nth-child(3) { width: 25%; } /* 月薪 */
+.staff-table th:nth-child(4), .staff-table td:nth-child(4) { width: 30%; } /* 总支出 */
+
         .amount-col { text-align: right; font-family: monospace; font-weight: bold; }
         .income-text { color: var(--success-color); }
         .expense-text { color: var(--danger-color); }
@@ -168,7 +195,7 @@
                 <div class="data-section">
                     <div class="section-header"><span>💰 税收明细 (Tax)</span></div>
                     <table class="finance-table">
-                        <thead><tr><th>税种</th><th>征收标准/来源</th><th class="amount-col">征收总额</th></tr></thead>
+                        <thead><tr><th>税种</th><th>征收标准</th><th class="amount-col">征收总额</th></tr></thead>
                         <tbody id="tax-table-body"></tbody>
                     </table>
                 </div>
