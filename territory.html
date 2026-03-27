@@ -456,6 +456,8 @@
 
     // 新增折线图渲染
     async function loadHistoricalTrends(userId) {
+        console.log("开始尝试拉取历史财务数据，当前领主ID:", userId);
+
         const { data, error } = await supabaseClient
             .from('monthly_finances')
             .select('*')
@@ -464,7 +466,20 @@
             .order('month', { ascending: true })
             .limit(12);
 
-        if (error || !data || data.length === 0) return;
+        // 打印接口返回的真实情况
+        console.log("Supabase 返回的结果 ->", { data, error });
+
+        if (error) {
+            console.error("读取历史数据出错:", error.message);
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            console.warn("读取成功，但是数据为空！请检查：1.数据库是否真的有数据？ 2.RLS策略是否拦截了读取？");
+            return;
+        }
+
+        console.log("成功获取到历史数据，准备画图...");
 
         const labels = data.map(d => `FR${d.year}-${d.month}月`);
         const incomes = data.map(d => d.total_income);
@@ -490,6 +505,8 @@
                 scales: { y: { beginAtZero: true } }
             }
         });
+        
+        console.log("折线图渲染完毕！");
     }
 
     init();
