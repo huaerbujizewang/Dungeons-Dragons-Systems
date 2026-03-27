@@ -3492,70 +3492,81 @@ if (typeof loadAdminResearch === 'function') {
 
     // --- 计算城市月度净收支 ---
     async function calculateCityNetIncome(targetUserId) {
-        // 1. 获取所有数据
-        const [statsRes, expensesRes, incomeRes, empRes] = await Promise.all([
-            supabaseClient.from('city_stats').select('*').eq('user_id', targetUserId).maybeSingle(),
-            supabaseClient.from('city_expenses').select('*').eq('user_id', targetUserId),
-            supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId),
-            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).in('status', ['在职', '科研中'])
+    console.log(`[财务结算] 开始为用户 ${targetUserId} 进行全领地核算...`);
+    
+    // 1. 获取该玩家名下的所有城市
+    const { data: cities, error: statsErr } = await supabaseClient
+        .from('city_stats')
+        .select('*')
+        .eq('user_id', targetUserId);
+
+    if (statsErr || !cities || cities.length === 0) {
+        console.error("未能找到任何领地统计数据:", statsErr);
+        return 0;
+    }
+
+    let totalEmpireNetIncome = 0; // 用来累计全领地的总利润
+
+    // 2. 遍历每一个城市独立核算
+    for (const city of cities) {
+        const loc = city.location;
+        console.log(` -> 正在核算地点: ${loc}`);
+
+        // 分别获取该城市对应的 收入、支出、雇员 (增加 .eq('location', loc))
+        const [expensesRes, incomeRes, empRes] = await Promise.all([
+            supabaseClient.from('city_expenses').select('*').eq('user_id', targetUserId).eq('location', loc),
+            supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId).eq('location', loc),
+            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('location', loc).in('status', ['在职', '科研中'])
         ]);
 
-        const stats = statsRes.data || { population: 0, subsidy: 0, tax_rate: 1.2 };
         const expenses = expensesRes.data || [];
         const incomes = incomeRes.data || [];
         const employees = empRes.data || [];
 
         // --- 收入计算 ---
-        const taxIncome = Math.ceil(stats.population * (stats.tax_rate ?? 1.2));
+        // 使用 ?? 处理 0 税率，防止 fallback 到 1.2
+        const taxIncome = Math.ceil(city.population * (city.tax_rate ?? 1.2));
         
-        // 贸易收入 (count * unit_price)
         const tradeIncome = incomes.reduce((sum, item) => {
             const count = item.count || 1;
             const price = item.unit_price || item.amount;
             return sum + (count * price);
         }, 0);
         
-        const totalIncome = taxIncome + stats.subsidy + tradeIncome;
+        const cityTotalIncome = taxIncome + (city.subsidy || 0) + tradeIncome;
 
         // --- 支出计算 ---
-        let totalExpense = 0;
-        
-        // 固定支出 (含 staff, building, trade_cost)
-        if (expenses) {
-            expenses.forEach(e => totalExpense += (e.count * e.unit_cost));
-        }
-        
-        // 特殊雇员支出
-        if (employees) {
-            totalExpense += employees.reduce((sum, e) => sum + e.salary, 0);
-        }
+        let cityTotalExpense = 0;
+        expenses.forEach(e => cityTotalExpense += (e.count * e.unit_cost));
+        cityTotalExpense += employees.reduce((sum, e) => sum + e.salary, 0);
 
-        const netIncome = totalIncome - totalExpense;
-        console.log(`[财务核算] User:${targetUserId} | 收入:${totalIncome} - 支出:${totalExpense} = 净利:${netIncome}`);
-        
-        // ================= 自动写入历史记录表 =================
-        // 直接使用全局的 currentDate 作为结算月份
+        const cityNet = cityTotalIncome - cityTotalExpense;
+        totalEmpireNetIncome += cityNet;
+
+        // --- 自动写入历史记录表 (增加 location 字段) ---
         const recordYear = currentDate.year;
         const recordMonth = currentDate.month;
 
         const { error: insertErr } = await supabaseClient.from('monthly_finances').insert({
             user_id: targetUserId,
+            location: loc, // 【关键】记录这笔钱是哪个城市的
             year: recordYear,
             month: recordMonth,
-            total_income: totalIncome,
-            total_expense: totalExpense,
-            net_income: netIncome
+            total_income: cityTotalIncome,
+            total_expense: cityTotalExpense,
+            net_income: cityNet
         });
 
         if (insertErr) {
-            console.error(`❌ 写入历史快照失败:`, insertErr.message);
+            console.error(`❌ ${loc} 历史快照写入失败:`, insertErr.message);
         } else {
-            console.log(`✅ 历史财务已自动录入 ${recordYear}年${recordMonth}月`);
+            console.log(`✅ ${loc} 核算完成：收入 ${cityTotalIncome}, 支出 ${cityTotalExpense}, 净利 ${cityNet}`);
         }
-        // ============================================================
-
-        return netIncome;
     }
+
+    console.log(`[结算完毕] 领地总计月利润: ${totalEmpireNetIncome} GP`);
+    return totalEmpireNetIncome;
+}
 
 
     async function adminAddItem() {
