@@ -304,25 +304,42 @@
         const urlParams = new URLSearchParams(window.location.search);
         globalUserId = urlParams.get('uid') || user.id;
 
+        // --- 核心修复：确保 JSON 加载成功后再进行下一步 ---
         try {
+            console.log("正在尝试加载 JSON 数据...");
             const res = await fetch('territory_data.json');
+            if(!res.ok) throw new Error(`HTTP 错误! 状态码: ${res.status}`);
+            
             territoryData = await res.json();
-        } catch (e) {
-            console.error("JSON 加载失败");
-            return;
-        }
+            console.log("JSON 加载成功:", territoryData);
 
-        await changeLocation(); 
+            // 只有数据加载成功，才允许初始化页面
+            await changeLocation(); 
+        } catch (e) {
+            console.error("CRITICAL: JSON 加载失败！请检查文件名是否准确，或是否使用了服务器运行环境。", e);
+            alert("系统数据加载失败，请检查控制台 (F12)");
+        }
     }
 
     async function changeLocation() {
-        currentLocation = document.getElementById('location-select').value;
-        const locInfo = territoryData[currentLocation];
-        if (!locInfo) return;
+        const selectEl = document.getElementById('location-select');
+        if (!selectEl) return;
         
+        currentLocation = selectEl.value;
+        console.log("正在切换至地点:", currentLocation);
+
+        // 检查 territoryData 是否已准备好
+        if (!territoryData || !territoryData[currentLocation]) {
+            console.error("无法找到该地点的 JSON 设定:", currentLocation);
+            return;
+        }
+
+        const locInfo = territoryData[currentLocation];
+        
+        // 1. 更新标题
         document.getElementById('header-city-name').innerHTML = `${locInfo.name} <span style="font-size:0.5em; font-weight:normal; color:#666;">${locInfo.subtitle}</span>`;
         
-        // 渲染治安 (从 JSON 读取设定)
+        // 2. 渲染治安
         if (locInfo.order) {
             const statusEl = document.getElementById('kpi-order-status');
             statusEl.innerText = locInfo.order.status;
@@ -330,6 +347,7 @@
             document.getElementById('kpi-order-desc').innerText = locInfo.order.desc;
         }
 
+        // 3. 动态菜单
         const subMenus = document.getElementById('sub-menus');
         subMenus.innerHTML = '';
         if (locInfo.menus) {
@@ -338,6 +356,7 @@
             });
         }
 
+        // 4. 显示/隐藏图表和表格
         if (currentLocation !== 'overview') {
             document.getElementById('demographic-charts-row').style.display = 'grid';
             document.getElementById('tables-container').style.display = 'block';
@@ -347,6 +366,7 @@
             document.getElementById('tables-container').style.display = 'none';
         }
 
+        // 5. 拉取数据库数据
         await loadAndRenderFinance(globalUserId); 
         await loadHistoricalTrends(globalUserId); 
         toggleOverview(true); 
