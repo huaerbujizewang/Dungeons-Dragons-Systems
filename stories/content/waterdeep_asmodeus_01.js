@@ -4,11 +4,11 @@ const storyContent = {
         "塞拉菲娜_营业微笑": "assets/stories/seraphina/business_smile.png",
         "塞拉菲娜_深意": "assets/stories/seraphina/profound.png",
         "塞拉菲娜_无奈": "assets/stories/seraphina/helpless.png",
-        "加雷斯_警惕": "assets/stories/gareth/wary.png",
-        "加雷斯_错愕": "assets/stories/gareth/shocked.png",
-        "芬恩_心动": "assets/stories/finn/tempted.png",
-        "艾兰_推敲": "assets/stories/elan/analyzing.png",
-        "艾兰_震惊": "assets/stories/elan/shocked.png"
+        "加雷斯_警惕": "assets/stories/npcs/wary.png",
+        "加雷斯_错愕": "assets/stories/npcs/shocked.png",
+        "芬恩_心动": "assets/stories/npcs/tempted.png",
+        "艾兰_推敲": "assets/stories/npcs/analyzing.png",
+        "艾兰_震惊": "assets/stories/npcs/shocked.png"
     },
     lines: [
         { speaker: "旁白", emotion: "", text: "深水城，繁花似锦的四月。空气中本该只有春天的气息，但今天，北区的一条主干道上弥漫着一种诡异的宁静。" },
