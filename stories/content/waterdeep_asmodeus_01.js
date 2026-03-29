@@ -5,10 +5,8 @@ const storyContent = {
         "塞拉菲娜_深意": "assets/stories/seraphina/profound.png",
         "塞拉菲娜_无奈": "assets/stories/seraphina/helpless.png",
         "加雷斯_警惕": "assets/stories/npcs/wary.png",
-        "加雷斯_错愕": "assets/stories/npcs/shocked.png",
         "芬恩_心动": "assets/stories/npcs/tempted.png",
         "艾兰_推敲": "assets/stories/npcs/analyzing.png",
-        "艾兰_震惊": "assets/stories/npcs/shocked.png"
     },
     lines: [
         { speaker: "旁白", emotion: "", text: "深水城，繁花似锦的四月。空气中本该只有春天的气息，但今天，北区的一条主干道上弥漫着一种诡异的宁静。" },
@@ -33,14 +31,14 @@ const storyContent = {
         { speaker: "塞拉菲娜", emotion: "塞拉菲娜_营业微笑", text: "“目前，本教堂在深水城合法开展以下业务：”" },
         { speaker: "塞拉菲娜", emotion: "塞拉菲娜_营业微笑", text: "“第一，‘无失败率’复活险。每月缴纳100GP，战死后您的灵魂将由我们在星界直接打捞并重塑躯体，省去您寻找高级牧师的烦恼。”" },
         { speaker: "塞拉菲娜", emotion: "塞拉菲娜_营业微笑", text: "“第二，合法魔力信贷。需要短时间内突破瓶颈？我们可以提供经过面具领主备案的‘有限期邪术师契约’。不收灵魂，只收您未来十年探险收益的20%。”" },
-        { speaker: "加雷斯", emotion: "加雷斯_错愕", text: "“等等……不收灵魂？！”" },
+        { speaker: "加雷斯", emotion: "加雷斯_警惕", text: "“等等……不收灵魂？！”" },
         { speaker: "塞拉菲娜", emotion: "塞拉菲娜_深意", text: "“当然。我们尊重深水城的现行法律。强买强卖是不道德的，而且极易引起外交纠纷。”" },
         { speaker: "旁白", emotion: "", text: "塞拉菲娜绕过长桌，高跟鞋在光洁的大理石地面上敲出清脆的节奏。她停在三人面前，那双深邃的眼睛里闪烁着令人无法抗拒的真诚。" },
         { speaker: "塞拉菲娜", emotion: "塞拉菲娜_深意", text: "“我们只是为那些在冒险中挣扎求生、却得不到上层神明眷顾的凡人，提供一个额外的、透明的选项罢了。”" },
         { speaker: "塞拉菲娜", emotion: "塞拉菲娜_营业微笑", text: "“顺带一提，今天开业大酬宾，签订复活险不仅免手续费，还赠送‘隐形仆役’的终身使用权。”" },
         { speaker: "塞拉菲娜", emotion: "塞拉菲娜_营业微笑", text: "“几位，要先看看合同的通用条款吗？”" },
         { speaker: "旁白", emotion: "", text: "门外，洛山达牧师的抗议声依然不绝于耳。但在教堂温暖、安静、充满安全感的大厅内，冒险者小队面面相觑。" },
-        { speaker: "艾兰", emotion: "艾兰_震惊", text: "“诸神啊……这复活险的赔付流程和免责条款，逻辑严密得就像魔法女神的法术模型！比老家那座苏伦神殿的祈祷文清晰一百倍，没有任何隐性陷阱！”" },
+        { speaker: "艾兰", emotion: "艾兰_推敲", text: "“诸神啊……这复活险的赔付流程和免责条款，逻辑严密得就像魔法女神的法术模型！比老家那座苏伦神殿的祈祷文清晰一百倍，没有任何隐性陷阱！”" },
         { speaker: "芬恩", emotion: "芬恩_心动", text: "“头儿，我兜里还有五枚金币……要不我先去把手续费免了，弄个隐形仆役爽爽？”" },
         { speaker: "旁白", emotion: "", text: "看着逐渐放下防备的众人，塞拉菲娜嘴角的弧度扩大了一毫米。" }
     ]
