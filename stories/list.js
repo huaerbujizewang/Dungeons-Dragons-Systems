@@ -49,6 +49,14 @@ const storyList = [
         date: "FR1494 - 2月"
     },
     {
+        id: "waterdeep_asmodeus_01",
+        title: "合规的地狱",
+        description: "大魔鬼塞拉菲娜正在接待她今天的第一批散客。",
+        owner: "master@almorel.com",
+        tags: "塞拉菲娜",
+        date: "FR1494 - 4月"
+    },
+    {
         id: "test_01",
         title: "牢玩家的故事",
         description: "这是一段只有 IDRotF 负责的玩家才能看到的剧情。",
