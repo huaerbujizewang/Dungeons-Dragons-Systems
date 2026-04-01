@@ -437,7 +437,7 @@
         let statsQ = supabaseClient.from('city_stats').select('*').eq('user_id', userId);
         let expQ = supabaseClient.from('city_expenses').select('*').eq('user_id', userId);
         let incQ = supabaseClient.from('city_incomes').select('*').eq('user_id', userId);
-        let empQ = supabaseClient.from('employees').select('*').eq('user_id', userId).in('status', ['在职', '科研中']);
+        let empQ = supabaseClient.from('employees').select('*').eq('user_id', userId).in('status', ['在职', '科研中', '出差']);
 
         if (currentLocation !== 'overview') {
             statsQ = statsQ.eq('location', currentLocation);
