@@ -2161,8 +2161,9 @@
         preloadImages(standUrls);
 
         // 2. 状态权重配置
+        // 2. 状态权重配置 (加入出差，排在科研之后)
         const statusWeight = {
-            '在职': 1, '科研中': 2, '休假': 3, '特殊状态': 4, '申请解雇': 5, '离职': 6, '违规': 7
+            '在职': 1, '科研中': 2, '出差': 3, '休假': 4, '特殊状态': 5, '申请解雇': 6, '离职': 7, '违规': 8
         };
 
         // --- 排序权重计算 ---
@@ -2193,11 +2194,10 @@
             return wB.salary - wA.salary;
         };
 
-        // 计算总薪资
+        // 计算总薪资 
         const totalSalary = data
-            .filter(e => (e.status === '在职' || e.status === '科研中') && e.salary > 0)
+            .filter(e => (e.status === '在职' || e.status === '科研中' || e.status === '出差') && e.salary > 0)
             .reduce((sum, e) => sum + e.salary, 0);
-        
         // 分组并排序
         const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
         const hirelings = data.filter(e => e.role !== '核心队友').sort(sortLogic);
@@ -2208,8 +2208,9 @@
             return list.map(e => {
                 // 状态色
                 const config = { color: '#666' };
-                if(e.status === '在职') config.color = '#2ecc71';
+               if(e.status === '在职') config.color = '#2ecc71';
                 else if(e.status === '科研中') config.color = '#3498db'; 
+                else if(e.status === '出差') config.color = '#1abc9c';
                 else if(e.status === '休假') config.color = '#f1c40f';
                 else if(e.status === '特殊状态') config.color = '#9b59b6';
                 else if(e.status === '违规') config.color = '#c0392b'; 
@@ -3516,7 +3517,7 @@ if (typeof loadAdminResearch === 'function') {
         const [expensesRes, incomeRes, empRes] = await Promise.all([
             supabaseClient.from('city_expenses').select('*').eq('user_id', targetUserId).eq('location', loc),
             supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId).eq('location', loc),
-            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('location', loc).in('status', ['在职', '科研中'])
+            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('location', loc).in('status', ['在职', '科研中', '出差'])
         ]);
 
         const expenses = expensesRes.data || [];
