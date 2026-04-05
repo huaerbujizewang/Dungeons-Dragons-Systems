@@ -130,6 +130,12 @@ set unit_price = 660,
 where name like '%火绳枪%' 
 and location = 'almorel' 
 and user_id = (select id from auth.users where email = 'master@almorel.com');
+
+-- 修改城市税率
+update city_stats 
+set tax_rate = 1.5  -- 在这里填入你想要的新税率，比如 1.5
+where location = 'almorel' 
+  and user_id = (select id from auth.users where email = 'master@almorel.com');
 ```
 
 #### 修改现有人员的数量 (扩编/裁员)
