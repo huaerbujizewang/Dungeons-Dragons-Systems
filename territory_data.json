@@ -7,24 +7,25 @@
   "almorel": {
     "name": "ALMOREL",
     "subtitle": "艾尔莫瑞尔",
+    "population": 7036,
     "order": {
       "status": "优秀",
       "color": "green",
       "desc": "稳中向好，蒸蒸日上"
     },
     "raceData": [
-      { "label": "人类", "value": 61.3, "color": "#2c3e50" },
-      { "label": "矮人", "value": 11.0, "color": "#7f8c8d" },
-      { "label": "半精灵", "value": 6.8, "color": "#e67e22" },
-      { "label": "精灵", "value": 3.7, "color": "#27ae60" },
+      { "label": "人类", "value": 61.9, "color": "#2c3e50" },
+      { "label": "矮人", "value": 10.4, "color": "#7f8c8d" },
+      { "label": "半精灵", "value": 6.9, "color": "#e67e22" },
+      { "label": "精灵", "value": 3.8, "color": "#27ae60" },
+      { "label": "龙裔", "value": 3.2, "color": "#B22222" },
       { "label": "地精", "value": 3.0, "color": "#8e44ad" },
       { "label": "兽人", "value": 2.5, "color": "#f1c40f" },
       { "label": "提夫林", "value": 2.5, "color": "#800000" },
-      { "label": "龙裔", "value": 3.2, "color": "#B22222" },
-      { "label": "侏儒", "value": 2.0, "color": "#c0392b" },
+      { "label": "侏儒", "value": 1.9, "color": "#c0392b" },
       { "label": "阿斯莫", "value": 1.5, "color": "#FFD700" },
       { "label": "狐妖", "value": 1.3, "color": "#ff9ff3" },
-      { "label": "狗头人", "value": 1.0, "color": "#8B4513" },
+      { "label": "狗头人", "value": 0.9, "color": "#8B4513" },
       { "label": "龙", "value": 0.2, "color": "#E5E4E2" }
     ],
     "faithData": [
@@ -107,9 +108,9 @@
     "name": "HERAKMAR",
     "subtitle": "赫拉克玛尔城",
     "order": {
-      "status": "脱序",
-      "color": "red",
-      "desc": "尚未建立有效统治"
+      "status": "自治",
+      "color": "#3498db",
+      "desc": "元素生物自治，服从艾尔莫瑞尔最高律法"
     },
     "raceData": [
       { "label": "火蝾螈", "value": 100, "color": "#e67e22" }
@@ -117,22 +118,77 @@
     "faithData": [
       { "label": "卡署斯", "value": 100, "color": "#c0392b" }
     ],
-    "menus": [],
-    "lore": {}
+    "menus": [
+      { "id": "law", "icon": "⚖️", "label": "法律" },
+      { "id": "economy", "icon": "💰", "label": "经济" }
+    ],
+    "lore": {
+      "law": {
+        "title": "LAW / 法律与政策",
+        "items": [
+          { "title": "区域自治权", "desc": "赫拉克玛尔城有权决定自己的区域领导者，并尊重当地的宗教和习俗。除此以外的行政与司法事务均照搬艾尔莫瑞尔法律执行。" }
+        ]
+      },
+      "economy": {
+        "title": "ECONOMY / 经济与税收",
+        "items": [
+          { "title": "针对性税收减免", "desc": "作为纳入统治并维持自治的怀柔政策，所有元素生物的税收将减半收取。" }
+        ]
+      }
+    }
   },
   "dragon_mine": {
     "name": "DRAGON HEART",
     "subtitle": "巨龙之心矿区",
-    "order": { "status": "荒废", "color": "#999", "desc": "当前无人口占领" },
-    "raceData": [],
+    "population": 100,
+    "order": {
+      "status": "良好",
+      "color": "#27ae60",
+      "desc": "治安良好，早期开发中"
+    },
+    "raceData": [
+      { "label": "矮人", "value": 52, "color": "#7f8c8d" },
+      { "label": "人类", "value": 27, "color": "#2c3e50" },
+      { "label": "侏儒", "value": 12, "color": "#c0392b" },
+      { "label": "狗头人", "value": 9, "color": "#8B4513" }
+    ],
     "faithData": [],
-    "menus": [],
-    "lore": {}
+    "menus": [
+      { "id": "economy", "icon": "💰", "label": "经济" },
+      { "id": "welfare", "icon": "❤️", "label": "福利" },
+      { "id": "law", "icon": "⚖️", "label": "法律" }
+    ],
+    "lore": {
+      "economy": {
+        "title": "ECONOMY / 经济政策",
+        "items": [
+          { "title": "移民开发补贴", "desc": "只要拥有艾尔莫瑞尔市民身份的人，移民巨龙之心矿坑即可领取 40gp/人的补贴，并且在最初的六个月内免予缴纳人头税。" }
+        ]
+      },
+      "welfare": {
+        "title": "WELFARE / 社会福利",
+        "items": [
+          { "title": "儿童集中抚养教育", "desc": "政务厅在当地专门设置了一个部门，负责对随行儿童进行统一抚养教育，免除后顾之忧，让监护人可以全身心投入到矿区工作当中。" },
+          { "title": "奖励生育制度", "desc": "依照不同种族的生育周期，孕期居民可享受带薪产假，其配偶居民亦享有同等福利的陪护假。" }
+        ]
+      },
+      "law": {
+        "title": "LAW / 法律与惩戒",
+        "items": [
+          { "title": "反骗保与黑名单追讨机制", "desc": "移民后一年内离开矿坑的市民需主动退还部分补贴，退还后保留的份额依照移民时间和工作贡献决定。不主动退还者将被艾尔莫瑞尔列入信用黑名单，且城市方有权追讨未缴纳份额并处以额外罚款。" },
+          { "title": "最高律法适用", "desc": "除上述针对性移民与建设政策外，矿区所有法度一律照搬艾尔莫瑞尔法律。" }
+        ]
+      }
+    }
   },
   "khilku": {
     "name": "KHILKU",
     "subtitle": "希尔库港",
-    "order": { "status": "荒废", "color": "#999", "desc": "当前无人口占领" },
+    "order": {
+      "status": "荒废",
+      "color": "#999",
+      "desc": "当前无人口占领"
+    },
     "raceData": [],
     "faithData": [],
     "menus": [],
