@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全境网络 - Omni</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 核心色彩定义：以绿为尊，繁荣明亮 */
+        /* 核心色彩定义：以绿为尊 */
         :root {
-            --omni-green-main: #196f3d; /* 帝国主色：祖母绿 */
-            --omni-green-light: #2ecc71; /* 交互高亮绿 */
-            --omni-bg-gray: #f4f6f7; /* 页面底色：明亮的浅灰 */
+            --omni-green-main: #196f3d; 
+            --omni-green-light: #2ecc71; 
+            --omni-bg-gray: #f4f6f7; 
             --omni-card-white: #ffffff;
             --omni-text-main: #2c3e50;
             --omni-text-sub: #7f8c8d;
-            --omni-gold: #f39c12; /* 辅色：财富与高阶权限 */
-            --omni-danger: #e74c3c; /* 违禁与危险警告 */
+            --omni-gold: #f39c12; 
+            --omni-danger: #e74c3c; 
         }
 
         body {
@@ -28,7 +29,7 @@
             overflow: hidden;
         }
 
-        /* PC端侧边栏导航 */
+        /* 侧边栏导航 */
         .omni-sidebar {
             width: 260px;
             background: var(--omni-green-main);
@@ -45,9 +46,6 @@
             font-weight: 900;
             letter-spacing: 2px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
         .nav-item {
@@ -61,10 +59,7 @@
             gap: 15px;
         }
 
-        .nav-item:hover {
-            background: rgba(255,255,255,0.05);
-        }
-
+        .nav-item:hover { background: rgba(255,255,255,0.05); }
         .nav-item.active {
             background: rgba(255,255,255,0.1);
             border-left-color: var(--omni-green-light);
@@ -79,21 +74,14 @@
             position: relative;
         }
 
-        .tab-pane {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .tab-pane.active {
-            display: block;
-        }
+        .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+        .tab-pane.active { display: block; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 卡片通用样式 (体现消费产业发达的精致感) */
         .omni-card {
             background: var(--omni-card-white);
             border-radius: 12px;
@@ -108,38 +96,10 @@
             font-weight: bold;
             margin-bottom: 25px;
             color: var(--omni-green-main);
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
-        /* --- 通讯模块 (Chat) --- */
-        .chat-layout {
-            display: flex;
-            gap: 20px;
-            height: calc(100vh - 120px);
-        }
-
-        .chat-list {
-            width: 300px;
-            background: var(--omni-card-white);
-            border-radius: 12px;
-            overflow-y: auto;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-
-        .chat-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .chat-item:hover { background: #f9f9f9; }
-
-        .chat-avatar { width: 45px; height: 45px; border-radius: 50%; background: #ddd; object-fit: cover;}
-
+        /* --- 通讯模块 UI --- */
+        .chat-layout { display: flex; gap: 20px; height: calc(100vh - 180px); }
         .chat-window {
             flex: 1;
             background: var(--omni-card-white);
@@ -149,144 +109,48 @@
             border: 1px solid rgba(0,0,0,0.05);
         }
 
-        .chat-history {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background: #fcfcfc;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            max-width: 70%;
-            display: flex;
-            flex-direction: column;
-        }
-        .message.self { align-self: flex-end; align-items: flex-end; margin-left: auto;}
+        .chat-history { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; }
         
-        .msg-bubble {
-            padding: 12px 18px;
-            border-radius: 18px;
-            background: #eee;
-            color: var(--omni-text-main);
-            position: relative;
-        }
-        .message.self .msg-bubble {
-            background: var(--omni-green-light);
+        /* DM 扮演控制台样式 */
+        #dm-control-panel {
+            background: #2c3e50;
             color: white;
-        }
-
-        .msg-error {
-            color: var(--omni-danger);
-            font-size: 0.8em;
-            margin-top: 5px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .chat-input-area {
-            padding: 20px;
-            border-top: 1px solid #eee;
-            display: flex;
-            gap: 15px;
-        }
-
-        .chat-input-area input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            outline: none;
-        }
-        .chat-input-area input:focus { border-color: var(--omni-green-main); }
-
-        .btn-send {
-            background: var(--omni-green-main);
-            color: white;
-            border: none;
-            padding: 0 25px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn-send:hover { background: var(--omni-green-light); }
-
-        /* --- 本地生活 (Meituan) --- */
-        .food-tags {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .food-tag {
-            padding: 8px 16px;
-            background: #eee;
-            border-radius: 20px;
-            cursor: pointer;
+            padding: 10px 20px;
             font-size: 0.9em;
-            font-weight: bold;
-            color: var(--omni-text-sub);
+            display: none; /* 仅对 DM 显示 */
+            gap: 10px;
+            align-items: center;
+            border-radius: 12px 12px 0 0;
         }
-        .food-tag.active {
-            background: var(--omni-green-main);
-            color: white;
-        }
+        #dm-control-panel input { padding: 4px 8px; border-radius: 4px; border: none; outline: none; }
 
-        .store-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
+        .chat-input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 15px; }
+        .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        .btn-send { background: var(--omni-green-main); color: white; border: none; padding: 0 25px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        .store-card {
-            background: var(--omni-card-white);
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(0,0,0,0.05);
-            transition: transform 0.2s;
-        }
-        .store-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
-        .store-img { width: 100%; height: 160px; background: #ddd; object-fit: cover; }
-        .store-info { padding: 15px; }
-        .store-title { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; }
-        .store-meta { font-size: 0.85em; color: var(--omni-text-sub); display: flex; justify-content: space-between;}
+        /* 消息气泡样式 */
+        .message { margin-bottom: 20px; display: flex; flex-direction: column; }
+        .message.self { align-items: flex-end; }
+        .msg-info { font-size: 0.75em; color: #999; margin-bottom: 4px; }
+        .msg-bubble { padding: 12px 18px; border-radius: 18px; background: #eee; max-width: 70%; word-wrap: break-word; }
+        .message.self .msg-bubble { background: var(--omni-green-light); color: white; }
+        .msg-error { color: var(--omni-danger); font-size: 0.8em; margin-top: 5px; font-weight: bold; }
 
-        /* --- 金融模块 (Alipay) --- */
+        /* --- 资产/钱包模块 UI --- */
         .wallet-banner {
             background: linear-gradient(135deg, var(--omni-green-main), #114b28);
             border-radius: 16px;
             padding: 40px;
             color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(25, 111, 61, 0.3);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 20px rgba(25, 111, 61, 0.3);
         }
-        .wallet-balance-title { font-size: 1.1em; opacity: 0.9; margin-bottom: 10px;}
-        .wallet-balance-val { font-size: 3.5em; font-weight: 900; line-height: 1;}
+        .wallet-balance-val { font-size: 3.5em; font-weight: 900; }
 
-        .service-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-        }
-        .service-item {
-            background: var(--omni-card-white);
-            padding: 25px 15px;
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            border: 1px solid rgba(0,0,0,0.05);
-            transition: 0.2s;
-        }
-        .service-item:hover { background: #f0fdf4; border-color: var(--omni-green-light); }
-        .service-icon { font-size: 2.5em; margin-bottom: 10px; color: var(--omni-green-main);}
-
-        /* 警告弹窗 */
+        /* --- 安全拦截弹窗 --- */
         .sys-warning {
             position: fixed;
             top: 20px;
@@ -298,30 +162,24 @@
             border-radius: 4px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             z-index: 9999;
-            font-weight: bold;
-            color: var(--omni-text-main);
             display: none;
             align-items: center;
             gap: 15px;
         }
-
     </style>
 </head>
 <body>
 
     <nav class="omni-sidebar">
-        <div class="omni-logo">
-            🌐 OMNI 全境
-        </div>
+        <div class="omni-logo">🌐 OMNI 全境</div>
         <div style="flex:1; padding-top: 20px;">
             <div class="nav-item active" onclick="switchTab('chat', this)">💬 枢纽通讯</div>
             <div class="nav-item" onclick="switchTab('life', this)">🍔 帝国优选</div>
-            <div class="nav-item" onclick="switchTab('wallet', this)">💳 资产管理</div>
+            <div class="nav-item" onclick="switchTab('wallet', this)">💳 资产结算</div>
             <div class="nav-item" onclick="switchTab('profile', this)">🛂 公民通行证</div>
         </div>
-        <div style="padding: 20px; font-size: 0.8em; color: rgba(255,255,255,0.5); border-top: 1px solid rgba(255,255,255,0.1);">
-            返回 D&D 指挥系统
-            <div style="cursor: pointer; margin-top: 10px; color: #fff; text-decoration: underline;" onclick="window.history.back()">⬅ 退 出</div>
+        <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="cursor: pointer; font-size: 0.9em; opacity: 0.7;" onclick="window.history.back()">⬅ 退出系统</div>
         </div>
     </nav>
 
@@ -330,91 +188,45 @@
         <div id="omni-warning" class="sys-warning">
             <span style="font-size: 1.5em;">⚠️</span>
             <div>
-                <div style="color: var(--omni-danger); font-size: 1.1em; margin-bottom: 4px;">安全拦截</div>
-                <div id="warning-text" style="font-size: 0.9em; font-weight: normal;">您尝试发送的内容包含敏感词汇。警告 (1/3)</div>
+                <div style="color: var(--omni-danger); font-size: 1.1em; font-weight: bold;">安全拦截</div>
+                <div style="font-size: 0.9em;">检测到敏感词汇，消息已阻断。警告 (1/3)</div>
             </div>
         </div>
 
         <div id="tab-chat" class="tab-pane active">
-            <div class="section-header">枢纽通讯</div>
-            <div class="chat-layout">
-                <div class="chat-list">
-                    <div class="chat-item" style="background: #f0fdf4; border-left: 4px solid var(--omni-green-main);">
-                        <div class="chat-avatar" style="background: #3498db;"></div>
-                        <div>
-                            <div style="font-weight: bold;">因斯卡利亚第三机械厂校友群</div>
-                            <div style="font-size: 0.8em; color: var(--omni-text-sub);">奥斯特克语转译中...</div>
-                        </div>
+            <div class="section-header">枢纽通讯 (Hub)</div>
+            
+            <div id="dm-control-panel">
+                <span style="color: #f39c12; font-weight: bold;">[DM 扮演模式]</span>
+                <input type="text" id="dm-npc-name" placeholder="NPC 名称 (如: 老李)">
+                <input type="text" id="dm-npc-race" placeholder="种族 (如: 人类)">
+                <input type="color" id="dm-npc-color" value="#3498db" title="头像颜色">
+            </div>
+
+            <div class="chat-window">
+                <div class="chat-history" id="chat-history">
                     </div>
-                    <div class="chat-item">
-                        <div class="chat-avatar" style="background: #9b59b6;"></div>
-                        <div>
-                            <div style="font-weight: bold;">深渊代购-卡罗尔</div>
-                            <div style="font-size: 0.8em; color: var(--omni-text-sub);">[图片] 新鲜的灵魂残渣</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="chat-window">
-                    <div style="padding: 15px 20px; border-bottom: 1px solid #eee; font-weight: bold; background: #fff; border-radius: 12px 12px 0 0;">
-                        因斯卡利亚第三机械厂校友群 (1,402人)
-                    </div>
-                    <div class="chat-history" id="chat-history">
-                        <div class="message">
-                            <span style="font-size: 0.8em; color: #999; margin-bottom: 4px;">老李</span>
-                            <div class="msg-bubble">今天厂里配给的营养液又是苹果味的，真腻转。</div>
-                        </div>
-                        <div class="message">
-                            <span style="font-size: 0.8em; color: #999; margin-bottom: 4px;">格拉克</span>
-                            <div class="msg-bubble" style="background: #fdebd0;">同意。我昨天去南部出差，那边的魔力纯度高多了。</div>
-                        </div>
-                    </div>
-                    <div class="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="输入消息..." onkeypress="if(event.key === 'Enter') attemptSend()">
-                        <button class="btn-send" onclick="attemptSend()">发 送</button>
-                    </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="输入消息 (已开启无感转译)..." onkeypress="if(event.key === 'Enter') attemptSend()">
+                    <button class="btn-send" onclick="attemptSend()">发 送</button>
                 </div>
             </div>
         </div>
 
         <div id="tab-life" class="tab-pane">
             <div class="section-header">帝国优选</div>
-            
             <div class="omni-card">
-                <div class="food-tags">
-                    <div class="food-tag active">推荐</div>
-                    <div class="food-tag">人类适口</div>
-                    <div class="food-tag">深渊特供</div>
-                    <div class="food-tag">能量矿石区</div>
-                </div>
-
-                <div class="store-grid">
-                    <div class="store-card">
-                        <div class="store-img" style="background: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=80') center/cover;"></div>
-                        <div class="store-info">
-                            <div class="store-title">蒂尔兰经典手工汉堡</div>
-                            <div class="store-meta">
-                                <span>⭐ 4.8 | 月销 2.4万次</span>
-                                <span style="color: var(--omni-green-main); font-weight: bold;">15 信用点</span>
-                            </div>
-                            <button onclick="mockOrder('蒂尔兰汉堡', 15, 2)" style="width: 100%; margin-top: 15px; padding: 10px; background: #eee; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                                立即支付
-                            </button>
-                        </div>
+                <p style="color:#7f8c8d;">当前语区：中央平原 - 蒂尔兰</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="border: 1px solid #eee; border-radius: 8px; padding: 15px;">
+                        <div style="font-weight: bold;">蒂尔兰经典手工汉堡</div>
+                        <div style="color: var(--omni-green-main); margin: 5px 0;">15.00 信用点</div>
+                        <button onclick="mockOrder('汉堡', 15)" style="width: 100%; padding: 8px; border: none; background: #eee; border-radius: 4px; cursor: pointer;">支付调配</button>
                     </div>
-                    
-                    <div class="store-card">
-                        <div class="store-img" style="background: url('https://images.unsplash.com/photo-1621317762635-4302eb6b5dfc?auto=format&fit=crop&w=500&q=80') center/cover;"></div>
-                        <div class="store-info">
-                            <div class="store-title">高纯度魔力营养液 (无污染版)</div>
-                            <div class="store-meta">
-                                <span>⭐ 4.9 | 军工认证</span>
-                                <span style="color: var(--omni-green-main); font-weight: bold;">120 信用点</span>
-                            </div>
-                            <button onclick="mockOrder('魔力营养液', 120, 15)" style="width: 100%; margin-top: 15px; padding: 10px; background: #eee; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                                立即支付
-                            </button>
-                        </div>
+                    <div style="border: 1px solid #eee; border-radius: 8px; padding: 15px;">
+                        <div style="font-weight: bold;">高纯度魔力营养液</div>
+                        <div style="color: var(--omni-green-main); margin: 5px 0;">120.00 信用点</div>
+                        <button onclick="mockOrder('营养液', 120)" style="width: 100%; padding: 8px; border: none; background: #eee; border-radius: 4px; cursor: pointer;">支付调配</button>
                     </div>
                 </div>
             </div>
@@ -422,60 +234,25 @@
 
         <div id="tab-wallet" class="tab-pane">
             <div class="section-header">资产结算</div>
-            
             <div class="wallet-banner">
                 <div>
-                    <div class="wallet-balance-title">可用信用点</div>
-                    <div class="wallet-balance-val" id="omni-gp-display">--.-</div>
-                    <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">锚定帝国中央银行</div>
+                    <div style="opacity: 0.9; margin-bottom: 10px;">可用信用点</div>
+                    <div class="wallet-balance-val" id="omni-credits-display">0.00</div>
+                    <div style="margin-top: 15px; font-size: 0.8em; opacity: 0.7;">锚定：帝国中央银行</div>
                 </div>
-                <div style="background: white; padding: 15px; border-radius: 12px;">
-                    <div style="width: 120px; height: 120px; background: repeating-linear-gradient(45deg, #000, #000 10px, #fff 10px, #fff 20px); opacity: 0.8;"></div>
-                </div>
-            </div>
-
-            <div class="service-grid">
-                <div class="service-item">
-                    <div class="service-icon">💸</div>
-                    <div style="font-weight: bold;">转账汇款</div>
-                </div>
-                <div class="service-item">
-                    <div class="service-icon">🛡️</div>
-                    <div style="font-weight: bold;">法则保险</div>
-                </div>
-                <div class="service-item">
-                    <div class="service-icon">📜</div>
-                    <div style="font-weight: bold;">契约公证</div>
-                </div>
-                <div class="service-item">
-                    <div class="service-icon">⚡</div>
-                    <div style="font-weight: bold;">生活缴费</div>
+                <div style="background: white; padding: 10px; border-radius: 8px; opacity: 0.8;">
+                    <div style="width: 100px; height: 100px; background: repeating-linear-gradient(45deg, #000, #000 5px, #fff 5px, #fff 10px);"></div>
                 </div>
             </div>
         </div>
 
         <div id="tab-profile" class="tab-pane">
             <div class="section-header">公民数据中心</div>
-            
-            <div class="omni-card" style="display: flex; gap: 30px; align-items: center;">
-                <div style="width: 100px; height: 100px; border-radius: 50%; background: #ddd; border: 4px solid var(--omni-green-main);"></div>
-                <div>
-                    <h2 style="margin: 0 0 10px 0;">当前终端使用者</h2>
-                    <div style="color: var(--omni-text-sub); margin-bottom: 5px;"><strong>种族识别：</strong> 通过检测</div>
-                    <div style="color: var(--omni-text-sub); margin-bottom: 5px;"><strong>语区归属：</strong> 中央平原 - 蒂尔兰语区</div>
-                    <div style="display: inline-block; padding: 4px 10px; background: #fdf2e9; color: #d35400; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-top: 10px;">
-                        社会信用等级：A
-                    </div>
-                </div>
-            </div>
-
             <div class="omni-card">
-                <h3 style="margin-top: 0;">电子签证与异变区通行状态</h3>
-                <div style="padding: 15px; border-left: 4px solid var(--omni-green-light); background: #f0fdf4; margin-bottom: 10px;">
-                    <strong>[正常]</strong> 中央平原至卡法罗群岛传送阵权限
-                </div>
-                <div style="padding: 15px; border-left: 4px solid var(--omni-danger); background: #fdedec;">
-                    <strong>[锁定]</strong> 废都白城边缘网格通行权限
+                <h2 id="user-name">载入中...</h2>
+                <div style="margin: 10px 0; color: #7f8c8d;">
+                    <div><strong>种族识别：</strong> <span id="user-race">--</span></div>
+                    <div style="margin-top: 5px;"><strong>社会信用等级：</strong> A</div>
                 </div>
             </div>
         </div>
@@ -483,64 +260,133 @@
     </main>
 
     <script>
-        // 导航切换
+        // --- 核心配置 (直接同步 index.html) ---
+        const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewingUserId = urlParams.get('uid');
+
+        let myProfile = null;
+
+        // 初始化
+        async function init() {
+            // 获取用户信息
+            const { data } = await supabase.from('profiles').select('*').eq('id', viewingUserId).single();
+            if (data) {
+                myProfile = data;
+                document.getElementById('user-name').innerText = data.name;
+                document.getElementById('user-race').innerText = data.race || "未定义";
+                document.getElementById('omni-credits-display').innerText = (data.omni_credits || 0).toLocaleString('en-US', {minimumFractionDigits: 2});
+
+                // DM 判定
+                if (viewingUserId === DM_UID) {
+                    document.getElementById('dm-control-panel').style.display = 'flex';
+                }
+            }
+
+            loadMessages();
+            subscribeToChat();
+        }
+
+        // 标签切换
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
             document.getElementById('tab-' + tabId).classList.add('active');
             element.classList.add('active');
+        }
 
-            // 切换到钱包时，模拟从 localStorage (或你实际的 D&D DB) 读取数据
-            if(tabId === 'wallet') {
-                document.getElementById('omni-gp-display').innerText = "15,200.00"; // 模拟金币数据
+        // 加载历史
+        async function loadMessages() {
+            const { data } = await supabase.from('omni_chat_messages').select('*').order('created_at', { ascending: true }).limit(50);
+            if (data) {
+                const chatBox = document.getElementById('chat-history');
+                chatBox.innerHTML = '';
+                data.forEach(renderMessage);
+                chatBox.scrollTop = chatBox.scrollHeight;
             }
         }
 
-        // 聊天拦截逻辑：帝国绝对红线
-        function attemptSend() {
+        // 实时同步
+        function subscribeToChat() {
+            supabase.channel('omni_realtime')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omni_chat_messages' }, payload => {
+                    renderMessage(payload.new);
+                    const chatBox = document.getElementById('chat-history');
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }).subscribe();
+        }
+
+        // 发送消息
+        async function attemptSend() {
             const inputEl = document.getElementById('chat-input');
             const text = inputEl.value.trim();
             if (!text) return;
 
-            const chatHistory = document.getElementById('chat-history');
-
-            // 检查禁忌词
-            if (text.includes('伊莎贝拉')) {
-                // 渲染发送失败的红色气泡
-                chatHistory.innerHTML += `
-                    <div class="message self">
-                        <div class="msg-bubble" style="background: #fdedec; color: #333; border: 1px solid var(--omni-danger);">
-                            ${text}
-                        </div>
-                        <div class="msg-error">
-                            <span>!</span> 消息发送失败
-                        </div>
-                    </div>`;
-                
-                // 弹出全局高危警告
-                const warningBox = document.getElementById('omni-warning');
-                warningBox.style.display = 'flex';
-                setTimeout(() => { warningBox.style.display = 'none'; }, 4000);
-            } else {
-                // 正常发送
-                chatHistory.innerHTML += `
-                    <div class="message self">
-                        <div class="msg-bubble">${text}</div>
-                    </div>`;
+            // 禁忌拦截逻辑
+            const isBlocked = text.includes('伊莎贝拉');
+            if (isBlocked) {
+                document.getElementById('omni-warning').style.display = 'flex';
+                setTimeout(() => { document.getElementById('omni-warning').style.display = 'none'; }, 4000);
             }
-            
+
+            // 身份判定
+            let sName = myProfile ? myProfile.name : "未知公民";
+            let sRace = myProfile ? myProfile.race : "未知";
+            let sAvatar = "#3498db";
+
+            // DM 扮演马甲逻辑
+            if (viewingUserId === DM_UID) {
+                const npcName = document.getElementById('dm-npc-name').value.trim();
+                const npcRace = document.getElementById('dm-npc-race').value.trim();
+                const npcColor = document.getElementById('dm-npc-color').value;
+                if (npcName) {
+                    sName = npcName;
+                    sRace = npcRace || "未知";
+                    sAvatar = npcColor;
+                }
+            }
+
+            await supabase.from('omni_chat_messages').insert([{
+                sender_uid: viewingUserId,
+                sender_name: sName,
+                sender_race: sRace,
+                sender_avatar: sAvatar,
+                content: text,
+                is_blocked: isBlocked
+            }]);
+
             inputEl.value = '';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        // 模拟外卖/物流结算
-        function mockOrder(name, price, envFee) {
-            const total = price + envFee;
-            if(confirm(`【订单确认】\n\n目标物资: ${name}\n标准价格: ${price} 信用点\n跨区环境调度费: ${envFee} 信用点\n\n总计: ${total} 信用点\n\n是否支付？`)) {
-                alert(`支付成功！配给列车/法阵物流已开始调度。`);
-            }
+        // 渲染单条消息
+        function renderMessage(msg) {
+            const chatBox = document.getElementById('chat-history');
+            const isSelf = msg.sender_uid === viewingUserId;
+            
+            // 逻辑：如果是 DM 且在扮演 NPC，即使是自己发的也靠左
+            const isNpcMode = isSelf && viewingUserId === DM_UID && msg.sender_name !== myProfile.name;
+            const alignClass = (isSelf && !isNpcMode) ? 'self' : '';
+
+            const bubbleStyle = msg.is_blocked ? 'background: #fdedec; color: #333; border: 1px solid var(--omni-danger);' : '';
+            
+            chatBox.innerHTML += `
+                <div class="message ${alignClass}">
+                    <div class="msg-info">${msg.sender_name} (${msg.sender_race})</div>
+                    <div class="msg-bubble" style="${bubbleStyle}">${msg.content}</div>
+                    ${msg.is_blocked ? '<div class="msg-error">! 消息已拦截</div>' : ''}
+                </div>
+            `;
         }
+
+        function mockOrder(name, price) {
+            confirm(`【支付确认】\n\n项目：${name}\n需支付：${price} 信用点\n\n确认后将立即从您的账户扣款。`) && alert('支付处理中...');
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
