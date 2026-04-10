@@ -17,15 +17,110 @@
 
         body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
 
-        /* 登录遮罩 */
-        #login-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--omni-green); z-index: 99999;
-            display: flex; justify-content: center; align-items: center;
-        }
-        .login-card { background: white; padding: 40px; border-radius: 15px; width: 320px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
-        .login-card input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        .login-card button { width: 100%; padding: 12px; background: var(--omni-green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+/* --- 未来几何登录界面重塑 --- */
+#login-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #0a0a0a; /* 极深灰底色 */
+    background-image: 
+        linear-gradient(45deg, rgba(25, 111, 61, 0.05) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(25, 111, 61, 0.05) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(25, 111, 61, 0.05) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(25, 111, 61, 0.05) 75%);
+    background-size: 100px 100px; /* 几何网格背景 */
+    z-index: 99999;
+    display: flex;
+    justify-content: flex-end; /* 非居中构图：靠右 */
+    align-items: center;
+    padding-right: 15%; 
+    overflow: hidden;
+}
+
+/* 几何背景线条装饰 */
+#login-overlay::before {
+    content: ""; position: absolute; top: -50%; left: -20%; width: 150%; height: 150%;
+    background: repeating-linear-gradient(45deg, transparent, transparent 120px, rgba(25, 111, 61, 0.1) 120px, rgba(25, 111, 61, 0.1) 121px);
+    transform: rotate(-15deg);
+    pointer-events: none;
+}
+
+.login-card {
+    background: rgba(20, 20, 20, 0.9);
+    backdrop-filter: blur(10px);
+    padding: 60px 50px;
+    width: 380px;
+    /* 核心几何切角 */
+    clip-path: polygon(0% 15%, 15% 0%, 100% 0%, 100% 85%, 85% 100%, 0% 100%);
+    border: 1px solid rgba(46, 204, 113, 0.3);
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    position: relative;
+}
+
+/* 组件变形：当内部输入框获得焦点时，整体外形发生微调 */
+.login-card:focus-within {
+    clip-path: polygon(0% 0%, 25% 0%, 100% 0%, 100% 100%, 75% 100%, 0% 100%);
+    border-color: var(--omni-green-bright);
+    background: rgba(25, 25, 25, 0.95);
+    transform: translateX(-10px);
+}
+
+.login-card h2 {
+    color: var(--omni-green-bright);
+    text-align: left;
+    font-size: 1.8em;
+    letter-spacing: 5px;
+    margin-bottom: 40px;
+    font-weight: 900;
+    border-left: 4px solid var(--omni-green-bright);
+    padding-left: 15px;
+}
+
+.login-card input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: none;
+    border-bottom: 2px solid rgba(46, 204, 113, 0.2);
+    padding: 15px 10px;
+    margin-bottom: 25px;
+    color: white;
+    font-size: 1.1em;
+    outline: none;
+    transition: 0.3s;
+    border-radius: 0;
+}
+
+.login-card input:focus {
+    background: rgba(46, 204, 113, 0.05);
+    border-bottom-color: var(--omni-green-bright);
+}
+
+.login-card button {
+    width: 100%;
+    padding: 18px;
+    background: transparent;
+    color: var(--omni-green-bright);
+    border: 1px solid var(--omni-green-bright);
+    font-weight: bold;
+    font-size: 1.2em;
+    letter-spacing: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+    /* 按钮切角 */
+    clip-path: polygon(10% 0%, 100% 0%, 100% 70%, 90% 100%, 0% 100%, 0% 30%);
+}
+
+.login-card button:hover {
+    background: var(--omni-green-bright);
+    color: #000;
+}
+
+#l-err {
+    position: absolute;
+    bottom: 20px;
+    left: 50px;
+    color: var(--omni-danger);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
 
         /* 主架构 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
@@ -61,11 +156,13 @@
 
     <div id="login-overlay">
         <div class="login-card">
-            <h2>🌐 全境网络接入</h2>
-            <input type="text" id="l-user" placeholder="公民账号">
-            <input type="password" id="l-pass" placeholder="访问密钥">
-            <button onclick="handleLogin()">接入网络</button>
-            <p id="l-err" style="color:red; font-size:0.8em; margin-top:10px; display:none;">身份校验未通过</p>
+            <h2>全境网络接入</h2>
+            <div style="margin-top: 20px;">
+                <input type="text" id="l-user" placeholder="公民账号" autocomplete="off">
+                <input type="password" id="l-pass" placeholder="访问密钥">
+                <button onclick="handleLogin()">接入网络</button>
+            </div>
+            <p id="l-err" style="display:none;">校验未通过</p>
         </div>
     </div>
 
@@ -282,6 +379,24 @@
             await supabaseClient.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
             alert("调拨完成");
         }
+
+function enterApp() {
+    // 增加一个简单的退出形变
+    const overlay = document.getElementById('login-overlay');
+    const card = document.querySelector('.login-card');
+    
+    card.style.transform = "translateX(200%) skewX(-20deg)";
+    card.style.opacity = "0";
+    
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        document.getElementById('prof-name').innerText = currentAccount.nickname || "公民账号";
+        document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
+        loadHistory();
+        subscribe();
+        updateWallet();
+    }, 500);
+}
 
         window.onload = init;
     </script>
