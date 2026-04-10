@@ -140,7 +140,7 @@
     <script>
         // --- 严格保持单次声明 ---
         const SB_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
-        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y";
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         
         // 核心修改：将 supabase 改为 supabaseClient，避免与官方 CDN 的全局变量冲突
         const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
