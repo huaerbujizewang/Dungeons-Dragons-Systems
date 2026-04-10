@@ -1533,7 +1533,7 @@ async function updateImperialDate(newDateStr) {
 
 // 【社交管理】删除好友
 async function deleteFriend(friendId, name) {
-    if(!confirm(`确定要从枢纽名单中抹除 [${name}] 吗？`)) return;
+    if(!confirm(`确定要删除联系人 [${name}] 吗？`)) return;
     
     const { error } = await supabaseClient.from('omni_friends')
         .delete()
