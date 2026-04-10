@@ -941,28 +941,35 @@
             }
         }
 
-        // (保留你之前已经修复好的 takeoverAccount 和 init 函数里的逻辑，注意 enterApp 里面唤醒面板的 ID 变成了 dm-admin-trigger)
 
         async function takeoverAccount(accId) {
+            // 如果是 DM 本人，则恢复为系统管理员身份
             if (accId === "DM") {
-                currentAccount = { nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
+                currentAccount = { id: 0, nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
             } else {
+                // 否则，从数据库拉取要接管的账号信息
                 const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
                 if(data) {
-                    const keepAdmin = currentAccount.is_dm; 
-                    currentAccount = data;
-                    currentAccount.is_dm = keepAdmin; 
+                    const keepAdmin = currentAccount.is_dm; // 保留当前用户的管理员权限状态
+                    currentAccount = data;                   // 切换为新账号
+                    currentAccount.is_dm = keepAdmin;        // 将管理员权限赋予新账号
                 }
             }
-            document.getElementById('prof-name').innerText = currentAccount.nickname;
-            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未知");
-            closeDmPanel();
+
+            closeDmPanel(); 
+
             // 如果处于私聊状态且接管了当前聊天的对象，退回大厅避免逻辑混乱
             if(currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === currentAccount.id) {
                 openPublicChat();
             } else {
+                // 否则，正常刷新聊天列表和历史记录以反映新身份
                 loadContactList();
-                loadHistory(); // 刷新消息记录（因为视角变了）
+                loadHistory(); 
+            }
+            
+            // 如果当前正停留在个人档案页，则立即刷新档案信息
+            if (document.getElementById('page-profile').classList.contains('active')) {
+                loadPassportData();
             }
         }
 
