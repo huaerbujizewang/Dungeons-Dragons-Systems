@@ -175,7 +175,7 @@
             <div class="nav-item" onclick="switchPage('life', this)">🍔 帝国优选</div>
             <div class="nav-item" onclick="switchPage('wallet', this)">💳 资产结算</div>
             <div class="nav-item" onclick="switchPage('profile', this)">🛂 公民通行证</div>
-            <div style="margin-top:auto; padding:20px; opacity:0.5; cursor:pointer;" onclick="window.history.back()">⬅ 退出</div>
+            <div style="margin-top:auto; padding:20px; opacity:0.5; cursor:pointer;" onclick="logout()">⬅ 退出</div>
         </nav>
 
         <main class="main-content">
@@ -276,13 +276,9 @@
             }
         }
 
-        function enterApp() {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('prof-name').innerText = currentAccount.nickname || "公民账号";
-            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
-            loadHistory();
-            subscribe();
-            updateWallet();
+        function logout() {
+            sessionStorage.removeItem('omni_session'); // 清除本地缓存
+            window.location.href = window.location.pathname; // 刷新页面并清除 URL 里的参数
         }
 
         function switchPage(pageId, el) {
