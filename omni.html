@@ -366,13 +366,10 @@
                                    </select>
                                </div>
                                 <div class="dm-form-group"><label>信仰</label><input type="text" id="npc-faith" value="无信仰"></div>
+
                                 <div class="dm-form-group">
                                     <label>基础信用评级</label>
-                                    <select id="npc-base-credit" style="padding:10px; background:#0f172a; color:white; border:1px solid #334155;">
-                                        <option value="B">B (平民标准)</option>
-                                        <option value="A">A (优等公民)</option>
-                                        <option value="C">C (观测对象)</option>
-                                    </select>
+                                    <select id="npc-base-credit" style="padding:10px; background:#0f172a; color:white; border:1px solid #334155;"></select>
                                 </div>
                                 <div class="dm-form-group" style="flex-direction:row; align-items:center; gap:10px; padding-top:25px;">
                                     <input type="checkbox" id="npc-military" style="width:20px; height:20px;">
@@ -845,21 +842,47 @@
             const val = inp.value.trim();
             if(!val) return;
 
-            if(val.includes('伊莎贝拉')) {
+            // --- 敏感词与违规处理逻辑 ---
+            const prohibitedKeywords = ['伊莎贝拉', '女皇', '低等种族', '桐花独立', '杂种', '劣种', '劣等种族']; 
+            const isViolation = prohibitedKeywords.some(k => val.includes(k));
+
+            if(isViolation) {
+                // 1. 显示警告 UI
                 document.getElementById('intercept-msg').style.display = 'block';
                 setTimeout(()=> document.getElementById('intercept-msg').style.display = 'none', 3000);
-                return;
+
+                // 2. 更新数据库中的违规计数
+                const { data: acc } = await supabaseClient.from('omni_accounts')
+                    .select('id, violation_count, social_credit')
+                    .eq('id', currentAccount.id).single();
+                
+                let newCount = (acc.violation_count || 0) + 1;
+                let newCredit = acc.social_credit;
+
+                // 3. 触发“三振出局”降级逻辑
+                if (newCount > 0 && newCount % 3 === 0) {
+                    let curIdx = CREDIT_GRADES.indexOf(acc.social_credit);
+                    if (curIdx > 0) {
+                        newCredit = CREDIT_GRADES[curIdx - 1]; // 信用降低一级
+                        alert(`⚠️ 警告：因累计 ${newCount} 次言论违规，您的社会信用等级已降至 ${newCredit}`);
+                    }
+                }
+
+                await supabaseClient.from('omni_accounts')
+                    .update({ violation_count: newCount, social_credit: newCredit })
+                    .eq('id', currentAccount.id);
+                
+                return; // 拦截消息，不予发送
             }
 
+            // --- 正常发送逻辑 ---
             let msgPayload = {
-                sender_id: currentAccount.id, 
+                sender_id: currentAccount.id,
                 sender_name: currentAccount.nickname,
                 sender_race: currentAccount.race || "未知",
                 sender_avatar_filename: currentAccount.avatar_filename || "default.png",
                 content: val
             };
-
-            // 附加路由信息
             if(currentChatMode === 'private') msgPayload.target_id = currentChatTarget.id;
             if(currentChatMode === 'group') msgPayload.group_id = currentChatTarget.id;
 
@@ -888,6 +911,7 @@
             document.getElementById('dm-modal').classList.add('show');
             renderDmTable(); 
             setupRegionSelects();
+            populateCreditDropdown();
         }
 
         function closeDmPanel() {
@@ -1070,9 +1094,23 @@ function generateImperialId(zoneName, birthDate) {
 }
 
 // 工具函数：计算信用进阶
-function calculateCredit(baseGrade, isMilitary) {
+// 【核心算法】帝国社会信用评估引擎
+function calculateCredit(baseGrade, isMilitary, education) {
     let index = CREDIT_GRADES.indexOf(baseGrade);
-    if (isMilitary && index < CREDIT_GRADES.length - 1) index++;
+    if (index === -1) index = 7; 
+    if (isMilitary) {
+        index += 1;
+    }
+    if (education === '博士' || education === '博士后') {
+        index += 2; 
+    } else if (education === '本科' || education === '硕士') {
+        index += 1; 
+    } else if (education === '小学' || education === '无学历') {
+        index -= 1; 
+    }
+
+    index = Math.max(0, Math.min(index, CREDIT_GRADES.length - 1));
+    
     return CREDIT_GRADES[index];
 }
 
@@ -1107,7 +1145,8 @@ async function submitImperialAccount() {
     if(!realName || !zone || !region) return alert("户籍核心信息不完整！");
 
     const finalId = generateImperialId(zone, bDate);
-    const finalCredit = calculateCredit(baseCredit, isMilitary);
+    const edu = document.getElementById('npc-edu').value;
+    const finalCredit = calculateCredit(baseCredit, isMilitary, edu);
 
     const { error } = await supabaseClient.from('omni_accounts').insert([{
         login_id: "ID_" + Math.floor(Math.random()*1000000), // 系统底层登录用ID
@@ -1274,6 +1313,8 @@ async function submitPlayerChanges() {
             const education = document.getElementById('setup-edu-page').value;
             const address = document.getElementById('setup-address-page').value.trim();
             const military = document.getElementById('setup-military-page').checked;
+            const baseDefault = "B"; 
+            const finalCredit = calculateCredit(baseDefault, military, education);
 
             if (!realName || !race || !birthDate) {
                 return alert("真实姓名、种族和出生日期为必填项！");
@@ -1297,6 +1338,7 @@ async function submitPlayerChanges() {
                 birth_date: birthDate,
                 faith: faith,
                 education: education,
+                social_credit: finalCredit,
                 home_address: address,
                 military_service: military,
                 passport_id: passportId,
@@ -1313,6 +1355,41 @@ async function submitPlayerChanges() {
             } else {
                 alert("登记失败，系统驳回：" + error.message);
             }
+        }
+
+        // --- 动态填充UI组件的函数 ---
+
+        // 用于为关键信用等级添加描述，提升DM体验
+        const CREDIT_DESCRIPTIONS = {
+            'A': ' (优等公民)',
+            'B': ' (平民标准)',
+            'C': ' (观测对象)',
+            'D': ' (受限公民)'
+        };
+
+        function populateCreditDropdown() {
+            const selectElement = document.getElementById('npc-base-credit');
+            if (!selectElement) return;
+
+            selectElement.innerHTML = ''; // 确保下拉框是空的
+
+            // 遍历完整的信用等级数组
+            CREDIT_GRADES.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                
+                // 查找并附加描述
+                const firstLetter = grade.charAt(0);
+                const description = CREDIT_DESCRIPTIONS[firstLetter] || '';
+                option.textContent = grade + description;
+
+                // 将'B'等级设置为默认选中项
+                if (grade === 'B') {
+                    option.selected = true;
+                }
+
+                selectElement.appendChild(option);
+            });
         }
 
 
