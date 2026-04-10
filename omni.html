@@ -59,46 +59,44 @@
             animation: smooth3D-3 25s infinite alternate ease-in-out;
         }
 
-        /* --- 极度不规则、缩小版的悬浮终端 --- */
+/* --- 15边形晶体终端 + 永续流体形变 --- */
         .login-card {
-            background: rgba(30, 41, 59, 0.85); /* 颜色加深一点，压住明亮的背景 */
+            background: rgba(30, 41, 59, 0.9);
             backdrop-filter: blur(20px);
-            /* 重点：减小整体宽度，增加上下 padding 作为形变缓冲区 */
             padding: 60px 40px; 
             width: 280px; 
-            border: 1px solid rgba(74, 222, 128, 0.5);
+            border: 1px solid rgba(74, 222, 128, 0.4);
             position: relative;
             transform: translateZ(500px); 
             box-shadow: 0 20px 50px rgba(0,0,0,0.25);
             
-            /* 打破方形思维，赋予大振幅的多边形狂野游走动画 */
-            animation: wildHexMorph 8s infinite alternate ease-in-out;
+            /* 核心：调用更复杂的15边形动画，并设置为永续正向循环 */
+            animation: crystalMorph 12s infinite linear; /* 使用 linear 确保匀速、不间断的流动感 */
         }
 
-        /* 焦点态：依然保持极度不规则，但停止游走，方便用户瞄准输入 */
+        /* 焦点态：锁定为一个锋利的15边形，停止动画 */
         .login-card:focus-within {
             animation: none;
-            /* 锁定为一个极具张力的不规则锐角六边形 */
-            clip-path: polygon(10% 0%, 100% 15%, 85% 100%, 40% 90%, 0% 100%, 5% 30%);
+            clip-path: polygon(25% 0%, 85% 0%, 100% 10%, 100% 40%, 90% 60%, 100% 80%, 80% 100%, 30% 100%, 0% 90%, 0% 70%, 10% 50%, 0% 30%, 5% 15%, 15% 10%, 10% 5%);
             background: rgba(30, 41, 59, 0.95);
             transform: translateZ(550px) scale(1.05);
             transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        /* 内部元素适配缩小后的容器 */
+        /* 内部元素样式保持不变 */
         .login-card h2 {
             color: var(--omni-green-bright);
-            font-size: 1.6em; /* 标题改小 */
+            font-size: 1.6em;
             letter-spacing: 5px; 
             margin-bottom: 30px;
-            text-align: center; /* 居中以适应不规则边缘 */
+            text-align: center;
             text-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
             transform: none;
         }
 
         .login-card input {
             width: 100%; 
-            padding: 14px; /* 输入框改小 */
+            padding: 14px;
             margin-bottom: 20px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(74, 222, 128, 0.2);
@@ -113,12 +111,11 @@
         }
 
         .login-card button {
-            width: 100%; /* 贴合内部宽度 */
+            width: 100%;
             padding: 16px;
             background: var(--omni-green); color: white;
             border: none; font-weight: 900; font-size: 1.1em;
             letter-spacing: 10px; cursor: pointer;
-            /* 按钮也做轻微的非对称倾斜 */
             clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
             transition: 0.4s;
         }
@@ -128,19 +125,28 @@
             transform: scale(1.05); filter: brightness(1.2);
         }
 
-        /* --- 狂野的大振幅六点多边形游走动画 --- */
-        @keyframes wildHexMorph {
-            /* 状态 1：左上角和右下角被严重削切 */
-            0%   { clip-path: polygon(20% 5%, 100% 0%, 80% 90%, 50% 100%, 0% 80%, 10% 25%); }
-            
-            /* 状态 2：重心偏移，右上角和左下角大幅度内收 */
-            33%  { clip-path: polygon(0% 15%, 85% 5%, 100% 80%, 75% 100%, 15% 90%, 25% 45%); }
-            
-            /* 状态 3：整体像左下方拉扯，形状近乎菱形变异 */
-            66%  { clip-path: polygon(15% 0%, 95% 20%, 100% 100%, 40% 85%, 5% 100%, 0% 50%); }
-            
-            /* 状态 4：重心回到中上部，两翼展开 */
-            100% { clip-path: polygon(10% 15%, 100% 20%, 90% 100%, 30% 95%, 0% 100%, 5% 40%); }
+        /* --- 15边形晶体永续流体动画关键帧 --- */
+        @keyframes crystalMorph {
+            /* 起始状态 */
+            0% {
+                clip-path: polygon(25% 0%, 85% 0%, 100% 10%, 100% 40%, 90% 60%, 100% 80%, 80% 100%, 30% 100%, 0% 90%, 0% 70%, 10% 50%, 0% 30%, 5% 15%, 15% 10%, 10% 5%);
+            }
+            /* 中间状态 1 */
+            25% {
+                clip-path: polygon(40% 5%, 70% 0%, 95% 5%, 100% 50%, 95% 95%, 70% 100%, 40% 95%, 15% 100%, 0% 85%, 5% 70%, 15% 50%, 5% 30%, 0% 15%, 10% 10%, 20% 5%);
+            }
+            /* 中间状态 2 */
+            50% {
+                clip-path: polygon(50% 0%, 80% 10%, 100% 25%, 95% 50%, 100% 75%, 80% 90%, 50% 100%, 20% 90%, 0% 75%, 5% 50%, 0% 25%, 20% 10%, 35% 5%, 45% 3%, 50% 0%);
+            }
+            /* 中间状态 3 */
+            75% {
+                 clip-path: polygon(30% 10%, 60% 0%, 80% 5%, 95% 30%, 90% 60%, 95% 80%, 70% 95%, 40% 100%, 10% 95%, 0% 75%, 15% 60%, 0% 40%, 5% 20%, 15% 15%, 25% 12%);
+            }
+            /* 结束状态，必须与 0% 完全相同才能无缝循环 */
+            100% {
+                clip-path: polygon(25% 0%, 85% 0%, 100% 10%, 100% 40%, 90% 60%, 100% 80%, 80% 100%, 30% 100%, 0% 90%, 0% 70%, 10% 50%, 0% 30%, 5% 15%, 15% 10%, 10% 5%);
+            }
         }
 
         @keyframes smooth3D-1 {
