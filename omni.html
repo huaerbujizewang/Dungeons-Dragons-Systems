@@ -269,6 +269,21 @@
         .action-hijack:hover { background: #f39c12; }
         .action-save { background: #3b82f6; }
         .action-save:hover { background: #60a5fa; }
+
+         /* --- 帝国电子通行证样式 --- */
+        .passport-card { background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.4); position: relative; }
+        .passport-header { background: var(--omni-green); color: #000; padding: 10px 20px; font-weight: 900; letter-spacing: 5px; font-size: 0.9em; }
+        .passport-main { display: flex; padding: 30px; gap: 30px; }
+        .passport-biometric { flex-shrink: 0; width: 160px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .biometric-photo-wrap { width: 150px; height: 180px; border: 2px solid var(--omni-green); position: relative; cursor: pointer; overflow: hidden; }
+        .biometric-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .biometric-photo-wrap:hover::after { content: "更新生物识别"; position: absolute; inset: 0; background: rgba(0,0,0,0.7); color: var(--omni-green-bright); display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; }
+        .passport-info-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .info-item { display: flex; flex-direction: column; gap: 4px; }
+        .info-item label { color: #64748b; font-size: 0.7em; text-transform: uppercase; }
+        .info-item span { color: #e2e8f0; font-size: 1em; background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
+        .passport-footer { padding: 20px 30px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .signature-font { font-family: "Brush Script MT", cursive, sans-serif; font-size: 1.5em; color: rgba(255,255,255,0.5); }
     </style>
 </head>
 <body>
@@ -336,7 +351,20 @@
                                     <label>具体行政区</label>
                                     <select id="npc-region" style="padding:10px; background:#0f172a; color:white; border:1px solid #334155;"></select>
                                 </div>
-                                <div class="dm-form-group"><label>学历</label><input type="text" id="npc-edu" value="本科"></div>
+                                <div class="dm-form-group">
+                                   <label>文化程度</label>
+                                   <select id="npc-edu" style="padding:12px; background:#0f172a; color:white; border:1px solid #334155; border-radius:6px; outline:none;">
+                                       <option value="小学">小学</option>
+                                       <option value="初中">初中</option>
+                                       <option value="高中">高中</option>
+                                       <option value="中专">中专</option>
+                                       <option value="大专">大专</option>
+                                       <option value="本科" selected>本科</option>
+                                       <option value="硕士">硕士</option>
+                                       <option value="博士">博士</option>
+                                       <option value="博士后">博士后</option>
+                                   </select>
+                               </div>
                                 <div class="dm-form-group"><label>信仰</label><input type="text" id="npc-faith" value="无信仰"></div>
                                 <div class="dm-form-group">
                                     <label>基础信用评级</label>
@@ -423,12 +451,80 @@
             </div>
 
             <div id="page-profile" class="page">
-                <div class="card">
-                    <h2 id="prof-name">公民信息</h2>
-                    <p id="prof-race">种族：--</p>
-                    <p>社会信用等级：A</p>
+    <div class="passport-card">
+        <div class="passport-header">LOTHAVIA IMPERIAL CITIZEN PASSPORT</div>
+        
+        <div class="passport-main">
+            <div class="passport-biometric">
+                <div class="biometric-photo-wrap" onclick="triggerAvatarUpload()">
+                    <img id="prof-avatar" src="">
                 </div>
+                <input type="file" id="avatar-input" style="display:none" accept="image/*" onchange="uploadAvatar()">
+                <div style="font-size: 0.6em; color: var(--omni-green); opacity: 0.7;">[ 生物识别特征码已锁定 ]</div>
+                
+                <button onclick="openPlayerEditModal()" style="margin-top:20px; width:100%; padding:8px; background:transparent; border:1px solid var(--omni-green); color:var(--omni-green); cursor:pointer; font-size:0.8em;">修改公民档案</button>
             </div>
+
+            <div class="passport-info-grid" id="prof-display-grid">
+                <div class="info-item"><label>真名 (仅个人可见)</label><span id="prof-realname">******</span></div>
+                <div class="info-item"><label>网络标识名 (Nickname)</label><span id="prof-nickname-val">--</span></div>
+                <div class="info-item"><label>公民序列号 (Passport ID)</label><span id="prof-passport-id" style="color:var(--omni-green-bright); font-family:monospace;">--</span></div>
+                <div class="info-item"><label>出生日期</label><span id="prof-birth">--</span></div>
+                <div class="info-item"><label>基因种族</label><span id="prof-race-val">--</span></div>
+                <div class="info-item"><label>信仰</label><span id="prof-faith-val">--</span></div>
+                <div class="info-item"><label>国籍</label><span id="prof-nationality-val">--</span></div>
+                <div class="info-item"><label>兵役状态</label><span id="prof-military-val">--</span></div>
+                <div class="info-item"><label>文化程度</label><span id="prof-edu-val">--</span></div>
+                <div class="info-item"><label>社会信用等级</label><span id="prof-credit-val" style="font-weight:bold; color:var(--omni-green-bright);">--</span></div>
+                <div class="info-item" style="grid-column: span 2;"><label>居住地址</label><span id="prof-address-val">--</span></div>
+            </div>
+        </div>
+
+        <div class="passport-footer">
+            <div class="info-item"><label>有效期限</label><span id="prof-validity">1092-05-21 至 1112-05-21</span></div>
+            <div class="signature-font" id="prof-sig">Signature</div>
+        </div>
+    </div>
+</div>
+
+<div class="dm-modal-overlay" id="player-edit-modal">
+    <div class="dm-modal" style="width:500px;">
+        <div class="dm-modal-header">
+            <h3 style="margin:0;">公民档案变更申请</h3>
+            <span class="dm-modal-close" onclick="closePlayerEditModal()">✖</span>
+        </div>
+        <div class="dm-body">
+            <div class="dm-form-group" style="margin-bottom:15px;">
+                <label>修改网名</label>
+                <input type="text" id="edit-nick" placeholder="输入新的网络标识名">
+            </div>
+            <div class="dm-form-group" style="margin-bottom:15px;">
+                <label>修改信仰</label>
+                <input type="text" id="edit-faith" placeholder="请输入你的信仰">
+            </div>
+            <div class="dm-form-group" style="margin-bottom:15px;">
+                <label>文化程度</label>
+                <select id="edit-edu" style="padding:10px; background:#0f172a; color:white; border:1px solid #334155;">
+                    <option value="小学">小学</option>
+                    <option value="初中">初中</option>
+                    <option value="高中">高中</option>
+                    <option value="中专">中专</option>
+                    <option value="大专">大专</option>
+                    <option value="本科">本科</option>
+                    <option value="硕士">硕士</option>
+                    <option value="博士">博士</option>
+                    <option value="博士后">博士后</option>
+                </select>
+            </div>
+            <div class="dm-form-group" style="margin-bottom:15px;">
+                <label>居住地址</label>
+                <input type="text" id="edit-address" placeholder="详细地址">
+            </div>
+            <div style="font-size:0.7em; color:#94a3b8; margin-bottom:15px;">* 种族、出生日期及公民序列号由帝国枢纽锁定，无法自行修改。</div>
+            <button class="dm-btn-submit" onclick="submitPlayerChanges()">提交变更</button>
+        </div>
+    </div>
+</div>
         </main>
     </div>
 
@@ -445,12 +541,12 @@
         const AVATAR_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/assets/bestiary/avatars/`;
 
         function getAvatarUrl(filename) {
-            return AVATAR_BASE + (filename || 'default.png');
+            if (!filename) return AVATAR_BASE + 'default.png';
+            if (filename.startsWith('http')) return filename; 
+            return AVATAR_BASE + filename;
         }
 
         let currentAccount = null;
-        const urlParams = new URLSearchParams(window.location.search);
-        const loginUid = urlParams.get('uid');
 
         // --- 聊天状态管理 ---
         let currentChatMode = 'public'; // 'public', 'private', 'group'
@@ -458,13 +554,7 @@
         let currentRealtimeChannel = null; // 用于实时监听
 
         // --- 初始化与登录 ---
-        async function init() {
-            if(loginUid === DM_UID) {
-                currentAccount = { id: 0, nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
-                document.getElementById('dm-admin-trigger').style.display = 'flex';
-                enterApp();
-                return;
-            }
+         async function init() {
             const saved = sessionStorage.getItem('omni_session');
             if(saved) {
                 currentAccount = JSON.parse(saved);
@@ -501,8 +591,6 @@
                 overlay.style.display = 'none';
             }
             
-            document.getElementById('prof-name').innerText = currentAccount.nickname || "公民账号";
-            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
             
             // 启动功能
             openPublicChat(); // 默认进入大厅
@@ -521,6 +609,7 @@
             document.getElementById('page-' + pageId).classList.add('active');
             el.classList.add('active');
             if(pageId === 'wallet') updateWallet();
+            if(pageId === 'profile') loadPassportData(); 
         }
 
         // --- 社交列表导航 ---
@@ -675,7 +764,7 @@
                 query = query.is('target_id', null).is('group_id', null);
             } else if (currentChatMode === 'private') {
                 // 读取：(我发给他的) 或者 (他发给我的)
-                query = query.or(`and(sender_name.eq.${currentAccount.nickname},target_id.eq.${currentChatTarget.id}),and(sender_name.eq.${currentChatTarget.name},target_id.eq.${currentAccount.id})`);
+                query = query.or(`and(sender_id.eq.${currentAccount.id},target_id.eq.${currentChatTarget.id}),and(sender_id.eq.${currentChatTarget.id},target_id.eq.${currentAccount.id})`);
             } else if (currentChatMode === 'group') {
                 query = query.eq('group_id', currentChatTarget.id);
             }
@@ -729,6 +818,7 @@
             }
 
             let msgPayload = {
+                sender_id: currentAccount.id, 
                 sender_name: currentAccount.nickname,
                 sender_race: currentAccount.race || "未知",
                 sender_avatar_filename: currentAccount.avatar_filename || "default.png",
@@ -753,7 +843,7 @@
                     <img src="${avatarUrl}" class="avatar-circle">
                     <div class="msg-content">
                         <div class="msg-sender-name">${m.sender_name} <span style="opacity:0.6">[${m.sender_race || '未知'}]</span></div>
-                        <div class="msg-bubble">${m.content}</div>
+                        <div class="msg-bubble">${escapeHTML(m.content)}</div>
                     </div>
                 </div>`;
             box.insertAdjacentHTML('beforeend', html);
@@ -927,7 +1017,12 @@ const CREDIT_GRADES = ["D-", "D", "D+", "C-", "C", "C+", "B-", "B", "B+", "A-", 
 // 工具函数：生成帝国公民号
 function generateImperialId(zoneName, birthDate) {
     const zoneCode = REGION_DATA[zoneName].code;
-    const year = new Date(birthDate).getFullYear();
+    
+    let year = "0000";
+    if (birthDate && !isNaN(new Date(birthDate).getTime())) {
+        year = new Date(birthDate).getFullYear();
+    }
+    
     const alpha = Array.from({length: 3}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
     const num = Math.floor(1000 + Math.random() * 9000);
     return `${zoneCode}-${alpha}-${year}-${num}`;
@@ -966,6 +1061,7 @@ async function submitImperialAccount() {
     const region = document.getElementById('npc-region').value;
     const isMilitary = document.getElementById('npc-military').checked;
     const baseCredit = document.getElementById('npc-base-credit').value;
+    
 
     if(!realName || !zone || !region) return alert("户籍核心信息不完整！");
 
@@ -999,23 +1095,111 @@ async function submitImperialAccount() {
     }
 }
 
+
+
+// --- 1. 玩家档案编辑逻辑 ---
+function openPlayerEditModal() {
+    // 将当前数据填入编辑框
+    document.getElementById('edit-nick').value = currentAccount.nickname;
+    document.getElementById('edit-faith').value = currentAccount.faith || '无信仰';
+    document.getElementById('edit-edu').value = currentAccount.education || '本科';
+    document.getElementById('edit-address').value = currentAccount.home_address || '';
+    
+    document.getElementById('player-edit-modal').classList.add('show');
+}
+
+function closePlayerEditModal() {
+    document.getElementById('player-edit-modal').classList.remove('show');
+}
+
+async function submitPlayerChanges() {
+    const nick = document.getElementById('edit-nick').value.trim();
+    const faith = document.getElementById('edit-faith').value.trim();
+    const edu = document.getElementById('edit-edu').value;
+    const address = document.getElementById('edit-address').value.trim();
+
+    if(!nick) return alert("网名不能为空");
+
+    const { error } = await supabaseClient.from('omni_accounts').update({
+        nickname: nick,
+        faith: faith,
+        education: edu,
+        home_address: address
+    }).eq('id', currentAccount.id);
+
+    if(!error) {
+        alert("帝国档案已同步更新。");
+        // 更新本地缓存和显示
+        currentAccount.nickname = nick;
+        currentAccount.faith = faith;
+        currentAccount.education = edu;
+        currentAccount.home_address = address;
+        
+        closePlayerEditModal();
+        loadPassportData(); // 重新刷新界面
+        loadContactList();  // 刷新左侧列表里的名字
+    } else {
+        alert("变更申请被驳回：" + error.message);
+    }
+}
+
+// --- 2. 完善通行证渲染函数 ---
 async function loadPassportData() {
+    // 强制拉取最新数据
     const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', currentAccount.id).single();
     if(!data) return;
 
-    // 只有本人或管理员能看到真名，其余人只能看到网名
-    document.getElementById('prof-id').innerText = data.passport_id;
-    document.getElementById('prof-race-val').innerText = data.race;
-    document.getElementById('prof-birthplace').innerText = `${data.birth_place_zone} - ${data.birth_place_region}`;
-    document.getElementById('prof-military').innerText = data.military_service ? '已服役 (荣誉公民)' : '未服役';
-    document.getElementById('prof-id-val').innerText = data.passport_id; // 对应你UI里的公民序列号
+    // 填充头像
+    document.getElementById('prof-avatar').src = getAvatarUrl(data.avatar_filename);
     
-    // 如果需要显示真名，在页面上加一个元素
-    // document.getElementById('prof-realname').innerText = data.real_name; 
-
-    // 设置有效期（20年逻辑）
-    document.getElementById('prof-validity').innerText = "1092-05-21 至 1112-05-21";
+    // 填充各项数据
+    document.getElementById('prof-realname').innerText = data.real_name || '未登记';
+    document.getElementById('prof-nickname-val').innerText = data.nickname;
+    document.getElementById('prof-passport-id').innerText = data.passport_id || 'PENDING...';
+    document.getElementById('prof-birth').innerText = data.birth_date;
+    document.getElementById('prof-race-val').innerText = data.race;
+    document.getElementById('prof-faith-val').innerText = data.faith || '无信仰';
+    document.getElementById('prof-nationality-val').innerText = data.nationality;
+    document.getElementById('prof-military-val').innerText = data.military_service ? '已服役' : '未服役';
+    document.getElementById('prof-edu-val').innerText = data.education || '本科';
+    document.getElementById('prof-credit-val').innerText = data.social_credit || 'B';
+    document.getElementById('prof-address-val').innerText = data.home_address || '未登记';
+    document.getElementById('prof-sig').innerText = data.real_name || data.nickname;
 }
+
+        function triggerAvatarUpload() {
+            document.getElementById('avatar-input').click();
+        }
+
+        async function uploadAvatar() {
+            const file = document.getElementById('avatar-input').files[0];
+            if (!file) return;
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `avatar_${currentAccount.id}.${fileExt}`;
+            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file, { upsert: true });
+            if (error) return alert("生物识别上传失败：" + error.message);
+
+            const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+
+            const finalUrl = publicUrl + "?t=" + Date.now();
+            const { error: updErr } = await supabaseClient.from('omni_accounts').update({ avatar_filename: finalUrl }).eq('id', currentAccount.id);
+
+            if (!updErr) {
+                currentAccount.avatar_filename = finalUrl;
+                document.getElementById('prof-avatar').src = finalUrl;
+                alert("生物特征已同步。");
+                loadContactList(); 
+            }
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+
+
     </script>
 </body>
 </html>
