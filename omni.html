@@ -6,7 +6,6 @@
     <title>全境网络 - Omni Terminal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 核心配色：以绿为尊，展现帝国繁荣感 */
         :root {
             --omni-green-main: #196f3d; 
             --omni-green-light: #2ecc71; 
@@ -29,7 +28,7 @@
             overflow: hidden;
         }
 
-        /* PC端大屏侧边栏 */
+        /* 侧边栏 */
         .omni-sidebar {
             width: 260px;
             background: var(--omni-green-main);
@@ -69,7 +68,6 @@
             font-weight: bold;
         }
 
-        /* 主内容区 */
         .omni-main {
             flex: 1;
             padding: 30px 40px;
@@ -104,26 +102,8 @@
             gap: 10px;
         }
 
-        /* --- 通讯频道 (Chat) --- */
+        /* 通讯 */
         .chat-layout { display: flex; gap: 20px; height: calc(100vh - 180px); }
-        .chat-list {
-            width: 300px;
-            background: var(--omni-card-white);
-            border-radius: 12px;
-            overflow-y: auto;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        .chat-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .chat-item:hover { background: #f9f9f9; }
-        .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd; flex-shrink: 0; }
-
         .chat-window {
             flex: 1;
             background: var(--omni-card-white);
@@ -134,13 +114,12 @@
             overflow: hidden;
         }
 
-        /* DM 扮演面板 */
         #dm-control-panel {
             background: #2c3e50;
             color: white;
             padding: 12px 20px;
             font-size: 0.9em;
-            display: none; /* 仅对 DM UID 显示 */
+            display: none; 
             gap: 12px;
             align-items: center;
         }
@@ -150,9 +129,7 @@
         .chat-input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 15px; }
         .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; outline: none; }
         .btn-send { background: var(--omni-green-main); color: white; border: none; padding: 0 30px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-send:hover { background: var(--omni-green-light); }
 
-        /* 消息气泡 */
         .message { margin-bottom: 20px; display: flex; flex-direction: column; }
         .message.self { align-items: flex-end; }
         .msg-info { font-size: 0.75em; color: #999; margin-bottom: 5px; }
@@ -160,13 +137,7 @@
         .message.self .msg-bubble { background: var(--omni-green-light); color: white; }
         .msg-error { color: var(--omni-danger); font-size: 0.8em; margin-top: 5px; font-weight: bold; display: flex; align-items: center; gap: 4px; }
 
-        /* --- 帝国优选 (Meituan) --- */
-        .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .store-card { background: white; border-radius: 12px; overflow: hidden; border: 1px solid #eee; }
-        .store-info { padding: 15px; }
-        .store-price { color: var(--omni-green-main); font-weight: bold; font-size: 1.2em; }
-
-        /* --- 资产结算 (Alipay) --- */
+        /* 资产 */
         .wallet-banner {
             background: linear-gradient(135deg, var(--omni-green-main), #114b28);
             border-radius: 16px;
@@ -175,11 +146,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 10px 20px rgba(25, 111, 61, 0.3);
         }
         .wallet-balance-val { font-size: 3.5em; font-weight: 900; margin-top: 10px; }
 
-        /* --- 安全警告 --- */
         .sys-warning {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             background: #fff; border-left: 6px solid var(--omni-danger);
@@ -204,7 +173,6 @@
     </nav>
 
     <main class="omni-main">
-        
         <div id="omni-warning" class="sys-warning">
             <span style="font-size: 1.5em;">⚠️</span>
             <div>
@@ -216,54 +184,17 @@
         <div id="tab-chat" class="tab-pane active">
             <div class="section-header">枢纽通讯 (HUB)</div>
             <div class="chat-layout">
-                <div class="chat-list">
-                    <div class="chat-item" style="background: #f0fdf4; border-left: 4px solid var(--omni-green-main);">
-                        <div class="chat-avatar" style="background: #3498db;"></div>
-                        <div>
-                            <div style="font-weight: bold;">因斯卡利亚第三机械厂群</div>
-                            <div style="font-size: 0.8em; color: var(--omni-text-sub);">已连接至全境转译服务...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chat-window">
+                <div class="chat-window" style="flex: 1;">
                     <div id="dm-control-panel">
                         <span style="color: #f39c12; font-weight: bold;">[DM 扮演开启]</span>
-                        <input type="text" id="dm-npc-name" placeholder="NPC 名字 (如: 老李)">
+                        <input type="text" id="dm-npc-name" placeholder="NPC 名字">
                         <input type="text" id="dm-npc-race" placeholder="种族">
-                        <input type="color" id="dm-npc-color" value="#3498db" title="头像颜色">
+                        <input type="color" id="dm-npc-color" value="#3498db">
                     </div>
-
-                    <div class="chat-history" id="chat-history">
-                        </div>
-
+                    <div class="chat-history" id="chat-history"></div>
                     <div class="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="输入消息内容..." onkeypress="if(event.key === 'Enter') attemptSend()">
+                        <input type="text" id="chat-input" placeholder="输入消息..." onkeypress="if(event.key === 'Enter') attemptSend()">
                         <button class="btn-send" onclick="attemptSend()">发 送</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-life" class="tab-pane">
-            <div class="section-header">帝国优选</div>
-            <div class="store-grid">
-                <div class="store-card">
-                    <div style="height:150px; background:#ddd;"></div>
-                    <div class="store-info">
-                        <div style="font-weight:bold; font-size:1.1em;">蒂尔兰经典手工汉堡</div>
-                        <div style="margin: 10px 0;">⭐ 4.8 | 配送时间 15min</div>
-                        <div class="store-price">15.00 信用点</div>
-                        <button onclick="mockOrder('汉堡', 15)" style="width:100%; margin-top:10px; padding:10px; border:none; background:#eee; border-radius:4px; cursor:pointer;">立即下单</button>
-                    </div>
-                </div>
-                <div class="store-card">
-                    <div style="height:150px; background:#ccc;"></div>
-                    <div class="store-info">
-                        <div style="font-weight:bold; font-size:1.1em;">高纯度魔力营养液</div>
-                        <div style="margin: 10px 0;">⭐ 4.9 | 军工认证</div>
-                        <div class="store-price">120.00 信用点</div>
-                        <button onclick="mockOrder('营养液', 120)" style="width:100%; margin-top:10px; padding:10px; border:none; background:#eee; border-radius:4px; cursor:pointer;">立即下单</button>
                     </div>
                 </div>
             </div>
@@ -273,9 +204,8 @@
             <div class="section-header">资产结算系统</div>
             <div class="wallet-banner">
                 <div>
-                    <div style="opacity: 0.9;">当前账户余额 (独立信用点)</div>
+                    <div style="opacity: 0.9;">当前账户余额 (信用点)</div>
                     <div class="wallet-balance-val" id="omni-credits-display">0.00</div>
-                    <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">锚定：帝国中央银行结算中心</div>
                 </div>
                 <div style="background:white; padding:10px; border-radius:12px; opacity:0.8;">
                     <div style="width:120px; height:120px; background: repeating-linear-gradient(45deg, #000, #000 5px, #fff 5px, #fff 10px);"></div>
@@ -286,7 +216,7 @@
         <div id="tab-profile" class="tab-pane">
             <div class="section-header">公民数据中心</div>
             <div class="omni-card" style="display:flex; gap:30px; align-items:center;">
-                <div id="user-avatar-placeholder" style="width:100px; height:100px; border-radius:50%; background:#eee; border:4px solid var(--omni-green-main);"></div>
+                <div style="width:100px; height:100px; border-radius:50%; background:#eee; border:4px solid var(--omni-green-main);"></div>
                 <div>
                     <h2 id="display-user-name" style="margin:0 0 10px 0;">载入中...</h2>
                     <div style="color:var(--omni-text-sub);">
@@ -296,53 +226,48 @@
                 </div>
             </div>
         </div>
-
     </main>
 
     <script>
-        // --- Supabase 配置 (同步自 index.html) ---
-        const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // --- 仅在此处声明一次核心变量 ---
+        const CONFIG = {
+            URL: "https://vbzfpgucpciqgaakqndz.supabase.co",
+            KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y",
+            DM_UID: "1c00b7ed-69d7-40e2-8c28-84f854a4fa35"
+        };
 
-        const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
+        // 这里的 supabase 只声明一次
+        const supabase = window.supabase.createClient(CONFIG.URL, CONFIG.KEY);
         const urlParams = new URLSearchParams(window.location.search);
         const viewingUserId = urlParams.get('uid');
 
         let myProfile = null;
 
-        // 初始化
         async function init() {
-            if (!viewingUserId) return alert("未检测到公民ID。");
+            if (!viewingUserId) return;
 
-            // 1. 获取用户信息
-            const { data, error } = await supabase.from('profiles').select('*').eq('id', viewingUserId).single();
+            const { data } = await supabase.from('profiles').select('*').eq('id', viewingUserId).single();
             if (data) {
                 myProfile = data;
-                document.getElementById('display-user-name').innerText = data.display_name;
+                // 使用 display_name 字段
+                document.getElementById('display-user-name').innerText = data.display_name || "未识别公民";
                 document.getElementById('display-user-race').innerText = data.race || "未识别";
-                document.getElementById('omni-credits-display').innerText = (data.omni_credits || 0).toLocaleString('en-US', {minimumFractionDigits: 2});
+                document.getElementById('omni-credits-display').innerText = (data.omni_credits || 0).toLocaleString();
 
-                // 2. DM 判定：开启控制台
-                if (viewingUserId === DM_UID) {
+                if (viewingUserId === CONFIG.DM_UID) {
                     document.getElementById('dm-control-panel').style.display = 'flex';
                 }
             }
-
-            // 3. 聊天初始化
             loadHistory();
             subscribeRealtime();
         }
 
-        // 标签切换
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
             element.classList.add('active');
         }
-
-        // --- 聊天功能核心 ---
 
         async function loadHistory() {
             const { data } = await supabase.from('omni_chat_messages').select('*').order('created_at', { ascending: true }).limit(100);
@@ -355,33 +280,29 @@
         }
 
         function subscribeRealtime() {
-            supabase.channel('omni_public_chat')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omni_chat_messages' }, payload => {
-                    renderMsg(payload.new);
-                    const chatBox = document.getElementById('chat-history');
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }).subscribe();
+            supabase.channel('omni_public_chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omni_chat_messages' }, payload => {
+                renderMsg(payload.new);
+                document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
+            }).subscribe();
         }
 
         async function attemptSend() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
-            if (!text) return;
+            if (!text || !myProfile) return;
 
-            // 拦截禁忌词
             const isBlocked = text.includes('伊莎贝拉');
             if (isBlocked) {
                 document.getElementById('omni-warning').style.display = 'flex';
-                setTimeout(() => { document.getElementById('omni-warning').style.display = 'none'; }, 4000);
+                setTimeout(() => document.getElementById('omni-warning').style.display = 'none', 4000);
             }
 
-            // 确定发送者身份
+            // 使用 display_name
             let sName = myProfile.display_name;
             let sRace = myProfile.race;
-            let sAvatar = "#3498db"; // 默认玩家蓝
+            let sAvatar = "#3498db";
 
-            // 如果是 DM 且开启了马甲
-            if (viewingUserId === DM_UID) {
+            if (viewingUserId === CONFIG.DM_UID) {
                 const npcName = document.getElementById('dm-npc-name').value.trim();
                 if (npcName) {
                     sName = npcName;
@@ -398,43 +319,26 @@
                 content: text,
                 is_blocked: isBlocked
             }]);
-
             input.value = '';
         }
 
         function renderMsg(msg) {
             const chatBox = document.getElementById('chat-history');
-            
-            // 逻辑判定：只有当发送者 UID 匹配且名字也匹配（非NPC模式）时，才显示在右侧
             const isSelf = msg.sender_uid === viewingUserId;
-            const isNpcMode = isSelf && viewingUserId === DM_UID && msg.sender_name !== myProfile.display_name;
+            const isNpcMode = isSelf && viewingUserId === CONFIG.DM_UID && msg.sender_name !== myProfile.display_name;
             const alignClass = (isSelf && !isNpcMode) ? 'self' : '';
-
-            const bubbleStyle = msg.is_blocked ? 'background: #fdedec; color: #333; border: 1px solid var(--omni-danger);' : '';
 
             const html = `
                 <div class="message ${alignClass}">
-                    <div class="msg-info" style="display:flex; gap:5px; flex-direction: ${alignClass === 'self' ? 'row-reverse' : 'row'};">
-                        <strong>${msg.sender_name}</strong> 
-                        <span style="opacity:0.6">(${msg.sender_race})</span>
-                    </div>
+                    <div class="msg-info"><strong>${msg.sender_name}</strong> (${msg.sender_race})</div>
                     <div style="display:flex; flex-direction: ${alignClass === 'self' ? 'row-reverse' : 'row'}; align-items:flex-end; gap:10px;">
-                        <div class="chat-avatar" style="background:${msg.sender_avatar}; width:30px; height:30px;"></div>
-                        <div class="msg-bubble" style="${bubbleStyle}">${msg.content}</div>
+                        <div style="background:${msg.sender_avatar}; width:30px; height:30px; border-radius:50%;"></div>
+                        <div class="msg-bubble" style="${msg.is_blocked ? 'background:#fdedec; border:1px solid red;' : ''}">${msg.content}</div>
                     </div>
-                    ${msg.is_blocked ? '<div class="msg-error"><span>!</span> 消息已拦截</div>' : ''}
-                </div>
-            `;
-            chatBox.innerHTML += html;
+                </div>`;
+            chatBox.insertAdjacentHTML('beforeend', html);
         }
 
-        function mockOrder(name, price) {
-            if(confirm(`【资产结算确认】\n项目：${name}\n需支付：${price} 信用点\n\n确认后调配程序将自动启动。`)) {
-                alert("支付成功。正在计算最近的法阵/列车调度路线...");
-            }
-        }
-
-        // 启动
         window.onload = init;
     </script>
 </body>
