@@ -218,7 +218,7 @@
         /* 警告拦截 */
         #intercept-msg { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: white; border-left: 5px solid red; padding: 15px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; z-index: 100001; }
 
-        /* --- 监察官全屏控制台--- */
+        /* --- 全屏控制台--- */
         .dm-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px);
@@ -285,6 +285,50 @@
         .info-item span { color: #e2e8f0; font-size: 1em; background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
         .passport-footer { padding: 20px 30px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
         .signature-font { font-family: "Brush Script MT", cursive, sans-serif; font-size: 1.5em; color: rgba(255,255,255,0.5); }
+
+
+/* 商城布局 */
+.mall-header-tool {
+    display: flex; gap: 10px; margin-bottom: 25px;
+}
+.mall-search-input {
+    flex: 1; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; outline: none;
+}
+.mall-search-input:focus { border-color: var(--omni-green); background: white; }
+
+/* 物资卡片 */
+.item-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
+}
+.item-card {
+    border: 1px solid #e2e8f0; padding: 20px; border-radius: 2px; /* 采用硬朗的直角 */
+    background: #fff; transition: all 0.3s; position: relative;
+}
+.item-card:hover { border-color: var(--omni-green); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+
+/* 信用等级锁死：灰化效果 */
+.item-locked {
+    filter: grayscale(1); opacity: 0.5; cursor: not-allowed;
+    background: #f1f5f9;
+}
+.item-locked .buy-btn { background: #94a3b8 !important; pointer-events: none; }
+.lock-tag {
+    position: absolute; top: 10px; right: 10px; color: var(--omni-danger);
+    font-size: 0.7em; font-weight: bold; border: 1px solid var(--omni-danger); padding: 2px 5px;
+}
+
+/* 按钮样式 */
+.buy-btn {
+    padding: 8px 16px; background: var(--omni-green); color: white; border: none;
+    cursor: pointer; font-weight: bold; font-size: 0.9em;
+}
+
+/* 背包清单布局 */
+.inv-list { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+.inv-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px; background: #f8fafc; border-left: 4px solid var(--omni-green);
+}
     </style>
 </head>
 <body>
@@ -327,7 +371,7 @@
                 <strong id="current-imperial-date" style="color: var(--omni-green); letter-spacing: 2px;">1092年04月10日</strong>
             </div>
             <div id="dm-admin-trigger" style="display:none; padding: 15px; background: #1e293b; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <strong style="color:#f39c12">● 监察官权限已激活</strong>
+                <strong style="color:#f39c12">● 管理权限已激活</strong>
                 <button onclick="openDmPanel()" style="background:var(--omni-green); color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">⚙️ 打开系统控制台</button>
             </div>
 
@@ -433,19 +477,16 @@
 
             <div id="page-life" class="page">
                 <div class="card">
-                    <h3>物资调配中心</h3>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                        <div style="border:1px solid #eee; padding:15px; border-radius:8px;">
-                            <h4>蒂尔兰手工汉堡</h4>
-                            <p style="color:var(--omni-green); font-weight:bold;">15 信用点</p>
-                            <button onclick="purchase('汉堡', 15)" style="width:100%; padding:8px;">立即调配</button>
-                        </div>
-                        <div style="border:1px solid #eee; padding:15px; border-radius:8px;">
-                            <h4>高纯度魔力液</h4>
-                            <p style="color:var(--omni-green); font-weight:bold;">120 信用点</p>
-                            <button onclick="purchase('魔力液', 120)" style="width:100%; padding:8px;">立即调配</button>
-                        </div>
+                    <div class="mall-header-tool">
+                        <input type="text" id="mall-search" class="mall-search-input" placeholder="输入物资名称或描述进行检索..." oninput="renderMall()">
+                        <select id="mall-cat-filter" onchange="renderMall()" style="padding:10px; border:1px solid #e2e8f0;">
+                            <option value="all">全部分类</option>
+                            <option value="food">生活补给</option>
+                            <option value="ticket">通行票据</option>
+                            <option value="gear">技术装备</option>
+                        </select>
                     </div>
+                    <div id="mall-container" class="item-grid"></div>
                 </div>
             </div>
 
@@ -521,6 +562,12 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card" style="margin-top:20px;">
+                   <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px;">📦 公民资产清单 (Inventory)</h3>
+                   <div id="inventory-container" class="inv-list">
+                       </div>
+               </div>
                 
             </div>
 
@@ -1000,7 +1047,7 @@
             box.insertAdjacentHTML('beforeend', html);
         }
 
-        // --- 监察官控制台 UI 交互 ---
+        // --- 控制台 UI 交互 ---
         function openDmPanel() {
             document.getElementById('dm-modal').classList.add('show');
             renderDmTable(); 
@@ -1633,7 +1680,7 @@ async function joinGroupById() {
 }
 
 
-// 监察官权限：重设帝国历年份偏移量
+        // 重设帝国历年份偏移量
         async function adminShiftTime() {
             const newOffset = prompt("请输入新的年份偏移量 (当前减去多少年能得到帝国历):\n(例如：2026 - 1014 = 1012年)", IMPERIAL_YEAR_OFFSET);
             if (!newOffset || isNaN(newOffset)) return;
@@ -1649,6 +1696,131 @@ async function joinGroupById() {
                 alert("同步失败: " + error.message);
             }
         }
+
+
+        let mallItems = [];
+
+// 1. 初始化商城数据
+async function loadMallItems() {
+    // 价格从高到低排序
+    const { data, error } = await supabaseClient
+        .from('omni_items')
+        .select('*')
+        .order('price', { ascending: false });
+
+    if (data) {
+        mallItems = data;
+        renderMall();
+    }
+}
+
+// 2. 渲染商城渲染引擎
+function renderMall() {
+    const container = document.getElementById('mall-container');
+    const search = document.getElementById('mall-search').value.trim().toLowerCase();
+    const cat = document.getElementById('mall-cat-filter').value;
+    
+    container.innerHTML = '';
+
+    // 获取当前用户信用等级的权重索引
+    const userCreditIdx = CREDIT_GRADES.indexOf(currentAccount.social_credit);
+
+    mallItems.forEach(item => {
+        // 过滤逻辑
+        if (cat !== 'all' && item.category !== cat) return;
+        if (search && !item.name.toLowerCase().includes(search) && !item.description.toLowerCase().includes(search)) return;
+
+        // 信用等级判定
+        const itemCreditIdx = CREDIT_GRADES.indexOf(item.min_credit);
+        const isLocked = userCreditIdx < itemCreditIdx;
+
+        const html = `
+            <div class="item-card ${isLocked ? 'item-locked' : ''}">
+                ${isLocked ? `<div class="lock-tag">权限不足 [需 ${item.min_credit}]</div>` : ''}
+                <div style="font-size: 0.75em; color: #94a3b8; text-transform: uppercase;">Category: ${item.category}</div>
+                <h4 style="margin: 8px 0; letter-spacing:1px;">${item.name}</h4>
+                <p style="font-size: 0.85em; color: #64748b; min-height: 40px;">${item.description}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                    <strong style="color: var(--omni-green); font-size: 1.1em;">${item.price} CR</strong>
+                    <button class="buy-btn" onclick="purchaseItem(${item.id}, ${item.price}, ${isLocked})">购买配给</button>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+// 3. 购买交易逻辑
+async function purchaseItem(itemId, price, isLocked) {
+    if (isLocked) return alert("身份识别失败：您的社会信用等级不足，无权调配此物资。");
+
+    // 获取最新余额
+    const { data: acc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+    if (acc.credits < price) return alert("信用点余额不足。请前往【资产结算】查看明细。");
+
+    // A. 扣除信用点
+    const { error: payErr } = await supabaseClient
+        .from('omni_accounts')
+        .update({ credits: acc.credits - price })
+        .eq('id', currentAccount.id);
+
+    if (payErr) return alert("数据库同步失败，请检查网络连接。");
+
+    // B. 自动进入背包 (使用 Upsert 逻辑)
+    // 注意：这里的 account_id 要对应你数据库里的字段
+    const { data: existingInv } = await supabaseClient
+        .from('omni_inventory')
+        .select('*')
+        .eq('account_id', currentAccount.id)
+        .eq('item_id', itemId)
+        .maybeSingle();
+
+    if (existingInv) {
+        // 数量 +1
+        await supabaseClient.from('omni_inventory').update({ quantity: existingInv.quantity + 1 }).eq('id', existingInv.id);
+    } else {
+        // 新增一条
+        await supabaseClient.from('omni_inventory').insert([
+            { account_id: currentAccount.id, item_id: itemId, quantity: 1 }
+        ]);
+    }
+
+    alert("物资调配请求已处理。物品已存入您的个人资产清单。");
+    updateWallet();     // 刷新钱包
+    loadInventory();    // 刷新背包界面
+}
+
+// 4. 加载背包清单
+async function loadInventory() {
+    const container = document.getElementById('inventory-container');
+    if (!container) return;
+
+    // 关联查询：查询背包的同时带出物品的名字
+    const { data, error } = await supabaseClient
+        .from('omni_inventory')
+        .select('*, omni_items(name, category)')
+        .eq('account_id', currentAccount.id);
+
+    container.innerHTML = '';
+    if (!data || data.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8; padding: 20px; font-size:0.9em;">- 暂无已登记资产 -</div>';
+        return;
+    }
+
+    data.forEach(row => {
+        const item = row.omni_items;
+        const html = `
+            <div class="inv-row">
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-weight:bold; color:var(--omni-text);">${item.name}</span>
+                    <span style="font-size:0.7em; color:#94a3b8; text-transform:uppercase;">${item.category}</span>
+                </div>
+                <div style="font-family:monospace; font-weight:bold; color:var(--omni-green);">QTY: ${row.quantity}</div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    });
+}
 
 
     </script>
