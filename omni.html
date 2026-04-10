@@ -153,7 +153,7 @@
         async function init() {
             // 1. DM判定
             if(loginUid === DM_UID) {
-                currentAccount = { display_name: "帝国监察官", race: "人类", is_dm: true, login_id: "DM" };
+                currentAccount = { nickname: "帝国监察官", race: "人类", is_dm: true, login_id: "DM" };
                 document.getElementById('dm-admin-panel').style.display = 'flex';
                 enterApp();
                 return;
@@ -181,7 +181,7 @@
 
         function enterApp() {
             document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('prof-name').innerText = currentAccount.display_name || "公民账号";
+            document.getElementById('prof-name').innerText = currentAccount.nickname || "公民账号";
             document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
             loadHistory();
             subscribe();
@@ -233,7 +233,7 @@
                 return;
             }
 
-            let sName = currentAccount.display_name;
+            let sName = currentAccount.nickname;
             let sRace = currentAccount.race || "未知";
             let sColor = "#2ecc71";
 
@@ -257,7 +257,7 @@
 
         function renderMsg(m) {
             const box = document.getElementById('chat-box');
-            const isSelf = (m.sender_name === currentAccount.display_name);
+            const isSelf = (m.sender_name === currentAccount.nickname);
             const html = `<div class="message ${isSelf ? 'self' : ''}">
                 <div style="font-size:0.7em; color:#999;">${m.sender_name} (${m.sender_race})</div>
                 <div class="msg-bubble" style="border-left:4px solid ${m.sender_avatar_color}">${m.content}</div>
