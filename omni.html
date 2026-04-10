@@ -59,42 +59,51 @@
             animation: smooth3D-3 25s infinite alternate ease-in-out;
         }
 
-        /* 登录卡片：明度提升的毛玻璃态 */
+        /* --- 极度不规则、缩小版的悬浮终端 --- */
         .login-card {
-            background: rgba(51, 65, 85, 0.85);
+            background: rgba(30, 41, 59, 0.85); /* 颜色加深一点，压住明亮的背景 */
             backdrop-filter: blur(20px);
-            padding: 60px 70px;
-            width: 450px;
-            border: 1px solid rgba(74, 222, 128, 0.4);
+            /* 重点：减小整体宽度，增加上下 padding 作为形变缓冲区 */
+            padding: 60px 40px; 
+            width: 280px; 
+            border: 1px solid rgba(74, 222, 128, 0.5);
             position: relative;
-            transform: translateZ(500px); /* 始终悬浮在最前方 */
-            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
-            animation: cardMorph 12s infinite ease-in-out; /* 增加周期，让呼吸极其缓慢 */
+            transform: translateZ(500px); 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+            
+            /* 打破方形思维，赋予大振幅的多边形狂野游走动画 */
+            animation: wildHexMorph 8s infinite alternate ease-in-out;
         }
 
-        /* 输入激活时，停止变形并锁定 */
+        /* 焦点态：依然保持极度不规则，但停止游走，方便用户瞄准输入 */
         .login-card:focus-within {
             animation: none;
-            clip-path: polygon(2% 2%, 98% 0%, 100% 98%, 0% 100%); /* 锁定为近乎矩形，防止输入时抖动 */
-            background: rgba(71, 85, 105, 0.95);
-            transform: translateZ(550px) scale(1.02);
-            transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            /* 锁定为一个极具张力的不规则锐角六边形 */
+            clip-path: polygon(10% 0%, 100% 15%, 85% 100%, 40% 90%, 0% 100%, 5% 30%);
+            background: rgba(30, 41, 59, 0.95);
+            transform: translateZ(550px) scale(1.05);
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
+        /* 内部元素适配缩小后的容器 */
         .login-card h2 {
             color: var(--omni-green-bright);
-            font-size: 2em; letter-spacing: 8px; margin-bottom: 50px;
-            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5); /* 增加一点光晕 */
-            transform: translateX(-5px);
+            font-size: 1.6em; /* 标题改小 */
+            letter-spacing: 5px; 
+            margin-bottom: 30px;
+            text-align: center; /* 居中以适应不规则边缘 */
+            text-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+            transform: none;
         }
 
         .login-card input {
-            width: 100%; padding: 18px; margin-bottom: 20px;
+            width: 100%; 
+            padding: 14px; /* 输入框改小 */
+            margin-bottom: 20px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(74, 222, 128, 0.2);
             color: #fff; outline: none; transition: 0.3s;
-            font-family: monospace; font-size: 1.1em;
-            border-radius: 4px; /* 微微的一点圆角，看着更舒服 */
+            font-family: monospace; font-size: 1em;
         }
 
         .login-card input:focus {
@@ -104,32 +113,36 @@
         }
 
         .login-card button {
-            width: 110%; margin-left: -5%; padding: 20px;
+            width: 100%; /* 贴合内部宽度 */
+            padding: 16px;
             background: var(--omni-green); color: white;
-            border: none; font-weight: 900; font-size: 1.2em;
-            letter-spacing: 12px; cursor: pointer;
-            clip-path: polygon(3% 0, 100% 10%, 97% 100%, 0 90%);
+            border: none; font-weight: 900; font-size: 1.1em;
+            letter-spacing: 10px; cursor: pointer;
+            /* 按钮也做轻微的非对称倾斜 */
+            clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
             transition: 0.4s;
         }
 
         .login-card button:hover {
             background: var(--omni-green-bright);
-            transform: scale(1.02); filter: brightness(1.1);
+            transform: scale(1.05); filter: brightness(1.2);
         }
 
-        /* --- 柔滑版动画关键帧 --- */
-
-        /* 登录框极其轻微的六边形呼吸动画 (不再大范围跳动) */
-        @keyframes cardMorph {
-            0%, 100% { clip-path: polygon(4% 1%, 96% 2%, 98% 96%, 70% 99%, 2% 98%, 1% 15%); }
-            50%      { clip-path: polygon(1% 4%, 99% 1%, 96% 99%, 65% 96%, 4% 97%, 3% 10%); }
+        /* --- 狂野的大振幅六点多边形游走动画 --- */
+        @keyframes wildHexMorph {
+            /* 状态 1：左上角和右下角被严重削切 */
+            0%   { clip-path: polygon(20% 5%, 100% 0%, 80% 90%, 50% 100%, 0% 80%, 10% 25%); }
+            
+            /* 状态 2：重心偏移，右上角和左下角大幅度内收 */
+            33%  { clip-path: polygon(0% 15%, 85% 5%, 100% 80%, 75% 100%, 15% 90%, 25% 45%); }
+            
+            /* 状态 3：整体像左下方拉扯，形状近乎菱形变异 */
+            66%  { clip-path: polygon(15% 0%, 95% 20%, 100% 100%, 40% 85%, 5% 100%, 0% 50%); }
+            
+            /* 状态 4：重心回到中上部，两翼展开 */
+            100% { clip-path: polygon(10% 15%, 100% 20%, 90% 100%, 30% 95%, 0% 100%, 5% 40%); }
         }
 
-        /* 
-           空间穿刺的核心：
-           只做 transform (平移 + 旋转 + 深度变化)。
-           因为没有任何多边形顶点计算，显卡渲染极其丝滑。
-        */
         @keyframes smooth3D-1 {
             0% { transform: translateZ(-600px) rotateY(15deg) rotateX(10deg) translateX(-10%); }
             100% { transform: translateZ(400px) rotateY(-10deg) rotateX(-5deg) translateX(10%); }
@@ -145,7 +158,7 @@
             100% { transform: translateZ(200px) rotateZ(20deg) scale(1.2); }
         }
 
-        
+
         /* 主架构 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
         .sidebar { width: 260px; background: var(--omni-green); color: white; display: flex; flex-direction: column; }
