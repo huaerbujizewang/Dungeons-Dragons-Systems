@@ -875,50 +875,56 @@
         }
 
         function subscribe() {
-            // 1. 彻底销毁旧频道，防止内存泄漏和逻辑冲突
+            // 1. 销毁可能存在的残留通道
             if (currentRealtimeChannel) {
-                console.log("正在重置旧的实时通道...");
                 supabaseClient.removeChannel(currentRealtimeChannel);
             }
 
-            // 2. 创建新频道，监听全表插入
-            currentRealtimeChannel = supabaseClient.channel('omni_broadcast')
+            // 2. 建立新通道，监听 omni_messages 表的所有变动
+            currentRealtimeChannel = supabaseClient.channel('omni_global_sync')
             .on('postgres_changes', { 
                 event: 'INSERT', 
                 schema: 'public', 
                 table: 'omni_messages' 
             }, payload => {
                 const m = payload.new;
-                let isRelevant = false;
+                console.log("【OMNI实时核心】检测到新数据流:", m);
 
-                // --- 核心逻辑修复：使用 == 避开数字/字符串类型陷阱 ---
+                let shouldShow = false;
+
+                // --- 逻辑刷新判定 (使用非严格对比 == 以兼容 ID 类型) ---
                 if (currentChatMode === 'public') {
-                    if (!m.target_id && !m.group_id) isRelevant = true;
+                    // 公共大厅：没有目标ID且没有群组ID
+                    if (!m.target_id && !m.group_id) shouldShow = true;
                 } 
                 else if (currentChatMode === 'private' && currentChatTarget) {
-                    // 判定私聊：(我发给他) OR (他发给我)
-                    if ((m.sender_id == currentAccount.id && m.target_id == currentChatTarget.id) ||
-                        (m.sender_id == currentChatTarget.id && m.target_id == currentAccount.id)) {
-                        isRelevant = true;
+                    // 私聊实时刷新逻辑：判定当前打开的窗口是否属于该发件人或收件人
+                    const myId = currentAccount.id;
+                    const targetId = currentChatTarget.id;
+                    if ((m.sender_id == myId && m.target_id == targetId) ||
+                        (m.sender_id == targetId && m.target_id == myId)) {
+                        shouldShow = true;
                     }
                 } 
                 else if (currentChatMode === 'group' && currentChatTarget) {
-                    if (m.group_id == currentChatTarget.id) isRelevant = true;
+                    // 群聊实时刷新逻辑
+                    if (m.group_id == currentChatTarget.id) shouldShow = true;
                 }
 
-                if (isRelevant) {
-                    console.log("收到相关消息，正在渲染...", m);
+                // --- 执行 HTML 实时注入 ---
+                if (shouldShow) {
+                    console.log("【OMNI UI】正在实时刷新当前会话...");
                     renderMsg(m);
-                    // 平滑滚动
+                    
+                    // 强制滚动到最新位置
                     const box = document.getElementById('chat-box');
-                    if (box) box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+                    if (box) box.scrollTop = box.scrollHeight;
                 }
             })
             .subscribe((status) => {
-                console.log("【全境网络状态】:", status);
-                // 如果状态不是 SUBSCRIBED，说明实时服务器连不上
-                if (status === 'CHANNEL_ERROR') {
-                    console.error("实时通信连接失败，请检查数据库 Replication 权限！");
+                console.log("【全境网络监听器状态】:", status);
+                if (status === 'SUBSCRIBED') {
+                    console.log("全境实时刷新系统已就绪。");
                 }
             });
         }
@@ -980,26 +986,17 @@
             const box = document.getElementById('chat-box');
             if (!box) return;
 
-            // 1. 判定是否为自己发的消息
-            const isSelf = (m.sender_id == currentAccount.id || m.sender_name === currentAccount.nickname);
-            
-            // 2. 头像处理：增加错误回退机制
-            let avatarUrl = getAvatarUrl(m.sender_avatar_filename);
+            const isSelf = (m.sender_id == currentAccount.id);
+            const avatarUrl = getAvatarUrl(m.sender_avatar_filename);
             
             const html = `
                 <div class="message ${isSelf ? 'self' : ''}">
-                    <img src="${avatarUrl}" 
-                         class="avatar-circle" 
-                         onerror="this.src='${AVATAR_BASE}default.png'"> 
+                    <img src="${avatarUrl}" class="avatar-circle" onerror="this.src='${AVATAR_BASE}default.png'">
                     <div class="msg-content">
-                        <div class="msg-sender-name">
-                            ${escapeHTML(m.sender_name)} 
-                            <span style="opacity:0.6">[${escapeHTML(m.sender_race || '未知')}]</span>
-                        </div>
+                        <div class="msg-sender-name">${escapeHTML(m.sender_name)}</div>
                         <div class="msg-bubble">${escapeHTML(m.content)}</div>
                     </div>
                 </div>`;
-            
             box.insertAdjacentHTML('beforeend', html);
         }
 
