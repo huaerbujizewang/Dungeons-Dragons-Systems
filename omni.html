@@ -18,73 +18,74 @@
 
         body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
 
-  /* --- 3D 穿透动态登录背景 --- */
+ /* --- 3D 穿透动态登录背景（丝滑护眼版） --- */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #e2e8f0, #f1f5f9); /* 明亮的灰白底色 */
+            background: linear-gradient(135deg, #e2e8f0, #f8fafc); /* 明亮的灰白底色 */
             z-index: 99999;
             display: flex; justify-content: center; align-items: center; overflow: hidden;
-            /* 开启真正的 3D 空间 */
-            perspective: 1200px;
+            perspective: 1500px; /* 拉远透视点，让运动显得更广阔平缓 */
             transform-style: preserve-3d;
         }
 
-        /* 巨型几何体基础属性 */
+        /* 巨型几何体基础属性：加入高斯模糊，打造全息柔和感 */
         .bg-shape {
             position: absolute;
-            width: 160vw; height: 160vh;
-            top: -30vh; left: -30vw;
+            width: 150vw; height: 150vh;
+            top: -25vh; left: -25vw;
             transform-style: preserve-3d;
-            opacity: 0.85;
+            opacity: 0.7; /* 降低一点透明度，避免色彩过于浓烈 */
+            filter: blur(40px); /* 核心护眼科技：让锋利的几何体变成柔和的光块 */
         }
 
-        /* 形状1：明亮的薄荷绿/青色 */
+        /* 形状1：明亮的薄荷绿，固定形状，只做空间运动 */
         .shape-light {
-            background: linear-gradient(135deg, rgba(74, 222, 128, 0.8), rgba(6, 182, 212, 0.7));
-            animation: float3D-1 14s infinite alternate ease-in-out;
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.9), rgba(6, 182, 212, 0.6));
+            clip-path: polygon(0 0, 80% 0, 40% 100%, 0 100%); /* 固定形状不形变 */
+            animation: smooth3D-1 18s infinite alternate ease-in-out;
         }
 
-        /* 形状2：提亮后的高级石板青色（即你要求的深色块） */
+        /* 形状2：高级石板青色 */
         .shape-dark {
-            background: linear-gradient(135deg, rgba(71, 85, 105, 0.9), rgba(15, 118, 110, 0.8));
-            animation: float3D-2 18s infinite alternate ease-in-out;
+            background: linear-gradient(135deg, rgba(71, 85, 105, 0.9), rgba(15, 118, 110, 0.7));
+            clip-path: polygon(100% 0, 100% 100%, 20% 100%, 50% 0); /* 固定形状 */
+            animation: smooth3D-2 22s infinite alternate ease-in-out;
         }
 
         /* 形状3：穿梭的明亮光带 */
         .shape-accent {
-            background: linear-gradient(135deg, rgba(167, 243, 208, 0.5), rgba(56, 189, 248, 0.6));
-            animation: float3D-3 22s infinite alternate ease-in-out;
+            background: linear-gradient(135deg, rgba(167, 243, 208, 0.5), rgba(56, 189, 248, 0.5));
+            clip-path: polygon(0 40%, 60% 0, 100% 60%, 40% 100%); /* 固定形状 */
+            animation: smooth3D-3 25s infinite alternate ease-in-out;
         }
 
-        /* 登录卡片：明度提升的毛玻璃态，外加不断呼吸变形的 6 个顶点 */
+        /* 登录卡片：明度提升的毛玻璃态 */
         .login-card {
-            background: rgba(51, 65, 85, 0.85); /* 提亮后的深青灰，不再是纯黑 */
-            backdrop-filter: blur(15px);
+            background: rgba(51, 65, 85, 0.85);
+            backdrop-filter: blur(20px);
             padding: 60px 70px;
             width: 450px;
-            border: 1px solid rgba(74, 222, 128, 0.3);
+            border: 1px solid rgba(74, 222, 128, 0.4);
             position: relative;
-            /* 将卡片拉到最前面，防止被背景切穿 */
-            transform: translateZ(400px); 
-            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
-            /* 六顶点变形动画 */
-            animation: cardMorph 8s infinite ease-in-out;
+            transform: translateZ(500px); /* 始终悬浮在最前方 */
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+            animation: cardMorph 12s infinite ease-in-out; /* 增加周期，让呼吸极其缓慢 */
         }
 
-        /* 输入激活时，停止变形，固定为一种锋利的六边形 */
+        /* 输入激活时，停止变形并锁定 */
         .login-card:focus-within {
             animation: none;
-            clip-path: polygon(0 5%, 90% 0, 100% 15%, 100% 95%, 20% 100%, 0 75%);
+            clip-path: polygon(2% 2%, 98% 0%, 100% 98%, 0% 100%); /* 锁定为近乎矩形，防止输入时抖动 */
             background: rgba(71, 85, 105, 0.95);
-            transform: translateZ(450px) scale(1.02) rotate(-1deg);
-            transition: all 0.5s;
+            transform: translateZ(550px) scale(1.02);
+            transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         .login-card h2 {
             color: var(--omni-green-bright);
             font-size: 2em; letter-spacing: 8px; margin-bottom: 50px;
-            text-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
-            transform: translateX(-10px);
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5); /* 增加一点光晕 */
+            transform: translateX(-5px);
         }
 
         .login-card input {
@@ -93,6 +94,7 @@
             border: 1px solid rgba(74, 222, 128, 0.2);
             color: #fff; outline: none; transition: 0.3s;
             font-family: monospace; font-size: 1.1em;
+            border-radius: 4px; /* 微微的一点圆角，看着更舒服 */
         }
 
         .login-card input:focus {
@@ -106,58 +108,44 @@
             background: var(--omni-green); color: white;
             border: none; font-weight: 900; font-size: 1.2em;
             letter-spacing: 12px; cursor: pointer;
-            clip-path: polygon(5% 0, 100% 15%, 95% 100%, 0 85%);
+            clip-path: polygon(3% 0, 100% 10%, 97% 100%, 0 90%);
             transition: 0.4s;
         }
 
         .login-card button:hover {
             background: var(--omni-green-bright);
-            transform: scale(1.05); filter: brightness(1.1);
+            transform: scale(1.02); filter: brightness(1.1);
         }
 
-        /* --- 动画关键帧区域 --- */
+        /* --- 柔滑版动画关键帧 --- */
 
-        /* 六边形卡片顶点呼吸动画 */
+        /* 登录框极其轻微的六边形呼吸动画 (不再大范围跳动) */
         @keyframes cardMorph {
-            0%, 100% { clip-path: polygon(10% 0%, 100% 5%, 95% 85%, 70% 100%, 0% 90%, 5% 15%); }
-            25%      { clip-path: polygon(5% 5%,  95% 0%,  100% 90%, 65% 95%,  5% 100%, 0% 20%); }
-            50%      { clip-path: polygon(15% 0%, 100% 10%, 90% 95%, 75% 100%, 0% 85%,  10% 10%); }
-            75%      { clip-path: polygon(0% 0%,  95% 5%,  100% 85%, 80% 95%,  5% 90%,  0% 25%); }
+            0%, 100% { clip-path: polygon(4% 1%, 96% 2%, 98% 96%, 70% 99%, 2% 98%, 1% 15%); }
+            50%      { clip-path: polygon(1% 4%, 99% 1%, 96% 99%, 65% 96%, 4% 97%, 3% 10%); }
         }
 
-        @keyframes float3D-1 {
-            0% {
-                clip-path: polygon(0 0, 80% 0, 40% 100%, 0 100%);
-                transform: translateZ(-400px) rotateY(15deg) translateX(-15%);
-            }
-            100% {
-                clip-path: polygon(20% 0, 100% 0, 70% 100%, 0 100%);
-                transform: translateZ(300px) rotateY(-10deg) translateX(10%);
-            }
+        /* 
+           空间穿刺的核心：
+           只做 transform (平移 + 旋转 + 深度变化)。
+           因为没有任何多边形顶点计算，显卡渲染极其丝滑。
+        */
+        @keyframes smooth3D-1 {
+            0% { transform: translateZ(-600px) rotateY(15deg) rotateX(10deg) translateX(-10%); }
+            100% { transform: translateZ(400px) rotateY(-10deg) rotateX(-5deg) translateX(10%); }
         }
 
-        @keyframes float3D-2 {
-            0% {
-                clip-path: polygon(100% 0, 100% 100%, 20% 100%, 50% 0);
-                transform: translateZ(300px) rotateX(-15deg) translateY(-10%);
-            }
-            100% {
-                clip-path: polygon(100% 20%, 100% 80%, 0 100%, 40% 0);
-                transform: translateZ(-400px) rotateX(15deg) translateY(15%);
-            }
+        @keyframes smooth3D-2 {
+            0% { transform: translateZ(400px) rotateX(-15deg) rotateY(-10deg) translateY(-10%); }
+            100% { transform: translateZ(-600px) rotateX(10deg) rotateY(15deg) translateY(10%); }
         }
 
-        @keyframes float3D-3 {
-            0% {
-                clip-path: polygon(0 40%, 60% 0, 100% 60%, 40% 100%);
-                transform: translateZ(0px) rotateZ(0deg) scale(0.9);
-            }
-            100% {
-                clip-path: polygon(0 20%, 80% 0, 100% 80%, 20% 100%);
-                transform: translateZ(150px) rotateZ(35deg) scale(1.3);
-            }
+        @keyframes smooth3D-3 {
+            0% { transform: translateZ(0px) rotateZ(0deg) scale(0.9); }
+            100% { transform: translateZ(200px) rotateZ(20deg) scale(1.2); }
         }
 
+        
         /* 主架构 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
         .sidebar { width: 260px; background: var(--omni-green); color: white; display: flex; flex-direction: column; }
