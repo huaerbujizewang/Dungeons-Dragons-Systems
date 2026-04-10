@@ -72,7 +72,6 @@
             /* 为焦点反馈添加平滑过渡 */
             transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.4s;
             
-            /* 核心：一个固定的、非对称的六边形切割，不再有动画。零性能开销！ */
             clip-path: polygon(15% 0%, 100% 10%, 90% 100%, 25% 95%, 0% 80%, 5% 20%);
         }
 
@@ -139,6 +138,25 @@
             100% { transform: translateZ(200px) rotateZ(20deg) scale(1.2); }
         }
 
+        /* 专门为返回键设计的次级几何样式 */
+        .login-card .btn-secondary {
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.05); /* 半透明背景 */
+            color: rgba(255, 255, 255, 0.6); /* 调暗文字颜色 */
+            font-size: 0.9em;
+            letter-spacing: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            /* 采用与主按钮相反的裁切方向，形成几何互补 */
+            clip-path: polygon(0 0, 95% 0, 100% 100%, 5% 100%);
+        }
+
+        .login-card .btn-secondary:hover {
+            background: rgba(239, 68, 68, 0.2); 
+            color: var(--omni-danger);
+            border-color: var(--omni-danger);
+            transform: scale(1.02);
+        }
+
 
         /* 主架构 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
@@ -184,6 +202,7 @@
             <input type="text" id="l-user" placeholder="公民账号" autocomplete="off">
             <input type="password" id="l-pass" placeholder="访问密钥">
             <button onclick="handleLogin()">接入网络</button>
+            <button onclick="window.history.back()" class="btn-secondary">返回 D&D 系统</button>
             <p id="l-err" style="color:var(--omni-danger); margin-top:15px; display:none; font-size:0.8em;">身份验证未通过</p>
         </div>
     </div>
