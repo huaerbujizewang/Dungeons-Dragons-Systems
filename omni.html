@@ -171,14 +171,44 @@
         .page.active { display: block; }
         .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
 
-        /* 聊天 */
-        .chat-container { display: flex; flex-direction: column; height: calc(100vh - 200px); border: 1px solid #eee; border-radius: 12px; background: white; }
-        .chat-history { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; }
-        .chat-input-bar { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
-        .message { margin-bottom: 15px; display: flex; flex-direction: column; }
-        .message.self { align-items: flex-end; }
-        .msg-bubble { padding: 10px 15px; border-radius: 15px; background: #eee; max-width: 70%; }
-        .message.self .msg-bubble { background: var(--omni-green-bright); color: white; }
+        /* --- 聊天 --- */
+        .chat-layout { display: flex; flex-direction: row; height: calc(100vh - 160px); border: 1px solid #e2e8f0; border-radius: 12px; background: white; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+        /* 左侧联系人栏 */
+        .chat-sidebar { width: 220px; border-right: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-tabs { display: flex; border-bottom: 1px solid #e2e8f0; }
+        .sidebar-tabs div { flex: 1; text-align: center; padding: 15px 0; cursor: pointer; font-size: 0.9em; transition: 0.2s; color: #64748b; }
+        .sidebar-tabs div.active { background: white; font-weight: bold; color: var(--omni-green); border-bottom: 2px solid var(--omni-green); }
+        .contact-list { flex: 1; overflow-y: auto; }
+        
+        /* 联系人列表项 */
+        .contact-item { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
+        .contact-item:hover { background: #e2e8f0; }
+        .contact-item.active { background: #e2e8f0; border-left: 3px solid var(--omni-green); }
+        .contact-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; background: #ddd; }
+        .contact-name { font-size: 0.9em; font-weight: bold; color: var(--omni-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* 右侧聊天主区 */
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: #ffffff; }
+        .chat-history { flex: 1; padding: 20px; overflow-y: auto; background: #fdfdfd; display: flex; flex-direction: column; }
+        .chat-input-bar { padding: 15px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; background: white; }
+        .chat-input-bar input { flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; outline: none; background: #f8fafc; transition: 0.3s; }
+        .chat-input-bar input:focus { border-color: var(--omni-green-bright); background: white; }
+
+        /* 头像与消息体 (对话流) */
+        .message { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; }
+        .message.self { flex-direction: row-reverse; }
+        .avatar-circle { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0; background: #fff; flex-shrink: 0; }
+        .message.self .avatar-circle { border-color: var(--omni-green-bright); }
+        
+        .msg-content { display: flex; flex-direction: column; max-width: 70%; }
+        .message.self .msg-content { align-items: flex-end; }
+        .msg-sender-name { font-size: 0.75em; color: #94a3b8; margin-bottom: 4px; }
+        .msg-bubble { padding: 10px 16px; border-radius: 12px; background: #f1f5f9; line-height: 1.5; color: #333; word-break: break-all; }
+        
+        /* 气泡小尾巴细节 */
+        .message.self .msg-bubble { background: var(--omni-green); color: white; border-top-right-radius: 2px; }
+        .message:not(.self) .msg-bubble { border-top-left-radius: 2px; }
 
         /* DM 面板 */
         #dm-admin-panel { background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; gap: 10px; align-items: center; }
@@ -232,11 +262,26 @@
             </div>
 
             <div id="page-chat" class="page active">
-                <div class="chat-container">
-                    <div class="chat-history" id="chat-box"></div>
-                    <div class="chat-input-bar">
-                        <input type="text" id="chat-in" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendMsg()">
-                        <button onclick="sendMsg()" style="padding:10px 20px; background:var(--omni-green); color:white; border:none; border-radius:4px; cursor:pointer;">发送</button>
+                <div class="chat-layout">
+                    <div class="chat-sidebar">
+                        <div class="sidebar-tabs">
+                            <div class="active" onclick="switchListTab('friends', this)">枢纽通讯录</div>
+                            <div onclick="switchListTab('groups', this)">加密频道</div>
+                        </div>
+                        <div class="contact-list" id="contact-list-box">
+                            <div class="contact-item active">
+                                <img src="https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/assets/bestiary/avatars/default.png" class="contact-avatar">
+                                <span class="contact-name">全境公共广播</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-main">
+                        <div class="chat-history" id="chat-box"></div>
+                        <div class="chat-input-bar">
+                            <input type="text" id="chat-in" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendMsg()">
+                            <button onclick="sendMsg()" style="padding:10px 25px; background:var(--omni-green); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">发送</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -280,8 +325,9 @@
         // --- 严格保持单次声明 ---
         const SB_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
-        
-        // 核心修改：将 supabase 改为 supabaseClient，避免与官方 CDN 的全局变量冲突
+        const GITHUB_USER = "huaerbujizewang"; 
+        const GITHUB_REPO = "Dungeons-Dragons-Systems";
+        const AVATAR_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/assets/bestiary/avatars/`;
         const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
         const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
 
@@ -434,6 +480,66 @@ function enterApp() {
         subscribe();
         updateWallet();
     }, 500);
+}
+
+// 获取头像全路径
+function getAvatarUrl(filename) {
+    const file = filename || 'default.png';
+    return AVATAR_BASE + file;
+}
+
+// --- DM 专用：捏人 ---
+async function adminCreateNPC() {
+    const nick = prompt("请输入 NPC 网名：");
+    const race = prompt("请输入 NPC 种族：");
+    const avatar = prompt("请输入头像文件名（需已在 avatars 文件夹中）：", "default.png");
+    
+    if(!nick) return;
+    
+    const { error } = await supabaseClient.from('omni_accounts').insert([{
+        login_id: "NPC_" + Date.now(),
+        login_pass: "123456",
+        nickname: nick,
+        race: race,
+        avatar_filename: avatar,
+        credits: 99999
+    }]);
+    
+    if(!error) {
+        alert("NPC 已生成并载入全境网络");
+        loadPossessionList(); // 刷新降临列表
+    }
+}
+
+// --- DM 专用：降临 ---
+async function hijackIdentity(accId) {
+    const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
+    if(data) {
+        // 关键：保留 DM 权限标识，但切换社交身份
+        const isActuallyDm = currentAccount.is_dm;
+        currentAccount = data;
+        currentAccount.is_dm = isActuallyDm; 
+        
+        alert(`已成功降临至：${currentAccount.nickname}`);
+        // 刷新 UI 上的个人信息
+        document.getElementById('prof-name').innerText = currentAccount.nickname;
+    }
+}
+
+// 渲染消息时带上头像
+function renderMsg(m) {
+    const box = document.getElementById('chat-box');
+    const isSelf = (m.sender_name === currentAccount.nickname);
+    const html = `
+        <div class="message ${isSelf ? 'self' : ''}">
+            <img src="${getAvatarUrl(m.sender_avatar_filename)}" class="avatar-circle">
+            <div class="msg-content">
+                <div style="font-size:0.7em; color:#64748b; margin-bottom:2px;">${m.sender_name}</div>
+                <div class="msg-bubble">${m.content}</div>
+            </div>
+        </div>`;
+    box.insertAdjacentHTML('beforeend', html);
+    box.scrollTop = box.scrollHeight;
 }
 
         window.onload = init;
