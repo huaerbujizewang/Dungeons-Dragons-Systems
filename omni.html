@@ -695,9 +695,11 @@
             }
         }
 
-        // 加载好友列表
+        // 好友功能
         async function loadContactList() {
             const box = document.getElementById('contact-list-box');
+            
+            // 列表头部：添加按钮与公共大厅入口
             let html = `
                 <div style="padding:10px; text-align:center;">
                     <button onclick="addFriend()" style="padding:6px 15px; background:white; border:1px solid var(--omni-green); color:var(--omni-green); border-radius:4px; cursor:pointer; width:100%; font-weight:bold;">+ 添加联系人</button>
@@ -710,10 +712,10 @@
 
             let queryData = [];
 
-            // 如果是纯 DM 实体，拥有上帝视角，看到所有人
+            // 逻辑：如果是纯 DM 实体（id为0），拥有上帝视角，看到所有人
             if (currentAccount.id === 0) {
                 const { data } = await supabaseClient.from('omni_accounts').select('*').neq('login_id', 'DM');
-                queryData = data;
+                queryData = data || [];
             } else {
                 // 如果是正常账号/被接管的账号，只拉取真正的好友
                 const { data: friends } = await supabaseClient.from('omni_friends')
@@ -725,20 +727,34 @@
                     const friendIds = friends.map(f => f.user_id === currentAccount.id ? f.friend_id : f.user_id);
                     const uniqueIds = [...new Set(friendIds)];
                     const { data: accs } = await supabaseClient.from('omni_accounts').select('*').in('id', uniqueIds);
-                    queryData = accs;
+                    queryData = accs || [];
                 }
             }
 
-            if(queryData && queryData.length > 0) {
+            // 渲染列表项
+            if(queryData.length > 0) {
                 queryData.forEach(acc => {
                     const isActive = (currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === acc.id) ? 'active' : '';
+                    
                     html += `
-                        <div class="contact-item ${isActive}" onclick="openPrivateChat(${acc.id}, '${acc.nickname}')">
-                            <img src="${getAvatarUrl(acc.avatar_filename)}" class="contact-avatar">
-                            <div style="display:flex; flex-direction:column; overflow:hidden;">
-                                <span class="contact-name">${acc.nickname}</span>
-                                <span style="font-size:0.7em; color:#94a3b8;">${acc.race || '未知'}</span>
+                        <div class="contact-item ${isActive}" style="display:flex; align-items:center; justify-content:space-between; padding-right:10px;">
+                            <!-- 点击左侧区域进入私聊 -->
+                            <div onclick="openPrivateChat(${acc.id}, '${acc.nickname}')" style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
+                                <img src="${getAvatarUrl(acc.avatar_filename)}" class="contact-avatar">
+                                <div style="display:flex; flex-direction:column; overflow:hidden;">
+                                    <span class="contact-name">${acc.nickname}</span>
+                                    <span style="font-size:0.7em; color:#94a3b8;">${acc.race || '未知'}</span>
+                                </div>
                             </div>
+                            
+                            <!-- 删除按钮 (×)：点击仅触发删除好友逻辑 -->
+                            <span onclick="event.stopPropagation(); deleteFriend(${acc.id}, '${acc.nickname}')" 
+                                  title="从名单中移除"
+                                  style="color:#cbd5e1; cursor:pointer; font-size:1.5em; font-weight:light; transition:color 0.2s; padding: 0 5px;"
+                                  onmouseover="this.style.color='var(--omni-danger)'" 
+                                  onmouseout="this.style.color='#cbd5e1'">
+                                ×
+                            </span>
                         </div>
                     `;
                 });
@@ -747,33 +763,60 @@
         }
 
         async function loadGroupList() {
-            const { data } = await supabaseClient.from('omni_groups').select('*').order('id', {ascending: true});
-            const box = document.getElementById('contact-list-box');
-            
-            let html = `<div style="padding:10px; text-align:center;"><button onclick="createGroup()" style="padding:6px 15px; background:white; border:1px solid var(--omni-green); color:var(--omni-green); border-radius:4px; cursor:pointer; width:100%; font-weight:bold;">+ 新建群组</button></div>`;
-            
-            if(data) {
-                data.forEach(g => {
-                    const isActive = (currentChatMode === 'group' && currentChatTarget && currentChatTarget.id === g.id) ? 'active' : '';
-                    html += `
-                        <div class="contact-item ${isActive}" onclick="openGroupChat(${g.id}, '${g.group_name}')">
-                            <div class="contact-avatar" style="background:var(--omni-green); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">群</div>
-                            <span class="contact-name">${g.group_name}</span>
-                        </div>
-                    `;
-                });
-            }
-            box.innerHTML = html;
-        }
+    const box = document.getElementById('contact-list-box');
+    
+    // 查询逻辑：从成员表里找当前用户加入的所有群组
+    const { data: memberships, error } = await supabaseClient.from('omni_group_members')
+        .select(`group_id, omni_groups(id, group_name, creator_id)`)
+        .eq('user_id', currentAccount.id);
+
+    let html = `
+        <div style="padding:10px; display:flex; gap:5px;">
+            <button onclick="createGroup()" style="flex:1; padding:6px; background:white; border:1px solid var(--omni-green); color:var(--omni-green); border-radius:4px; cursor:pointer; font-size:0.8em; font-weight:bold;">+ 建群</button>
+            <button onclick="joinGroupById()" style="flex:1; padding:6px; background:white; border:1px solid #64748b; color:#64748b; border-radius:4px; cursor:pointer; font-size:0.8em; font-weight:bold;"># 入群</button>
+        </div>
+    `;
+
+    if (memberships) {
+        memberships.forEach(m => {
+            const g = m.omni_groups;
+            if(!g) return;
+            const isActive = (currentChatMode === 'group' && currentChatTarget && currentChatTarget.id === g.id) ? 'active' : '';
+            const isOwner = (g.creator_id === currentAccount.id || currentAccount.is_dm);
+
+            html += `
+                <div class="contact-item ${isActive}" style="justify-content: space-between;">
+                    <div onclick="openGroupChat(${g.id}, '${g.group_name}')" style="display:flex; align-items:center; gap:10px; flex:1;">
+                        <div class="contact-avatar" style="background:var(--omni-green); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.8em;">群</div>
+                        <span class="contact-name">${g.group_name}</span>
+                    </div>
+                    ${isOwner ? `<span onclick="disbandGroup(${g.id}, '${g.group_name}')" style="color:var(--omni-danger); cursor:pointer; font-size:1.2em; padding:0 5px;">×</span>` : ''}
+                </div>
+            `;
+        });
+    }
+    box.innerHTML = html;
+}
 
         async function createGroup() {
-            if (currentAccount.id === 0) return alert("系统管理员实体无法直接建群，请先在后台【接管账号】。");
-            
+            if (currentAccount.id === 0) return alert("系统管理员无法建群。");
             const name = prompt("请输入新群组名称：");
             if(!name) return;
-            const { error } = await supabaseClient.from('omni_groups').insert([{ group_name: name, creator_id: currentAccount.id }]);
-            if(error) alert("建群失败，网络驳回。");
-            else loadGroupList();
+
+            // 1. 创建群组
+            const { data: group, error } = await supabaseClient.from('omni_groups')
+                .insert([{ group_name: name, creator_id: currentAccount.id }])
+                .select().single();
+
+            if(error) return alert("建群失败。");
+
+            // 2. 将创建者自动加入成员表
+            await supabaseClient.from('omni_group_members').insert([
+                { group_id: group.id, user_id: currentAccount.id }
+            ]);
+
+            alert(`群组 [${name}] 已创建。`);
+            loadGroupList();
         }
 
         // --- 聊天室切换逻辑 ---
@@ -1479,12 +1522,56 @@ async function syncImperialDate() {
     }
 }
 
-// 供监察官修改日期使用
+// 修改日期使用
 async function updateImperialDate(newDateStr) {
     const { error } = await supabaseClient.from('omni_config').update({ value: newDateStr }).eq('key', 'current_date');
     if (!error) {
         alert("帝国标准时已同步更新。");
         syncImperialDate();
+    }
+}
+
+// 【社交管理】删除好友
+async function deleteFriend(friendId, name) {
+    if(!confirm(`确定要从枢纽名单中抹除 [${name}] 吗？`)) return;
+    
+    const { error } = await supabaseClient.from('omni_friends')
+        .delete()
+        .or(`and(user_id.eq.${currentAccount.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${currentAccount.id})`);
+    
+    if(!error) {
+        alert("联系人已移除。");
+        if(currentChatMode === 'private' && currentChatTarget.id === friendId) openPublicChat();
+        loadContactList();
+    }
+}
+
+// 【社交管理】解散群组
+async function disbandGroup(groupId, name) {
+    if(!confirm(`确定要彻底解散群组 [${name}] 吗？此操作不可逆。`)) return;
+    
+    const { error } = await supabaseClient.from('omni_groups').delete().eq('id', groupId);
+    
+    if(!error) {
+        alert("群组已解散。");
+        if(currentChatMode === 'group' && currentChatTarget.id === groupId) openPublicChat();
+        loadGroupList();
+    }
+}
+
+// 【社交管理】通过ID加入群组
+async function joinGroupById() {
+    const gid = prompt("请输入群组识别码 (ID):");
+    if(!gid) return;
+
+    const { error } = await supabaseClient.from('omni_group_members').insert([
+        { group_id: gid, user_id: currentAccount.id }
+    ]);
+
+    if(error) alert("无法加入：ID不存在或您已在群中。");
+    else {
+        alert("已成功接入群组频道。");
+        loadGroupList();
     }
 }
 
