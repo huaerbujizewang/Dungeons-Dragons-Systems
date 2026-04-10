@@ -346,7 +346,7 @@
         // --- 初始化与登录 ---
         async function init() {
             if(loginUid === DM_UID) {
-                currentAccount = { nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
+                currentAccount = { id: 0, nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
                 document.getElementById('dm-admin-panel').style.display = 'flex';
                 enterApp();
                 return;
@@ -418,21 +418,71 @@
             else loadGroupList();
         }
 
-        // 加载联系人 (这里为了跑团方便，默认全员可见，相当于全局花名册)
-        async function loadContactList() {
-            const { data } = await supabaseClient.from('omni_accounts').select('*').neq('login_id', 'DM').order('id', {ascending: true});
-            const box = document.getElementById('contact-list-box');
+        // --- 社交模块：好友与群组  ---
+
+        // 添加联系人逻辑
+        async function addFriend() {
+            if (currentAccount.id === 0) return alert("系统管理员实体无法直接添加好友，请先在后台【接管账号】。");
             
+            const targetName = prompt("请输入你要添加的公民网名：");
+            if (!targetName) return;
+
+            // 检索账号
+            const { data: users, error } = await supabaseClient.from('omni_accounts').select('id, nickname').eq('nickname', targetName);
+            if (!users || users.length === 0) return alert(`未检索到名为 [${targetName}] 的公民。`);
+            
+            const targetId = users[0].id;
+            if (targetId === currentAccount.id) return alert("不可添加自己为联系人。");
+
+            // 写入好友关系
+            const { error: insertErr } = await supabaseClient.from('omni_friends').insert([
+                { user_id: currentAccount.id, friend_id: targetId }
+            ]);
+
+            if (!insertErr) {
+                alert("联系人添加成功！");
+                loadContactList(); // 刷新列表
+            } else {
+                alert("添加失败，可能已经是联系人。");
+            }
+        }
+
+        // 加载好友列表
+        async function loadContactList() {
+            const box = document.getElementById('contact-list-box');
             let html = `
+                <div style="padding:10px; text-align:center;">
+                    <button onclick="addFriend()" style="padding:6px 15px; background:white; border:1px solid var(--omni-green); color:var(--omni-green); border-radius:4px; cursor:pointer; width:100%; font-weight:bold;">+ 添加联系人</button>
+                </div>
                 <div class="contact-item ${currentChatMode === 'public' ? 'active' : ''}" onclick="openPublicChat()">
                     <img src="${getAvatarUrl('default.png')}" class="contact-avatar">
                     <span class="contact-name" style="color:var(--omni-green);">公共大厅</span>
                 </div>
             `;
-            
-            if(data) {
-                data.forEach(acc => {
-                    if(currentAccount.id === acc.id) return; // 不显示自己
+
+            let queryData = [];
+
+            // 如果是纯 DM 实体，拥有上帝视角，看到所有人
+            if (currentAccount.id === 0) {
+                const { data } = await supabaseClient.from('omni_accounts').select('*').neq('login_id', 'DM');
+                queryData = data;
+            } else {
+                // 如果是正常账号/被接管的账号，只拉取真正的好友
+                const { data: friends } = await supabaseClient.from('omni_friends')
+                    .select('user_id, friend_id')
+                    .or(`user_id.eq.${currentAccount.id},friend_id.eq.${currentAccount.id}`);
+                
+                if (friends && friends.length > 0) {
+                    // 提取所有好友的 ID 并去重
+                    const friendIds = friends.map(f => f.user_id === currentAccount.id ? f.friend_id : f.user_id);
+                    const uniqueIds = [...new Set(friendIds)];
+                    const { data: accs } = await supabaseClient.from('omni_accounts').select('*').in('id', uniqueIds);
+                    queryData = accs;
+                }
+            }
+
+            if(queryData && queryData.length > 0) {
+                queryData.forEach(acc => {
                     const isActive = (currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === acc.id) ? 'active' : '';
                     html += `
                         <div class="contact-item ${isActive}" onclick="openPrivateChat(${acc.id}, '${acc.nickname}')">
@@ -448,12 +498,11 @@
             box.innerHTML = html;
         }
 
-        // 加载群组列表
         async function loadGroupList() {
             const { data } = await supabaseClient.from('omni_groups').select('*').order('id', {ascending: true});
             const box = document.getElementById('contact-list-box');
             
-            let html = `<div style="padding:10px; text-align:center;"><button onclick="createGroup()" style="padding:6px 15px; background:white; border:1px solid var(--omni-green); color:var(--omni-green); border-radius:4px; cursor:pointer;">+ 新建群组</button></div>`;
+            let html = `<div style="padding:10px; text-align:center;"><button onclick="createGroup()" style="padding:6px 15px; background:white; border:1px solid var(--omni-green); color:var(--omni-green); border-radius:4px; cursor:pointer; width:100%; font-weight:bold;">+ 新建群组</button></div>`;
             
             if(data) {
                 data.forEach(g => {
@@ -467,6 +516,16 @@
                 });
             }
             box.innerHTML = html;
+        }
+
+        async function createGroup() {
+            if (currentAccount.id === 0) return alert("系统管理员实体无法直接建群，请先在后台【接管账号】。");
+            
+            const name = prompt("请输入新群组名称：");
+            if(!name) return;
+            const { error } = await supabaseClient.from('omni_groups').insert([{ group_name: name, creator_id: currentAccount.id }]);
+            if(error) alert("建群失败，网络驳回。");
+            else loadGroupList();
         }
 
         async function createGroup() {
