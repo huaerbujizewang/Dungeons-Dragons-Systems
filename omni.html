@@ -141,7 +141,9 @@
         // --- 严格保持单次声明 ---
         const SB_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y";
-        const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+        
+        // 核心修改：将 supabase 改为 supabaseClient，避免与官方 CDN 的全局变量冲突
+        const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
         const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
 
         let currentAccount = null;
@@ -167,7 +169,7 @@
         async function handleLogin() {
             const u = document.getElementById('l-user').value;
             const p = document.getElementById('l-pass').value;
-            const { data, error } = await supabase.from('omni_accounts').select('*').eq('login_id', u).eq('login_pass', p).single();
+            const { data, error } = await supabaseClient.from('omni_accounts').select('*').eq('login_id', u).eq('login_pass', p).single();
             if(data) {
                 currentAccount = data;
                 sessionStorage.setItem('omni_session', JSON.stringify(data));
@@ -199,12 +201,12 @@
                 document.getElementById('wallet-val').innerText = "∞";
                 return;
             }
-            const { data } = await supabase.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
             if(data) document.getElementById('wallet-val').innerText = data.credits.toLocaleString();
         }
 
         async function loadHistory() {
-            const { data } = await supabase.from('omni_messages').select('*').order('created_at', {ascending:true}).limit(50);
+            const { data } = await supabaseClient.from('omni_messages').select('*').order('created_at', {ascending:true}).limit(50);
             if(data) {
                 const box = document.getElementById('chat-box');
                 box.innerHTML = '';
@@ -214,7 +216,7 @@
         }
 
         function subscribe() {
-            supabase.channel('omni_msgs').on('postgres_changes', {event:'INSERT', schema:'public', table:'omni_messages'}, p => {
+            supabaseClient.channel('omni_msgs').on('postgres_changes', {event:'INSERT', schema:'public', table:'omni_messages'}, p => {
                 renderMsg(p.new);
                 document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
             }).subscribe();
@@ -244,7 +246,7 @@
                 }
             }
 
-            await supabase.from('omni_messages').insert([{
+            await supabaseClient.from('omni_messages').insert([{
                 sender_name: sName,
                 sender_race: sRace,
                 sender_avatar_color: sColor,
@@ -265,10 +267,10 @@
 
         async function purchase(name, price) {
             if(currentAccount.is_dm) return alert("监察官无需调配结算。");
-            const { data } = await supabase.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
             if(data.credits < price) return alert("信用点不足。");
             if(confirm(`确认调配 ${name}？`)) {
-                await supabase.from('omni_accounts').update({ credits: data.credits - price }).eq('id', currentAccount.id);
+                await supabaseClient.from('omni_accounts').update({ credits: data.credits - price }).eq('id', currentAccount.id);
                 alert("支付成功，物流法阵启动。");
                 updateWallet();
             }
@@ -277,7 +279,7 @@
         async function adminAdjustCredits() {
             const tid = document.getElementById('target-id').value;
             const amt = document.getElementById('target-amt').value;
-            await supabase.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
+            await supabaseClient.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
             alert("调拨完成");
         }
 
