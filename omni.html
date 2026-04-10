@@ -7,155 +7,156 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --omni-green: #196f3d; 
-            --omni-green-bright: #2ecc71; 
-            --omni-bg: #f4f6f7; 
-            --omni-card: #ffffff;
-            --omni-text: #2c3e50;
-            --omni-danger: #e74c3c; 
+            /* 整体色彩明度上调 */
+            --omni-green: #2ecc71; 
+            --omni-green-bright: #4ade80; 
+            --omni-bg: #ffffff; 
+            --omni-card: #f8fafc;
+            --omni-text: #1e293b;
+            --omni-danger: #ef4444; 
         }
 
         body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
 
-/* --- 动态未来几何登录背景 --- */
-#login-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    /* 基础底色：流动的科技灰渐变 */
-    background: linear-gradient(-45deg, #e0e5ec, #f4f6f7, #bdc3c7, #d5dbdb);
-    background-size: 400% 400%;
-    animation: bgShift 15s ease infinite; /* Google风格的平滑呼吸渐变 */
-    z-index: 99999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-}
+  /* --- 3D 穿透动态登录背景 --- */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #e2e8f0, #f1f5f9); /* 明亮的灰白底色 */
+            z-index: 99999;
+            display: flex; justify-content: center; align-items: center; overflow: hidden;
+            /* 开启真正的 3D 空间 */
+            perspective: 1200px;
+            transform-style: preserve-3d;
+        }
 
-/* 动态几何色块 1：明色 + 亮绿的大斜率切片 (靠左上) */
-#login-overlay::before {
-    content: "";
-    position: absolute;
-    width: 150vw; height: 150vh;
-    /* 亮绿与明亮青色的渐变，带来未来活力感 */
-    background: linear-gradient(135deg, rgba(46, 204, 113, 0.85), rgba(0, 212, 255, 0.6));
-    /* 大斜率多边形切割 */
-    clip-path: polygon(0 0, 80% 0, 30% 100%, 0 100%);
-    top: -20%; left: -20%;
-    z-index: -2;
-    animation: floatShape1 20s ease-in-out infinite alternate;
-}
+        /* 巨型几何体基础属性 */
+        .bg-shape {
+            position: absolute;
+            width: 160vw; height: 160vh;
+            top: -30vh; left: -30vw;
+            transform-style: preserve-3d;
+            opacity: 0.85;
+        }
 
-/* 动态几何色块 2：深灰 + 深绿的稳重切片 (靠右下) */
-#login-overlay::after {
-    content: "";
-    position: absolute;
-    width: 150vw; height: 150vh;
-    /* 帝国深绿与深灰色的融合 */
-    background: linear-gradient(135deg, rgba(44, 62, 80, 0.9), rgba(25, 111, 61, 0.85));
-    /* 互补的大斜率多边形切割 */
-    clip-path: polygon(70% 0, 100% 0, 100% 100%, 20% 100%);
-    bottom: -20%; right: -20%;
-    z-index: -1;
-    animation: floatShape2 25s ease-in-out infinite alternate;
-}
+        /* 形状1：明亮的薄荷绿/青色 */
+        .shape-light {
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.8), rgba(6, 182, 212, 0.7));
+            animation: float3D-1 14s infinite alternate ease-in-out;
+        }
 
-/* --- 背景动态关键帧 (让它们动起来) --- */
-@keyframes bgShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+        /* 形状2：提亮后的高级石板青色（即你要求的深色块） */
+        .shape-dark {
+            background: linear-gradient(135deg, rgba(71, 85, 105, 0.9), rgba(15, 118, 110, 0.8));
+            animation: float3D-2 18s infinite alternate ease-in-out;
+        }
 
-@keyframes floatShape1 {
-    0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    100% { transform: translate(3%, 4%) rotate(-2deg) scale(1.05); }
-}
+        /* 形状3：穿梭的明亮光带 */
+        .shape-accent {
+            background: linear-gradient(135deg, rgba(167, 243, 208, 0.5), rgba(56, 189, 248, 0.6));
+            animation: float3D-3 22s infinite alternate ease-in-out;
+        }
 
-@keyframes floatShape2 {
-    0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    100% { transform: translate(-3%, -4%) rotate(2deg) scale(1.05); }
-}
+        /* 登录卡片：明度提升的毛玻璃态，外加不断呼吸变形的 6 个顶点 */
+        .login-card {
+            background: rgba(51, 65, 85, 0.85); /* 提亮后的深青灰，不再是纯黑 */
+            backdrop-filter: blur(15px);
+            padding: 60px 70px;
+            width: 450px;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            position: relative;
+            /* 将卡片拉到最前面，防止被背景切穿 */
+            transform: translateZ(400px); 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+            /* 六顶点变形动画 */
+            animation: cardMorph 8s infinite ease-in-out;
+        }
 
-/* 彻底不规则的登录卡片：多边形拼接感 */
-.login-card {
-    background: rgba(15, 15, 15, 0.95);
-    backdrop-filter: blur(20px);
-    padding: 60px 70px;
-    width: 450px;
-    /* 核心：复杂的 10 点不规则多边形裁剪 */
-    clip-path: polygon(10% 0, 100% 5%, 95% 85%, 70% 100%, 0 90%, 5% 15%);
-    border: none;
-    position: relative;
-    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-}
+        /* 输入激活时，停止变形，固定为一种锋利的六边形 */
+        .login-card:focus-within {
+            animation: none;
+            clip-path: polygon(0 5%, 90% 0, 100% 15%, 100% 95%, 20% 100%, 0 75%);
+            background: rgba(71, 85, 105, 0.95);
+            transform: translateZ(450px) scale(1.02) rotate(-1deg);
+            transition: all 0.5s;
+        }
 
-/* 辅助几何外框：营造层级感 */
-.login-card::after {
-    content: ""; position: absolute; inset: -2px;
-    background: linear-gradient(135deg, var(--omni-green-bright), transparent, var(--omni-green));
-    z-index: -1;
-    clip-path: polygon(10% 0, 100% 5%, 95% 85%, 70% 100%, 0 90%, 5% 15%);
-    opacity: 0.4;
-}
+        .login-card h2 {
+            color: var(--omni-green-bright);
+            font-size: 2em; letter-spacing: 8px; margin-bottom: 50px;
+            text-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+            transform: translateX(-10px);
+        }
 
-/* 激活态形变：当输入时，几何体发生整体扭转和拉伸 */
-.login-card:focus-within {
-    clip-path: polygon(0 5%, 90% 0, 100% 15%, 100% 95%, 20% 100%, 0 75%);
-    background: rgba(20, 20, 20, 0.98);
-    transform: scale(1.02) rotate(-1deg);
-}
+        .login-card input {
+            width: 100%; padding: 18px; margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+            color: #fff; outline: none; transition: 0.3s;
+            font-family: monospace; font-size: 1.1em;
+        }
 
-.login-card h2 {
-    color: var(--omni-green-bright);
-    font-size: 2em;
-    letter-spacing: 8px;
-    margin-bottom: 50px;
-    text-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
-    /* 标题位置也略微非对称 */
-    transform: translateX(-10px);
-}
+        .login-card input:focus {
+            border-color: var(--omni-green-bright);
+            background: rgba(74, 222, 128, 0.1);
+            box-shadow: -5px 0 0 var(--omni-green-bright);
+        }
 
-/* 输入框：去掉所有圆角，保持硬朗线条 */
-.login-card input {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(46, 204, 113, 0.1);
-    padding: 18px;
-    margin-bottom: 20px;
-    color: #fff;
-    outline: none;
-    transition: 0.3s;
-    font-family: monospace; /* 增加终端感 */
-}
+        .login-card button {
+            width: 110%; margin-left: -5%; padding: 20px;
+            background: var(--omni-green); color: white;
+            border: none; font-weight: 900; font-size: 1.2em;
+            letter-spacing: 12px; cursor: pointer;
+            clip-path: polygon(5% 0, 100% 15%, 95% 100%, 0 85%);
+            transition: 0.4s;
+        }
 
-.login-card input:focus {
-    border-color: var(--omni-green-bright);
-    background: rgba(46, 204, 113, 0.05);
-    box-shadow: -5px 0 0 var(--omni-green-bright);
-}
+        .login-card button:hover {
+            background: var(--omni-green-bright);
+            transform: scale(1.05); filter: brightness(1.1);
+        }
 
-/* 按钮：非对称切割 */
-.login-card button {
-    width: 110%;
-    margin-left: -5%;
-    padding: 20px;
-    background: var(--omni-green);
-    color: white;
-    border: none;
-    font-weight: 900;
-    font-size: 1.2em;
-    letter-spacing: 12px;
-    cursor: pointer;
-    clip-path: polygon(5% 0, 100% 15%, 95% 100%, 0 85%);
-    transition: 0.4s;
-}
+        /* --- 动画关键帧区域 --- */
 
-.login-card button:hover {
-    background: var(--omni-green-bright);
-    transform: scale(1.05);
-    filter: brightness(1.2);
-}
+        /* 六边形卡片顶点呼吸动画 */
+        @keyframes cardMorph {
+            0%, 100% { clip-path: polygon(10% 0%, 100% 5%, 95% 85%, 70% 100%, 0% 90%, 5% 15%); }
+            25%      { clip-path: polygon(5% 5%,  95% 0%,  100% 90%, 65% 95%,  5% 100%, 0% 20%); }
+            50%      { clip-path: polygon(15% 0%, 100% 10%, 90% 95%, 75% 100%, 0% 85%,  10% 10%); }
+            75%      { clip-path: polygon(0% 0%,  95% 5%,  100% 85%, 80% 95%,  5% 90%,  0% 25%); }
+        }
+
+        @keyframes float3D-1 {
+            0% {
+                clip-path: polygon(0 0, 80% 0, 40% 100%, 0 100%);
+                transform: translateZ(-400px) rotateY(15deg) translateX(-15%);
+            }
+            100% {
+                clip-path: polygon(20% 0, 100% 0, 70% 100%, 0 100%);
+                transform: translateZ(300px) rotateY(-10deg) translateX(10%);
+            }
+        }
+
+        @keyframes float3D-2 {
+            0% {
+                clip-path: polygon(100% 0, 100% 100%, 20% 100%, 50% 0);
+                transform: translateZ(300px) rotateX(-15deg) translateY(-10%);
+            }
+            100% {
+                clip-path: polygon(100% 20%, 100% 80%, 0 100%, 40% 0);
+                transform: translateZ(-400px) rotateX(15deg) translateY(15%);
+            }
+        }
+
+        @keyframes float3D-3 {
+            0% {
+                clip-path: polygon(0 40%, 60% 0, 100% 60%, 40% 100%);
+                transform: translateZ(0px) rotateZ(0deg) scale(0.9);
+            }
+            100% {
+                clip-path: polygon(0 20%, 80% 0, 100% 80%, 20% 100%);
+                transform: translateZ(150px) rotateZ(35deg) scale(1.3);
+            }
+        }
 
         /* 主架构 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
@@ -190,6 +191,12 @@
 <body>
 
     <div id="login-overlay">
+        <!-- 3D 空间中互相穿透的巨型几何体 -->
+        <div class="bg-shape shape-light"></div>
+        <div class="bg-shape shape-dark"></div>
+        <div class="bg-shape shape-accent"></div>
+
+        <!-- 登录卡片 -->
         <div class="login-card">
             <h2>全境网络接入</h2>
             <input type="text" id="l-user" placeholder="公民账号" autocomplete="off">
