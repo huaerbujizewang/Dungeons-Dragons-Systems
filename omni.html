@@ -685,6 +685,8 @@
             if (!currentRealtimeChannel) subscribe(); 
             updateWallet();
             loadContactList();
+            loadMallItems(); 
+            loadInventory(); 
 
             if(currentAccount.is_dm) {
                 document.getElementById('dm-admin-trigger').style.display = 'flex';
