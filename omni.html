@@ -3,340 +3,452 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全境网络 - Omni Terminal</title>
+    <title>全境网络 - Lotharia Omni Terminal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --omni-green-main: #196f3d; 
-            --omni-green-light: #2ecc71; 
-            --omni-bg-gray: #f4f6f7; 
-            --omni-card-white: #ffffff;
-            --omni-text-main: #2c3e50;
-            --omni-text-sub: #7f8c8d;
-            --omni-gold: #f39c12; 
+            --omni-green: #196f3d; 
+            --omni-green-bright: #2ecc71; 
+            --omni-bg: #f0f3f4; 
+            --omni-card: #ffffff;
+            --omni-text: #2c3e50;
+            --omni-text-light: #7f8c8d;
             --omni-danger: #e74c3c; 
+            --omni-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
 
-        body {
-            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-            background: var(--omni-bg-gray);
-            color: var(--omni-text-main);
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            overflow: hidden;
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
+
+        /* --- 登录层 --- */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--omni-green), #114b28); 
+            z-index: 99999; display: flex; justify-content: center; align-items: center;
+        }
+        .login-card { 
+            background: white; padding: 50px; border-radius: 20px; width: 400px; 
+            text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.4); 
+        }
+        .login-card h1 { color: var(--omni-green); font-size: 2em; margin-bottom: 30px; letter-spacing: 4px; }
+        .login-card input { 
+            width: 100%; padding: 15px; margin-bottom: 20px; border: 1px solid #ddd; 
+            border-radius: 8px; font-size: 1em; outline: none; transition: 0.3s;
+        }
+        .login-card input:focus { border-color: var(--omni-green); box-shadow: 0 0 10px rgba(25,111,61,0.1); }
+        .login-card button { 
+            width: 100%; padding: 15px; background: var(--omni-green); color: white; 
+            border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em;
         }
 
+        /* --- 主架构 --- */
+        .app-container { display: flex; height: 100vh; width: 100vw; }
+        
         /* 侧边栏 */
-        .omni-sidebar {
-            width: 260px;
-            background: var(--omni-green-main);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            z-index: 10;
+        .sidebar { width: 280px; background: var(--omni-green); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 40px 25px; font-size: 1.8em; font-weight: 900; letter-spacing: 3px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .nav-group { flex: 1; padding-top: 20px; }
+        .nav-item { 
+            padding: 22px 30px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; 
+            gap: 20px; border-left: 5px solid transparent; font-size: 1.1em; opacity: 0.8;
         }
+        .nav-item:hover { background: rgba(255,255,255,0.05); opacity: 1; }
+        .nav-item.active { background: rgba(255,255,255,0.15); border-left-color: var(--omni-green-bright); opacity: 1; font-weight: bold; }
 
-        .omni-logo {
-            padding: 30px 20px;
-            font-size: 1.8em;
-            font-weight: 900;
-            letter-spacing: 2px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* 内容区 */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--omni-bg); }
+        .top-bar { height: 80px; background: white; display: flex; align-items: center; justify-content: flex-end; padding: 0 40px; border-bottom: 1px solid #eee; }
+        .content-body { flex: 1; padding: 40px; overflow-y: auto; }
+        
+        .page { display: none; height: 100%; }
+        .page.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 通讯板块 (Chat) --- */
+        .chat-wrap { display: flex; gap: 30px; height: 100%; max-height: 800px; }
+        .chat-main { flex: 1; background: white; border-radius: 16px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; box-shadow: var(--omni-shadow); }
+        .chat-header { padding: 20px 25px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa; display: flex; justify-content: space-between; }
+        .chat-history { flex: 1; padding: 30px; overflow-y: auto; background: #fdfdfd; display: flex; flex-direction: column; gap: 20px; }
+        .chat-input-area { padding: 25px; border-top: 1px solid #eee; display: flex; gap: 15px; }
+        .chat-input-area input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 10px; outline: none; font-size: 1em; }
+        
+        .message { max-width: 75%; display: flex; flex-direction: column; }
+        .message.self { align-self: flex-end; align-items: flex-end; }
+        .msg-meta { font-size: 0.8em; color: var(--omni-text-light); margin-bottom: 6px; }
+        .msg-bubble { 
+            padding: 14px 20px; border-radius: 18px; background: #f0f2f5; line-height: 1.6; 
+            position: relative; border-left: 4px solid #ddd; word-wrap: break-word; 
         }
+        .message.self .msg-bubble { background: var(--omni-green-bright); color: white; border-left: none; border-right: 4px solid #145a32; }
 
-        .nav-item {
-            padding: 20px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border-left: 4px solid transparent;
-            display: flex;
-            align-items: center;
-            gap: 15px;
+        /* --- 优选板块 (Life/Shop) --- */
+        .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
+        .store-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: var(--omni-shadow); transition: 0.3s; border: 1px solid #eee; }
+        .store-card:hover { transform: translateY(-8px); box-shadow: 0 15px 40px rgba(0,0,0,0.1); }
+        .store-img { height: 180px; background: #e5e8e8; display: flex; align-items: center; justify-content: center; font-size: 3em; }
+        .store-info { padding: 25px; }
+        .store-title { font-size: 1.3em; font-weight: bold; margin-bottom: 10px; }
+        .store-price { font-size: 1.5em; color: var(--omni-green); font-weight: 900; margin: 15px 0; }
+        .btn-buy { width: 100%; padding: 12px; background: #eee; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-buy:hover { background: var(--omni-green); color: white; }
+
+        /* --- 资产板块 (Wallet) --- */
+        .wallet-banner { 
+            background: linear-gradient(135deg, var(--omni-green), #114b28); color: white; 
+            padding: 60px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 20px 50px rgba(25,111,61,0.2);
         }
+        .balance-title { font-size: 1.2em; opacity: 0.8; margin-bottom: 15px; }
+        .balance-value { font-size: 5em; font-weight: 900; letter-spacing: -2px; }
+        .wallet-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; margin-top: 40px; }
+        .action-item { background: white; padding: 30px; border-radius: 16px; text-align: center; box-shadow: var(--omni-shadow); cursor: pointer; transition: 0.2s; }
+        .action-item:hover { background: #f0fdf4; border: 1px solid var(--omni-green-bright); }
 
-        .nav-item:hover { background: rgba(255,255,255,0.05); }
-        .nav-item.active {
-            background: rgba(255,255,255,0.1);
-            border-left-color: var(--omni-green-light);
-            font-weight: bold;
+        /* --- DM 专用控制面板 --- */
+        #dm-admin-panel { 
+            background: #2c3e50; color: white; padding: 20px 40px; display: none; 
+            align-items: center; gap: 20px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
+        #dm-admin-panel input { padding: 8px; border-radius: 4px; border: none; outline: none; }
+        .admin-btn { background: #f39c12; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-        .omni-main {
-            flex: 1;
-            padding: 30px 40px;
-            overflow-y: auto;
-            position: relative;
+        /* 通用提示 */
+        #omni-toast { 
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); 
+            background: rgba(0,0,0,0.8); color: white; padding: 12px 30px; border-radius: 30px; 
+            z-index: 100000; display: none; animation: slideUp 0.3s ease;
         }
+        @keyframes slideUp { from { transform: translate(-50%, 50px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
-        .tab-pane { display: none; animation: fadeIn 0.3s ease; }
-        .tab-pane.active { display: block; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .omni-card {
-            background: var(--omni-card-white);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            border: 1px solid rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-
-        .section-header {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 25px;
-            color: var(--omni-green-main);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* 通讯 */
-        .chat-layout { display: flex; gap: 20px; height: calc(100vh - 180px); }
-        .chat-window {
-            flex: 1;
-            background: var(--omni-card-white);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-
-        #dm-control-panel {
-            background: #2c3e50;
-            color: white;
-            padding: 12px 20px;
-            font-size: 0.9em;
-            display: none; 
-            gap: 12px;
-            align-items: center;
-        }
-        #dm-control-panel input { padding: 5px 10px; border-radius: 4px; border: none; outline: none; }
-
-        .chat-history { flex: 1; padding: 25px; overflow-y: auto; background: #fcfcfc; }
-        .chat-input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 15px; }
-        .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; outline: none; }
-        .btn-send { background: var(--omni-green-main); color: white; border: none; padding: 0 30px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-
-        .message { margin-bottom: 20px; display: flex; flex-direction: column; }
-        .message.self { align-items: flex-end; }
-        .msg-info { font-size: 0.75em; color: #999; margin-bottom: 5px; }
-        .msg-bubble { padding: 12px 18px; border-radius: 18px; background: #eee; max-width: 70%; word-wrap: break-word; line-height: 1.5; }
-        .message.self .msg-bubble { background: var(--omni-green-light); color: white; }
-        .msg-error { color: var(--omni-danger); font-size: 0.8em; margin-top: 5px; font-weight: bold; display: flex; align-items: center; gap: 4px; }
-
-        /* 资产 */
-        .wallet-banner {
-            background: linear-gradient(135deg, var(--omni-green-main), #114b28);
-            border-radius: 16px;
-            padding: 40px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .wallet-balance-val { font-size: 3.5em; font-weight: 900; margin-top: 10px; }
-
-        .sys-warning {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: #fff; border-left: 6px solid var(--omni-danger);
-            padding: 15px 25px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            z-index: 9999; display: none; align-items: center; gap: 15px; font-weight: bold;
+        /* 敏感词拦截 */
+        #intercept-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9);
+            z-index: 100001; display: none; flex-direction: column; justify-content: center; align-items: center;
         }
     </style>
 </head>
 <body>
 
-    <nav class="omni-sidebar">
-        <div class="omni-logo">🌐 OMNI 全境</div>
-        <div style="flex:1; padding-top: 20px;">
-            <div class="nav-item active" onclick="switchTab('chat', this)">💬 枢纽通讯</div>
-            <div class="nav-item" onclick="switchTab('life', this)">🍔 帝国优选</div>
-            <div class="nav-item" onclick="switchTab('wallet', this)">💳 资产结算</div>
-            <div class="nav-item" onclick="switchTab('profile', this)">🛂 公民通行证</div>
+    <div id="login-overlay">
+        <div class="login-card">
+            <h1>🌐 OMNI</h1>
+            <p style="color:#666; margin-bottom:30px;">全境枢纽网络 - 公民身份接入</p>
+            <input type="text" id="l-user" placeholder="公民账号 (用户账号1-5)">
+            <input type="password" id="l-pass" placeholder="访问密钥 (123456)">
+            <button onclick="handleLogin()">验证并接入</button>
+            <p id="l-err" style="color:red; margin-top:15px; display:none; font-size:0.9em;">! 密钥错误或公民号不存在</p>
         </div>
-        <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="cursor: pointer; opacity: 0.7; font-size: 0.9em;" onclick="window.history.back()">⬅ 退出系统</div>
-        </div>
-    </nav>
+    </div>
 
-    <main class="omni-main">
-        <div id="omni-warning" class="sys-warning">
-            <span style="font-size: 1.5em;">⚠️</span>
-            <div>
-                <div style="color: var(--omni-danger); font-size: 1.1em; margin-bottom: 2px;">安全拦截</div>
-                <div style="font-size: 0.85em; font-weight: normal;">检测到敏感词汇，消息发送受限。警告 (1/3)</div>
+    <div id="dm-admin-panel">
+        <strong style="color:#f39c12">● 后台管理模式</strong>
+        <span>扮演NPC:</span>
+        <input type="text" id="npc-name" placeholder="NPC名字" style="width:100px">
+        <input type="text" id="npc-race" placeholder="种族" style="width:100px">
+        <input type="color" id="npc-color" value="#3498db">
+        <span style="margin-left:20px">调拨信用点:</span>
+        <input type="text" id="target-id" placeholder="账号ID" style="width:80px">
+        <input type="number" id="target-amt" placeholder="金额" style="width:80px">
+        <button class="admin-btn" onclick="adminCreditAction()">执行调拨</button>
+    </div>
+
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">🌐 OMNI 全境</div>
+            <div class="nav-group">
+                <div class="nav-item active" onclick="switchPage('chat', this)">💬 枢纽通讯</div>
+                <div class="nav-item" onclick="switchPage('life', this)">🍔 帝国优选</div>
+                <div class="nav-item" onclick="switchPage('wallet', this)">💳 资产结算</div>
+                <div class="nav-item" onclick="switchPage('profile', this)">🛂 公民通行证</div>
             </div>
-        </div>
+            <div style="padding:30px; opacity:0.5; font-size:0.8em; cursor:pointer;" onclick="window.history.back()">⬅ 退出系统</div>
+        </nav>
 
-        <div id="tab-chat" class="tab-pane active">
-            <div class="section-header">枢纽通讯 (HUB)</div>
-            <div class="chat-layout">
-                <div class="chat-window" style="flex: 1;">
-                    <div id="dm-control-panel">
-                        <span style="color: #f39c12; font-weight: bold;">[DM 扮演开启]</span>
-                        <input type="text" id="dm-npc-name" placeholder="NPC 名字">
-                        <input type="text" id="dm-npc-race" placeholder="种族">
-                        <input type="color" id="dm-npc-color" value="#3498db">
-                    </div>
-                    <div class="chat-history" id="chat-history"></div>
-                    <div class="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="输入消息..." onkeypress="if(event.key === 'Enter') attemptSend()">
-                        <button class="btn-send" onclick="attemptSend()">发 送</button>
-                    </div>
-                </div>
+        <main class="main-content">
+            <div class="top-bar">
+                <span id="top-user-info" style="font-weight:bold; color:var(--omni-green);">公民身份：加载中...</span>
             </div>
-        </div>
 
-        <div id="tab-wallet" class="tab-pane">
-            <div class="section-header">资产结算系统</div>
-            <div class="wallet-banner">
-                <div>
-                    <div style="opacity: 0.9;">当前账户余额 (信用点)</div>
-                    <div class="wallet-balance-val" id="omni-credits-display">0.00</div>
-                </div>
-                <div style="background:white; padding:10px; border-radius:12px; opacity:0.8;">
-                    <div style="width:120px; height:120px; background: repeating-linear-gradient(45deg, #000, #000 5px, #fff 5px, #fff 10px);"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-profile" class="tab-pane">
-            <div class="section-header">公民数据中心</div>
-            <div class="omni-card" style="display:flex; gap:30px; align-items:center;">
-                <div style="width:100px; height:100px; border-radius:50%; background:#eee; border:4px solid var(--omni-green-main);"></div>
-                <div>
-                    <h2 id="display-user-name" style="margin:0 0 10px 0;">载入中...</h2>
-                    <div style="color:var(--omni-text-sub);">
-                        <strong>种族识别：</strong> <span id="display-user-race">--</span><br>
-                        <strong>社会信用等级：</strong> A
+            <div class="content-body">
+                <div id="page-chat" class="page active">
+                    <div class="chat-wrap">
+                        <div class="chat-main">
+                            <div class="chat-header">
+                                <span>因斯卡利亚第三机械厂校友群 (1,402)</span>
+                                <span style="color:var(--omni-green-bright); font-size:0.85em;">🟢 以太连接稳定</span>
+                            </div>
+                            <div class="chat-history" id="chat-box">
+                                </div>
+                            <div class="chat-input-area">
+                                <input type="text" id="chat-in" placeholder="在此输入消息..." onkeypress="if(event.key==='Enter') sendMsg()">
+                                <button class="btn-send" onclick="sendMsg()">发送</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <div id="page-life" class="page">
+                    <div style="margin-bottom:30px;">
+                        <h2 class="section-title">今日优选调配</h2>
+                        <p style="color:#7f8c8d">根据您的种族生理特征与地理位置，已筛选以下物资：</p>
+                    </div>
+                    <div class="store-grid">
+                        <div class="store-card">
+                            <div class="store-img">🍔</div>
+                            <div class="store-info">
+                                <div class="store-title">蒂尔兰经典手工汉堡</div>
+                                <div style="color:#7f8c8d; font-size:0.9em;">中央平原特供小麦与陆行鸟肉</div>
+                                <div class="store-price">15.00 信用点</div>
+                                <button class="btn-buy" onclick="purchase('汉堡', 15)">立即调配</button>
+                            </div>
+                        </div>
+                        <div class="store-card">
+                            <div class="store-img">🧪</div>
+                            <div class="store-info">
+                                <div class="store-title">高纯度魔力营养液</div>
+                                <div style="color:#7f8c8d; font-size:0.9em;">奥斯特克军工标准，纯净度99%</div>
+                                <div class="store-price">120.00 信用点</div>
+                                <button class="btn-buy" onclick="purchase('营养液', 120)">立即调配</button>
+                            </div>
+                        </div>
+                        <div class="store-card">
+                            <div class="store-img">💎</div>
+                            <div class="store-info">
+                                <div class="store-title">深渊原矿残渣 (高能)</div>
+                                <div style="color:#7f8c8d; font-size:0.9em;">仅限非人类种族，严禁人类摄入</div>
+                                <div class="store-price">450.00 信用点</div>
+                                <button class="btn-buy" onclick="purchase('原矿残渣', 450)">立即调配</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page-wallet" class="page">
+                    <div class="wallet-banner">
+                        <div>
+                            <div class="balance-title">当前可用资产 (信用点)</div>
+                            <div class="balance-value" id="wallet-balance">0.00</div>
+                        </div>
+                        <div style="background:white; padding:15px; border-radius:15px;">
+                            <div style="width:120px; height:120px; background:repeating-linear-gradient(45deg, #000, #000 5px, #fff 5px, #fff 10px); opacity:0.8;"></div>
+                        </div>
+                    </div>
+                    <div class="wallet-actions">
+                        <div class="action-item"><strong>💸</strong><br>跨区转账</div>
+                        <div class="action-item"><strong>🛡️</strong><br>法则保险</div>
+                        <div class="action-item"><strong>📜</strong><br>契约公证</div>
+                        <div class="action-item"><strong>⚡</strong><br>生活缴费</div>
+                    </div>
+                </div>
+
+                <div id="page-profile" class="page">
+                    <h2 class="section-title">公民个人凭证</h2>
+                    <div class="omni-card" style="display:flex; gap:40px; padding:40px;">
+                        <div style="width:150px; height:150px; background:#ddd; border-radius:15px; border:6px solid var(--omni-green);"></div>
+                        <div style="flex:1;">
+                            <h1 id="p-name" style="margin:0; font-size:2.5em;">--</h1>
+                            <div style="margin-top:20px; font-size:1.1em; line-height:2;">
+                                <strong>种族识别：</strong> <span id="p-race">--</span><br>
+                                <strong>归属语区：</strong> 中央平原 - 蒂尔兰语区<br>
+                                <strong>社会信用评分：</strong> <span style="color:var(--omni-green-bright); font-weight:bold;">A (优秀)</span><br>
+                                <strong>当前状态：</strong> 正常通行
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
+
+    <div id="intercept-overlay">
+        <h1 style="color:red; font-size:4em;">⚠️</h1>
+        <h2 style="color:red;">检测到非法词汇</h2>
+        <p>您的消息包含帝国禁忌词汇。行为已记录。警告 (1/3)</p>
+        <button onclick="document.getElementById('intercept-overlay').style.display='none'" style="margin-top:20px; padding:10px 30px;">确认并返回</button>
+    </div>
+
+    <div id="omni-toast">提示内容</div>
 
     <script>
-        // --- 仅在此处声明一次核心变量 ---
-        const CONFIG = {
-            URL: "https://vbzfpgucpciqgaakqndz.supabase.co",
-            KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y",
-            DM_UID: "1c00b7ed-69d7-40e2-8c28-84f854a4fa35"
-        };
-
-        // 这里的 supabase 只声明一次
-        const supabase = window.supabase.createClient(CONFIG.URL, CONFIG.KEY);
+        // --- 核心配置 ---
+        const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
         const urlParams = new URLSearchParams(window.location.search);
-        const viewingUserId = urlParams.get('uid');
+        let currentUserId = null; 
+        let currentAccount = null;
 
-        let myProfile = null;
-
+        // --- 系统初始化 ---
         async function init() {
-            if (!viewingUserId) return;
-
-            const { data } = await supabase.from('profiles').select('*').eq('id', viewingUserId).single();
-            if (data) {
-                myProfile = data;
-                // 使用 display_name 字段
-                document.getElementById('display-user-name').innerText = data.display_name || "未识别公民";
-                document.getElementById('display-user-race').innerText = data.race || "未识别";
-                document.getElementById('omni-credits-display').innerText = (data.omni_credits || 0).toLocaleString();
-
-                if (viewingUserId === CONFIG.DM_UID) {
-                    document.getElementById('dm-control-panel').style.display = 'flex';
-                }
+            const loginUid = urlParams.get('uid');
+            
+            // 如果是 DM 直接放行
+            if(loginUid === DM_UID) {
+                currentAccount = { display_name: "帝国监察官", race: "人类", is_dm: true, login_id: "DM" };
+                enterApp();
+                return;
             }
-            loadHistory();
-            subscribeRealtime();
+
+            // 检查缓存
+            const saved = sessionStorage.getItem('omni_session');
+            if(saved) {
+                currentAccount = JSON.parse(saved);
+                enterApp();
+            }
         }
 
-        function switchTab(tabId, element) {
-            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-' + tabId).classList.add('active');
-            element.classList.add('active');
+        // --- 独立登录逻辑 ---
+        async function handleLogin() {
+            const u = document.getElementById('l-user').value;
+            const p = document.getElementById('l-pass').value;
+
+            const { data, error } = await supabase
+                .from('omni_accounts')
+                .select('*')
+                .eq('login_id', u)
+                .eq('login_pass', p)
+                .single();
+
+            if(data) {
+                currentAccount = data;
+                sessionStorage.setItem('omni_session', JSON.stringify(data));
+                enterApp();
+            } else {
+                document.getElementById('l-err').style.display = 'block';
+            }
+        }
+
+        function enterApp() {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('top-user-info').innerText = `公民：${currentAccount.display_name}`;
+            
+            if(currentAccount.is_dm) {
+                document.getElementById('dm-admin-panel').style.display = 'flex';
+            }
+
+            // 加载通行证数据
+            document.getElementById('p-name').innerText = currentAccount.display_name;
+            document.getElementById('p-race').innerText = currentAccount.race;
+
+            loadHistory();
+            subscribe();
+            refreshWallet();
+        }
+
+        // --- 核心功能逻辑 ---
+
+        function switchPage(pageId, el) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            el.classList.add('active');
+            if(pageId === 'wallet') refreshWallet();
+        }
+
+        async function refreshWallet() {
+            if(currentAccount.is_dm) {
+                document.getElementById('wallet-balance').innerText = "∞";
+                return;
+            }
+            const { data } = await supabase.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+            if(data) {
+                document.getElementById('wallet-balance').innerText = data.credits.toLocaleString('en-US', {minimumFractionDigits: 2});
+            }
         }
 
         async function loadHistory() {
-            const { data } = await supabase.from('omni_chat_messages').select('*').order('created_at', { ascending: true }).limit(100);
-            if (data) {
-                const chatBox = document.getElementById('chat-history');
-                chatBox.innerHTML = '';
-                data.forEach(renderMsg);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
+            const { data } = await supabase.from('omni_messages').select('*').order('created_at', {ascending:true}).limit(50);
+            const box = document.getElementById('chat-box');
+            box.innerHTML = '';
+            data.forEach(m => renderMessage(m));
+            box.scrollTop = box.scrollHeight;
         }
 
-        function subscribeRealtime() {
-            supabase.channel('omni_public_chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omni_chat_messages' }, payload => {
-                renderMsg(payload.new);
-                document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
+        function subscribe() {
+            supabase.channel('omni_msgs').on('postgres_changes', {event:'INSERT', schema:'public', table:'omni_messages'}, p => {
+                renderMessage(p.new);
+                document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
             }).subscribe();
         }
 
-        async function attemptSend() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text || !myProfile) return;
+        async function sendMsg() {
+            const inp = document.getElementById('chat-in');
+            const val = inp.value.trim();
+            if(!val) return;
 
-            const isBlocked = text.includes('伊莎贝拉');
-            if (isBlocked) {
-                document.getElementById('omni-warning').style.display = 'flex';
-                setTimeout(() => document.getElementById('omni-warning').style.display = 'none', 4000);
+            // 伊莎贝拉 拦截逻辑
+            if(val.includes('伊莎贝拉')) {
+                document.getElementById('intercept-overlay').style.display = 'flex';
+                return;
             }
 
-            // 使用 display_name
-            let sName = myProfile.display_name;
-            let sRace = myProfile.race;
-            let sAvatar = "#3498db";
+            let sName = currentAccount.display_name;
+            let sRace = currentAccount.race;
+            let sColor = "#2ecc71";
 
-            if (viewingUserId === CONFIG.DM_UID) {
-                const npcName = document.getElementById('dm-npc-name').value.trim();
-                if (npcName) {
-                    sName = npcName;
-                    sRace = document.getElementById('dm-npc-race').value.trim() || "未知";
-                    sAvatar = document.getElementById('dm-npc-color').value;
+            // DM 扮演逻辑
+            if(currentAccount.is_dm) {
+                const nName = document.getElementById('npc-name').value;
+                if(nName) {
+                    sName = nName;
+                    sRace = document.getElementById('npc-race').value || "未知";
+                    sColor = document.getElementById('npc-color').value;
                 }
             }
 
-            await supabase.from('omni_chat_messages').insert([{
-                sender_uid: viewingUserId,
+            await supabase.from('omni_messages').insert([{
                 sender_name: sName,
                 sender_race: sRace,
-                sender_avatar: sAvatar,
-                content: text,
-                is_blocked: isBlocked
+                sender_avatar_color: sColor,
+                content: val
             }]);
-            input.value = '';
+            inp.value = '';
         }
 
-        function renderMsg(msg) {
-            const chatBox = document.getElementById('chat-history');
-            const isSelf = msg.sender_uid === viewingUserId;
-            const isNpcMode = isSelf && viewingUserId === CONFIG.DM_UID && msg.sender_name !== myProfile.display_name;
-            const alignClass = (isSelf && !isNpcMode) ? 'self' : '';
-
+        function renderMessage(m) {
+            const box = document.getElementById('chat-box');
+            const isSelf = (m.sender_name === currentAccount.display_name);
             const html = `
-                <div class="message ${alignClass}">
-                    <div class="msg-info"><strong>${msg.sender_name}</strong> (${msg.sender_race})</div>
-                    <div style="display:flex; flex-direction: ${alignClass === 'self' ? 'row-reverse' : 'row'}; align-items:flex-end; gap:10px;">
-                        <div style="background:${msg.sender_avatar}; width:30px; height:30px; border-radius:50%;"></div>
-                        <div class="msg-bubble" style="${msg.is_blocked ? 'background:#fdedec; border:1px solid red;' : ''}">${msg.content}</div>
-                    </div>
-                </div>`;
-            chatBox.insertAdjacentHTML('beforeend', html);
+                <div class="message ${isSelf ? 'self' : ''}">
+                    <div class="msg-meta">${m.sender_name} (${m.sender_race})</div>
+                    <div class="msg-bubble" style="border-left: 5px solid ${m.sender_avatar_color}">${m.content}</div>
+                </div>
+            `;
+            box.insertAdjacentHTML('beforeend', html);
+        }
+
+        // --- 业务交互逻辑 ---
+
+        async function purchase(name, price) {
+            if(currentAccount.is_dm) return showToast("监察官账户无需结算，调配已强制执行。");
+            
+            const { data } = await supabase.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+            if(data.credits < price) return showToast("! 余额不足，调配申请已驳回");
+
+            if(confirm(`[资产结算确认]\n项目：${name}\n消耗：${price} 信用点\n\n确认扣款？`)) {
+                const { error } = await supabase.from('omni_accounts').update({ credits: data.credits - price }).eq('id', currentAccount.id);
+                if(!error) {
+                    showToast("结算成功，物流法阵已就绪");
+                    refreshWallet();
+                }
+            }
+        }
+
+        async function adminCreditAction() {
+            const tid = document.getElementById('target-id').value;
+            const amt = document.getElementById('target-amt').value;
+            const { error } = await supabase.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
+            if(!error) showToast("信用点划拨成功");
+            else showToast("操作失败：" + error.message);
+        }
+
+        function showToast(txt) {
+            const t = document.getElementById('omni-toast');
+            t.innerText = txt;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
         }
 
         window.onload = init;
