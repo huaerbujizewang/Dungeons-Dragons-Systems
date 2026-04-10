@@ -795,7 +795,7 @@
                 query = query.is('target_id', null).is('group_id', null);
             } else if (currentChatMode === 'private') {
                 // 读取：(我发给他的) 或者 (他发给我的)
-                query = query.or(`and(sender_id.eq.${currentAccount.id},target_id.eq.${currentChatTarget.id}),and(sender_id.eq.${currentChatTarget.id},target_id.eq.${currentAccount.id})`);
+                query = query.or(`and(sender_id.eq.${myId},target_id.eq.${toId}),and(sender_id.eq.${toId},target_id.eq.${myId})`);
             } else if (currentChatMode === 'group') {
                 query = query.eq('group_id', currentChatTarget.id);
             }
@@ -1140,38 +1140,45 @@ async function submitImperialAccount() {
     const region = document.getElementById('npc-region').value;
     const isMilitary = document.getElementById('npc-military').checked;
     const baseCredit = document.getElementById('npc-base-credit').value;
-    
+    const edu = document.getElementById('npc-edu').value; // 学历
+    const race = document.getElementById('npc-race').value; // 种族
+    const faith = document.getElementById('npc-faith').value; // 信仰
 
     if(!realName || !zone || !region) return alert("户籍核心信息不完整！");
 
-    const finalId = generateImperialId(zone, bDate);
-    const edu = document.getElementById('npc-edu').value;
     const finalCredit = calculateCredit(baseCredit, isMilitary, edu);
+    const finalId = generateImperialId(zone, bDate);
 
-    const { error } = await supabaseClient.from('omni_accounts').insert([{
-        login_id: "ID_" + Math.floor(Math.random()*1000000), // 系统底层登录用ID
+    // 严格检查字段名是否与数据库一致
+    const insertData = {
+        login_id: "ID_" + Math.floor(Math.random()*1000000),
         login_pass: "123456",
-        passport_id: finalId, // 帝国公民序列号
+        passport_id: finalId,
         real_name: realName,
         nickname: nick || realName,
-        race: document.getElementById('npc-race').value,
+        race: race,
         birth_date: bDate,
         birth_place_zone: zone,
         birth_place_region: region,
-        education: document.getElementById('npc-edu').value,
-        faith: document.getElementById('npc-faith').value,
+        education: edu,
+        faith: faith,
         military_service: isMilitary,
         social_credit: finalCredit,
         nationality: "洛萨维亚帝国",
-        validity: "1092-05-21 至 1112-05-21",
-        issue_date: "1092-05-21",
-        issuing_authority: "帝国民政局 & 帝国信息管理局"
-    }]);
+        is_profile_complete: true, // NPC 默认为已锁定
+        violation_count: 0,
+        credits: 1000
+    };
 
-    if(!error) {
+    const { data, error } = await supabaseClient.from('omni_accounts').insert([insertData]);
+
+    if(error) {
+        console.error("生成失败详情:", error);
+        alert("生成失败: " + error.message);
+    } else {
         alert(`公民号 [${finalId}] 已成功核发！`);
         closeDmPanel();
-        loadContactList();
+        renderDmTable(); // 刷新后台列表
     }
 }
 
