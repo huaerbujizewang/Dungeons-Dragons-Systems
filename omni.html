@@ -251,30 +251,29 @@
         </nav>
 
         <main class="main-content">
-            <div id="dm-admin-panel">
-                <strong style="color:#f39c12">● 监察官后台</strong>
+            <div id="dm-admin-panel" style="background: #1e293b; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; gap: 10px; align-items: center;">
+                <strong style="color:#f39c12">● 监察官控制台</strong>
                 <span style="margin-left:10px">划拨信用点：</span>
-                <input type="text" id="target-id" placeholder="账号" style="width:80px">
-                <input type="number" id="target-amt" placeholder="金额" style="width:80px">
-                <button onclick="adminAdjustCredits()" style="background:var(--omni-green); color:white; border:none; padding:5px 10px; cursor:pointer;">执行</button>
+                <input type="text" id="target-id" placeholder="账号ID" style="width:80px; padding: 5px; border-radius: 4px; border: none;">
+                <input type="number" id="target-amt" placeholder="金额" style="width:80px; padding: 5px; border-radius: 4px; border: none;">
+                <button onclick="adminAdjustCredits()" style="background:var(--omni-green); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">执行</button>
                 </div>
 
             <div id="page-chat" class="page active">
                 <div class="chat-layout">
                     <div class="chat-sidebar">
                         <div class="sidebar-tabs">
-                            <div class="active" onclick="switchListTab('friends', this)">枢纽通讯录</div>
-                            <div onclick="switchListTab('groups', this)">加密频道</div>
+                            <div class="active" onclick="switchListTab('friends', this)">联系人</div>
+                            <div onclick="switchListTab('groups', this)">群组</div>
                         </div>
                         <div class="contact-list" id="contact-list-box">
-                            <div class="contact-item active">
-                                <img src="https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/assets/bestiary/avatars/default.png" class="contact-avatar">
-                                <span class="contact-name">全境公共广播</span>
                             </div>
-                        </div>
                     </div>
                     
                     <div class="chat-main">
+                        <div id="chat-header-title" style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; background: #fff; font-weight: bold; font-size: 1.1em; color: var(--omni-text);">
+                            公共大厅
+                        </div>
                         <div class="chat-history" id="chat-box"></div>
                         <div class="chat-input-bar">
                             <input type="text" id="chat-in" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendMsg()">
@@ -320,13 +319,13 @@
     </div>
 
     <script>
-       // --- 核心配置 ---
+      // --- 核心配置 ---
         const SB_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
         const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
 
-        // --- GitHub 头像路径配置 ---
+        // GitHub 头像路径配置
         const GITHUB_USER = "huaerbujizewang"; 
         const GITHUB_REPO = "Dungeons-Dragons-Systems";
         const AVATAR_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/assets/bestiary/avatars/`;
@@ -339,10 +338,15 @@
         const urlParams = new URLSearchParams(window.location.search);
         const loginUid = urlParams.get('uid');
 
+        // --- 聊天状态管理 ---
+        let currentChatMode = 'public'; // 'public', 'private', 'group'
+        let currentChatTarget = null;   // 存储当前私聊对象 {id, name} 或群组 {id, name}
+        let currentRealtimeChannel = null; // 用于实时监听
+
         // --- 初始化与登录 ---
         async function init() {
             if(loginUid === DM_UID) {
-                currentAccount = { nickname: "帝国监察官", race: "人类", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
+                currentAccount = { nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
                 document.getElementById('dm-admin-panel').style.display = 'flex';
                 enterApp();
                 return;
@@ -369,7 +373,7 @@
 
         function logout() {
             sessionStorage.removeItem('omni_session');
-            window.location.href = window.location.pathname;
+            window.location.href = 'index.html'; // 绝对路径返回主系统
         }
 
         function enterApp() {
@@ -379,26 +383,25 @@
                 card.style.transform = "translateX(200%) skewX(-20deg)";
                 card.style.opacity = "0";
                 setTimeout(() => { overlay.style.display = 'none'; }, 500);
-            } else {
-                if(overlay) overlay.style.display = 'none';
+            } else if(overlay) {
+                overlay.style.display = 'none';
             }
             
             document.getElementById('prof-name').innerText = currentAccount.nickname || "公民账号";
             document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
             
-            loadHistory();
+            // 启动功能
+            openPublicChat(); // 默认进入大厅
             subscribe();
             updateWallet();
             
-            // 启动社交模块与上帝视角
             loadContactList();
             if(currentAccount.is_dm) {
                 document.getElementById('dm-admin-panel').style.display = 'flex';
-                loadPossessionList();
+                loadAdminAccountList();
             }
         }
 
-        // --- 界面导航 ---
         function switchPage(pageId, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -407,32 +410,32 @@
             if(pageId === 'wallet') updateWallet();
         }
 
+        // --- 社交列表导航 ---
         function switchListTab(tab, el) {
             document.querySelectorAll('.sidebar-tabs div').forEach(d => d.classList.remove('active'));
             el.classList.add('active');
             if(tab === 'friends') loadContactList();
-            else document.getElementById('contact-list-box').innerHTML = `<div style="padding:20px; color:#94a3b8; text-align:center; font-size:0.9em;">频道列表为空<br><br><span style="cursor:pointer; color:var(--omni-green);" onclick="alert('频道接口待激活')">+ 组建加密频道</span></div>`;
+            else loadGroupList();
         }
 
-        // --- 社交模块：加载全境联系人 ---
+        // 加载联系人 (这里为了跑团方便，默认全员可见，相当于全局花名册)
         async function loadContactList() {
-            // 获取除自己外的所有人作为通讯录
             const { data } = await supabaseClient.from('omni_accounts').select('*').neq('login_id', 'DM').order('id', {ascending: true});
             const box = document.getElementById('contact-list-box');
             
             let html = `
-                <div class="contact-item active" onclick="alert('已处于公共频道')">
+                <div class="contact-item ${currentChatMode === 'public' ? 'active' : ''}" onclick="openPublicChat()">
                     <img src="${getAvatarUrl('default.png')}" class="contact-avatar">
-                    <span class="contact-name" style="color:var(--omni-green);">🌐 全境公共广播</span>
+                    <span class="contact-name" style="color:var(--omni-green);">公共大厅</span>
                 </div>
             `;
             
             if(data) {
                 data.forEach(acc => {
-                    // 当前自己不出现在联系人里
-                    if(currentAccount.id === acc.id) return;
+                    if(currentAccount.id === acc.id) return; // 不显示自己
+                    const isActive = (currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === acc.id) ? 'active' : '';
                     html += `
-                        <div class="contact-item" onclick="alert('私聊通道建设中...')">
+                        <div class="contact-item ${isActive}" onclick="openPrivateChat(${acc.id}, '${acc.nickname}')">
                             <img src="${getAvatarUrl(acc.avatar_filename)}" class="contact-avatar">
                             <div style="display:flex; flex-direction:column; overflow:hidden;">
                                 <span class="contact-name">${acc.nickname}</span>
@@ -445,87 +448,107 @@
             box.innerHTML = html;
         }
 
-        // --- DM 专属：神权系统 (捏人与降临) ---
-        async function adminCreateNPC() {
-            const nick = prompt("【创造NPC】请输入虚拟网名：");
-            if(!nick) return;
-            const race = prompt("请输入种族：", "未知");
-            const avatar = prompt("请输入 GitHub assets/bestiary/avatars 下的文件名 (含后缀)：", "default.png");
+        // 加载群组列表
+        async function loadGroupList() {
+            const { data } = await supabaseClient.from('omni_groups').select('*').order('id', {ascending: true});
+            const box = document.getElementById('contact-list-box');
             
-            const { error } = await supabaseClient.from('omni_accounts').insert([{
-                login_id: "NPC_" + Date.now(),
-                login_pass: "123456",
-                nickname: nick,
-                race: race,
-                avatar_filename: avatar,
-                credits: 9999
-            }]);
+            let html = `<div style="padding:10px; text-align:center;"><button onclick="createGroup()" style="padding:6px 15px; background:white; border:1px solid var(--omni-green); color:var(--omni-green); border-radius:4px; cursor:pointer;">+ 新建群组</button></div>`;
             
-            if(!error) {
-                alert(`NPC [${nick}] 已注入全境网络！`);
-                loadPossessionList(); // 刷新降临列表
-                loadContactList();    // 刷新左侧通讯录
-            } else {
-                alert("创造失败：" + error.message);
-            }
-        }
-
-        async function loadPossessionList() {
-            const { data } = await supabaseClient.from('omni_accounts').select('*').order('id', {ascending: true});
-            const dmPanel = document.getElementById('dm-admin-panel');
-            
-            // 移除旧控件防重复
-            const oldSel = document.getElementById('possess-selector');
-            const oldBtn = document.getElementById('create-npc-btn');
-            if(oldSel) oldSel.remove();
-            if(oldBtn) oldBtn.remove();
-
-            let html = `
-                <select id="possess-selector" onchange="hijackIdentity(this.value)" style="background:#2c3e50; color:white; border:none; padding:5px; border-radius:4px; margin-left:15px; outline:none;">
-                    <option value="DM">--- 切换身份 (降临) ---</option>
-            `;
             if(data) {
-                data.forEach(acc => { html += `<option value="${acc.id}">${acc.nickname}</option>`; });
+                data.forEach(g => {
+                    const isActive = (currentChatMode === 'group' && currentChatTarget && currentChatTarget.id === g.id) ? 'active' : '';
+                    html += `
+                        <div class="contact-item ${isActive}" onclick="openGroupChat(${g.id}, '${g.group_name}')">
+                            <div class="contact-avatar" style="background:var(--omni-green); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">群</div>
+                            <span class="contact-name">${g.group_name}</span>
+                        </div>
+                    `;
+                });
             }
-            html += `</select>
-            <button id="create-npc-btn" onclick="adminCreateNPC()" style="background:#e67e22; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-left:10px; font-weight:bold;">+ 捏人</button>`;
-            
-            dmPanel.insertAdjacentHTML('beforeend', html);
+            box.innerHTML = html;
         }
 
-        async function hijackIdentity(accId) {
-            if (accId === "DM") {
-                currentAccount = { nickname: "帝国监察官", race: "人类", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
-            } else {
-                const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
-                if(data) {
-                    const originalDmFlag = currentAccount.is_dm; // 备份真实的监察官权限
-                    currentAccount = data;
-                    currentAccount.is_dm = originalDmFlag; // 将神权赋予该躯壳
-                }
-            }
-            document.getElementById('prof-name').innerText = currentAccount.nickname;
-            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未知");
-            alert(`神识已降临至躯壳：${currentAccount.nickname}`);
-            loadContactList(); // 重新加载列表（因为自己不会在列表中显示）
+        async function createGroup() {
+            const name = prompt("请输入新群组名称：");
+            if(!name) return;
+            const { error } = await supabaseClient.from('omni_groups').insert([{ group_name: name, creator_id: currentAccount.id }]);
+            if(!error) loadGroupList();
         }
 
-        // --- 通讯引擎 ---
+        // --- 聊天室切换逻辑 ---
+        function openPublicChat() {
+            currentChatMode = 'public';
+            currentChatTarget = null;
+            document.getElementById('chat-header-title').innerText = "公共大厅";
+            loadContactList(); // 刷新左侧选中状态
+            loadHistory();
+        }
+
+        function openPrivateChat(id, name) {
+            currentChatMode = 'private';
+            currentChatTarget = { id: id, name: name };
+            document.getElementById('chat-header-title').innerText = `私聊：${name}`;
+            loadContactList();
+            loadHistory();
+        }
+
+        function openGroupChat(id, name) {
+            currentChatMode = 'group';
+            currentChatTarget = { id: id, name: name };
+            document.getElementById('chat-header-title').innerText = `群组：${name}`;
+            loadGroupList();
+            loadHistory();
+        }
+
+        // --- 聊天核心引擎 ---
         async function loadHistory() {
-            const { data } = await supabaseClient.from('omni_messages').select('*').order('created_at', {ascending:true}).limit(100);
+            let query = supabaseClient.from('omni_messages').select('*');
+
+            // 根据当前模式过滤消息
+            if(currentChatMode === 'public') {
+                query = query.is('target_id', null).is('group_id', null);
+            } else if (currentChatMode === 'private') {
+                // 读取：(我发给他的) 或者 (他发给我的)
+                query = query.or(`and(sender_name.eq.${currentAccount.nickname},target_id.eq.${currentChatTarget.id}),and(sender_name.eq.${currentChatTarget.name},target_id.eq.${currentAccount.id})`);
+            } else if (currentChatMode === 'group') {
+                query = query.eq('group_id', currentChatTarget.id);
+            }
+
+            const { data } = await query.order('created_at', {ascending:true}).limit(100);
+            const box = document.getElementById('chat-box');
+            box.innerHTML = '';
+            
             if(data) {
-                const box = document.getElementById('chat-box');
-                box.innerHTML = '';
                 data.forEach(renderMsg);
-                setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
+                setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
             }
         }
 
         function subscribe() {
-            supabaseClient.channel('omni_msgs').on('postgres_changes', {event:'INSERT', schema:'public', table:'omni_messages'}, p => {
-                renderMsg(p.new);
-                const box = document.getElementById('chat-box');
-                box.scrollTop = box.scrollHeight;
+            if(currentRealtimeChannel) supabaseClient.removeChannel(currentRealtimeChannel);
+            
+            currentRealtimeChannel = supabaseClient.channel('omni_msgs').on('postgres_changes', {event:'INSERT', schema:'public', table:'omni_messages'}, p => {
+                const m = p.new;
+                let shouldRender = false;
+                
+                // 判断新消息是否属于当前聊天窗口
+                if(currentChatMode === 'public' && !m.target_id && !m.group_id) {
+                    shouldRender = true;
+                } else if(currentChatMode === 'private') {
+                    if((m.target_id === currentAccount.id && m.sender_name === currentChatTarget.name) || 
+                       (m.target_id === currentChatTarget.id && m.sender_name === currentAccount.nickname)) {
+                        shouldRender = true;
+                    }
+                } else if(currentChatMode === 'group' && m.group_id === currentChatTarget.id) {
+                    shouldRender = true;
+                }
+
+                if(shouldRender) {
+                    renderMsg(m);
+                    const box = document.getElementById('chat-box');
+                    box.scrollTop = box.scrollHeight;
+                }
             }).subscribe();
         }
 
@@ -540,13 +563,18 @@
                 return;
             }
 
-            // 发送消息时带上当前的头像数据
-            await supabaseClient.from('omni_messages').insert([{
+            let msgPayload = {
                 sender_name: currentAccount.nickname,
                 sender_race: currentAccount.race || "未知",
                 sender_avatar_filename: currentAccount.avatar_filename || "default.png",
                 content: val
-            }]);
+            };
+
+            // 附加路由信息
+            if(currentChatMode === 'private') msgPayload.target_id = currentChatTarget.id;
+            if(currentChatMode === 'group') msgPayload.group_id = currentChatTarget.id;
+
+            await supabaseClient.from('omni_messages').insert([msgPayload]);
             inp.value = '';
         }
 
@@ -555,7 +583,6 @@
             const isSelf = (m.sender_name === currentAccount.nickname);
             const avatarUrl = getAvatarUrl(m.sender_avatar_filename);
             
-            // 使用全新的左右流式气泡与圆形头像
             const html = `
                 <div class="message ${isSelf ? 'self' : ''}">
                     <img src="${avatarUrl}" class="avatar-circle">
@@ -567,15 +594,83 @@
             box.insertAdjacentHTML('beforeend', html);
         }
 
+        // --- DM 后台管理正常化 ---
+        async function adminCreateAccount() {
+            const nick = prompt("请输入新账号显示名称：");
+            if(!nick) return;
+            const race = prompt("请输入种族：", "人类");
+            const avatar = prompt("请输入头像文件名 (GitHub assets/bestiary/avatars 目录下)：", "default.png");
+            
+            const { error } = await supabaseClient.from('omni_accounts').insert([{
+                login_id: "USER_" + Date.now(),
+                login_pass: "123456",
+                nickname: nick,
+                race: race,
+                avatar_filename: avatar,
+                credits: 1000
+            }]);
+            
+            if(!error) {
+                alert(`账号 [${nick}] 注册成功`);
+                loadAdminAccountList();
+                loadContactList();
+            }
+        }
+
+        async function loadAdminAccountList() {
+            const { data } = await supabaseClient.from('omni_accounts').select('*').order('id', {ascending: true});
+            const dmPanel = document.getElementById('dm-admin-panel');
+            
+            const oldSel = document.getElementById('admin-acc-selector');
+            const oldBtn = document.getElementById('admin-create-btn');
+            if(oldSel) oldSel.remove();
+            if(oldBtn) oldBtn.remove();
+
+            let html = `
+                <select id="admin-acc-selector" onchange="takeoverAccount(this.value)" style="background:#334155; color:white; border:none; padding:5px; border-radius:4px; margin-left:15px; outline:none;">
+                    <option value="DM">--- 接管指定账号发信 ---</option>
+            `;
+            if(data) {
+                data.forEach(acc => { html += `<option value="${acc.id}">${acc.nickname}</option>`; });
+            }
+            html += `</select>
+            <button id="admin-create-btn" onclick="adminCreateAccount()" style="background:#3b82f6; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-left:10px; font-weight:bold;">+ 注册新账号</button>`;
+            
+            dmPanel.insertAdjacentHTML('beforeend', html);
+        }
+
+        async function takeoverAccount(accId) {
+            if (accId === "DM") {
+                currentAccount = { nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
+            } else {
+                const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
+                if(data) {
+                    const keepAdmin = currentAccount.is_dm; 
+                    currentAccount = data;
+                    currentAccount.is_dm = keepAdmin; 
+                }
+            }
+            document.getElementById('prof-name').innerText = currentAccount.nickname;
+            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未知");
+            
+            // 如果处于私聊状态且接管了当前聊天的对象，退回大厅避免逻辑混乱
+            if(currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === currentAccount.id) {
+                openPublicChat();
+            } else {
+                loadContactList();
+                loadHistory(); // 刷新消息记录（因为视角变了）
+            }
+        }
+
         // --- 资产操作 ---
         async function purchase(name, price) {
-            if(currentAccount.is_dm && currentAccount.login_id === "DM") return alert("纯灵体监察官无需调配结算。");
-            const targetId = currentAccount.id; // 即便是降临态，扣的也是当前躯壳的钱
+            if(currentAccount.is_dm && currentAccount.login_id === "DM") return alert("系统管理员账号无需扣费。");
+            const targetId = currentAccount.id; 
             const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', targetId).single();
             if(data && data.credits < price) return alert("信用点不足。");
-            if(confirm(`确认调配 ${name}？`)) {
+            if(confirm(`确认花费 ${price} 信用点调配 [${name}] 吗？`)) {
                 await supabaseClient.from('omni_accounts').update({ credits: data.credits - price }).eq('id', targetId);
-                alert("支付成功，物流法阵启动。");
+                alert("支付成功，物资派发中。");
                 updateWallet();
             }
         }
@@ -589,7 +684,7 @@
 
         async function updateWallet() {
             if(currentAccount.is_dm && currentAccount.login_id === "DM") {
-                document.getElementById('wallet-val').innerText = "∞";
+                document.getElementById('wallet-val').innerText = "无限";
                 return;
             }
             const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
