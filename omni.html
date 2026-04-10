@@ -17,32 +17,63 @@
 
         body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
 
-/* --- 真正的不规则几何登录界面 --- */
+/* --- 动态未来几何登录背景 --- */
 #login-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #050505; 
-    /* 背景不再是重复网格，而是几条贯穿全屏的、深浅不一的几何色块 */
-    background-image: 
-        linear-gradient(115deg, rgba(25, 111, 61, 0.1) 0%, transparent 40%),
-        linear-gradient(245deg, rgba(20, 20, 20, 1) 0%, transparent 70%);
+    /* 基础底色：流动的科技灰渐变 */
+    background: linear-gradient(-45deg, #e0e5ec, #f4f6f7, #bdc3c7, #d5dbdb);
+    background-size: 400% 400%;
+    animation: bgShift 15s ease infinite; /* Google风格的平滑呼吸渐变 */
     z-index: 99999;
     display: flex;
-    justify-content: center; /* 回归居中 */
+    justify-content: center;
     align-items: center;
     overflow: hidden;
 }
 
-/* 背景的大型不规则切割线条 */
+/* 动态几何色块 1：明色 + 亮绿的大斜率切片 (靠左上) */
 #login-overlay::before {
-    content: ""; position: absolute; width: 200%; height: 200%;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 150px,
-        rgba(46, 204, 113, 0.03) 150px,
-        rgba(46, 204, 113, 0.03) 151px
-    );
-    transform: rotate(15deg);
+    content: "";
+    position: absolute;
+    width: 150vw; height: 150vh;
+    /* 亮绿与明亮青色的渐变，带来未来活力感 */
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.85), rgba(0, 212, 255, 0.6));
+    /* 大斜率多边形切割 */
+    clip-path: polygon(0 0, 80% 0, 30% 100%, 0 100%);
+    top: -20%; left: -20%;
+    z-index: -2;
+    animation: floatShape1 20s ease-in-out infinite alternate;
+}
+
+/* 动态几何色块 2：深灰 + 深绿的稳重切片 (靠右下) */
+#login-overlay::after {
+    content: "";
+    position: absolute;
+    width: 150vw; height: 150vh;
+    /* 帝国深绿与深灰色的融合 */
+    background: linear-gradient(135deg, rgba(44, 62, 80, 0.9), rgba(25, 111, 61, 0.85));
+    /* 互补的大斜率多边形切割 */
+    clip-path: polygon(70% 0, 100% 0, 100% 100%, 20% 100%);
+    bottom: -20%; right: -20%;
+    z-index: -1;
+    animation: floatShape2 25s ease-in-out infinite alternate;
+}
+
+/* --- 背景动态关键帧 (让它们动起来) --- */
+@keyframes bgShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes floatShape1 {
+    0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    100% { transform: translate(3%, 4%) rotate(-2deg) scale(1.05); }
+}
+
+@keyframes floatShape2 {
+    0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    100% { transform: translate(-3%, -4%) rotate(2deg) scale(1.05); }
 }
 
 /* 彻底不规则的登录卡片：多边形拼接感 */
