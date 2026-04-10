@@ -322,24 +322,36 @@
                     <div class="dm-body">
                         <div id="dm-sec-create" class="dm-section active">
                             <div class="dm-form-grid">
+                                <div class="dm-form-group"><label>真实姓名 (Real Name)</label><input type="text" id="npc-real-name"></div>
+                                <div class="dm-form-group"><label>网络标识名 (Nickname)</label><input type="text" id="npc-nick-name"></div>
+                                <div class="dm-form-group"><label>出生日期</label><input type="date" id="npc-birth-date" value="1065-01-01"></div>
+                                <div class="dm-form-group"><label>基因种族</label><input type="text" id="npc-race" value="人类"></div>
                                 <div class="dm-form-group">
-                                    <label>显示网名 (Nickname)</label>
-                                    <input type="text" id="new-npc-name" placeholder="例: 铁匠老李">
+                                    <label>出生语区/飞地</label>
+                                    <select id="npc-zone" onchange="updateRegionDropdown(this.value)" style="padding:10px; background:#0f172a; color:white; border:1px solid #334155;">
+                                        <option value="">请选择语区</option>
+                                        </select>
                                 </div>
                                 <div class="dm-form-group">
-                                    <label>种族 (Race)</label>
-                                    <input type="text" id="new-npc-race" placeholder="例: 人类">
+                                    <label>具体行政区</label>
+                                    <select id="npc-region" style="padding:10px; background:#0f172a; color:white; border:1px solid #334155;"></select>
                                 </div>
+                                <div class="dm-form-group"><label>学历</label><input type="text" id="npc-edu" value="本科"></div>
+                                <div class="dm-form-group"><label>信仰</label><input type="text" id="npc-faith" value="无信仰"></div>
                                 <div class="dm-form-group">
-                                    <label>初始信用点 (Credits)</label>
-                                    <input type="number" id="new-npc-credits" value="1000">
+                                    <label>基础信用评级</label>
+                                    <select id="npc-base-credit" style="padding:10px; background:#0f172a; color:white; border:1px solid #334155;">
+                                        <option value="B">B (平民标准)</option>
+                                        <option value="A">A (优等公民)</option>
+                                        <option value="C">C (观测对象)</option>
+                                    </select>
                                 </div>
-                                <div class="dm-form-group">
-                                    <label>头像文件 (在 assets/bestiary/avatars 下)</label>
-                                    <input type="text" id="new-npc-avatar" placeholder="例: blacksmith.png" value="default.png">
+                                <div class="dm-form-group" style="flex-direction:row; align-items:center; gap:10px; padding-top:25px;">
+                                    <input type="checkbox" id="npc-military" style="width:20px; height:20px;">
+                                    <label style="margin:0;">已服兵役</label>
                                 </div>
                             </div>
-                            <button class="dm-btn-submit" onclick="submitNewAccount()">写入全境网络</button>
+                            <button class="dm-btn-submit" onclick="submitImperialAccount()">批准入库并生成公民号</button>
                         </div>
                         
                         <div id="dm-sec-manage" class="dm-section">
@@ -750,7 +762,8 @@
         // --- 监察官控制台 UI 交互 ---
         function openDmPanel() {
             document.getElementById('dm-modal').classList.add('show');
-            renderDmTable(); // 打开时顺便刷新一下表格数据
+            renderDmTable(); 
+            setupRegionSelects();
         }
 
         function closeDmPanel() {
@@ -893,6 +906,116 @@
         }
 
         window.onload = init;
+
+
+
+const REGION_DATA = {
+    "蒂尔兰语区": { code: "TL", regions: ["因斯卡利亚", "白城", "瓦尔登霍夫", "赫森谷", "铁壁", "尤特里克", "施瓦茨", "弗兰肯马克", "苍狼林区", "克劳斯施坦", "洛恩河谷", "北威登", "朔尔茨贝格", "暮松州", "齐默尔曼"] },
+    "格伦瑟语区": { code: "GL", regions: ["佩斯堡", "维恩弗里德", "瓦尔塔源", "布达利亚", "萨尔茨高", "波西米伦", "斯特拉恩", "普热米亚", "卡尼鄂兰", "蒂罗利亚", "伽拉缇亚", "玛丽恩巴德", "泽蒙", "弗朗西斯"] },
+    "卡法罗语区": { code: "KF", regions: ["维内西利亚", "费罗萨", "诺维利亚", "罗曼纳", "帕提农", "希兰卡", "蔚蓝", "桑托里纳", "柯西莉亚", "艾奥尼卡", "托斯坎", "迈诺亚"] },
+    "桐花语区": { code: "TH", regions: ["天陆", "苇原", "鸣神", "神无月", "樱华", "须佐", "九重", "豪野", "浮世", "八咫", "胧月", "冀东"] },
+    "奥斯特克语区": { code: "AS", regions: ["特奥提兰", "奇琴塔卡", "库库玛尔", "米克塔", "米坎库里", "帕伦克尔", "阿兹兰特", "托尔特纳", "尤卡提亚", "纳瓦特尔", "曜石邦"] },
+    "安塔拉语区": { code: "AT", regions: ["阿玛兹卡", "玛丘卡比", "安塔迪尔", "帕塔贡", "里约布兰卡", "科尔瓦纳", "潘帕利亚", "奥里卡诺", "多纳诺", "潘帕斯瓦拉贡"] },
+    "霍桑语区": { code: "HS", regions: ["阿尔-萨哈尔", "鲁卜-艾尔-卡迪", "伊麦尔德", "帕尔斯湾", "达玛斯克", "巴比尔", "迈凯基", "霍桑沙漠", "帕莱斯", "伦齐亚"] },
+    "乌瑞克语区": { code: "WR", regions: ["埃弗奈特", "阿比萨尔", "佩尔特隆", "布林斯通", "萨库巴斯", "克里姆森·罗特兰", "玛纳·克里斯托", "德拉冈博恩", "沃伊丹克"] },
+    "海外飞地": { code: "EC", regions: ["枫丹", "新尚泰尔", "圣克莱尔堡"] }
+};
+
+// 信用等级表
+const CREDIT_GRADES = ["D-", "D", "D+", "C-", "C", "C+", "B-", "B", "B+", "A-", "A", "A+"];
+
+// 工具函数：生成帝国公民号
+function generateImperialId(zoneName, birthDate) {
+    const zoneCode = REGION_DATA[zoneName].code;
+    const year = new Date(birthDate).getFullYear();
+    const alpha = Array.from({length: 3}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+    const num = Math.floor(1000 + Math.random() * 9000);
+    return `${zoneCode}-${alpha}-${year}-${num}`;
+}
+
+// 工具函数：计算信用进阶
+function calculateCredit(baseGrade, isMilitary) {
+    let index = CREDIT_GRADES.indexOf(baseGrade);
+    if (isMilitary && index < CREDIT_GRADES.length - 1) index++;
+    return CREDIT_GRADES[index];
+}
+
+function setupRegionSelects() {
+    const zoneSelect = document.getElementById('npc-zone');
+    if(!zoneSelect) return;
+    zoneSelect.innerHTML = '<option value="">请选择语区</option>';
+    for(let zone in REGION_DATA) {
+        zoneSelect.innerHTML += `<option value="${zone}">${zone}</option>`;
+    }
+}
+
+function updateRegionDropdown(zoneName) {
+    const regionSelect = document.getElementById('npc-region');
+    regionSelect.innerHTML = '';
+    if(!zoneName) return;
+    REGION_DATA[zoneName].regions.forEach(r => {
+        regionSelect.innerHTML += `<option value="${r}">${r}</option>`;
+    });
+}
+
+async function submitImperialAccount() {
+    const realName = document.getElementById('npc-real-name').value;
+    const nick = document.getElementById('npc-nick-name').value;
+    const bDate = document.getElementById('npc-birth-date').value;
+    const zone = document.getElementById('npc-zone').value;
+    const region = document.getElementById('npc-region').value;
+    const isMilitary = document.getElementById('npc-military').checked;
+    const baseCredit = document.getElementById('npc-base-credit').value;
+
+    if(!realName || !zone || !region) return alert("户籍核心信息不完整！");
+
+    const finalId = generateImperialId(zone, bDate);
+    const finalCredit = calculateCredit(baseCredit, isMilitary);
+
+    const { error } = await supabaseClient.from('omni_accounts').insert([{
+        login_id: "ID_" + Math.floor(Math.random()*1000000), // 系统底层登录用ID
+        login_pass: "123456",
+        passport_id: finalId, // 帝国公民序列号
+        real_name: realName,
+        nickname: nick || realName,
+        race: document.getElementById('npc-race').value,
+        birth_date: bDate,
+        birth_place_zone: zone,
+        birth_place_region: region,
+        education: document.getElementById('npc-edu').value,
+        faith: document.getElementById('npc-faith').value,
+        military_service: isMilitary,
+        social_credit: finalCredit,
+        nationality: "洛萨维亚帝国",
+        validity: "1092-05-21 至 1112-05-21",
+        issue_date: "1092-05-21",
+        issuing_authority: "帝国民政局 & 帝国信息管理局"
+    }]);
+
+    if(!error) {
+        alert(`公民号 [${finalId}] 已成功核发！`);
+        closeDmPanel();
+        loadContactList();
+    }
+}
+
+async function loadPassportData() {
+    const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', currentAccount.id).single();
+    if(!data) return;
+
+    // 只有本人或管理员能看到真名，其余人只能看到网名
+    document.getElementById('prof-id').innerText = data.passport_id;
+    document.getElementById('prof-race-val').innerText = data.race;
+    document.getElementById('prof-birthplace').innerText = `${data.birth_place_zone} - ${data.birth_place_region}`;
+    document.getElementById('prof-military').innerText = data.military_service ? '已服役 (荣誉公民)' : '未服役';
+    document.getElementById('prof-id-val').innerText = data.passport_id; // 对应你UI里的公民序列号
+    
+    // 如果需要显示真名，在页面上加一个元素
+    // document.getElementById('prof-realname').innerText = data.real_name; 
+
+    // 设置有效期（20年逻辑）
+    document.getElementById('prof-validity').innerText = "1092-05-21 至 1112-05-21";
+}
     </script>
 </body>
 </html>
