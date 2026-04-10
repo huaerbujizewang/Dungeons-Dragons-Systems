@@ -319,6 +319,12 @@
         </nav>
 
         <main class="main-content">
+
+            <!-- 帝国标准时 HUD -->
+            <div id="imperial-clock-hub" style="padding: 10px 30px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: flex-end; align-items: center; gap: 20px; font-family: monospace;">
+                <span style="color: #64748b; font-size: 0.8em;">洛萨维亚标准时 (LST):</span>
+                <strong id="current-imperial-date" style="color: var(--omni-green); letter-spacing: 2px;">1092年04月10日</strong>
+            </div>
             <div id="dm-admin-trigger" style="display:none; padding: 15px; background: #1e293b; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                 <strong style="color:#f39c12">● 监察官权限已激活</strong>
                 <button onclick="openDmPanel()" style="background:var(--omni-green); color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">⚙️ 打开系统控制台</button>
@@ -377,6 +383,14 @@
                                 </div>
                             </div>
                             <button class="dm-btn-submit" onclick="submitImperialAccount()">批准入库并生成公民号</button>
+
+                            <div style="margin-top:20px; padding-top:20px; border-top:1px dashed #444;">
+                                <label style="color:var(--omni-green);">推进帝国标准时</label>
+                                <div style="display:flex; gap:10px; margin-top:10px;">
+                                    <input type="date" id="admin-date-input" style="flex:1; padding:10px; background:#0f172a; color:white; border:1px solid #334155;">
+                                    <button onclick="updateImperialDate(document.getElementById('admin-date-input').value)" style="padding:10px; background:var(--omni-danger); color:white; border:none; cursor:pointer;">全境同步</button>
+                                </div>
+                            </div>
                         </div>
                         
                         <div id="dm-sec-manage" class="dm-section">
@@ -586,7 +600,8 @@
         let currentRealtimeChannel = null; // 用于实时监听
 
         // --- 初始化与登录 ---
-         async function init() {
+        async function init() {
+            await syncImperialDate(); // 先同步全局日期
             const saved = sessionStorage.getItem('omni_session');
             if(saved) {
                 currentAccount = JSON.parse(saved);
@@ -1093,8 +1108,50 @@ function generateImperialId(zoneName, birthDate) {
     return `${zoneCode}-${alpha}-${year}-${num}`;
 }
 
-// 工具函数：计算信用进阶
-// 【核心算法】帝国社会信用评估引擎
+// 动态效期推算
+// 【核心算法】动态效期推算 - 增强健壮版
+function calculatePassportValidity(birthDateStr, currentYear) {
+    if (!birthDateStr) return "未知至未知";
+    const birthDate = new Date(birthDateStr);
+    const birthYear = birthDate.getFullYear();
+    const period = 20;
+
+    // 获取当前系统年份（从DB传入）
+    const cy = parseInt(currentYear);
+
+    // 如果出生年份还没到（测试用数据），则从出生当年算起
+    if (birthYear > cy) {
+        return `${birthYear}-01-01 至 ${birthYear + period}-01-01`;
+    }
+
+    // 核心逻辑：计算当前年处于哪一个20年周期
+    // (1092 - 786) = 306
+    // 306 / 20 = 15.3 -> floor 为 15
+    // 起始 = 786 + 15 * 20 = 1086
+    const elapsed = cy - birthYear;
+    const cycles = Math.floor(elapsed / period);
+    const startYear = birthYear + (cycles * period);
+    const endYear = startYear + period;
+
+    return `${startYear}-01-01 至 ${endYear}-01-01`;
+}
+
+// 【时钟逻辑】初始化帝国时间
+function initImperialClock() {
+    // 初始日期设定为 1092年4月10日
+    let year = 1092;
+    let month = 4;
+    let day = 10;
+
+    const display = document.getElementById('current-imperial-date');
+    
+    // 模拟时间缓慢流逝（每过一分钟现实时间，模拟帝国历法的一点点变化，或者仅做静态显示）
+    display.innerText = `${year}年${String(month).padStart(2, '0')}月${String(day).padStart(2, '0')}日`;
+}
+
+
+
+// 帝国社会信用评估引擎
 function calculateCredit(baseGrade, isMilitary, education) {
     let index = CREDIT_GRADES.indexOf(baseGrade);
     if (index === -1) index = 7; 
@@ -1133,9 +1190,12 @@ function updateRegionDropdown(zoneName) {
 }
 
 async function submitImperialAccount() {
+
     const realName = document.getElementById('npc-real-name').value;
     const nick = document.getElementById('npc-nick-name').value;
     const bDate = document.getElementById('npc-birth-date').value;
+    const currentYear = GLOBAL_IMPERIAL_DATE.split('-')[0];
+    const finalValidity = calculatePassportValidity(bDate, currentYear);
     const zone = document.getElementById('npc-zone').value;
     const region = document.getElementById('npc-region').value;
     const isMilitary = document.getElementById('npc-military').checked;
@@ -1167,6 +1227,7 @@ async function submitImperialAccount() {
         nationality: "洛萨维亚帝国",
         is_profile_complete: true, // NPC 默认为已锁定
         violation_count: 0,
+        validity: finalValidity, 
         credits: 1000
     };
 
@@ -1236,6 +1297,9 @@ async function submitPlayerChanges() {
             const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', currentAccount.id).single();
             if(!data) return;
             currentAccount = data; // 更新本地缓存
+            const currentYear = GLOBAL_IMPERIAL_DATE.split('-')[0];
+            const dynamicValidity = calculatePassportValidity(data.birth_date, currentYear);
+            document.getElementById('prof-validity').innerText = dynamicValidity;
 
             const setupView = document.getElementById('profile-setup-view');
             const passportView = document.getElementById('passport-display-view');
@@ -1260,6 +1324,7 @@ async function submitPlayerChanges() {
                 document.getElementById('prof-credit-val').innerText = data.social_credit || 'B';
                 document.getElementById('prof-address-val').innerText = data.home_address || '未登记';
                 document.getElementById('prof-sig').innerText = data.real_name || data.nickname;
+
 
             } else {
                 // 档案未锁定，显示登记表单
@@ -1323,6 +1388,9 @@ async function submitPlayerChanges() {
             const baseDefault = "B"; 
             const finalCredit = calculateCredit(baseDefault, military, education);
 
+            const currentYear = GLOBAL_IMPERIAL_DATE.split('-')[0];
+            const dynamicVal = calculatePassportValidity(birthDate, currentYear);
+
             if (!realName || !race || !birthDate) {
                 return alert("真实姓名、种族和出生日期为必填项！");
             }
@@ -1349,6 +1417,7 @@ async function submitPlayerChanges() {
                 home_address: address,
                 military_service: military,
                 passport_id: passportId,
+                validity: dynamicVal,
                 is_profile_complete: true // 【核心】将“开关”设置为 true，永久锁定
             };
 
@@ -1398,6 +1467,26 @@ async function submitPlayerChanges() {
                 selectElement.appendChild(option);
             });
         }
+
+let GLOBAL_IMPERIAL_DATE = "1092-04-10"; // 全局缓存
+
+async function syncImperialDate() {
+    const { data } = await supabaseClient.from('omni_config').select('value').eq('key', 'current_date').single();
+    if (data) {
+        GLOBAL_IMPERIAL_DATE = data.value;
+        const [y, m, d] = data.value.split('-');
+        document.getElementById('current-imperial-date').innerText = `${y}年${m}月${d}日`;
+    }
+}
+
+// 供监察官修改日期使用
+async function updateImperialDate(newDateStr) {
+    const { error } = await supabaseClient.from('omni_config').update({ value: newDateStr }).eq('key', 'current_date');
+    if (!error) {
+        alert("帝国标准时已同步更新。");
+        syncImperialDate();
+    }
+}
 
 
     </script>
