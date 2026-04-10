@@ -253,13 +253,11 @@
         <main class="main-content">
             <div id="dm-admin-panel">
                 <strong style="color:#f39c12">● 监察官后台</strong>
-                <input type="text" id="npc-name" placeholder="NPC名字" style="width:100px">
-                <input type="color" id="npc-color" value="#3498db">
                 <span style="margin-left:10px">划拨信用点：</span>
                 <input type="text" id="target-id" placeholder="账号" style="width:80px">
                 <input type="number" id="target-amt" placeholder="金额" style="width:80px">
                 <button onclick="adminAdjustCredits()" style="background:var(--omni-green); color:white; border:none; padding:5px 10px; cursor:pointer;">执行</button>
-            </div>
+                </div>
 
             <div id="page-chat" class="page active">
                 <div class="chat-layout">
@@ -322,28 +320,33 @@
     </div>
 
     <script>
-        // --- 严格保持单次声明 ---
+       // --- 核心配置 ---
         const SB_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+        const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+        const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
+
+        // --- GitHub 头像路径配置 ---
         const GITHUB_USER = "huaerbujizewang"; 
         const GITHUB_REPO = "Dungeons-Dragons-Systems";
         const AVATAR_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/assets/bestiary/avatars/`;
-        const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
-        const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
+
+        function getAvatarUrl(filename) {
+            return AVATAR_BASE + (filename || 'default.png');
+        }
 
         let currentAccount = null;
         const urlParams = new URLSearchParams(window.location.search);
         const loginUid = urlParams.get('uid');
 
+        // --- 初始化与登录 ---
         async function init() {
-            // 1. DM判定
             if(loginUid === DM_UID) {
-                currentAccount = { nickname: "帝国监察官", race: "人类", is_dm: true, login_id: "DM" };
+                currentAccount = { nickname: "帝国监察官", race: "人类", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
                 document.getElementById('dm-admin-panel').style.display = 'flex';
                 enterApp();
                 return;
             }
-            // 2. 玩家缓存
             const saved = sessionStorage.getItem('omni_session');
             if(saved) {
                 currentAccount = JSON.parse(saved);
@@ -365,10 +368,37 @@
         }
 
         function logout() {
-            sessionStorage.removeItem('omni_session'); // 清除本地缓存
-            window.location.href = window.location.pathname; // 刷新页面并清除 URL 里的参数
+            sessionStorage.removeItem('omni_session');
+            window.location.href = window.location.pathname;
         }
 
+        function enterApp() {
+            const overlay = document.getElementById('login-overlay');
+            const card = document.querySelector('.login-card');
+            if(card && overlay) {
+                card.style.transform = "translateX(200%) skewX(-20deg)";
+                card.style.opacity = "0";
+                setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            } else {
+                if(overlay) overlay.style.display = 'none';
+            }
+            
+            document.getElementById('prof-name').innerText = currentAccount.nickname || "公民账号";
+            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
+            
+            loadHistory();
+            subscribe();
+            updateWallet();
+            
+            // 启动社交模块与上帝视角
+            loadContactList();
+            if(currentAccount.is_dm) {
+                document.getElementById('dm-admin-panel').style.display = 'flex';
+                loadPossessionList();
+            }
+        }
+
+        // --- 界面导航 ---
         function switchPage(pageId, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -377,29 +407,125 @@
             if(pageId === 'wallet') updateWallet();
         }
 
-        async function updateWallet() {
-            if(currentAccount.is_dm) {
-                document.getElementById('wallet-val').innerText = "∞";
-                return;
-            }
-            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-            if(data) document.getElementById('wallet-val').innerText = data.credits.toLocaleString();
+        function switchListTab(tab, el) {
+            document.querySelectorAll('.sidebar-tabs div').forEach(d => d.classList.remove('active'));
+            el.classList.add('active');
+            if(tab === 'friends') loadContactList();
+            else document.getElementById('contact-list-box').innerHTML = `<div style="padding:20px; color:#94a3b8; text-align:center; font-size:0.9em;">频道列表为空<br><br><span style="cursor:pointer; color:var(--omni-green);" onclick="alert('频道接口待激活')">+ 组建加密频道</span></div>`;
         }
 
+        // --- 社交模块：加载全境联系人 ---
+        async function loadContactList() {
+            // 获取除自己外的所有人作为通讯录
+            const { data } = await supabaseClient.from('omni_accounts').select('*').neq('login_id', 'DM').order('id', {ascending: true});
+            const box = document.getElementById('contact-list-box');
+            
+            let html = `
+                <div class="contact-item active" onclick="alert('已处于公共频道')">
+                    <img src="${getAvatarUrl('default.png')}" class="contact-avatar">
+                    <span class="contact-name" style="color:var(--omni-green);">🌐 全境公共广播</span>
+                </div>
+            `;
+            
+            if(data) {
+                data.forEach(acc => {
+                    // 当前自己不出现在联系人里
+                    if(currentAccount.id === acc.id) return;
+                    html += `
+                        <div class="contact-item" onclick="alert('私聊通道建设中...')">
+                            <img src="${getAvatarUrl(acc.avatar_filename)}" class="contact-avatar">
+                            <div style="display:flex; flex-direction:column; overflow:hidden;">
+                                <span class="contact-name">${acc.nickname}</span>
+                                <span style="font-size:0.7em; color:#94a3b8;">${acc.race || '未知'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            box.innerHTML = html;
+        }
+
+        // --- DM 专属：神权系统 (捏人与降临) ---
+        async function adminCreateNPC() {
+            const nick = prompt("【创造NPC】请输入虚拟网名：");
+            if(!nick) return;
+            const race = prompt("请输入种族：", "未知");
+            const avatar = prompt("请输入 GitHub assets/bestiary/avatars 下的文件名 (含后缀)：", "default.png");
+            
+            const { error } = await supabaseClient.from('omni_accounts').insert([{
+                login_id: "NPC_" + Date.now(),
+                login_pass: "123456",
+                nickname: nick,
+                race: race,
+                avatar_filename: avatar,
+                credits: 9999
+            }]);
+            
+            if(!error) {
+                alert(`NPC [${nick}] 已注入全境网络！`);
+                loadPossessionList(); // 刷新降临列表
+                loadContactList();    // 刷新左侧通讯录
+            } else {
+                alert("创造失败：" + error.message);
+            }
+        }
+
+        async function loadPossessionList() {
+            const { data } = await supabaseClient.from('omni_accounts').select('*').order('id', {ascending: true});
+            const dmPanel = document.getElementById('dm-admin-panel');
+            
+            // 移除旧控件防重复
+            const oldSel = document.getElementById('possess-selector');
+            const oldBtn = document.getElementById('create-npc-btn');
+            if(oldSel) oldSel.remove();
+            if(oldBtn) oldBtn.remove();
+
+            let html = `
+                <select id="possess-selector" onchange="hijackIdentity(this.value)" style="background:#2c3e50; color:white; border:none; padding:5px; border-radius:4px; margin-left:15px; outline:none;">
+                    <option value="DM">--- 切换身份 (降临) ---</option>
+            `;
+            if(data) {
+                data.forEach(acc => { html += `<option value="${acc.id}">${acc.nickname}</option>`; });
+            }
+            html += `</select>
+            <button id="create-npc-btn" onclick="adminCreateNPC()" style="background:#e67e22; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-left:10px; font-weight:bold;">+ 捏人</button>`;
+            
+            dmPanel.insertAdjacentHTML('beforeend', html);
+        }
+
+        async function hijackIdentity(accId) {
+            if (accId === "DM") {
+                currentAccount = { nickname: "帝国监察官", race: "人类", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
+            } else {
+                const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
+                if(data) {
+                    const originalDmFlag = currentAccount.is_dm; // 备份真实的监察官权限
+                    currentAccount = data;
+                    currentAccount.is_dm = originalDmFlag; // 将神权赋予该躯壳
+                }
+            }
+            document.getElementById('prof-name').innerText = currentAccount.nickname;
+            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未知");
+            alert(`神识已降临至躯壳：${currentAccount.nickname}`);
+            loadContactList(); // 重新加载列表（因为自己不会在列表中显示）
+        }
+
+        // --- 通讯引擎 ---
         async function loadHistory() {
-            const { data } = await supabaseClient.from('omni_messages').select('*').order('created_at', {ascending:true}).limit(50);
+            const { data } = await supabaseClient.from('omni_messages').select('*').order('created_at', {ascending:true}).limit(100);
             if(data) {
                 const box = document.getElementById('chat-box');
                 box.innerHTML = '';
                 data.forEach(renderMsg);
-                box.scrollTop = box.scrollHeight;
+                setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
             }
         }
 
         function subscribe() {
             supabaseClient.channel('omni_msgs').on('postgres_changes', {event:'INSERT', schema:'public', table:'omni_messages'}, p => {
                 renderMsg(p.new);
-                document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+                const box = document.getElementById('chat-box');
+                box.scrollTop = box.scrollHeight;
             }).subscribe();
         }
 
@@ -414,23 +540,11 @@
                 return;
             }
 
-            let sName = currentAccount.nickname;
-            let sRace = currentAccount.race || "未知";
-            let sColor = "#2ecc71";
-
-            if(currentAccount.is_dm) {
-                const nName = document.getElementById('npc-name').value;
-                if(nName) {
-                    sName = nName;
-                    sRace = "未知";
-                    sColor = document.getElementById('npc-color').value;
-                }
-            }
-
+            // 发送消息时带上当前的头像数据
             await supabaseClient.from('omni_messages').insert([{
-                sender_name: sName,
-                sender_race: sRace,
-                sender_avatar_color: sColor,
+                sender_name: currentAccount.nickname,
+                sender_race: currentAccount.race || "未知",
+                sender_avatar_filename: currentAccount.avatar_filename || "default.png",
                 content: val
             }]);
             inp.value = '';
@@ -439,19 +553,28 @@
         function renderMsg(m) {
             const box = document.getElementById('chat-box');
             const isSelf = (m.sender_name === currentAccount.nickname);
-            const html = `<div class="message ${isSelf ? 'self' : ''}">
-                <div style="font-size:0.7em; color:#999;">${m.sender_name} (${m.sender_race})</div>
-                <div class="msg-bubble" style="border-left:4px solid ${m.sender_avatar_color}">${m.content}</div>
-            </div>`;
+            const avatarUrl = getAvatarUrl(m.sender_avatar_filename);
+            
+            // 使用全新的左右流式气泡与圆形头像
+            const html = `
+                <div class="message ${isSelf ? 'self' : ''}">
+                    <img src="${avatarUrl}" class="avatar-circle">
+                    <div class="msg-content">
+                        <div class="msg-sender-name">${m.sender_name} <span style="opacity:0.6">[${m.sender_race || '未知'}]</span></div>
+                        <div class="msg-bubble">${m.content}</div>
+                    </div>
+                </div>`;
             box.insertAdjacentHTML('beforeend', html);
         }
 
+        // --- 资产操作 ---
         async function purchase(name, price) {
-            if(currentAccount.is_dm) return alert("监察官无需调配结算。");
-            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-            if(data.credits < price) return alert("信用点不足。");
+            if(currentAccount.is_dm && currentAccount.login_id === "DM") return alert("纯灵体监察官无需调配结算。");
+            const targetId = currentAccount.id; // 即便是降临态，扣的也是当前躯壳的钱
+            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', targetId).single();
+            if(data && data.credits < price) return alert("信用点不足。");
             if(confirm(`确认调配 ${name}？`)) {
-                await supabaseClient.from('omni_accounts').update({ credits: data.credits - price }).eq('id', currentAccount.id);
+                await supabaseClient.from('omni_accounts').update({ credits: data.credits - price }).eq('id', targetId);
                 alert("支付成功，物流法阵启动。");
                 updateWallet();
             }
@@ -461,86 +584,17 @@
             const tid = document.getElementById('target-id').value;
             const amt = document.getElementById('target-amt').value;
             await supabaseClient.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
-            alert("调拨完成");
+            alert("资产调拨完成");
         }
 
-function enterApp() {
-    // 增加一个简单的退出形变
-    const overlay = document.getElementById('login-overlay');
-    const card = document.querySelector('.login-card');
-    
-    card.style.transform = "translateX(200%) skewX(-20deg)";
-    card.style.opacity = "0";
-    
-    setTimeout(() => {
-        overlay.style.display = 'none';
-        document.getElementById('prof-name').innerText = currentAccount.nickname || "公民账号";
-        document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
-        loadHistory();
-        subscribe();
-        updateWallet();
-    }, 500);
-}
-
-// 获取头像全路径
-function getAvatarUrl(filename) {
-    const file = filename || 'default.png';
-    return AVATAR_BASE + file;
-}
-
-// --- DM 专用：捏人 ---
-async function adminCreateNPC() {
-    const nick = prompt("请输入 NPC 网名：");
-    const race = prompt("请输入 NPC 种族：");
-    const avatar = prompt("请输入头像文件名（需已在 avatars 文件夹中）：", "default.png");
-    
-    if(!nick) return;
-    
-    const { error } = await supabaseClient.from('omni_accounts').insert([{
-        login_id: "NPC_" + Date.now(),
-        login_pass: "123456",
-        nickname: nick,
-        race: race,
-        avatar_filename: avatar,
-        credits: 99999
-    }]);
-    
-    if(!error) {
-        alert("NPC 已生成并载入全境网络");
-        loadPossessionList(); // 刷新降临列表
-    }
-}
-
-// --- DM 专用：降临 ---
-async function hijackIdentity(accId) {
-    const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
-    if(data) {
-        // 关键：保留 DM 权限标识，但切换社交身份
-        const isActuallyDm = currentAccount.is_dm;
-        currentAccount = data;
-        currentAccount.is_dm = isActuallyDm; 
-        
-        alert(`已成功降临至：${currentAccount.nickname}`);
-        // 刷新 UI 上的个人信息
-        document.getElementById('prof-name').innerText = currentAccount.nickname;
-    }
-}
-
-// 渲染消息时带上头像
-function renderMsg(m) {
-    const box = document.getElementById('chat-box');
-    const isSelf = (m.sender_name === currentAccount.nickname);
-    const html = `
-        <div class="message ${isSelf ? 'self' : ''}">
-            <img src="${getAvatarUrl(m.sender_avatar_filename)}" class="avatar-circle">
-            <div class="msg-content">
-                <div style="font-size:0.7em; color:#64748b; margin-bottom:2px;">${m.sender_name}</div>
-                <div class="msg-bubble">${m.content}</div>
-            </div>
-        </div>`;
-    box.insertAdjacentHTML('beforeend', html);
-    box.scrollTop = box.scrollHeight;
-}
+        async function updateWallet() {
+            if(currentAccount.is_dm && currentAccount.login_id === "DM") {
+                document.getElementById('wallet-val').innerText = "∞";
+                return;
+            }
+            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+            if(data) document.getElementById('wallet-val').innerText = data.credits.toLocaleString();
+        }
 
         window.onload = init;
     </script>
