@@ -3,295 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全境网络 - Lotharia Omni Terminal</title>
+    <title>全境网络 - OMNI Terminal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --omni-green: #196f3d; 
             --omni-green-bright: #2ecc71; 
-            --omni-bg: #f0f3f4; 
+            --omni-bg: #f4f6f7; 
             --omni-card: #ffffff;
             --omni-text: #2c3e50;
-            --omni-text-light: #7f8c8d;
             --omni-danger: #e74c3c; 
-            --omni-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
 
-        * { box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
 
-        /* --- 登录层 --- */
+        /* 登录遮罩 */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, var(--omni-green), #114b28); 
-            z-index: 99999; display: flex; justify-content: center; align-items: center;
+            background: var(--omni-green); z-index: 99999;
+            display: flex; justify-content: center; align-items: center;
         }
-        .login-card { 
-            background: white; padding: 50px; border-radius: 20px; width: 400px; 
-            text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.4); 
-        }
-        .login-card h1 { color: var(--omni-green); font-size: 2em; margin-bottom: 30px; letter-spacing: 4px; }
-        .login-card input { 
-            width: 100%; padding: 15px; margin-bottom: 20px; border: 1px solid #ddd; 
-            border-radius: 8px; font-size: 1em; outline: none; transition: 0.3s;
-        }
-        .login-card input:focus { border-color: var(--omni-green); box-shadow: 0 0 10px rgba(25,111,61,0.1); }
-        .login-card button { 
-            width: 100%; padding: 15px; background: var(--omni-green); color: white; 
-            border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em;
-        }
+        .login-card { background: white; padding: 40px; border-radius: 15px; width: 320px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .login-card input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .login-card button { width: 100%; padding: 12px; background: var(--omni-green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-        /* --- 主架构 --- */
+        /* 主架构 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
-        
-        /* 侧边栏 */
-        .sidebar { width: 280px; background: var(--omni-green); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-header { padding: 40px 25px; font-size: 1.8em; font-weight: 900; letter-spacing: 3px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .nav-group { flex: 1; padding-top: 20px; }
-        .nav-item { 
-            padding: 22px 30px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; 
-            gap: 20px; border-left: 5px solid transparent; font-size: 1.1em; opacity: 0.8;
-        }
-        .nav-item:hover { background: rgba(255,255,255,0.05); opacity: 1; }
-        .nav-item.active { background: rgba(255,255,255,0.15); border-left-color: var(--omni-green-bright); opacity: 1; font-weight: bold; }
+        .sidebar { width: 260px; background: var(--omni-green); color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 30px 20px; font-size: 1.5em; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .nav-item { padding: 20px; cursor: pointer; display: flex; align-items: center; gap: 15px; border-left: 4px solid transparent; }
+        .nav-item.active { background: rgba(255,255,255,0.1); border-left-color: var(--omni-green-bright); font-weight: bold; }
 
         /* 内容区 */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--omni-bg); }
-        .top-bar { height: 80px; background: white; display: flex; align-items: center; justify-content: flex-end; padding: 0 40px; border-bottom: 1px solid #eee; }
-        .content-body { flex: 1; padding: 40px; overflow-y: auto; }
-        
-        .page { display: none; height: 100%; }
-        .page.active { display: block; animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; position: relative; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
 
-        /* --- 通讯板块 (Chat) --- */
-        .chat-wrap { display: flex; gap: 30px; height: 100%; max-height: 800px; }
-        .chat-main { flex: 1; background: white; border-radius: 16px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; box-shadow: var(--omni-shadow); }
-        .chat-header { padding: 20px 25px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa; display: flex; justify-content: space-between; }
-        .chat-history { flex: 1; padding: 30px; overflow-y: auto; background: #fdfdfd; display: flex; flex-direction: column; gap: 20px; }
-        .chat-input-area { padding: 25px; border-top: 1px solid #eee; display: flex; gap: 15px; }
-        .chat-input-area input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 10px; outline: none; font-size: 1em; }
-        
-        .message { max-width: 75%; display: flex; flex-direction: column; }
-        .message.self { align-self: flex-end; align-items: flex-end; }
-        .msg-meta { font-size: 0.8em; color: var(--omni-text-light); margin-bottom: 6px; }
-        .msg-bubble { 
-            padding: 14px 20px; border-radius: 18px; background: #f0f2f5; line-height: 1.6; 
-            position: relative; border-left: 4px solid #ddd; word-wrap: break-word; 
-        }
-        .message.self .msg-bubble { background: var(--omni-green-bright); color: white; border-left: none; border-right: 4px solid #145a32; }
+        /* 聊天 */
+        .chat-container { display: flex; flex-direction: column; height: calc(100vh - 200px); border: 1px solid #eee; border-radius: 12px; background: white; }
+        .chat-history { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; }
+        .chat-input-bar { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        .message { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .message.self { align-items: flex-end; }
+        .msg-bubble { padding: 10px 15px; border-radius: 15px; background: #eee; max-width: 70%; }
+        .message.self .msg-bubble { background: var(--omni-green-bright); color: white; }
 
-        /* --- 优选板块 (Life/Shop) --- */
-        .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
-        .store-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: var(--omni-shadow); transition: 0.3s; border: 1px solid #eee; }
-        .store-card:hover { transform: translateY(-8px); box-shadow: 0 15px 40px rgba(0,0,0,0.1); }
-        .store-img { height: 180px; background: #e5e8e8; display: flex; align-items: center; justify-content: center; font-size: 3em; }
-        .store-info { padding: 25px; }
-        .store-title { font-size: 1.3em; font-weight: bold; margin-bottom: 10px; }
-        .store-price { font-size: 1.5em; color: var(--omni-green); font-weight: 900; margin: 15px 0; }
-        .btn-buy { width: 100%; padding: 12px; background: #eee; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-buy:hover { background: var(--omni-green); color: white; }
+        /* DM 面板 */
+        #dm-admin-panel { background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; gap: 10px; align-items: center; }
+        #dm-admin-panel input { padding: 5px; border-radius: 4px; border: none; }
 
-        /* --- 资产板块 (Wallet) --- */
-        .wallet-banner { 
-            background: linear-gradient(135deg, var(--omni-green), #114b28); color: white; 
-            padding: 60px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 20px 50px rgba(25,111,61,0.2);
-        }
-        .balance-title { font-size: 1.2em; opacity: 0.8; margin-bottom: 15px; }
-        .balance-value { font-size: 5em; font-weight: 900; letter-spacing: -2px; }
-        .wallet-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; margin-top: 40px; }
-        .action-item { background: white; padding: 30px; border-radius: 16px; text-align: center; box-shadow: var(--omni-shadow); cursor: pointer; transition: 0.2s; }
-        .action-item:hover { background: #f0fdf4; border: 1px solid var(--omni-green-bright); }
-
-        /* --- DM 专用控制面板 --- */
-        #dm-admin-panel { 
-            background: #2c3e50; color: white; padding: 20px 40px; display: none; 
-            align-items: center; gap: 20px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        #dm-admin-panel input { padding: 8px; border-radius: 4px; border: none; outline: none; }
-        .admin-btn { background: #f39c12; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-
-        /* 通用提示 */
-        #omni-toast { 
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); 
-            background: rgba(0,0,0,0.8); color: white; padding: 12px 30px; border-radius: 30px; 
-            z-index: 100000; display: none; animation: slideUp 0.3s ease;
-        }
-        @keyframes slideUp { from { transform: translate(-50%, 50px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-
-        /* 敏感词拦截 */
-        #intercept-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9);
-            z-index: 100001; display: none; flex-direction: column; justify-content: center; align-items: center;
-        }
+        /* 警告拦截 */
+        #intercept-msg { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: white; border-left: 5px solid red; padding: 15px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; z-index: 100001; }
     </style>
 </head>
 <body>
 
     <div id="login-overlay">
         <div class="login-card">
-            <h1>🌐 OMNI</h1>
-            <p style="color:#666; margin-bottom:30px;">全境枢纽网络 - 公民身份接入</p>
-            <input type="text" id="l-user" placeholder="公民账号 (用户账号1-5)">
-            <input type="password" id="l-pass" placeholder="访问密钥 (123456)">
-            <button onclick="handleLogin()">验证并接入</button>
-            <p id="l-err" style="color:red; margin-top:15px; display:none; font-size:0.9em;">! 密钥错误或公民号不存在</p>
+            <h2>🌐 全境网络接入</h2>
+            <input type="text" id="l-user" placeholder="公民账号">
+            <input type="password" id="l-pass" placeholder="访问密钥">
+            <button onclick="handleLogin()">接入网络</button>
+            <p id="l-err" style="color:red; font-size:0.8em; margin-top:10px; display:none;">身份校验未通过</p>
         </div>
     </div>
 
-    <div id="dm-admin-panel">
-        <strong style="color:#f39c12">● 后台管理模式</strong>
-        <span>扮演NPC:</span>
-        <input type="text" id="npc-name" placeholder="NPC名字" style="width:100px">
-        <input type="text" id="npc-race" placeholder="种族" style="width:100px">
-        <input type="color" id="npc-color" value="#3498db">
-        <span style="margin-left:20px">调拨信用点:</span>
-        <input type="text" id="target-id" placeholder="账号ID" style="width:80px">
-        <input type="number" id="target-amt" placeholder="金额" style="width:80px">
-        <button class="admin-btn" onclick="adminCreditAction()">执行调拨</button>
-    </div>
+    <div id="intercept-msg">⚠️ <strong>安全拦截：</strong> 检测到敏感词汇，消息已阻断。</div>
 
     <div class="app-container">
         <nav class="sidebar">
-            <div class="sidebar-header">🌐 OMNI 全境</div>
-            <div class="nav-group">
-                <div class="nav-item active" onclick="switchPage('chat', this)">💬 枢纽通讯</div>
-                <div class="nav-item" onclick="switchPage('life', this)">🍔 帝国优选</div>
-                <div class="nav-item" onclick="switchPage('wallet', this)">💳 资产结算</div>
-                <div class="nav-item" onclick="switchPage('profile', this)">🛂 公民通行证</div>
-            </div>
-            <div style="padding:30px; opacity:0.5; font-size:0.8em; cursor:pointer;" onclick="window.history.back()">⬅ 退出系统</div>
+            <div class="sidebar-header">🌐 OMNI</div>
+            <div class="nav-item active" onclick="switchPage('chat', this)">💬 枢纽通讯</div>
+            <div class="nav-item" onclick="switchPage('life', this)">🍔 帝国优选</div>
+            <div class="nav-item" onclick="switchPage('wallet', this)">💳 资产结算</div>
+            <div class="nav-item" onclick="switchPage('profile', this)">🛂 公民通行证</div>
+            <div style="margin-top:auto; padding:20px; opacity:0.5; cursor:pointer;" onclick="window.history.back()">⬅ 退出</div>
         </nav>
 
         <main class="main-content">
-            <div class="top-bar">
-                <span id="top-user-info" style="font-weight:bold; color:var(--omni-green);">公民身份：加载中...</span>
+            <div id="dm-admin-panel">
+                <strong style="color:#f39c12">● 监察官后台</strong>
+                <input type="text" id="npc-name" placeholder="NPC名字" style="width:100px">
+                <input type="color" id="npc-color" value="#3498db">
+                <span style="margin-left:10px">划拨信用点：</span>
+                <input type="text" id="target-id" placeholder="账号" style="width:80px">
+                <input type="number" id="target-amt" placeholder="金额" style="width:80px">
+                <button onclick="adminAdjustCredits()" style="background:var(--omni-green); color:white; border:none; padding:5px 10px; cursor:pointer;">执行</button>
             </div>
 
-            <div class="content-body">
-                <div id="page-chat" class="page active">
-                    <div class="chat-wrap">
-                        <div class="chat-main">
-                            <div class="chat-header">
-                                <span>因斯卡利亚第三机械厂校友群 (1,402)</span>
-                                <span style="color:var(--omni-green-bright); font-size:0.85em;">🟢 以太连接稳定</span>
-                            </div>
-                            <div class="chat-history" id="chat-box">
-                                </div>
-                            <div class="chat-input-area">
-                                <input type="text" id="chat-in" placeholder="在此输入消息..." onkeypress="if(event.key==='Enter') sendMsg()">
-                                <button class="btn-send" onclick="sendMsg()">发送</button>
-                            </div>
+            <div id="page-chat" class="page active">
+                <div class="chat-container">
+                    <div class="chat-history" id="chat-box"></div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-in" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendMsg()">
+                        <button onclick="sendMsg()" style="padding:10px 20px; background:var(--omni-green); color:white; border:none; border-radius:4px; cursor:pointer;">发送</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-life" class="page">
+                <div class="card">
+                    <h3>物资调配中心</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div style="border:1px solid #eee; padding:15px; border-radius:8px;">
+                            <h4>蒂尔兰手工汉堡</h4>
+                            <p style="color:var(--omni-green); font-weight:bold;">15 信用点</p>
+                            <button onclick="purchase('汉堡', 15)" style="width:100%; padding:8px;">立即调配</button>
+                        </div>
+                        <div style="border:1px solid #eee; padding:15px; border-radius:8px;">
+                            <h4>高纯度魔力液</h4>
+                            <p style="color:var(--omni-green); font-weight:bold;">120 信用点</p>
+                            <button onclick="purchase('魔力液', 120)" style="width:100%; padding:8px;">立即调配</button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div id="page-life" class="page">
-                    <div style="margin-bottom:30px;">
-                        <h2 class="section-title">今日优选调配</h2>
-                        <p style="color:#7f8c8d">根据您的种族生理特征与地理位置，已筛选以下物资：</p>
-                    </div>
-                    <div class="store-grid">
-                        <div class="store-card">
-                            <div class="store-img">🍔</div>
-                            <div class="store-info">
-                                <div class="store-title">蒂尔兰经典手工汉堡</div>
-                                <div style="color:#7f8c8d; font-size:0.9em;">中央平原特供小麦与陆行鸟肉</div>
-                                <div class="store-price">15.00 信用点</div>
-                                <button class="btn-buy" onclick="purchase('汉堡', 15)">立即调配</button>
-                            </div>
-                        </div>
-                        <div class="store-card">
-                            <div class="store-img">🧪</div>
-                            <div class="store-info">
-                                <div class="store-title">高纯度魔力营养液</div>
-                                <div style="color:#7f8c8d; font-size:0.9em;">奥斯特克军工标准，纯净度99%</div>
-                                <div class="store-price">120.00 信用点</div>
-                                <button class="btn-buy" onclick="purchase('营养液', 120)">立即调配</button>
-                            </div>
-                        </div>
-                        <div class="store-card">
-                            <div class="store-img">💎</div>
-                            <div class="store-info">
-                                <div class="store-title">深渊原矿残渣 (高能)</div>
-                                <div style="color:#7f8c8d; font-size:0.9em;">仅限非人类种族，严禁人类摄入</div>
-                                <div class="store-price">450.00 信用点</div>
-                                <button class="btn-buy" onclick="purchase('原矿残渣', 450)">立即调配</button>
-                            </div>
-                        </div>
-                    </div>
+            <div id="page-wallet" class="page">
+                <div class="card" style="background:linear-gradient(135deg, #196f3d, #114b28); color:white; padding:40px;">
+                    <div style="opacity:0.8;">可用余额 (信用点)</div>
+                    <div id="wallet-val" style="font-size:3.5em; font-weight:bold; margin-top:10px;">0.00</div>
                 </div>
+            </div>
 
-                <div id="page-wallet" class="page">
-                    <div class="wallet-banner">
-                        <div>
-                            <div class="balance-title">当前可用资产 (信用点)</div>
-                            <div class="balance-value" id="wallet-balance">0.00</div>
-                        </div>
-                        <div style="background:white; padding:15px; border-radius:15px;">
-                            <div style="width:120px; height:120px; background:repeating-linear-gradient(45deg, #000, #000 5px, #fff 5px, #fff 10px); opacity:0.8;"></div>
-                        </div>
-                    </div>
-                    <div class="wallet-actions">
-                        <div class="action-item"><strong>💸</strong><br>跨区转账</div>
-                        <div class="action-item"><strong>🛡️</strong><br>法则保险</div>
-                        <div class="action-item"><strong>📜</strong><br>契约公证</div>
-                        <div class="action-item"><strong>⚡</strong><br>生活缴费</div>
-                    </div>
-                </div>
-
-                <div id="page-profile" class="page">
-                    <h2 class="section-title">公民个人凭证</h2>
-                    <div class="omni-card" style="display:flex; gap:40px; padding:40px;">
-                        <div style="width:150px; height:150px; background:#ddd; border-radius:15px; border:6px solid var(--omni-green);"></div>
-                        <div style="flex:1;">
-                            <h1 id="p-name" style="margin:0; font-size:2.5em;">--</h1>
-                            <div style="margin-top:20px; font-size:1.1em; line-height:2;">
-                                <strong>种族识别：</strong> <span id="p-race">--</span><br>
-                                <strong>归属语区：</strong> 中央平原 - 蒂尔兰语区<br>
-                                <strong>社会信用评分：</strong> <span style="color:var(--omni-green-bright); font-weight:bold;">A (优秀)</span><br>
-                                <strong>当前状态：</strong> 正常通行
-                            </div>
-                        </div>
-                    </div>
+            <div id="page-profile" class="page">
+                <div class="card">
+                    <h2 id="prof-name">公民信息</h2>
+                    <p id="prof-race">种族：--</p>
+                    <p>社会信用等级：A</p>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="intercept-overlay">
-        <h1 style="color:red; font-size:4em;">⚠️</h1>
-        <h2 style="color:red;">检测到非法词汇</h2>
-        <p>您的消息包含帝国禁忌词汇。行为已记录。警告 (1/3)</p>
-        <button onclick="document.getElementById('intercept-overlay').style.display='none'" style="margin-top:20px; padding:10px 30px;">确认并返回</button>
-    </div>
-
-    <div id="omni-toast">提示内容</div>
-
     <script>
-        // --- 核心配置 ---
-        const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
+        // --- 严格保持单次声明 ---
+        const SB_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZlI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODg3MDksImV4cCI6MjA1NDA0ODcwOX0.Sly54jFsh3tS98u4M4WfUe3v0Yx1P5_z0y4W1P5_z0y";
+        const supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentUserId = null; 
-        let currentAccount = null;
 
-        // --- 系统初始化 ---
+        let currentAccount = null;
+        const urlParams = new URLSearchParams(window.location.search);
+        const loginUid = urlParams.get('uid');
+
         async function init() {
-            const loginUid = urlParams.get('uid');
-            
-            // 如果是 DM 直接放行
+            // 1. DM判定
             if(loginUid === DM_UID) {
                 currentAccount = { display_name: "帝国监察官", race: "人类", is_dm: true, login_id: "DM" };
+                document.getElementById('dm-admin-panel').style.display = 'flex';
                 enterApp();
                 return;
             }
-
-            // 检查缓存
+            // 2. 玩家缓存
             const saved = sessionStorage.getItem('omni_session');
             if(saved) {
                 currentAccount = JSON.parse(saved);
@@ -299,18 +164,10 @@
             }
         }
 
-        // --- 独立登录逻辑 ---
         async function handleLogin() {
             const u = document.getElementById('l-user').value;
             const p = document.getElementById('l-pass').value;
-
-            const { data, error } = await supabase
-                .from('omni_accounts')
-                .select('*')
-                .eq('login_id', u)
-                .eq('login_pass', p)
-                .single();
-
+            const { data, error } = await supabase.from('omni_accounts').select('*').eq('login_id', u).eq('login_pass', p).single();
             if(data) {
                 currentAccount = data;
                 sessionStorage.setItem('omni_session', JSON.stringify(data));
@@ -322,53 +179,43 @@
 
         function enterApp() {
             document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('top-user-info').innerText = `公民：${currentAccount.display_name}`;
-            
-            if(currentAccount.is_dm) {
-                document.getElementById('dm-admin-panel').style.display = 'flex';
-            }
-
-            // 加载通行证数据
-            document.getElementById('p-name').innerText = currentAccount.display_name;
-            document.getElementById('p-race').innerText = currentAccount.race;
-
+            document.getElementById('prof-name').innerText = currentAccount.display_name || "公民账号";
+            document.getElementById('prof-race').innerText = "种族：" + (currentAccount.race || "未识别");
             loadHistory();
             subscribe();
-            refreshWallet();
+            updateWallet();
         }
-
-        // --- 核心功能逻辑 ---
 
         function switchPage(pageId, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('page-' + pageId).classList.add('active');
             el.classList.add('active');
-            if(pageId === 'wallet') refreshWallet();
+            if(pageId === 'wallet') updateWallet();
         }
 
-        async function refreshWallet() {
+        async function updateWallet() {
             if(currentAccount.is_dm) {
-                document.getElementById('wallet-balance').innerText = "∞";
+                document.getElementById('wallet-val').innerText = "∞";
                 return;
             }
             const { data } = await supabase.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-            if(data) {
-                document.getElementById('wallet-balance').innerText = data.credits.toLocaleString('en-US', {minimumFractionDigits: 2});
-            }
+            if(data) document.getElementById('wallet-val').innerText = data.credits.toLocaleString();
         }
 
         async function loadHistory() {
             const { data } = await supabase.from('omni_messages').select('*').order('created_at', {ascending:true}).limit(50);
-            const box = document.getElementById('chat-box');
-            box.innerHTML = '';
-            data.forEach(m => renderMessage(m));
-            box.scrollTop = box.scrollHeight;
+            if(data) {
+                const box = document.getElementById('chat-box');
+                box.innerHTML = '';
+                data.forEach(renderMsg);
+                box.scrollTop = box.scrollHeight;
+            }
         }
 
         function subscribe() {
             supabase.channel('omni_msgs').on('postgres_changes', {event:'INSERT', schema:'public', table:'omni_messages'}, p => {
-                renderMessage(p.new);
+                renderMsg(p.new);
                 document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
             }).subscribe();
         }
@@ -378,22 +225,21 @@
             const val = inp.value.trim();
             if(!val) return;
 
-            // 伊莎贝拉 拦截逻辑
             if(val.includes('伊莎贝拉')) {
-                document.getElementById('intercept-overlay').style.display = 'flex';
+                document.getElementById('intercept-msg').style.display = 'block';
+                setTimeout(()=> document.getElementById('intercept-msg').style.display = 'none', 3000);
                 return;
             }
 
             let sName = currentAccount.display_name;
-            let sRace = currentAccount.race;
+            let sRace = currentAccount.race || "未知";
             let sColor = "#2ecc71";
 
-            // DM 扮演逻辑
             if(currentAccount.is_dm) {
                 const nName = document.getElementById('npc-name').value;
                 if(nName) {
                     sName = nName;
-                    sRace = document.getElementById('npc-race').value || "未知";
+                    sRace = "未知";
                     sColor = document.getElementById('npc-color').value;
                 }
             }
@@ -407,48 +253,32 @@
             inp.value = '';
         }
 
-        function renderMessage(m) {
+        function renderMsg(m) {
             const box = document.getElementById('chat-box');
             const isSelf = (m.sender_name === currentAccount.display_name);
-            const html = `
-                <div class="message ${isSelf ? 'self' : ''}">
-                    <div class="msg-meta">${m.sender_name} (${m.sender_race})</div>
-                    <div class="msg-bubble" style="border-left: 5px solid ${m.sender_avatar_color}">${m.content}</div>
-                </div>
-            `;
+            const html = `<div class="message ${isSelf ? 'self' : ''}">
+                <div style="font-size:0.7em; color:#999;">${m.sender_name} (${m.sender_race})</div>
+                <div class="msg-bubble" style="border-left:4px solid ${m.sender_avatar_color}">${m.content}</div>
+            </div>`;
             box.insertAdjacentHTML('beforeend', html);
         }
 
-        // --- 业务交互逻辑 ---
-
         async function purchase(name, price) {
-            if(currentAccount.is_dm) return showToast("监察官账户无需结算，调配已强制执行。");
-            
+            if(currentAccount.is_dm) return alert("监察官无需调配结算。");
             const { data } = await supabase.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-            if(data.credits < price) return showToast("! 余额不足，调配申请已驳回");
-
-            if(confirm(`[资产结算确认]\n项目：${name}\n消耗：${price} 信用点\n\n确认扣款？`)) {
-                const { error } = await supabase.from('omni_accounts').update({ credits: data.credits - price }).eq('id', currentAccount.id);
-                if(!error) {
-                    showToast("结算成功，物流法阵已就绪");
-                    refreshWallet();
-                }
+            if(data.credits < price) return alert("信用点不足。");
+            if(confirm(`确认调配 ${name}？`)) {
+                await supabase.from('omni_accounts').update({ credits: data.credits - price }).eq('id', currentAccount.id);
+                alert("支付成功，物流法阵启动。");
+                updateWallet();
             }
         }
 
-        async function adminCreditAction() {
+        async function adminAdjustCredits() {
             const tid = document.getElementById('target-id').value;
             const amt = document.getElementById('target-amt').value;
-            const { error } = await supabase.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
-            if(!error) showToast("信用点划拨成功");
-            else showToast("操作失败：" + error.message);
-        }
-
-        function showToast(txt) {
-            const t = document.getElementById('omni-toast');
-            t.innerText = txt;
-            t.style.display = 'block';
-            setTimeout(() => t.style.display = 'none', 3000);
+            await supabase.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
+            alert("调拨完成");
         }
 
         window.onload = init;
