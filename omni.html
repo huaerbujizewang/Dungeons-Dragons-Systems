@@ -17,109 +17,113 @@
 
         body, html { margin: 0; padding: 0; height: 100vh; font-family: "PingFang SC", sans-serif; background: var(--omni-bg); color: var(--omni-text); overflow: hidden; }
 
-/* --- 未来几何登录界面重塑 --- */
+/* --- 真正的不规则几何登录界面 --- */
 #login-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #0a0a0a; /* 极深灰底色 */
+    background: #050505; 
+    /* 背景不再是重复网格，而是几条贯穿全屏的、深浅不一的几何色块 */
     background-image: 
-        linear-gradient(45deg, rgba(25, 111, 61, 0.05) 25%, transparent 25%),
-        linear-gradient(-45deg, rgba(25, 111, 61, 0.05) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, rgba(25, 111, 61, 0.05) 75%),
-        linear-gradient(-45deg, transparent 75%, rgba(25, 111, 61, 0.05) 75%);
-    background-size: 100px 100px; /* 几何网格背景 */
+        linear-gradient(115deg, rgba(25, 111, 61, 0.1) 0%, transparent 40%),
+        linear-gradient(245deg, rgba(20, 20, 20, 1) 0%, transparent 70%);
     z-index: 99999;
     display: flex;
-    justify-content: flex-end; /* 非居中构图：靠右 */
+    justify-content: center; /* 回归居中 */
     align-items: center;
-    padding-right: 15%; 
     overflow: hidden;
 }
 
-/* 几何背景线条装饰 */
+/* 背景的大型不规则切割线条 */
 #login-overlay::before {
-    content: ""; position: absolute; top: -50%; left: -20%; width: 150%; height: 150%;
-    background: repeating-linear-gradient(45deg, transparent, transparent 120px, rgba(25, 111, 61, 0.1) 120px, rgba(25, 111, 61, 0.1) 121px);
-    transform: rotate(-15deg);
-    pointer-events: none;
+    content: ""; position: absolute; width: 200%; height: 200%;
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 150px,
+        rgba(46, 204, 113, 0.03) 150px,
+        rgba(46, 204, 113, 0.03) 151px
+    );
+    transform: rotate(15deg);
 }
 
+/* 彻底不规则的登录卡片：多边形拼接感 */
 .login-card {
-    background: rgba(20, 20, 20, 0.9);
-    backdrop-filter: blur(10px);
-    padding: 60px 50px;
-    width: 380px;
-    /* 核心几何切角 */
-    clip-path: polygon(0% 15%, 15% 0%, 100% 0%, 100% 85%, 85% 100%, 0% 100%);
-    border: 1px solid rgba(46, 204, 113, 0.3);
-    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    background: rgba(15, 15, 15, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 60px 70px;
+    width: 450px;
+    /* 核心：复杂的 10 点不规则多边形裁剪 */
+    clip-path: polygon(10% 0, 100% 5%, 95% 85%, 70% 100%, 0 90%, 5% 15%);
+    border: none;
     position: relative;
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
 }
 
-/* 组件变形：当内部输入框获得焦点时，整体外形发生微调 */
+/* 辅助几何外框：营造层级感 */
+.login-card::after {
+    content: ""; position: absolute; inset: -2px;
+    background: linear-gradient(135deg, var(--omni-green-bright), transparent, var(--omni-green));
+    z-index: -1;
+    clip-path: polygon(10% 0, 100% 5%, 95% 85%, 70% 100%, 0 90%, 5% 15%);
+    opacity: 0.4;
+}
+
+/* 激活态形变：当输入时，几何体发生整体扭转和拉伸 */
 .login-card:focus-within {
-    clip-path: polygon(0% 0%, 25% 0%, 100% 0%, 100% 100%, 75% 100%, 0% 100%);
-    border-color: var(--omni-green-bright);
-    background: rgba(25, 25, 25, 0.95);
-    transform: translateX(-10px);
+    clip-path: polygon(0 5%, 90% 0, 100% 15%, 100% 95%, 20% 100%, 0 75%);
+    background: rgba(20, 20, 20, 0.98);
+    transform: scale(1.02) rotate(-1deg);
 }
 
 .login-card h2 {
     color: var(--omni-green-bright);
-    text-align: left;
-    font-size: 1.8em;
-    letter-spacing: 5px;
-    margin-bottom: 40px;
-    font-weight: 900;
-    border-left: 4px solid var(--omni-green-bright);
-    padding-left: 15px;
+    font-size: 2em;
+    letter-spacing: 8px;
+    margin-bottom: 50px;
+    text-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
+    /* 标题位置也略微非对称 */
+    transform: translateX(-10px);
 }
 
+/* 输入框：去掉所有圆角，保持硬朗线条 */
 .login-card input {
     width: 100%;
-    background: rgba(255, 255, 255, 0.03);
-    border: none;
-    border-bottom: 2px solid rgba(46, 204, 113, 0.2);
-    padding: 15px 10px;
-    margin-bottom: 25px;
-    color: white;
-    font-size: 1.1em;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(46, 204, 113, 0.1);
+    padding: 18px;
+    margin-bottom: 20px;
+    color: #fff;
     outline: none;
     transition: 0.3s;
-    border-radius: 0;
+    font-family: monospace; /* 增加终端感 */
 }
 
 .login-card input:focus {
+    border-color: var(--omni-green-bright);
     background: rgba(46, 204, 113, 0.05);
-    border-bottom-color: var(--omni-green-bright);
+    box-shadow: -5px 0 0 var(--omni-green-bright);
 }
 
+/* 按钮：非对称切割 */
 .login-card button {
-    width: 100%;
-    padding: 18px;
-    background: transparent;
-    color: var(--omni-green-bright);
-    border: 1px solid var(--omni-green-bright);
-    font-weight: bold;
+    width: 110%;
+    margin-left: -5%;
+    padding: 20px;
+    background: var(--omni-green);
+    color: white;
+    border: none;
+    font-weight: 900;
     font-size: 1.2em;
-    letter-spacing: 10px;
+    letter-spacing: 12px;
     cursor: pointer;
-    transition: 0.3s;
-    /* 按钮切角 */
-    clip-path: polygon(10% 0%, 100% 0%, 100% 70%, 90% 100%, 0% 100%, 0% 30%);
+    clip-path: polygon(5% 0, 100% 15%, 95% 100%, 0 85%);
+    transition: 0.4s;
 }
 
 .login-card button:hover {
     background: var(--omni-green-bright);
-    color: #000;
-}
-
-#l-err {
-    position: absolute;
-    bottom: 20px;
-    left: 50px;
-    color: var(--omni-danger);
-    font-weight: bold;
-    letter-spacing: 1px;
+    transform: scale(1.05);
+    filter: brightness(1.2);
 }
 
         /* 主架构 */
@@ -157,14 +161,13 @@
     <div id="login-overlay">
         <div class="login-card">
             <h2>全境网络接入</h2>
-            <div style="margin-top: 20px;">
-                <input type="text" id="l-user" placeholder="公民账号" autocomplete="off">
-                <input type="password" id="l-pass" placeholder="访问密钥">
-                <button onclick="handleLogin()">接入网络</button>
-            </div>
-            <p id="l-err" style="display:none;">校验未通过</p>
+            <input type="text" id="l-user" placeholder="公民账号" autocomplete="off">
+            <input type="password" id="l-pass" placeholder="访问密钥">
+            <button onclick="handleLogin()">接入网络</button>
+            <p id="l-err" style="color:var(--omni-danger); margin-top:15px; display:none; font-size:0.8em;">身份验证未通过</p>
         </div>
     </div>
+
 
     <div id="intercept-msg">⚠️ <strong>安全拦截：</strong> 检测到敏感词汇，消息已阻断。</div>
 
