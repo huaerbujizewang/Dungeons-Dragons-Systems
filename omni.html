@@ -384,13 +384,7 @@
                             </div>
                             <button class="dm-btn-submit" onclick="submitImperialAccount()">批准入库并生成公民号</button>
 
-                            <div style="margin-top:20px; padding-top:20px; border-top:1px dashed #444;">
-                                <label style="color:var(--omni-green);">推进帝国标准时</label>
-                                <div style="display:flex; gap:10px; margin-top:10px;">
-                                    <input type="date" id="admin-date-input" style="flex:1; padding:10px; background:#0f172a; color:white; border:1px solid #334155;">
-                                    <button onclick="updateImperialDate(document.getElementById('admin-date-input').value)" style="padding:10px; background:var(--omni-danger); color:white; border:none; cursor:pointer;">全境同步</button>
-                                </div>
-                            </div>
+                            <button onclick="adminShiftTime()" style="padding:10px; background:var(--omni-danger); color:white; border:none; border-radius:4px; cursor:pointer; width:100%; font-weight:bold; margin-top:10px;">🕒 重设年份偏移</button>
                         </div>
                         
                         <div id="dm-sec-manage" class="dm-section">
@@ -851,14 +845,25 @@
             // 根据当前模式过滤消息
             if(currentChatMode === 'public') {
                 query = query.is('target_id', null).is('group_id', null);
-            } else if (currentChatMode === 'private') {
-                // 读取：(我发给他的) 或者 (他发给我的)
+            } 
+            else if (currentChatMode === 'private') {
+                const myId = currentAccount.id;
+                const toId = currentChatTarget.id;
+                
+                // 使用最稳健的 or 过滤方式
                 query = query.or(`and(sender_id.eq.${myId},target_id.eq.${toId}),and(sender_id.eq.${toId},target_id.eq.${myId})`);
-            } else if (currentChatMode === 'group') {
+            } 
+            else if (currentChatMode === 'group') {
                 query = query.eq('group_id', currentChatTarget.id);
             }
 
-            const { data } = await query.order('created_at', {ascending:true}).limit(100);
+            const { data, error } = await query.order('created_at', {ascending:true}).limit(100);
+            
+            if (error) {
+                console.error("历史记录读取失败:", error);
+                return;
+            }
+
             const box = document.getElementById('chat-box');
             box.innerHTML = '';
             
@@ -1153,44 +1158,65 @@ function generateImperialId(zoneName, birthDate) {
 
 // 动态效期推算
 // 【核心算法】动态效期推算 - 增强健壮版
-function calculatePassportValidity(birthDateStr, currentYear) {
-    if (!birthDateStr) return "未知至未知";
-    const birthDate = new Date(birthDateStr);
-    const birthYear = birthDate.getFullYear();
-    const period = 20;
+function calculatePassportValidity(birthDateStr) {
+            if (!birthDateStr) return "未知 至 未知";
+            const birthDate = new Date(birthDateStr);
+            const birthYear = birthDate.getFullYear();
+            const period = 20;
 
-    // 获取当前系统年份（从DB传入）
-    const cy = parseInt(currentYear);
+            // 获取当前动态计算出的帝国年份（若时钟未启动则默认1012）
+            const cy = window.CURRENT_IMPERIAL_YEAR || 1012;
 
-    // 如果出生年份还没到（测试用数据），则从出生当年算起
-    if (birthYear > cy) {
-        return `${birthYear}-01-01 至 ${birthYear + period}-01-01`;
-    }
+            if (birthYear > cy) {
+                return `${birthYear}-01-01 至 ${birthYear + period}-01-01`;
+            }
 
-    // 核心逻辑：计算当前年处于哪一个20年周期
-    // (1092 - 786) = 306
-    // 306 / 20 = 15.3 -> floor 为 15
-    // 起始 = 786 + 15 * 20 = 1086
-    const elapsed = cy - birthYear;
-    const cycles = Math.floor(elapsed / period);
-    const startYear = birthYear + (cycles * period);
-    const endYear = startYear + period;
+            const elapsed = cy - birthYear;
+            const cycles = Math.floor(elapsed / period);
+            const startYear = birthYear + (cycles * period);
+            const endYear = startYear + period;
 
-    return `${startYear}-01-01 至 ${endYear}-01-01`;
-}
+            return `${startYear}-01-01 至 ${endYear}-01-01`;
+        }
 
-// 【时钟逻辑】初始化帝国时间
-function initImperialClock() {
-    // 初始日期设定为 1092年4月10日
-    let year = 1092;
-    let month = 4;
-    let day = 10;
+let IMPERIAL_YEAR_OFFSET = 934;
 
-    const display = document.getElementById('current-imperial-date');
-    
-    // 模拟时间缓慢流逝（每过一分钟现实时间，模拟帝国历法的一点点变化，或者仅做静态显示）
-    display.innerText = `${year}年${String(month).padStart(2, '0')}月${String(day).padStart(2, '0')}日`;
-}
+        // 1. 同步偏移量并启动时钟
+        async function initImperialClock() {
+            try {
+                const { data } = await supabaseClient.from('omni_config').select('value').eq('key', 'year_offset').maybeSingle();
+                if (data) {
+                    IMPERIAL_YEAR_OFFSET = parseInt(data.value);
+                }
+            } catch (err) {
+                console.warn("无法读取偏移量，使用默认值 1014");
+            }
+
+            // 每一秒更新一次显示
+            setInterval(updateImperialDisplay, 1000);
+            updateImperialDisplay(); // 立即执行一次
+        }
+
+        // 2. 格式化并显示时间
+        function updateImperialDisplay() {
+            const now = new Date();
+            
+            // 计算帝国历年份
+            const impYear = now.getFullYear() - IMPERIAL_YEAR_OFFSET;
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            const display = document.getElementById('current-imperial-date');
+            if (display) {
+                display.innerHTML = `${impYear}年${month}月${day}日 <span style="color:var(--omni-text); opacity:0.8; margin-left:10px;">${hours}:${minutes}:${seconds}</span>`;
+            }
+
+            // 更新全局缓存年份，供护照效期等逻辑实时调用
+            window.CURRENT_IMPERIAL_YEAR = impYear;
+        }
 
 
 
@@ -1233,58 +1259,56 @@ function updateRegionDropdown(zoneName) {
 }
 
 async function submitImperialAccount() {
+            // 获取输入框
+            const realName = document.getElementById('npc-real-name').value;
+            const nick = document.getElementById('npc-nick-name').value;
+            const bDate = document.getElementById('npc-birth-date').value;
+            const zone = document.getElementById('npc-zone').value;
+            const region = document.getElementById('npc-region').value;
+            const isMilitary = document.getElementById('npc-military').checked;
+            const baseCredit = document.getElementById('npc-base-credit').value;
+            const edu = document.getElementById('npc-edu').value;
+            const race = document.getElementById('npc-race').value;
+            const faith = document.getElementById('npc-faith').value;
 
-    const realName = document.getElementById('npc-real-name').value;
-    const nick = document.getElementById('npc-nick-name').value;
-    const bDate = document.getElementById('npc-birth-date').value;
-    const currentYear = GLOBAL_IMPERIAL_DATE.split('-')[0];
-    const finalValidity = calculatePassportValidity(bDate, currentYear);
-    const zone = document.getElementById('npc-zone').value;
-    const region = document.getElementById('npc-region').value;
-    const isMilitary = document.getElementById('npc-military').checked;
-    const baseCredit = document.getElementById('npc-base-credit').value;
-    const edu = document.getElementById('npc-edu').value; // 学历
-    const race = document.getElementById('npc-race').value; // 种族
-    const faith = document.getElementById('npc-faith').value; // 信仰
+            if(!realName || !zone || !region || !bDate) return alert("户籍核心信息不完整！");
 
-    if(!realName || !zone || !region) return alert("户籍核心信息不完整！");
+            // 计算算法
+            const finalCredit = calculateCredit(baseCredit, isMilitary, edu);
+            const finalValidity = calculatePassportValidity(bDate);
+            const finalId = generateImperialId(zone, bDate);
 
-    const finalCredit = calculateCredit(baseCredit, isMilitary, edu);
-    const finalId = generateImperialId(zone, bDate);
+            const insertData = {
+                login_id: "ID_" + Math.floor(Math.random()*1000000),
+                login_pass: "123456",
+                passport_id: finalId,
+                real_name: realName,
+                nickname: nick || realName,
+                race: race,
+                birth_date: bDate,
+                birth_place_zone: zone,
+                birth_place_region: region,
+                education: edu,
+                faith: faith,
+                military_service: isMilitary,
+                social_credit: finalCredit,
+                nationality: "洛萨维亚帝国",
+                is_profile_complete: true,
+                violation_count: 0,
+                validity: finalValidity, 
+                credits: 1000
+            };
 
-    // 严格检查字段名是否与数据库一致
-    const insertData = {
-        login_id: "ID_" + Math.floor(Math.random()*1000000),
-        login_pass: "123456",
-        passport_id: finalId,
-        real_name: realName,
-        nickname: nick || realName,
-        race: race,
-        birth_date: bDate,
-        birth_place_zone: zone,
-        birth_place_region: region,
-        education: edu,
-        faith: faith,
-        military_service: isMilitary,
-        social_credit: finalCredit,
-        nationality: "洛萨维亚帝国",
-        is_profile_complete: true, // NPC 默认为已锁定
-        violation_count: 0,
-        validity: finalValidity, 
-        credits: 1000
-    };
+            const { error } = await supabaseClient.from('omni_accounts').insert([insertData]);
 
-    const { data, error } = await supabaseClient.from('omni_accounts').insert([insertData]);
-
-    if(error) {
-        console.error("生成失败详情:", error);
-        alert("生成失败: " + error.message);
-    } else {
-        alert(`公民号 [${finalId}] 已成功核发！`);
-        closeDmPanel();
-        renderDmTable(); // 刷新后台列表
-    }
-}
+            if(error) {
+                alert("生成失败: " + error.message);
+            } else {
+                alert(`公民号 [${finalId}] 已核发。`);
+                closeDmPanel();
+                renderDmTable();
+            }
+        }
 
 
 
@@ -1336,24 +1360,19 @@ async function submitPlayerChanges() {
 
         // --- 2. 完善通行证渲染函数 ---
         async function loadPassportData() {
-            // 强制从数据库拉取最新数据，防止缓存问题
-            const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', currentAccount.id).single();
-            if(!data) return;
-            currentAccount = data; // 更新本地缓存
-            const currentYear = GLOBAL_IMPERIAL_DATE.split('-')[0];
-            const dynamicValidity = calculatePassportValidity(data.birth_date, currentYear);
-            document.getElementById('prof-validity').innerText = dynamicValidity;
+            // 强制从数据库拉取最新数据
+            const { data, error } = await supabaseClient.from('omni_accounts').select('*').eq('id', currentAccount.id).single();
+            if(!data || error) return;
+            currentAccount = data; // 更新缓存
 
             const setupView = document.getElementById('profile-setup-view');
             const passportView = document.getElementById('passport-display-view');
 
-            // 核心逻辑：根据档案是否锁定，切换视图
             if (data.is_profile_complete) {
-                // 档案已锁定，显示通行证
                 setupView.style.display = 'none';
                 passportView.style.display = 'block';
 
-                // 填充通行证数据
+                // 填充基本信息
                 document.getElementById('prof-avatar').src = getAvatarUrl(data.avatar_filename);
                 document.getElementById('prof-realname').innerText = data.real_name || '未登记';
                 document.getElementById('prof-nickname-val').innerText = data.nickname;
@@ -1368,13 +1387,15 @@ async function submitPlayerChanges() {
                 document.getElementById('prof-address-val').innerText = data.home_address || '未登记';
                 document.getElementById('prof-sig').innerText = data.real_name || data.nickname;
 
+                // 【核心修改】动态计算并显示当前周期的有效期
+                const dynamicVal = calculatePassportValidity(data.birth_date);
+                document.getElementById('prof-validity').innerText = dynamicVal;
 
             } else {
-                // 档案未锁定，显示登记表单
                 setupView.style.display = 'block';
                 passportView.style.display = 'none';
                 
-                // 预填充表单（方便用户修改）
+                // 预填充表单
                 document.getElementById('setup-realname-page').value = data.real_name || '';
                 document.getElementById('setup-nickname-page').value = data.nickname || '';
                 document.getElementById('setup-race-page').value = data.race || '人类';
@@ -1419,7 +1440,7 @@ async function submitPlayerChanges() {
         }
 
         async function submitInitialProfile() {
-            // 从表单获取所有数据
+            // 1. 获取所有输入值
             const realName = document.getElementById('setup-realname-page').value.trim();
             const nickname = document.getElementById('setup-nickname-page').value.trim();
             const race = document.getElementById('setup-race-page').value.trim();
@@ -1428,27 +1449,23 @@ async function submitPlayerChanges() {
             const education = document.getElementById('setup-edu-page').value;
             const address = document.getElementById('setup-address-page').value.trim();
             const military = document.getElementById('setup-military-page').checked;
-            const baseDefault = "B"; 
-            const finalCredit = calculateCredit(baseDefault, military, education);
 
-            const currentYear = GLOBAL_IMPERIAL_DATE.split('-')[0];
-            const dynamicVal = calculatePassportValidity(birthDate, currentYear);
-
-            if (!realName || !race || !birthDate) {
-                return alert("真实姓名、种族和出生日期为必填项！");
-            }
-            if (!nickname) {
-                return alert("网络标识名为必填项！");
+            // 2. 基础验证
+            if (!realName || !race || !birthDate || !nickname) {
+                return alert("所有带 * 号的项均为帝国必填项！");
             }
 
-            // 生成公民序列号（如果还没有的话）
+            // 3. 实时计算：信用等级、动态效期、公民号
+            const finalCredit = calculateCredit("B", military, education);
+            const dynamicVal = calculatePassportValidity(birthDate);
+            
             let passportId = currentAccount.passport_id;
             if (!passportId || passportId === 'PENDING...') {
-                // 假设出生语区和行政区在后台注册时已随机生成，我们从currentAccount里取
-                const zone = currentAccount.birth_place_zone || "蒂尔兰语区"; // 提供一个默认值
+                const zone = currentAccount.birth_place_zone || "蒂尔兰语区";
                 passportId = generateImperialId(zone, birthDate);
             }
 
+            // 4. 封装载荷
             const updatePayload = {
                 real_name: realName,
                 nickname: nickname,
@@ -1460,19 +1477,17 @@ async function submitPlayerChanges() {
                 home_address: address,
                 military_service: military,
                 passport_id: passportId,
-                validity: dynamicVal,
-                is_profile_complete: true // 【核心】将“开关”设置为 true，永久锁定
+                validity: dynamicVal, // 保存当前计算出的效期
+                is_profile_complete: true
             };
 
-            const { error } = await supabaseClient.from('omni_accounts')
-                .update(updatePayload)
-                .eq('id', currentAccount.id);
+            const { error } = await supabaseClient.from('omni_accounts').update(updatePayload).eq('id', currentAccount.id);
 
             if (!error) {
-                alert("公民档案登记成功！核心数据已锁定。");
-                loadPassportData(); // 重新加载页面，视图会自动切换为通行证
+                alert("帝国档案登记成功，核心数据已锁定。");
+                loadPassportData(); 
             } else {
-                alert("登记失败，系统驳回：" + error.message);
+                alert("登记失败: " + error.message);
             }
         }
 
@@ -1514,13 +1529,24 @@ async function submitPlayerChanges() {
 let GLOBAL_IMPERIAL_DATE = "1092-04-10"; // 全局缓存
 
 async function syncImperialDate() {
-    const { data } = await supabaseClient.from('omni_config').select('value').eq('key', 'current_date').single();
-    if (data) {
-        GLOBAL_IMPERIAL_DATE = data.value;
-        const [y, m, d] = data.value.split('-');
-        document.getElementById('current-imperial-date').innerText = `${y}年${m}月${d}日`;
-    }
-}
+            try {
+                const { data, error } = await supabaseClient.from('omni_config').select('value').eq('key', 'current_date').maybeSingle();
+                
+                if (data && data.value) {
+                    GLOBAL_IMPERIAL_DATE = data.value;
+                } else {
+                    console.warn("未能在数据库找到 current_date，使用保底日期。");
+                }
+
+                const [y, m, d] = GLOBAL_IMPERIAL_DATE.split('-');
+                const display = document.getElementById('current-imperial-date');
+                if (display) {
+                    display.innerText = `${y}年${m}月${d}日`;
+                }
+            } catch (err) {
+                console.error("同步日期时发生意外:", err);
+            }
+        }
 
 // 修改日期使用
 async function updateImperialDate(newDateStr) {
@@ -1574,6 +1600,24 @@ async function joinGroupById() {
         loadGroupList();
     }
 }
+
+
+// 监察官权限：重设帝国历年份偏移量
+        async function adminShiftTime() {
+            const newOffset = prompt("请输入新的年份偏移量 (当前减去多少年能得到帝国历):\n(例如：2026 - 1014 = 1012年)", IMPERIAL_YEAR_OFFSET);
+            if (!newOffset || isNaN(newOffset)) return;
+
+            const { error } = await supabaseClient.from('omni_config')
+                .update({ value: newOffset })
+                .eq('key', 'year_offset');
+
+            if (!error) {
+                alert("全境网络时钟已重置，系统正在同步新的时间线...");
+                location.reload(); // 刷新页面以应用新时间
+            } else {
+                alert("同步失败: " + error.message);
+            }
+        }
 
 
     </script>
