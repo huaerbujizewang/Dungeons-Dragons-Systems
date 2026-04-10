@@ -450,42 +450,73 @@
                 </div>
             </div>
 
+<!-- ============= 公民通行证页面  ============ -->
             <div id="page-profile" class="page">
-    <div class="passport-card">
-        <div class="passport-header">LOTHAVIA IMPERIAL CITIZEN PASSPORT</div>
-        
-        <div class="passport-main">
-            <div class="passport-biometric">
-                <div class="biometric-photo-wrap" onclick="triggerAvatarUpload()">
-                    <img id="prof-avatar" src="">
+
+                <!-- 视图一：首次档案登记表单 -->
+                <div id="profile-setup-view" style="display: none;">
+                    <div class="card">
+                        <h2 style="color:var(--omni-danger); text-align:center; margin-bottom: 10px;">首次公民档案登记</h2>
+                        <p style="text-align:center; color:#64748b; margin-top:0; margin-bottom: 30px;">
+                            请填写您的核心档案。提交后，【真实姓名】、【基因种族】、【出生日期】等关键信息将被永久锁定。
+                        </p>
+
+                        <div class="dm-form-grid">
+                            <div class="dm-form-group"><label>真实姓名 <span style="color:var(--omni-danger)">*</span> (锁定)</label><input type="text" id="setup-realname-page" class="setup-input"></div>
+                            <div class="dm-form-group"><label>网络标识名</label><input type="text" id="setup-nickname-page" class="setup-input"></div>
+                            <div class="dm-form-group"><label>基因种族 <span style="color:var(--omni-danger)">*</span> (锁定)</label><input type="text" id="setup-race-page" class="setup-input"></div>
+                            <div class="dm-form-group"><label>出生日期 <span style="color:var(--omni-danger)">*</span> (锁定)</label><input type="date" id="setup-birthdate-page" value="1060-01-01" class="setup-input" style="color-scheme: dark;"></div>
+                            <div class="dm-form-group"><label>信仰</label><input type="text" id="setup-faith-page" value="无信仰" class="setup-input"></div>
+                            <div class="dm-form-group"><label>文化程度</label>
+                                <select id="setup-edu-page" class="setup-input" style="padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                                    <option>小学</option><option>初中</option><option>高中</option><option>中专</option><option>大专</option><option selected>本科</option><option>硕士</option><option>博士</option><option>博士后</option>
+                                </select>
+                            </div>
+                            <div class="dm-form-group" style="grid-column: span 2;"><label>居住地址</label><input type="text" id="setup-address-page" class="setup-input"></div>
+                             <div class="dm-form-group" style="flex-direction:row; align-items:center; gap:10px;">
+                                <input type="checkbox" id="setup-military-page" style="width:20px; height:20px;">
+                                <label style="margin:0; color: #333;">我已履行兵役 (选择后锁定)</label>
+                            </div>
+                        </div>
+                        <button class="dm-btn-submit" onclick="submitInitialProfile()" style="margin-top:20px; background:var(--omni-danger); color:white;">确认登记并锁定核心档案</button>
+                    </div>
                 </div>
-                <input type="file" id="avatar-input" style="display:none" accept="image/*" onchange="uploadAvatar()">
-                <div style="font-size: 0.6em; color: var(--omni-green); opacity: 0.7;">[ 生物识别特征码已锁定 ]</div>
+
+                <!-- 视图二：已锁定的公民通行证 -->
+                <div id="passport-display-view">
+                    <div class="passport-card">
+                        <div class="passport-header">LOTHAVIA IMPERIAL CITIZEN PASSPORT</div>
+                        <div class="passport-main">
+                            <div class="passport-biometric">
+                                <div class="biometric-photo-wrap" onclick="triggerAvatarUpload()">
+                                    <img id="prof-avatar" src="">
+                                </div>
+                                <input type="file" id="avatar-input" style="display:none" accept="image/*" onchange="uploadAvatar()">
+                                <div style="font-size: 0.6em; color: var(--omni-green); opacity: 0.7;">[ 生物识别特征码已锁定 ]</div>
+                                <button onclick="openPlayerEditModal()" style="margin-top:20px; width:100%; padding:8px; background:transparent; border:1px solid var(--omni-green); color:var(--omni-green); cursor:pointer; font-size:0.8em;">修改公民档案</button>
+                            </div>
+                            <div class="passport-info-grid" id="prof-display-grid">
+                                <div class="info-item"><label>真名 (仅个人可见)</label><span id="prof-realname">******</span></div>
+                                <div class="info-item"><label>网络标识名 (Nickname)</label><span id="prof-nickname-val">--</span></div>
+                                <div class="info-item"><label>公民序列号 (Passport ID)</label><span id="prof-passport-id" style="color:var(--omni-green-bright); font-family:monospace;">--</span></div>
+                                <div class="info-item"><label>出生日期</label><span id="prof-birth">--</span></div>
+                                <div class="info-item"><label>基因种族</label><span id="prof-race-val">--</span></div>
+                                <div class="info-item"><label>信仰</label><span id="prof-faith-val">--</span></div>
+                                <div class="info-item"><label>国籍</label><span id="prof-nationality-val">--</span></div>
+                                <div class="info-item"><label>兵役状态</label><span id="prof-military-val">--</span></div>
+                                <div class="info-item"><label>文化程度</label><span id="prof-edu-val">--</span></div>
+                                <div class="info-item"><label>社会信用等级</label><span id="prof-credit-val" style="font-weight:bold; color:var(--omni-green-bright);">--</span></div>
+                                <div class="info-item" style="grid-column: span 2;"><label>居住地址</label><span id="prof-address-val">--</span></div>
+                            </div>
+                        </div>
+                        <div class="passport-footer">
+                            <div class="info-item"><label>有效期限</label><span id="prof-validity">1092-05-21 至 1112-05-21</span></div>
+                            <div class="signature-font" id="prof-sig">Signature</div>
+                        </div>
+                    </div>
+                </div>
                 
-                <button onclick="openPlayerEditModal()" style="margin-top:20px; width:100%; padding:8px; background:transparent; border:1px solid var(--omni-green); color:var(--omni-green); cursor:pointer; font-size:0.8em;">修改公民档案</button>
             </div>
-
-            <div class="passport-info-grid" id="prof-display-grid">
-                <div class="info-item"><label>真名 (仅个人可见)</label><span id="prof-realname">******</span></div>
-                <div class="info-item"><label>网络标识名 (Nickname)</label><span id="prof-nickname-val">--</span></div>
-                <div class="info-item"><label>公民序列号 (Passport ID)</label><span id="prof-passport-id" style="color:var(--omni-green-bright); font-family:monospace;">--</span></div>
-                <div class="info-item"><label>出生日期</label><span id="prof-birth">--</span></div>
-                <div class="info-item"><label>基因种族</label><span id="prof-race-val">--</span></div>
-                <div class="info-item"><label>信仰</label><span id="prof-faith-val">--</span></div>
-                <div class="info-item"><label>国籍</label><span id="prof-nationality-val">--</span></div>
-                <div class="info-item"><label>兵役状态</label><span id="prof-military-val">--</span></div>
-                <div class="info-item"><label>文化程度</label><span id="prof-edu-val">--</span></div>
-                <div class="info-item"><label>社会信用等级</label><span id="prof-credit-val" style="font-weight:bold; color:var(--omni-green-bright);">--</span></div>
-                <div class="info-item" style="grid-column: span 2;"><label>居住地址</label><span id="prof-address-val">--</span></div>
-            </div>
-        </div>
-
-        <div class="passport-footer">
-            <div class="info-item"><label>有效期限</label><span id="prof-validity">1092-05-21 至 1112-05-21</span></div>
-            <div class="signature-font" id="prof-sig">Signature</div>
-        </div>
-    </div>
-</div>
 
 <div class="dm-modal-overlay" id="player-edit-modal">
     <div class="dm-modal" style="width:500px;">
@@ -525,6 +556,10 @@
         </div>
     </div>
 </div>
+
+
+
+
         </main>
     </div>
 
@@ -591,13 +626,12 @@
                 overlay.style.display = 'none';
             }
             
-            
-            // 启动功能
-            openPublicChat(); // 默认进入大厅
-            subscribe();
+            // 启动核心功能
+            openPublicChat(); 
+            if (!currentRealtimeChannel) subscribe(); 
             updateWallet();
-            
             loadContactList();
+
             if(currentAccount.is_dm) {
                 document.getElementById('dm-admin-trigger').style.display = 'flex';
             }
@@ -1150,29 +1184,53 @@ async function submitPlayerChanges() {
     }
 }
 
-// --- 2. 完善通行证渲染函数 ---
-async function loadPassportData() {
-    // 强制拉取最新数据
-    const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', currentAccount.id).single();
-    if(!data) return;
+        // --- 2. 完善通行证渲染函数 ---
+        async function loadPassportData() {
+            // 强制从数据库拉取最新数据，防止缓存问题
+            const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', currentAccount.id).single();
+            if(!data) return;
+            currentAccount = data; // 更新本地缓存
 
-    // 填充头像
-    document.getElementById('prof-avatar').src = getAvatarUrl(data.avatar_filename);
-    
-    // 填充各项数据
-    document.getElementById('prof-realname').innerText = data.real_name || '未登记';
-    document.getElementById('prof-nickname-val').innerText = data.nickname;
-    document.getElementById('prof-passport-id').innerText = data.passport_id || 'PENDING...';
-    document.getElementById('prof-birth').innerText = data.birth_date;
-    document.getElementById('prof-race-val').innerText = data.race;
-    document.getElementById('prof-faith-val').innerText = data.faith || '无信仰';
-    document.getElementById('prof-nationality-val').innerText = data.nationality;
-    document.getElementById('prof-military-val').innerText = data.military_service ? '已服役' : '未服役';
-    document.getElementById('prof-edu-val').innerText = data.education || '本科';
-    document.getElementById('prof-credit-val').innerText = data.social_credit || 'B';
-    document.getElementById('prof-address-val').innerText = data.home_address || '未登记';
-    document.getElementById('prof-sig').innerText = data.real_name || data.nickname;
-}
+            const setupView = document.getElementById('profile-setup-view');
+            const passportView = document.getElementById('passport-display-view');
+
+            // 核心逻辑：根据档案是否锁定，切换视图
+            if (data.is_profile_complete) {
+                // 档案已锁定，显示通行证
+                setupView.style.display = 'none';
+                passportView.style.display = 'block';
+
+                // 填充通行证数据
+                document.getElementById('prof-avatar').src = getAvatarUrl(data.avatar_filename);
+                document.getElementById('prof-realname').innerText = data.real_name || '未登记';
+                document.getElementById('prof-nickname-val').innerText = data.nickname;
+                document.getElementById('prof-passport-id').innerText = data.passport_id || 'PENDING...';
+                document.getElementById('prof-birth').innerText = data.birth_date;
+                document.getElementById('prof-race-val').innerText = data.race;
+                document.getElementById('prof-faith-val').innerText = data.faith || '无信仰';
+                document.getElementById('prof-nationality-val').innerText = data.nationality;
+                document.getElementById('prof-military-val').innerText = data.military_service ? '已服役' : '未服役';
+                document.getElementById('prof-edu-val').innerText = data.education || '本科';
+                document.getElementById('prof-credit-val').innerText = data.social_credit || 'B';
+                document.getElementById('prof-address-val').innerText = data.home_address || '未登记';
+                document.getElementById('prof-sig').innerText = data.real_name || data.nickname;
+
+            } else {
+                // 档案未锁定，显示登记表单
+                setupView.style.display = 'block';
+                passportView.style.display = 'none';
+                
+                // 预填充表单（方便用户修改）
+                document.getElementById('setup-realname-page').value = data.real_name || '';
+                document.getElementById('setup-nickname-page').value = data.nickname || '';
+                document.getElementById('setup-race-page').value = data.race || '人类';
+                document.getElementById('setup-birthdate-page').value = data.birth_date || '1060-01-01';
+                document.getElementById('setup-faith-page').value = data.faith || '无信仰';
+                document.getElementById('setup-edu-page').value = data.education || '本科';
+                document.getElementById('setup-address-page').value = data.home_address || '';
+                document.getElementById('setup-military-page').checked = data.military_service || false;
+            }
+        }
 
         function triggerAvatarUpload() {
             document.getElementById('avatar-input').click();
@@ -1204,6 +1262,57 @@ async function loadPassportData() {
             return str.replace(/[&<>'"]/g, tag => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             }[tag] || tag));
+        }
+
+        async function submitInitialProfile() {
+            // 从表单获取所有数据
+            const realName = document.getElementById('setup-realname-page').value.trim();
+            const nickname = document.getElementById('setup-nickname-page').value.trim();
+            const race = document.getElementById('setup-race-page').value.trim();
+            const birthDate = document.getElementById('setup-birthdate-page').value;
+            const faith = document.getElementById('setup-faith-page').value.trim();
+            const education = document.getElementById('setup-edu-page').value;
+            const address = document.getElementById('setup-address-page').value.trim();
+            const military = document.getElementById('setup-military-page').checked;
+
+            if (!realName || !race || !birthDate) {
+                return alert("真实姓名、种族和出生日期为必填项！");
+            }
+            if (!nickname) {
+                return alert("网络标识名为必填项！");
+            }
+
+            // 生成公民序列号（如果还没有的话）
+            let passportId = currentAccount.passport_id;
+            if (!passportId || passportId === 'PENDING...') {
+                // 假设出生语区和行政区在后台注册时已随机生成，我们从currentAccount里取
+                const zone = currentAccount.birth_place_zone || "蒂尔兰语区"; // 提供一个默认值
+                passportId = generateImperialId(zone, birthDate);
+            }
+
+            const updatePayload = {
+                real_name: realName,
+                nickname: nickname,
+                race: race,
+                birth_date: birthDate,
+                faith: faith,
+                education: education,
+                home_address: address,
+                military_service: military,
+                passport_id: passportId,
+                is_profile_complete: true // 【核心】将“开关”设置为 true，永久锁定
+            };
+
+            const { error } = await supabaseClient.from('omni_accounts')
+                .update(updatePayload)
+                .eq('id', currentAccount.id);
+
+            if (!error) {
+                alert("公民档案登记成功！核心数据已锁定。");
+                loadPassportData(); // 重新加载页面，视图会自动切换为通行证
+            } else {
+                alert("登记失败，系统驳回：" + error.message);
+            }
         }
 
 
