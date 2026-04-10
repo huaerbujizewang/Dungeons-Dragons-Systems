@@ -319,7 +319,7 @@
             const { data, error } = await supabase.from('profiles').select('*').eq('id', viewingUserId).single();
             if (data) {
                 myProfile = data;
-                document.getElementById('display-user-name').innerText = data.name;
+                document.getElementById('display-user-name').innerText = data.display_name;
                 document.getElementById('display-user-race').innerText = data.race || "未识别";
                 document.getElementById('omni-credits-display').innerText = (data.omni_credits || 0).toLocaleString('en-US', {minimumFractionDigits: 2});
 
@@ -376,7 +376,7 @@
             }
 
             // 确定发送者身份
-            let sName = myProfile.name;
+            let sName = myProfile.display_name;
             let sRace = myProfile.race;
             let sAvatar = "#3498db"; // 默认玩家蓝
 
@@ -407,7 +407,7 @@
             
             // 逻辑判定：只有当发送者 UID 匹配且名字也匹配（非NPC模式）时，才显示在右侧
             const isSelf = msg.sender_uid === viewingUserId;
-            const isNpcMode = isSelf && viewingUserId === DM_UID && msg.sender_name !== myProfile.name;
+            const isNpcMode = isSelf && viewingUserId === DM_UID && msg.sender_name !== myProfile.display_name;
             const alignClass = (isSelf && !isNpcMode) ? 'self' : '';
 
             const bubbleStyle = msg.is_blocked ? 'background: #fdedec; color: #333; border: 1px solid var(--omni-danger);' : '';
