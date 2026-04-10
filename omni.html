@@ -437,10 +437,10 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>网名</th>
-                                        <th>种族</th>
-                                        <th>修改头像</th>
-                                        <th>操作</th>
+                                        <th>公民实体</th>
+                                        <th>社会信用等级</th>
+                                        <th>可用资产</th>
+                                        <th>系统干预</th>
                                     </tr>
                                 </thead>
                                 <tbody id="dm-account-table-body">
@@ -1099,37 +1099,82 @@
             }
         }
 
-        // --- 核心功能 2：后台表格渲染与直接干预 ---
+        // --- 更新公民状态 ---
+        async function adminUpdateUser(accId) {
+            const newCredit = document.getElementById(`edit-credit-${accId}`).value;
+            const newBalance = parseFloat(document.getElementById(`edit-balance-${accId}`).value);
+
+            if (isNaN(newBalance)) return alert("资产数值必须为数字。");
+
+            const { error } = await supabaseClient
+                .from('omni_accounts')
+                .update({ 
+                    social_credit: newCredit, 
+                    credits: newBalance 
+                })
+                .eq('id', accId);
+
+            if (!error) {
+                alert(`公民 #${accId} 的档案已强制重写。`);
+                renderDmTable(); // 刷新表格
+        
+                // 如果修改的是当前接管的账号，同步更新缓存
+                if (currentAccount.id === accId) {
+                    currentAccount.social_credit = newCredit;
+                    currentAccount.credits = newBalance;
+                    updateWallet();
+                    if (document.getElementById('page-profile').classList.contains('active')) {
+                        loadPassportData();
+                    }
+                }
+            } else {
+                alert("干预失败：" + error.message);
+            }
+        }
+
+        // --- 重新编写的后台表格渲染 ---
         async function renderDmTable() {
             const tbody = document.getElementById('dm-account-table-body');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">正在读取数据库...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">正在扫描全境公民档案...</td></tr>';
 
             const { data } = await supabaseClient.from('omni_accounts').select('*').order('id', {ascending: true});
             if(!data) return;
 
             let html = '';
             data.forEach(acc => {
-                if (acc.login_id === 'DM') return; // 隐藏系统级根账号
+                if (acc.login_id === 'DM') return; // 隐藏系统根账号
+
+                // 生成等级下拉框
+                let creditOptions = '';
+                CREDIT_GRADES.forEach(grade => {
+                    creditOptions += `<option value="${grade}" ${acc.social_credit === grade ? 'selected' : ''}>${grade}</option>`;
+                });
+
                 html += `
-                    <tr>
-                        <td style="color:#f39c12">#${acc.id}</td>
-                        <td><strong>${acc.nickname}</strong></td>
-                        <td>${acc.race || '--'}</td>
+                    <tr style="border-bottom: 1px solid #334155;">
+                        <td style="color:#f39c12; font-family:monospace;">#${acc.id}</td>
+                        <td><strong>${acc.nickname}</strong><br><small style="color:#64748b">${acc.real_name || ''}</small></td>
+                
                         <td>
-                            <div style="display:flex; gap:5px;">
-                                <input type="text" id="edit-avatar-${acc.id}" value="${acc.avatar_filename || ''}">
-                                <button class="action-btn action-save" onclick="updateAvatar(${acc.id})">保存</button>
-                            </div>
+                            <select id="edit-credit-${acc.id}" style="padding:5px; background:#0f172a; color:var(--omni-green); border:1px solid #334155;">
+                                ${creditOptions}
+                            </select>
                         </td>
+
                         <td>
-                            <button class="action-btn action-hijack" onclick="takeoverAccount(${acc.id})">接管身份</button>
+                            <input type="number" id="edit-balance-${acc.id}" value="${acc.credits}" 
+                                   style="width:80px; padding:5px; background:#0f172a; color:white; border:1px solid #334155;">
+                        </td>
+
+                        <td>
+                            <button class="action-btn action-save" onclick="adminUpdateUser(${acc.id})" style="margin-bottom:5px;">应用</button>
+                            <button class="action-btn action-hijack" onclick="takeoverAccount(${acc.id})">接管</button>
                         </td>
                     </tr>
                 `;
             });
             tbody.innerHTML = html;
         }
-
         // --- 核心功能 3：不经弹窗直接修改头像 ---
         async function updateAvatar(accId) {
             const newAvatar = document.getElementById(`edit-avatar-${accId}`).value.trim();
