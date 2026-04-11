@@ -1792,14 +1792,14 @@ function renderMall() {
         const isLocked = (userCreditIdx < itemCreditIdx) && itemCreditIdx !== -1;
 
         // --- 核心改动：动态生成按钮文本和价格显示 ---
-        let actionText = '申请配给';
+        let actionText = '购买配给';
         let priceSuffix = '';
 
         if (item.category === 'sub') {
             actionText = '点击订阅';
             priceSuffix = ' / 月'; // 订阅制增加后缀
         } else if (item.category === 'gear') {
-            actionText = '买断硬件';
+            actionText = '购买配给';
         } else if (item.category === 'ticket') {
             actionText = '申请通行';
         }
