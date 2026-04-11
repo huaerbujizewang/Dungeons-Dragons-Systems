@@ -565,7 +565,7 @@
                 </div>
 
                 <div class="card" style="margin-top:20px;">
-                   <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px;">📦 公民资产清单 (Inventory)</h3>
+                   <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px;">📦 公民资产清单</h3>
                    <div id="inventory-container" class="inv-list">
                        </div>
                </div>
@@ -1879,11 +1879,12 @@ async function purchaseItem(itemId, price, isLocked) {
     loadInventory();
 }
 
-// 2. 升级版：加载背包（带过期判定）
+// 2. 加载背包
 async function loadInventory() {
     const container = document.getElementById('inventory-container');
     if (!container) return;
 
+    // 拉取玩家所有资产
     const { data } = await supabaseClient
         .from('omni_inventory')
         .select('*, omni_items(name, category, price)')
@@ -1891,54 +1892,97 @@ async function loadInventory() {
 
     container.innerHTML = '';
     if (!data || data.length === 0) {
-        container.innerHTML = '<div style="color:#94a3b8; padding: 20px; font-size:0.9em;">- 暂无个人资产或生效中的订阅 -</div>';
+        container.innerHTML = '<div style="color:#94a3b8; padding: 20px; font-size:0.9em; text-align:center;">- 档案显示：该公民名下暂无任何资产 -</div>';
         return;
     }
 
     const now = new Date();
 
+    // 1. 初始化四个分类的容器
+    const categories = {
+        ticket: { title: '🛂 帝国证件与许可', html: '' },
+        sub:    { title: '🔄 现行特许协议', html: '' },
+        gear:   { title: '⚙️ 实体资产与武装', html: '' },
+        food:   { title: '🍔 生存与消耗配给', html: '' }
+    };
+
+    // 2. 遍历数据并分类打包
     data.forEach(row => {
         const item = row.omni_items;
-        let statusHtml = '';
-        let isExpired = false;
+        if (!item) return;
+        const cat = item.category;
 
-        // 处理订阅制装备的过期逻辑
-        if (item.category === 'sub' && row.expires_at) {
-            const expDate = new Date(row.expires_at);
-            isExpired = now > expDate;
+        let rightSideHtml = '';
+        let rowStyle = '';
 
-            // 计算剩余天数
-            const diffTime = expDate - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        // 处理订阅的过期逻辑
+        if (cat === 'sub') {
+            if (row.expires_at) {
+                const expDate = new Date(row.expires_at);
+                const isExpired = now > expDate;
+                const diffTime = expDate - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            if (isExpired) {
-                statusHtml = `
-                    <div style="font-size:0.7em; color:var(--omni-danger); font-weight:bold; margin-top:5px;">
-                        ⚠️ 服务已欠费终止
-                    </div>
-                    <button onclick="purchaseItem(${row.item_id}, ${item.price}, false)" style="margin-top:8px; padding:4px 8px; background:var(--omni-danger); color:white; border:none; border-radius:4px; font-size:0.75em; cursor:pointer;">
-                        立即续费 (${item.price} CR)
-                    </button>
-                `;
+                if (isExpired) {
+                    rowStyle = 'border-left-color: var(--omni-danger); filter: grayscale(0.8); opacity: 0.8;';
+                    rightSideHtml = `
+                        <div style="text-align:right;">
+                            <div style="font-size:0.7em; color:var(--omni-danger); font-weight:bold; margin-bottom:5px;">⚠️ 协议已欠费终止</div>
+                            <button onclick="purchaseItem(${row.item_id}, ${item.price}, false)" style="padding:4px 8px; background:var(--omni-danger); color:white; border:none; border-radius:4px; font-size:0.75em; cursor:pointer;">
+                                立即续费
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    rightSideHtml = `<div style="font-size:0.75em; color:var(--omni-green); font-weight:bold;">✓ 授权中 (余 ${diffDays} 天)</div>`;
+                }
             } else {
-                statusHtml = `<div style="font-size:0.7em; color:var(--omni-green); margin-top:5px;">✓ 授权生效中 (剩余 ${diffDays} 天)</div>`;
+                rightSideHtml = `<div style="font-size:0.75em; color:var(--omni-green); font-weight:bold;">✓ 终身授权</div>`;
             }
-        } else {
-            // 普通物品显示数量
-            statusHtml = `<div style="font-family:monospace; font-weight:bold; color:var(--omni-green);">QTY: ${row.quantity}</div>`;
+        } 
+        // 处理证件 (不显示数量，只显示持有状态)
+        else if (cat === 'ticket') {
+            rightSideHtml = `<div style="font-family:monospace; font-weight:bold; color:var(--omni-green);">[已核发]</div>`;
+        } 
+        // 处理食物和装备 (显示堆叠数量)
+        else {
+            rightSideHtml = `<div style="font-family:monospace; font-weight:bold; color:var(--omni-text); font-size:1.1em;">QTY: <span style="color:var(--omni-green)">${row.quantity}</span></div>`;
         }
 
-        const html = `
-            <div class="inv-row" style="${isExpired ? 'border-left-color: var(--omni-danger); filter: grayscale(0.8); opacity: 0.8;' : ''}">
+        // 构建单个物品的 HTML
+        const itemHtml = `
+            <div class="inv-row" style="${rowStyle}">
                 <div style="display:flex; flex-direction:column; flex: 1;">
-                    <span style="font-weight:bold; color:var(--omni-text);">${item.name}</span>
-                    <span style="font-size:0.7em; color:#94a3b8; text-transform:uppercase;">${item.category}</span>
-                    ${statusHtml}
+                    <span style="font-weight:bold; color:var(--omni-text); letter-spacing:0.5px;">${item.name}</span>
                 </div>
+                ${rightSideHtml}
             </div>
         `;
-        container.insertAdjacentHTML('beforeend', html);
+
+        // 塞入对应分类
+        if (categories[cat]) {
+            categories[cat].html += itemHtml;
+        }
     });
+
+    // 3. 将有内容的分类渲染到页面上
+    let finalHtml = '';
+    for (const key in categories) {
+        if (categories[key].html !== '') {
+            finalHtml += `
+                <div style="margin-top: 15px; margin-bottom: 5px;">
+                    <div style="font-size: 0.8em; color: #64748b; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">
+                        ${categories[key].title}
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        ${categories[key].html}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    container.innerHTML = finalHtml;
 }
 
 
