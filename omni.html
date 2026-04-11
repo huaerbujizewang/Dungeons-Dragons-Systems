@@ -1765,13 +1765,22 @@ async function loadMallItems() {
 // 2. 渲染商城渲染引擎
 function renderMall() {
     const container = document.getElementById('mall-container');
-    const search = document.getElementById('mall-search').value.trim().toLowerCase();
-    const cat = document.getElementById('mall-cat-filter').value;
+    if (!container) return;
+
+    const searchInput = document.getElementById('mall-search');
+    const search = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    
+    const catFilter = document.getElementById('mall-cat-filter');
+    const cat = catFilter ? catFilter.value : "all";
     
     container.innerHTML = '';
 
-    // 获取当前用户信用等级的权重索引
     const userCreditIdx = CREDIT_GRADES.indexOf(currentAccount.social_credit);
+
+    if (mallItems.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8; padding:20px;">全境物资匮乏，暂无商品供应。</div>';
+        return;
+    }
 
     mallItems.forEach(item => {
         // 过滤逻辑
@@ -1780,17 +1789,38 @@ function renderMall() {
 
         // 信用等级判定
         const itemCreditIdx = CREDIT_GRADES.indexOf(item.min_credit);
-        const isLocked = userCreditIdx < itemCreditIdx;
+        const isLocked = (userCreditIdx < itemCreditIdx) && itemCreditIdx !== -1;
+
+        // --- 核心改动：动态生成按钮文本和价格显示 ---
+        let actionText = '申请配给';
+        let priceSuffix = '';
+
+        if (item.category === 'sub') {
+            actionText = '点击订阅';
+            priceSuffix = ' / 月'; // 订阅制增加后缀
+        } else if (item.category === 'gear') {
+            actionText = '买断硬件';
+        } else if (item.category === 'ticket') {
+            actionText = '申请通行';
+        }
+
+        const btnText = isLocked ? '权限锁定' : actionText;
 
         const html = `
             <div class="item-card ${isLocked ? 'item-locked' : ''}">
                 ${isLocked ? `<div class="lock-tag">权限不足 [需 ${item.min_credit}]</div>` : ''}
-                <div style="font-size: 0.75em; color: #94a3b8; text-transform: uppercase;">Category: ${item.category}</div>
+                <div style="font-size: 0.7em; color: #94a3b8; text-transform: uppercase;">TYPE: ${item.category}</div>
                 <h4 style="margin: 8px 0; letter-spacing:1px;">${item.name}</h4>
-                <p style="font-size: 0.85em; color: #64748b; min-height: 40px;">${item.description}</p>
+                <p style="font-size: 0.85em; color: #64748b; min-height: 40px; line-height:1.4;">${item.description}</p>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-                    <strong style="color: var(--omni-green); font-size: 1.1em;">${item.price} CR</strong>
-                    <button class="buy-btn" onclick="purchaseItem(${item.id}, ${item.price}, ${isLocked})">购买配给</button>
+                    <strong style="color: var(--omni-green); font-size: 1.1em;">
+                        ${item.price} CR<span style="font-size:0.7em; color:#64748b;">${priceSuffix}</span>
+                    </strong>
+                    <button class="buy-btn" 
+                        onclick="purchaseItem(${item.id}, ${item.price}, ${isLocked})"
+                        style="${isLocked ? 'background:#cbd5e1; cursor:not-allowed;' : ''}">
+                        ${btnText}
+                    </button>
                 </div>
             </div>
         `;
