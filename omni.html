@@ -357,6 +357,7 @@
         <nav class="sidebar">
             <div class="sidebar-header">🌐 OMNI</div>
             <div class="nav-item active" onclick="switchPage('chat', this)">💬 枢纽通讯</div>
+            <div class="nav-item" onclick="switchPage('jobs', this)">🏢 劳力调配</div>
             <div class="nav-item" onclick="switchPage('life', this)">🍔 帝国优选</div>
             <div class="nav-item" onclick="switchPage('wallet', this)">💳 资产结算</div>
             <div class="nav-item" onclick="switchPage('profile', this)">🛂 公民通行证</div>
@@ -472,6 +473,16 @@
                             <button onclick="sendMsg()" style="padding:10px 25px; background:var(--omni-green); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">发送</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div id="page-jobs" class="page">
+                <div class="card">
+                    <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px; margin-bottom: 20px;">
+                        💼 帝国全境职位实时索引
+                    </h3>
+                    <div id="job-list-container" style="display: flex; flex-direction: column; gap: 15px;">
+                        </div>
                 </div>
             </div>
 
@@ -670,7 +681,7 @@
             window.location.href = 'index.html'; // 绝对路径返回主系统
         }
 
-        function enterApp() {
+        async function enterApp() {
             const overlay = document.getElementById('login-overlay');
             const card = document.querySelector('.login-card');
             if(card && overlay) {
@@ -688,6 +699,8 @@
             loadContactList();
             loadMallItems(); 
             loadInventory(); 
+            await autoProcessBureaucracy();
+            await processEmploymentRewards(); // 结算工资
 
             if(currentAccount.is_dm) {
                 document.getElementById('dm-admin-trigger').style.display = 'flex';
@@ -701,6 +714,9 @@
             el.classList.add('active');
             if(pageId === 'wallet') updateWallet();
             if(pageId === 'profile') loadPassportData(); 
+            if(pageId === 'jobs') loadJobs(); // 进入页面时立即拉取职位列表
+            if(pageId === 'wallet') updateWallet();
+            if(pageId === 'profile') loadPassportData();
         }
 
         // --- 社交列表导航 ---
@@ -1983,6 +1999,191 @@ async function loadInventory() {
     }
 
     container.innerHTML = finalHtml;
+}
+
+
+let allJobs = [];
+
+// 1. 加载职位列表
+async function loadJobs() {
+    const { data } = await supabaseClient.from('omni_jobs').select('*');
+    allJobs = data || [];
+    renderJobs();
+}
+
+// 2. 渲染职位卡片
+function renderJobs() {
+    const container = document.getElementById('job-list-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    allJobs.forEach(job => {
+        
+        // --- 新增逻辑：将 ID 字符串翻译成证件名称 ---
+        let permitDisplay = "无";
+        if (job.provided_item_ids && job.provided_item_ids.trim() !== '') {
+            // 把 "98,193" 切割成数组 [98, 193]
+            const ids = job.provided_item_ids.split(',').map(id => parseInt(id.trim()));
+            
+            // 去 mallItems 字典里找对应的名字
+            const names = ids.map(id => {
+                const item = mallItems.find(i => i.id === id);
+                return item ? `《${item.name}》` : `[未知授权]`;
+            });
+            
+            permitDisplay = "核发 " + names.join('、');
+        }
+        // ------------------------------------------
+
+        const html = `
+            <div class="card" style="border: 1px solid #e2e8f0; margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div style="font-size: 0.7em; color: #64748b; font-weight: bold;">[ ${job.employer} ]</div>
+                        <h4 style="margin: 5px 0;">${job.title}</h4>
+                        <div style="font-size: 0.85em; color: #1e293b;">坐标：${job.region} - ${job.sub_region} - ${job.specific_location}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: var(--omni-green); font-weight: bold;">${job.salary} CR / 月</div>
+                        <div style="font-size: 0.75em; color: #64748b;">周期：${job.promotion_interval || '--'}月/信用+1</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; padding: 10px; background: #f8fafc; font-size: 0.8em; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>门槛：信用 ${job.min_credit} / 学历 ${job.required_edu}</div>
+                    <div>勤务：${job.work_schedule}</div>
+                    <div style="grid-column: span 2; color: #64748b;">授权：${permitDisplay}</div> 
+                </div>
+                <button onclick="applyForJob(${job.id})" style="width: 100%; margin-top: 10px; padding: 8px; background: var(--omni-text); color: white; border: none; cursor: pointer;">
+                    提交劳动力调配申请
+                </button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+// 3. 核心：申请逻辑
+async function applyForJob(jobId) {
+    const job = allJobs.find(j => j.id === jobId);
+    if (!job) return;
+    
+    // 基础门槛校验 (信用等级 & 学历)
+    const creditIdx = CREDIT_GRADES.indexOf(currentAccount.social_credit);
+    const minCreditIdx = CREDIT_GRADES.indexOf(job.min_credit);
+    const eduWeight = { "初中": 1, "大专": 2, "本科": 3, "硕士": 4, "博士": 5 };
+    
+    if (creditIdx < minCreditIdx || (eduWeight[currentAccount.education] || 0) < (eduWeight[job.required_edu] || 0)) {
+        return alert("申请驳回：您的公民档案不符合该职位的最低准入标准。");
+    }
+
+    // 检查是否已有工作或正在审批中
+    const { data: existing } = await supabaseClient.from('omni_user_jobs').select('*').eq('account_id', currentAccount.id).maybeSingle();
+    if (existing) {
+        if (existing.status === 'approved') return alert("操作受限：您已在帝国劳动力池中拥有一份正式编制，请先离职。");
+        if (existing.status === 'pending') return alert("您的上一份申请正在政审序列中，请勿重复提交。");
+    }
+
+    // 写入申请，记录当前时间
+    const { error } = await supabaseClient.from('omni_user_jobs').upsert([
+        { 
+            account_id: currentAccount.id, 
+            job_id: jobId, 
+            status: 'pending', 
+            apply_time: new Date().toISOString() 
+        }
+    ]);
+
+    if (!error) {
+        alert("【政审开始】申请已提交帝国社会治理数据库。");
+    }
+}
+
+
+async function autoProcessBureaucracy() {
+    // 1. 查找当前公民是否有处于“审批中”的申请
+    const { data: work, error } = await supabaseClient
+        .from('omni_user_jobs')
+        .select('*, omni_jobs(*)')
+        .eq('account_id', currentAccount.id)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+    if (!work || error) return; // 没有申请在排队，直接退出
+
+    // 2. 计算时间差
+    const applyTime = new Date(work.apply_time);
+    const now = new Date();
+    const waitTimeHours = (now - applyTime) / (1000 * 60 * 60); 
+
+    // 3. 判定：如果不满 3 小时，保持静默，什么都不做
+    if (waitTimeHours < 3) return;
+
+    // 4. 时间已满 3 小时，执行“伪审批”逻辑
+    // 随机概率判定 (50%)
+    const isApproved = Math.random() > 0.5;
+
+    if (isApproved) {
+        // --- 审批通过逻辑 ---
+        
+        // A. 自动发放职位关联的许可证
+        if (work.omni_jobs.provided_item_ids && work.omni_jobs.provided_item_ids.trim() !== "") {
+            const itemIds = work.omni_jobs.provided_item_ids.split(',').map(id => parseInt(id.trim()));
+            for (const itemId of itemIds) {
+                // 直接插入背包，利用数据库的 ID 关联你已录入的证件
+                await supabaseClient.from('omni_inventory').insert([
+                    { account_id: currentAccount.id, item_id: itemId, quantity: 1 }
+                ]);
+            }
+        }
+
+        // B. 更新职历状态为“已录取”
+        await supabaseClient.from('omni_user_jobs').update({
+            status: 'approved',
+            hire_date: now.toISOString(),
+            last_pay_date: now.toISOString()
+        }).eq('id', work.id);
+
+        // 提示公民（模拟终端收到的系统邮件回执）
+        alert("【系统通知】您的劳动力调配申请（政审编号：OMNI-RT-" + work.id + "）已通过审核。相关许可已下发。");
+
+    } else {
+        // --- 审批拒绝逻辑 ---
+        await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
+        
+        alert("【系统通知】您的劳动力调配申请已被驳回。原因：档案匹配度不足或名额已满。");
+    }
+
+    // 更新完成后刷新 UI
+    if (typeof loadInventory === 'function') loadInventory();
+}
+
+// 4. 自动结转：工资与信用 (建议放在 enterApp 中调用)
+async function processEmploymentRewards() {
+    const { data: work } = await supabaseClient
+        .from('omni_user_jobs')
+        .select('*, omni_jobs(*)')
+        .eq('account_id', currentAccount.id)
+        .eq('status', 'approved')
+        .maybeSingle();
+
+    if (!work) return;
+
+    const job = work.omni_jobs;
+    const now = new Date();
+    const lastPay = new Date(work.last_pay_date);
+    const hireDate = new Date(work.hire_date);
+
+    // 计算过去了多少个月
+    const monthsDiff = (now.getFullYear() - lastPay.getFullYear()) * 12 + (now.getMonth() - lastPay.getMonth());
+
+    if (monthsDiff >= 1) {
+        // 发工资
+        const totalPay = monthsDiff * job.salary;
+        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: totalPay }); // 需要在SQL定义自增函数
+        await supabaseClient.from('omni_user_jobs').update({ last_pay_date: now.toISOString() }).eq('id', work.id);
+        console.log(`帝国财务部：已发放 ${totalPay} CR 工资。`);
+    }
+    
 }
 
 
