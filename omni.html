@@ -1971,106 +1971,115 @@ async function loadInventory() {
 let allJobs = [];
 
 // 1. 加载职位列表
-// --- 增强后的 loadJobs：根据状态决定显示哪个视图 ---
 async function loadJobs() {
-    // 1. 检查公民是否已经有工作（在职 或 正在走离职审批）
+    // 1. 检查公民是否已有记录 (无论是 入职中、离职中、还是 申请中)
     const { data: myJob } = await supabaseClient
         .from('omni_user_jobs')
         .select('*, omni_jobs(*)')
         .eq('account_id', currentAccount.id)
-        .in('status', ['approved', 'resigning'])
+        .in('status', ['approved', 'resigning', 'pending']) // 加入 pending 判定
         .maybeSingle();
 
     if (myJob) {
-        // 有工作：隐藏市场，显示个人档案
+        // 只要有记录，就隐藏市场，显示“我的档案/申请”视图
         document.getElementById('job-market-view').style.display = 'none';
         document.getElementById('my-job-view').style.display = 'block';
-        renderMyJob(myJob); // 调用辅助渲染函数
+        renderMyJob(myJob); 
     } else {
-        // 没工作：显示市场，拉取公开职位
+        // 只有完全没记录时，才显示人才市场
         document.getElementById('job-market-view').style.display = 'block';
         document.getElementById('my-job-view').style.display = 'none';
 
-        // 只拉取对平民公开的职位 (is_public = true)
         const { data } = await supabaseClient.from('omni_jobs').select('*');
         allJobs = data || [];
-        renderJobs(); // 依然使用你原有的 renderJobs
+        renderJobs();
     }
 }
 
 // --- 渲染“我的工作”面板 ---
 function renderMyJob(work) {
     const job = work.omni_jobs;
-    const isResigning = work.status === 'resigning';
-    const statusText = isResigning ? "离职核算中" : "正常履职中";
+    const status = work.status;
+    
+    // --- 状态标准化参数定义 ---
+    let statusLabel = "";
+    let statusBg = "";
+    let actionBtnHtml = "";
+    let headerTitle = "💼 帝国就业档案";
 
-    // 动态读取证件字典
-    let permitDisplay = "无";
-    if (job.provided_item_ids && job.provided_item_ids.trim() !== '') {
-        const ids = job.provided_item_ids.split(',').map(id => parseInt(id.trim()));
-        const names = ids.map(id => {
-            const item = mallItems.find(i => i.id === id);
-            return item ? `《${item.name}》` : `[未知授权]`;
-        });
-        permitDisplay = names.join('、');
+    if (status === 'pending') {
+        statusLabel = "调配申请受理中";
+        statusBg = "#3b82f6"; // 蓝色，代表处理中
+        headerTitle = "📑 劳动力调配申请单";
+        actionBtnHtml = `
+            <div style="margin-top: 30px; padding: 15px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.85em; text-align: center;">
+                <strong>流程提示：</strong> 您的申请已进入帝国人力资源数据库排队序列。请保持终端在线，核算系统将静默完成背景调查与岗位匹配。
+            </div>
+            <button disabled style="margin-top: 15px; width: 100%; padding: 12px; background: #e2e8f0; color: #94a3b8; border: none; font-weight: bold; letter-spacing: 2px;">
+                正在等待系统回执...
+            </button>
+        `;
+    } 
+    else if (status === 'resigning') {
+        statusLabel = "离职核算中";
+        statusBg = "#f59e0b"; // 橙色
+        actionBtnHtml = `
+            <button disabled style="margin-top: 30px; width: 100%; padding: 12px; background: #f1f5f9; color: #94a3b8; border: none; font-weight: bold; letter-spacing: 2px;">
+                系统正在回收职权并同步档案...
+            </button>
+        `;
+    } 
+    else { // approved
+        statusLabel = "正常履职中";
+        statusBg = "var(--omni-green)";
+        actionBtnHtml = `
+            <button onclick="submitResignation(${work.id})" style="margin-top: 30px; width: 100%; padding: 12px; background: none; border: 1px solid var(--omni-danger); color: var(--omni-danger); cursor: pointer; font-weight: bold; letter-spacing: 2px;">
+                申请解除契约 (提交辞呈)
+            </button>
+        `;
     }
 
     const html = `
         <div class="card" style="border: 2px solid var(--omni-text); border-radius: 0; padding: 30px;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--omni-text); padding-bottom: 15px; margin-bottom: 20px;">
-                <h3 style="margin: 0; letter-spacing: 4px;">💼 帝国就业档案</h3>
-                <span style="font-family: monospace; font-weight: bold; background: ${isResigning ? '#f59e0b' : 'var(--omni-green)'}; color: white; padding: 2px 10px;">
-                    ${statusText.toUpperCase()}
+                <h3 style="margin: 0; letter-spacing: 4px;">${headerTitle}</h3>
+                <span style="font-family: monospace; font-weight: bold; background: ${statusBg}; color: white; padding: 2px 10px;">
+                    ${statusLabel.toUpperCase()}
                 </span>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">EMPLOYER / 雇主单位</label>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">EMPLOYER / 目标雇主</label>
                          <strong style="font-size: 1.1em;">${job.employer}</strong></div>
-                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">POSITION / 职衔</label>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">POSITION / 拟任职衔</label>
                          <strong>${job.title}</strong></div>
-                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">LOCATION / 标准坐标</label>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">LOCATION / 坐标</label>
                          <span style="font-size: 0.9em;">${job.region} - ${job.sub_region} - ${job.specific_location}</span></div>
                 </div>
 
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">SALARY / 月度配给</label>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">SALARY / 预定配给</label>
                          <strong style="color: var(--omni-green); font-size: 1.1em;">${job.salary.toLocaleString()} CR</strong></div>
-                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">SCHEDULE / 勤务序列</label>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">SCHEDULE / 勤务要求</label>
                          <strong>${job.work_schedule}</strong></div>
-                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">HIRE DATE / 入职时间</label>
-                         <strong>帝国历 ${formatImperialDate(work.hire_date)}</strong></div>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">ACTION DATE / 操作时间</label>
+                         <strong>帝国历 ${formatImperialDate(work.apply_time || work.hire_date)}</strong></div>
                 </div>
             </div>
 
             <div style="margin-top: 30px; padding: 15px; background: #f8fafc; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #e2e8f0;">
                 <div style="text-align: center; border-right: 1px solid #e2e8f0;">
-                    <label style="display: block; font-size: 0.7em; color: #64748b;">NEXT DISTRIBUTION / 下次配给发放</label>
-                    <strong style="font-size: 1.1em;">${getDaysUntilPayday(work.last_pay_date)} 天</strong>
+                    <label style="display: block; font-size: 0.7em; color: #64748b;">${status === 'pending' ? 'BUREAUCRACY STATUS' : 'NEXT DISTRIBUTION'}</label>
+                    <strong style="font-size: 1.1em;">${status === 'pending' ? '受理中' : getDaysUntilPayday(work.last_pay_date) + ' 天'}</strong>
                 </div>
                 <div style="text-align: center;">
-                    <label style="display: block; font-size: 0.7em; color: #64748b;">CREDIT PROMOTION / 距离信用晋升</label>
-                    <strong style="font-size: 1.1em;">${getMonthsUntilPromotion(work.hire_date, job.promotion_interval)}</strong>
+                    <label style="display: block; font-size: 0.7em; color: #64748b;">CREDIT PROGRESS</label>
+                    <strong style="font-size: 1.1em;">${status === 'pending' ? '等待入职' : getMonthsUntilPromotion(work.hire_date, job.promotion_interval)}</strong>
                 </div>
             </div>
 
-            <div style="margin-top: 25px;">
-                <label style="color: #64748b; font-size: 0.75em; display: block; margin-bottom: 5px;">AUTHORIZED PERMITS / 关联授权</label>
-                <div style="font-size: 0.85em; font-family: monospace; color: #64748b;">
-                    ${permitDisplay}
-                </div>
-            </div>
-
-            ${!isResigning ? `
-                <button onclick="submitResignation(${work.id})" style="margin-top: 30px; width: 100%; padding: 12px; background: none; border: 1px solid var(--omni-danger); color: var(--omni-danger); cursor: pointer; font-weight: bold; letter-spacing: 2px;">
-                    提交辞呈
-                </button>
-            ` : `
-                <button disabled style="margin-top: 30px; width: 100%; padding: 12px; background: #f1f5f9; color: #94a3b8; border: none; font-weight: bold; letter-spacing: 2px;">
-                    离职核算中
-                </button>
-            `}
+            ${actionBtnHtml}
         </div>
     `;
     document.getElementById('my-job-details').innerHTML = html;
@@ -2231,7 +2240,8 @@ async function applyForJob(jobId) {
     ]);
 
     if (!error) {
-        alert("【政审开始】申请已提交帝国社会治理数据库。");
+        alert("【流程启动】申请已上传至劳工部。");
+        loadJobs(); 
     }
 }
 
