@@ -2292,7 +2292,7 @@ async function autoProcessBureaucracy() {
     // 4. 满 3 小时，分支处理
     if (work.status === 'pending') {
         // --- 【入职审批分支】(保持你原有的 50% 逻辑) ---
-        const isApproved = Math.random() > 0.5;
+        const isApproved = true;
 
         if (isApproved) {
             if (work.omni_jobs.provided_item_ids) {
