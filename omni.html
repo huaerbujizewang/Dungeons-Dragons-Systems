@@ -739,6 +739,7 @@
             loadInventory(); 
             await autoProcessBureaucracy();
             await processEmploymentRewards(); // 结算工资
+            await processSubscriptions();
 
             if(currentAccount.is_dm) {
                 document.getElementById('dm-admin-trigger').style.display = 'flex';
@@ -751,6 +752,7 @@ async function syncOmniTerminal() {
 
     // 1. 基础资产与余额刷新
     await updateWallet();
+    await processSubscriptions();
     await loadInventory(); 
 
     const activePage = document.querySelector('.page.active')?.id;
@@ -1300,7 +1302,79 @@ async function takeoverAccount(accId) {
 
         window.onload = init;
 
+// --- 自动续费引擎 ---
+async function processSubscriptions() {
+    console.log("【帝国财务部】正在扫描特许协议账单...");
+    
+    const { data: inv } = await supabaseClient
+        .from('omni_inventory')
+        .select('*, omni_items(name, price, category)')
+        .eq('account_id', currentAccount.id);
 
+    if (!inv) return;
+
+    let walletBalance = currentAccount.credits;
+    let isWalletUpdated = false;
+    let autoRenewMsg = "";
+
+    for (const row of inv) {
+        // 只处理带有过期时间的订阅类商品
+        if (row.omni_items?.category !== 'sub' || !row.expires_at) continue;
+
+        const expDate = new Date(row.expires_at);
+        const now = new Date();
+
+        // 如果协议已经过期，尝试触发自动扣费
+        if (now > expDate) {
+            const price = row.omni_items.price;
+            
+            if (walletBalance >= price) {
+                // 钱够，直接划走！
+                walletBalance -= price;
+                isWalletUpdated = true;
+
+                // 强制续期 30 天 (以当前系统时间起算)
+                const newExp = new Date(now);
+                newExp.setDate(newExp.getDate() + 30);
+
+                await supabaseClient.from('omni_inventory')
+                    .update({ expires_at: newExp.toISOString() })
+                    .eq('id', row.id);
+
+                autoRenewMsg += `\n- 《${row.omni_items.name}》自动续费成功 (-${price} CR)`;
+            } else {
+                // 钱不够，不扣费，保留过期状态，等下次他有钱了再扣
+                console.log(`【扣费受阻】《${row.omni_items.name}》账户余额不足，协议冻结中。`);
+            }
+        }
+    }
+
+    // 如果发生了扣费，同步更新账户余额
+    if (isWalletUpdated) {
+        await supabaseClient.from('omni_accounts')
+            .update({ credits: walletBalance })
+            .eq('id', currentAccount.id);
+            
+        currentAccount.credits = walletBalance; // 更新本地缓存
+        updateWallet(); // 刷新界面余额
+        
+        // 发送不可抗拒的扣费通知
+        alert(`【帝国财务部账单通知】\n您的部分特许协议已到期，系统已执行静默续费：${autoRenewMsg}\n\n如有异议，请在资产清单中主动终止契约。`);
+    }
+}
+
+// --- 主动退订逻辑 ---
+async function cancelSubscription(invId, itemName) {
+    if (!confirm(`【终止契约确认】\n警告：您正在请求终止《${itemName}》的特许服务。\n终止后，您的相关权限将被系统立即剥夺，且已扣除的当月配给点数（CR）将不予退还。\n\n您确定要承受此代价并退订吗？`)) return;
+
+    // 退订就是直接从资产清单中抹除这条记录
+    const { error } = await supabaseClient.from('omni_inventory').delete().eq('id', invId);
+    
+    if (!error) {
+        alert("【协议终止】权限已回收。期待您下次拥有充足预算时再次订阅。");
+        loadInventory(); // 刷新背包
+    }
+}
 
 const REGION_DATA = {
     "蒂尔兰语区": { code: "TL", regions: ["因斯卡利亚", "白城", "瓦尔登霍夫", "赫森谷", "铁壁", "尤特里克", "施瓦茨", "弗兰肯马克", "苍狼林区", "克劳斯施坦", "洛恩河谷", "北威登", "朔尔茨贝格", "暮松州", "齐默尔曼"] },
@@ -1992,20 +2066,28 @@ async function loadInventory() {
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                 if (isExpired) {
-                    rowStyle = 'border-left-color: var(--omni-danger); filter: grayscale(0.8); opacity: 0.8;';
+                    rowStyle = 'border-left-color: var(--omni-danger); filter: grayscale(0.8); background: #fef2f2;';
                     rightSideHtml = `
                         <div style="text-align:right;">
-                            <div style="font-size:0.7em; color:var(--omni-danger); font-weight:bold; margin-bottom:5px;">⚠️ 协议已欠费终止</div>
-                            <button onclick="purchaseItem(${row.item_id}, ${item.price}, false)" style="padding:4px 8px; background:var(--omni-danger); color:white; border:none; border-radius:4px; font-size:0.75em; cursor:pointer;">
-                                立即续费
+                            <div style="font-size:0.7em; color:var(--omni-danger); font-weight:bold; margin-bottom:5px;">⚠️ 协议因欠费冻结</div>
+                            <div style="font-size:0.65em; color:#94a3b8;">系统将在余额充足时自动划扣</div>
+                            <button onclick="cancelSubscription(${row.id}, '${item.name}')" style="margin-top:5px; padding:4px 8px; background:transparent; border:1px solid #94a3b8; color:#64748b; border-radius:4px; font-size:0.7em; cursor:pointer;">
+                                终止协议
                             </button>
                         </div>
                     `;
                 } else {
-                    rightSideHtml = `<div style="font-size:0.75em; color:var(--omni-green); font-weight:bold;">✓ 授权中 (余 ${diffDays} 天)</div>`;
+                    rightSideHtml = `
+                        <div style="text-align:right;">
+                            <div style="font-size:0.75em; color:var(--omni-green); font-weight:bold; margin-bottom:5px;">✓ 自动续费中 (余 ${diffDays} 天)</div>
+                            <button onclick="cancelSubscription(${row.id}, '${item.name}')" style="padding:4px 8px; background:transparent; border:1px solid var(--omni-danger); color:var(--omni-danger); border-radius:4px; font-size:0.7em; cursor:pointer; opacity:0.8;">
+                                终止契约
+                            </button>
+                        </div>
+                    `;
                 }
             } else {
-                rightSideHtml = `<div style="font-size:0.75em; color:var(--omni-green); font-weight:bold;">✓ 终身授权</div>`;
+                rightSideHtml = `<div style="font-size:0.75em; color:var(--omni-green); font-weight:bold;">✓ 终身授权 (豁免续费)</div>`;
             }
         } 
         // 处理证件 (不显示数量，只显示持有状态)
