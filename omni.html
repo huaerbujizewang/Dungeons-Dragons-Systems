@@ -441,6 +441,7 @@
                                         <th>公民实体</th>
                                         <th>社会信用等级</th>
                                         <th>可用资产</th>
+                                        <th>职位调整</th>
                                         <th>系统干预</th>
                                     </tr>
                                 </thead>
@@ -1067,8 +1068,9 @@
         }
 
         // --- 控制台 UI 交互 ---
-        function openDmPanel() {
+        async function openDmPanel() {
             document.getElementById('dm-modal').classList.add('show');
+            await loadJobs(); // 确保职位数据已同步
             renderDmTable(); 
             setupRegionSelects();
             populateCreditDropdown();
@@ -1150,48 +1152,64 @@
         }
 
         // --- 重新编写的后台表格渲染 ---
-        async function renderDmTable() {
-            const tbody = document.getElementById('dm-account-table-body');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">正在扫描全境公民档案...</td></tr>';
+async function renderDmTable() {
+    const tbody = document.getElementById('dm-account-table-body');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">正在扫描全境公民档案...</td></tr>';
 
-            const { data } = await supabaseClient.from('omni_accounts').select('*').order('id', {ascending: true});
-            if(!data) return;
+    const { data } = await supabaseClient.from('omni_accounts').select('*').order('id', {ascending: true});
+    if(!data) return;
+    let jobOptions = '<option value="">-- 选择任命职位 --</option>';
+    allJobs.forEach(j => {
+        const publicTag = j.is_public ? "" : " [内部]";
+        jobOptions += `<option value="${j.id}">${j.employer} - ${j.title}${publicTag}</option>`;
+    });
 
-            let html = '';
-            data.forEach(acc => {
-                if (acc.login_id === 'DM') return; // 隐藏系统根账号
+    let html = '';
+    data.forEach(acc => {
+        if (acc.login_id === 'DM') return;
 
-                // 生成等级下拉框
-                let creditOptions = '';
-                CREDIT_GRADES.forEach(grade => {
-                    creditOptions += `<option value="${grade}" ${acc.social_credit === grade ? 'selected' : ''}>${grade}</option>`;
-                });
+        let creditOptions = '';
+        CREDIT_GRADES.forEach(grade => {
+            creditOptions += `<option value="${grade}" ${acc.social_credit === grade ? 'selected' : ''}>${grade}</option>`;
+        });
 
-                html += `
-                    <tr style="border-bottom: 1px solid #334155;">
-                        <td style="color:#f39c12; font-family:monospace;">#${acc.id}</td>
-                        <td><strong>${acc.nickname}</strong><br><small style="color:#64748b">${acc.real_name || ''}</small></td>
+        html += `
+            <tr style="border-bottom: 1px solid #334155;">
+                <td style="color:#f39c12; font-family:monospace;">#${acc.id}</td>
+                <td><strong>${acc.nickname}</strong><br><small style="color:#64748b">${acc.real_name || ''}</small></td>
                 
-                        <td>
-                            <select id="edit-credit-${acc.id}" style="padding:5px; background:#0f172a; color:var(--omni-green); border:1px solid #334155;">
-                                ${creditOptions}
-                            </select>
-                        </td>
+                <td>
+                    <select id="edit-credit-${acc.id}" style="padding:5px; background:#0f172a; color:var(--omni-green); border:1px solid #334155;">
+                        ${creditOptions}
+                    </select>
+                </td>
 
-                        <td>
-                            <input type="number" id="edit-balance-${acc.id}" value="${acc.credits}" 
-                                   style="width:80px; padding:5px; background:#0f172a; color:white; border:1px solid #334155;">
-                        </td>
+                <td>
+                    <input type="number" id="edit-balance-${acc.id}" value="${acc.credits}" 
+                           style="width:80px; padding:5px; background:#0f172a; color:white; border:1px solid #334155;">
+                </td>
 
-                        <td>
-                            <button class="action-btn action-save" onclick="adminUpdateUser(${acc.id})" style="margin-bottom:5px;">应用</button>
-                            <button class="action-btn action-hijack" onclick="takeoverAccount(${acc.id})">接管</button>
-                        </td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
-        }
+                <td>
+                    <div style="display:flex; gap:5px;">
+                        <select id="appoint-job-${acc.id}" style="width:120px; padding:5px; background:#1e293b; color:#4ade80; border:1px solid #334155; font-size:0.8em;">
+                            ${jobOptions}
+                        </select>
+                        <button class="action-btn" onclick="adminAppointJob(${acc.id}, parseInt(document.getElementById('appoint-job-${acc.id}').value))" 
+                                style="background:var(--omni-green); padding:2px 8px; font-size:0.7em;">
+                            任命
+                        </button>
+                    </div>
+                </td>
+
+                <td>
+                    <button class="action-btn action-save" onclick="adminUpdateUser(${acc.id})" style="margin-bottom:5px;">应用</button>
+                    <button class="action-btn action-hijack" onclick="takeoverAccount(${acc.id})">接管</button>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
         // --- 核心功能 3：不经弹窗直接修改头像 ---
         async function updateAvatar(accId) {
             const newAvatar = document.getElementById(`edit-avatar-${accId}`).value.trim();
