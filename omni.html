@@ -892,10 +892,10 @@ function switchPage(pageId, el) {
             box.innerHTML = html;
         }
 
-        async function loadGroupList() {
+// --- 修改后的群组列表渲染 ---
+async function loadGroupList() {
     const box = document.getElementById('contact-list-box');
     
-    // 查询逻辑：从成员表里找当前用户加入的所有群组
     const { data: memberships, error } = await supabaseClient.from('omni_group_members')
         .select(`group_id, omni_groups(id, group_name, creator_id)`)
         .eq('user_id', currentAccount.id);
@@ -916,9 +916,11 @@ function switchPage(pageId, el) {
 
             html += `
                 <div class="contact-item ${isActive}" style="justify-content: space-between;">
-                    <div onclick="openGroupChat(${g.id}, '${g.group_name}')" style="display:flex; align-items:center; gap:10px; flex:1;">
+                    <div onclick="openGroupChat(${g.id}, '${g.group_name}')" style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
                         <div class="contact-avatar" style="background:var(--omni-green); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.8em;">群</div>
-                        <span class="contact-name">${g.group_name}</span>
+                        <div style="display:flex; flex-direction:column; overflow:hidden;">
+                            <span class="contact-name">${g.group_name}</span>
+                            <span style="font-size:0.7em; color:#94a3b8;">GID: ${g.id}</span> </div>
                     </div>
                     ${isOwner ? `<span onclick="disbandGroup(${g.id}, '${g.group_name}')" style="color:var(--omni-danger); cursor:pointer; font-size:1.2em; padding:0 5px;">×</span>` : ''}
                 </div>
@@ -928,26 +930,25 @@ function switchPage(pageId, el) {
     box.innerHTML = html;
 }
 
-        async function createGroup() {
-            if (currentAccount.id === 0) return alert("系统管理员无法建群。");
-            const name = prompt("请输入新群组名称：");
-            if(!name) return;
+async function createGroup() {
+    if (currentAccount.id === 0) return alert("系统管理员无法建群。");
+    const name = prompt("请输入新群组名称：");
+    if(!name) return;
 
-            // 1. 创建群组
-            const { data: group, error } = await supabaseClient.from('omni_groups')
-                .insert([{ group_name: name, creator_id: currentAccount.id }])
-                .select().single();
+    const { data: group, error } = await supabaseClient.from('omni_groups')
+        .insert([{ group_name: name, creator_id: currentAccount.id }])
+        .select().single();
 
-            if(error) return alert("建群失败。");
+    if(error) return alert("建群失败。");
 
-            // 2. 将创建者自动加入成员表
-            await supabaseClient.from('omni_group_members').insert([
-                { group_id: group.id, user_id: currentAccount.id }
-            ]);
+    await supabaseClient.from('omni_group_members').insert([
+        { group_id: group.id, user_id: currentAccount.id }
+    ]);
 
-            alert(`群组 [${name}] 已创建。`);
-            loadGroupList();
-        }
+    // 修改提示词，包含 ID
+    alert(`群组 [${name}] 已成功创建！\n群组识别码 (GID): ${group.id}\n请将此 ID 分享给其他公民以邀请加入。`);
+    loadGroupList();
+}
 
         // --- 聊天室切换逻辑 ---
         function openPublicChat() {
@@ -966,13 +967,19 @@ function switchPage(pageId, el) {
             loadHistory();
         }
 
-        function openGroupChat(id, name) {
-            currentChatMode = 'group';
-            currentChatTarget = { id: id, name: name };
-            document.getElementById('chat-header-title').innerText = `群组：${name}`;
-            loadGroupList();
-            loadHistory();
-        }
+function openGroupChat(id, name) {
+    currentChatMode = 'group';
+    currentChatTarget = { id: id, name: name };
+    // 在标题处显示 ID
+    document.getElementById('chat-header-title').innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <span>群组：${name}</span>
+            <span style="font-size:0.7em; color:#94a3b8; font-weight:normal;">识别码: ${id}</span>
+        </div>
+    `;
+    loadGroupList();
+    loadHistory();
+}
 
         // --- 聊天核心引擎 ---
         async function loadHistory() {
