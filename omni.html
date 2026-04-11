@@ -544,7 +544,31 @@
                                     <option>小学</option><option>初中</option><option>高中</option><option>中专</option><option>大专</option><option selected>本科</option><option>硕士</option><option>博士</option><option>博士后</option>
                                 </select>
                             </div>
-                            <div class="dm-form-group" style="grid-column: span 2;"><label>居住地址</label><input type="text" id="setup-address-page" class="setup-input"></div>
+                            <div class="dm-form-group">
+    <label>居住语区 <span style="color:var(--omni-danger)">*</span></label>
+    <select id="setup-region-page" class="setup-input" onchange="updateSubRegionsForUser()" style="padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px;">
+        <option value="">请选择语区...</option>
+        <option value="蒂尔兰语区">蒂尔兰语区</option>
+        <option value="格伦瑟语区">格伦瑟语区</option>
+        <option value="卡法罗语区">卡法罗语区</option>
+        <option value="桐花语区">桐花语区</option>
+        <option value="奥斯特克语区">奥斯特克语区</option>
+        <option value="安塔拉语区">安塔拉语区</option>
+        <option value="霍桑语区">霍桑语区</option>
+        <option value="乌瑞克语区">乌瑞克语区</option>
+        <option value="海外飞地">海外飞地</option>
+    </select>
+</div>
+<div class="dm-form-group">
+    <label>所属行政区 <span style="color:var(--omni-danger)">*</span></label>
+    <select id="setup-subregion-page" class="setup-input" style="padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px;">
+        <option value="">请先选择语区</option>
+    </select>
+</div>
+<div class="dm-form-group" style="grid-column: span 2;">
+    <label>详细地址 (街道名/门牌号) <span style="color:#64748b; font-size:0.8em;">(选填)</span></label>
+    <input type="text" id="setup-address-page" class="setup-input" placeholder="例如：康斯坦斯大道8号">
+</div>
                              <div class="dm-form-group" style="flex-direction:row; align-items:center; gap:10px;">
                                 <input type="checkbox" id="setup-military-page" style="width:20px; height:20px;">
                                 <label style="margin:0; color: #333;">我已履行兵役 (选择后锁定)</label>
@@ -1402,6 +1426,23 @@ function updateRegionDropdown(zoneName) {
     });
 }
 
+// --- 玩家首次登记：语区与行政区联动 ---
+function updateSubRegionsForUser() {
+    const zoneName = document.getElementById('setup-region-page').value;
+    const subSelect = document.getElementById('setup-subregion-page');
+    subSelect.innerHTML = '<option value="">请选择行政区</option>';
+    
+    if(!zoneName || !REGION_DATA[zoneName]) return;
+    
+    // 直接复用全局 REGION_DATA 字典
+    REGION_DATA[zoneName].regions.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        subSelect.appendChild(opt);
+    });
+}
+
 async function submitImperialAccount() {
             // 获取输入框
             const realName = document.getElementById('npc-real-name').value;
@@ -1583,57 +1624,68 @@ async function submitPlayerChanges() {
             }[tag] || tag));
         }
 
-        async function submitInitialProfile() {
-            // 1. 获取所有输入值
-            const realName = document.getElementById('setup-realname-page').value.trim();
-            const nickname = document.getElementById('setup-nickname-page').value.trim();
-            const race = document.getElementById('setup-race-page').value.trim();
-            const birthDate = document.getElementById('setup-birthdate-page').value;
-            const faith = document.getElementById('setup-faith-page').value.trim();
-            const education = document.getElementById('setup-edu-page').value;
-            const address = document.getElementById('setup-address-page').value.trim();
-            const military = document.getElementById('setup-military-page').checked;
+async function submitInitialProfile() {
+    // 1. 获取所有输入值
+    const realName = document.getElementById('setup-realname-page').value.trim();
+    const nickname = document.getElementById('setup-nickname-page').value.trim();
+    const race = document.getElementById('setup-race-page').value.trim();
+    const birthDate = document.getElementById('setup-birthdate-page').value;
+    const faith = document.getElementById('setup-faith-page').value.trim();
+    const education = document.getElementById('setup-edu-page').value;
+    const military = document.getElementById('setup-military-page').checked;
+    
+    // 获取新增的地址字段
+    const region = document.getElementById('setup-region-page').value;
+    const subRegion = document.getElementById('setup-subregion-page').value;
+    const street = document.getElementById('setup-address-page').value.trim();
 
-            // 2. 基础验证
-            if (!realName || !race || !birthDate || !nickname) {
-                return alert("所有带 * 号的项均为帝国必填项！");
-            }
+    // 2. 基础验证 (已移除 street 的强制拦截)
+    if (!realName || !race || !birthDate || !nickname || !region || !subRegion) {
+        return alert("【登记受阻】所有带 * 号的项均为帝国必填项！");
+    }
 
-            // 3. 实时计算：信用等级、动态效期、公民号
-            const finalCredit = calculateCredit("C-", military, education);
-            const dynamicVal = calculatePassportValidity(birthDate);
-            
-            let passportId = currentAccount.passport_id;
-            if (!passportId || passportId === 'PENDING...') {
-                const zone = currentAccount.birth_place_zone || "蒂尔兰语区";
-                passportId = generateImperialId(zone, birthDate);
-            }
+    // 3. 实时计算：信用等级、动态效期、公民号
+    const finalCredit = calculateCredit("C-", military, education);
+    const dynamicVal = calculatePassportValidity(birthDate);
+    
+    let passportId = currentAccount.passport_id;
+    if (!passportId || passportId === 'PENDING...') {
+        passportId = generateImperialId(region, birthDate); 
+    }
 
-            // 4. 封装载荷
-            const updatePayload = {
-                real_name: realName,
-                nickname: nickname,
-                race: race,
-                birth_date: birthDate,
-                faith: faith,
-                education: education,
-                social_credit: finalCredit,
-                home_address: address,
-                military_service: military,
-                passport_id: passportId,
-                validity: dynamicVal, // 保存当前计算出的效期
-                is_profile_complete: true
-            };
+    // 拼接成完整的护照展示地址格式
+    let fullAddress = `${region} - ${subRegion}`;
+    if (street !== '') {
+        fullAddress += ` - ${street}`; 
+    }
 
-            const { error } = await supabaseClient.from('omni_accounts').update(updatePayload).eq('id', currentAccount.id);
+    // 4. 封装载荷
+    const updatePayload = {
+        real_name: realName,
+        nickname: nickname,
+        race: race,
+        birth_date: birthDate,
+        faith: faith,
+        education: education,
+        social_credit: finalCredit,
+        home_address: fullAddress,       
+        birth_place_zone: region,         
+        birth_place_region: subRegion,   
+        military_service: military,
+        passport_id: passportId,
+        validity: dynamicVal, 
+        is_profile_complete: true
+    };
 
-            if (!error) {
-                alert("帝国档案登记成功，核心数据已锁定。");
-                loadPassportData(); 
-            } else {
-                alert("登记失败: " + error.message);
-            }
-        }
+    const { error } = await supabaseClient.from('omni_accounts').update(updatePayload).eq('id', currentAccount.id);
+
+    if (!error) {
+        alert("帝国档案登记成功，核心坐标数据已锁定。");
+        loadPassportData(); 
+    } else {
+        alert("登记失败: " + error.message);
+    }
+}
 
         // --- 动态填充UI组件的函数 ---
 
