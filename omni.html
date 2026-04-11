@@ -710,7 +710,8 @@
             if (!currentRealtimeChannel) subscribe(); 
             updateWallet();
             loadContactList();
-            loadMallItems(); 
+            await loadMallItems(); 
+            await syncOmniTerminal();
             loadInventory(); 
             await autoProcessBureaucracy();
             await processEmploymentRewards(); // 结算工资
@@ -722,40 +723,46 @@
 
 
 async function syncOmniTerminal() {
-    console.log("【OMNI OS】正在同步终端数据线...");
+    console.log("【OMNI OS】正在进行全链路数据校准...");
 
-    // 1. 强制同步底层资产（无论在哪个页面都需要）
-    updateWallet();
-    
-    // 2. 针对当前正在显示的页面，进行深度数据重载
-    if (document.getElementById('page-jobs').classList.contains('active')) {
-        await loadJobs(); // 重新判定是显示人才市场，还是显示个人档案
+    // 1. 基础资产与余额刷新
+    await updateWallet();
+    await loadInventory(); 
+
+    const activePage = document.querySelector('.page.active')?.id;
+
+    // 2. 针对性视图重载
+    if (activePage === 'page-jobs') {
+        await loadJobs(); 
     }
     
-    if (document.getElementById('page-profile').classList.contains('active')) {
-        await loadPassportData(); // 刷新护照信息
-        await loadInventory();    // 核心修复：强制刷新背包内容
+    if (activePage === 'page-profile') {
+        await loadPassportData(); 
     }
     
-    if (document.getElementById('page-life').classList.contains('active')) {
-        renderMall(); // 身份切换可能导致购买权限（信用等级）变化，必须重绘商城按钮
+    if (activePage === 'page-life') {
+        renderMall(); 
     }
     
-    // 3. 强制重载社交大厅（好友列表会随接管的账号改变）
+    // 3. 社交链路重载
     loadContactList();
 }
 
-        function switchPage(pageId, el) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('page-' + pageId).classList.add('active');
-            el.classList.add('active');
-            if(pageId === 'wallet') updateWallet();
-            if(pageId === 'profile') loadPassportData(); 
-            if(pageId === 'jobs') loadJobs(); // 进入页面时立即拉取职位列表
-            if(pageId === 'wallet') updateWallet();
-            if(pageId === 'profile') loadPassportData();
-        }
+function switchPage(pageId, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + pageId).classList.add('active');
+    el.classList.add('active');
+
+    // --- 页面切换时的实时数据拉取 ---
+    if(pageId === 'wallet') updateWallet();
+    if(pageId === 'profile') {
+        loadPassportData(); 
+        loadInventory(); 
+    }
+    if(pageId === 'jobs') loadJobs();
+    if(pageId === 'life') renderMall();
+}
 
         // --- 社交列表导航 ---
         function switchListTab(tab, el) {
