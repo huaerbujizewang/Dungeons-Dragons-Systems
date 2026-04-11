@@ -1600,7 +1600,7 @@ async function submitPlayerChanges() {
             }
 
             // 3. 实时计算：信用等级、动态效期、公民号
-            const finalCredit = calculateCredit("B", military, education);
+            const finalCredit = calculateCredit("C-", military, education);
             const dynamicVal = calculatePassportValidity(birthDate);
             
             let passportId = currentAccount.passport_id;
@@ -1645,30 +1645,30 @@ async function submitPlayerChanges() {
             'D': ' (受限公民)'
         };
 
-        function populateCreditDropdown() {
-            const selectElement = document.getElementById('npc-base-credit');
-            if (!selectElement) return;
+function populateCreditDropdown() {
+    const selectElement = document.getElementById('npc-base-credit');
+    if (!selectElement) return;
 
-            selectElement.innerHTML = ''; // 确保下拉框是空的
+    selectElement.innerHTML = ''; // 确保下拉框是空的
 
-            // 遍历完整的信用等级数组
-            CREDIT_GRADES.forEach(grade => {
-                const option = document.createElement('option');
-                option.value = grade;
-                
-                // 查找并附加描述
-                const firstLetter = grade.charAt(0);
-                const description = CREDIT_DESCRIPTIONS[firstLetter] || '';
-                option.textContent = grade + description;
+    // 遍历完整的信用等级数组
+    CREDIT_GRADES.forEach(grade => {
+        const option = document.createElement('option');
+        option.value = grade;
+        
+        // 查找并附加描述
+        const firstLetter = grade.charAt(0);
+        const description = CREDIT_DESCRIPTIONS[firstLetter] || '';
+        option.textContent = grade + description;
 
-                // 将'B'等级设置为默认选中项
-                if (grade === 'B') {
-                    option.selected = true;
-                }
-
-                selectElement.appendChild(option);
-            });
+        // 【修改点】：将 'C-' 等级设置为帝国初始默认项
+        if (grade === 'C-') {
+            option.selected = true;
         }
+
+        selectElement.appendChild(option);
+    });
+}
 
 let GLOBAL_IMPERIAL_DATE = "1092-04-10"; // 全局缓存
 
