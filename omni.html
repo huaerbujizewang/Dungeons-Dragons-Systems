@@ -479,11 +479,12 @@
                 <div class="card">
                     <div class="mall-header-tool">
                         <input type="text" id="mall-search" class="mall-search-input" placeholder="输入物资名称或描述进行检索..." oninput="renderMall()">
-                        <select id="mall-cat-filter" onchange="renderMall()" style="padding:10px; border:1px solid #e2e8f0;">
-                            <option value="all">全部分类</option>
-                            <option value="food">生活补给</option>
-                            <option value="ticket">通行票据</option>
-                            <option value="gear">技术装备</option>
+                        <select id="mall-cat-filter" onchange="renderMall()" style="padding:10px; border:1px solid #e2e8f0; border-radius:4px;">
+                            <option value="all">全境物资总览</option>
+                            <option value="food">🍔 生活补给</option>
+                            <option value="ticket">🎫 通行票据</option>
+                            <option value="gear">⚙️ 技术装备</option>
+                            <option value="sub">🔄 特许订阅</option>
                         </select>
                     </div>
                     <div id="mall-container" class="item-grid"></div>
@@ -1798,76 +1799,119 @@ function renderMall() {
 }
 
 // 3. 购买交易逻辑
+// 1. 升级版：购买/续费逻辑
 async function purchaseItem(itemId, price, isLocked) {
-    if (isLocked) return alert("身份识别失败：您的社会信用等级不足，无权调配此物资。");
+    if (isLocked) return alert("身份识别失败：您的社会信用等级不足，无权调配此服务。");
 
-    // 获取最新余额
     const { data: acc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-    if (acc.credits < price) return alert("信用点余额不足。请前往【资产结算】查看明细。");
+    if (acc.credits < price) return alert("信用点余额不足，请努力为帝国服务。");
 
-    // A. 扣除信用点
-    const { error: payErr } = await supabaseClient
-        .from('omni_accounts')
-        .update({ credits: acc.credits - price })
-        .eq('id', currentAccount.id);
+    // 扣费
+    const { error: payErr } = await supabaseClient.from('omni_accounts').update({ credits: acc.credits - price }).eq('id', currentAccount.id);
+    if (payErr) return alert("数据库同步失败。");
 
-    if (payErr) return alert("数据库同步失败，请检查网络连接。");
+    // 获取被购买物品的分类
+    const itemData = mallItems.find(i => i.id === itemId);
+    const isSubscription = (itemData && itemData.category === 'sub'); // 设定：所有 sub 均为包月订阅
 
-    // B. 自动进入背包 (使用 Upsert 逻辑)
-    // 注意：这里的 account_id 要对应你数据库里的字段
-    const { data: existingInv } = await supabaseClient
-        .from('omni_inventory')
-        .select('*')
-        .eq('account_id', currentAccount.id)
-        .eq('item_id', itemId)
-        .maybeSingle();
+    // 计算到期时间（当前时间 + 30天）
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + 30);
+    const expireTimestamp = expireDate.toISOString();
+
+    // 检查背包
+    const { data: existingInv } = await supabaseClient.from('omni_inventory').select('*').eq('account_id', currentAccount.id).eq('item_id', itemId).maybeSingle();
 
     if (existingInv) {
-        // 数量 +1
-        await supabaseClient.from('omni_inventory').update({ quantity: existingInv.quantity + 1 }).eq('id', existingInv.id);
+        if (isSubscription) {
+            // 如果是订阅，更新过期时间，而不是加数量
+            await supabaseClient.from('omni_inventory').update({ expires_at: expireTimestamp }).eq('id', existingInv.id);
+            alert(`[服务续费成功] 授权已延长30天。`);
+        } else {
+            // 普通物品堆叠
+            await supabaseClient.from('omni_inventory').update({ quantity: existingInv.quantity + 1 }).eq('id', existingInv.id);
+            alert("物资调配请求已处理。");
+        }
     } else {
-        // 新增一条
+        // 新入库
         await supabaseClient.from('omni_inventory').insert([
-            { account_id: currentAccount.id, item_id: itemId, quantity: 1 }
+            { 
+                account_id: currentAccount.id, 
+                item_id: itemId, 
+                quantity: 1,
+                expires_at: isSubscription ? expireTimestamp : null 
+            }
         ]);
+        alert(isSubscription ? "订阅协议已签署，服务已激活。" : "物资已存入您的个人资产。");
     }
 
-    alert("物资调配请求已处理。物品已存入您的个人资产清单。");
-    updateWallet();     // 刷新钱包
-    loadInventory();    // 刷新背包界面
+    updateWallet();
+    loadInventory();
 }
 
-// 4. 加载背包清单
+// 2. 升级版：加载背包（带过期判定）
 async function loadInventory() {
     const container = document.getElementById('inventory-container');
     if (!container) return;
 
-    // 关联查询：查询背包的同时带出物品的名字
-    const { data, error } = await supabaseClient
+    const { data } = await supabaseClient
         .from('omni_inventory')
-        .select('*, omni_items(name, category)')
+        .select('*, omni_items(name, category, price)')
         .eq('account_id', currentAccount.id);
 
     container.innerHTML = '';
     if (!data || data.length === 0) {
-        container.innerHTML = '<div style="color:#94a3b8; padding: 20px; font-size:0.9em;">- 暂无已登记资产 -</div>';
+        container.innerHTML = '<div style="color:#94a3b8; padding: 20px; font-size:0.9em;">- 暂无个人资产或生效中的订阅 -</div>';
         return;
     }
 
+    const now = new Date();
+
     data.forEach(row => {
         const item = row.omni_items;
+        let statusHtml = '';
+        let isExpired = false;
+
+        // 处理订阅制装备的过期逻辑
+        if (item.category === 'sub' && row.expires_at) {
+            const expDate = new Date(row.expires_at);
+            isExpired = now > expDate;
+
+            // 计算剩余天数
+            const diffTime = expDate - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (isExpired) {
+                statusHtml = `
+                    <div style="font-size:0.7em; color:var(--omni-danger); font-weight:bold; margin-top:5px;">
+                        ⚠️ 服务已欠费终止
+                    </div>
+                    <button onclick="purchaseItem(${row.item_id}, ${item.price}, false)" style="margin-top:8px; padding:4px 8px; background:var(--omni-danger); color:white; border:none; border-radius:4px; font-size:0.75em; cursor:pointer;">
+                        立即续费 (${item.price} CR)
+                    </button>
+                `;
+            } else {
+                statusHtml = `<div style="font-size:0.7em; color:var(--omni-green); margin-top:5px;">✓ 授权生效中 (剩余 ${diffDays} 天)</div>`;
+            }
+        } else {
+            // 普通物品显示数量
+            statusHtml = `<div style="font-family:monospace; font-weight:bold; color:var(--omni-green);">QTY: ${row.quantity}</div>`;
+        }
+
         const html = `
-            <div class="inv-row">
-                <div style="display:flex; flex-direction:column;">
+            <div class="inv-row" style="${isExpired ? 'border-left-color: var(--omni-danger); filter: grayscale(0.8); opacity: 0.8;' : ''}">
+                <div style="display:flex; flex-direction:column; flex: 1;">
                     <span style="font-weight:bold; color:var(--omni-text);">${item.name}</span>
                     <span style="font-size:0.7em; color:#94a3b8; text-transform:uppercase;">${item.category}</span>
+                    ${statusHtml}
                 </div>
-                <div style="font-family:monospace; font-weight:bold; color:var(--omni-green);">QTY: ${row.quantity}</div>
             </div>
         `;
         container.insertAdjacentHTML('beforeend', html);
     });
 }
+
+
 
 
     </script>
