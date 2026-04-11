@@ -720,6 +720,31 @@
             }
         }
 
+
+async function syncOmniTerminal() {
+    console.log("【OMNI OS】正在同步终端数据线...");
+
+    // 1. 强制同步底层资产（无论在哪个页面都需要）
+    updateWallet();
+    
+    // 2. 针对当前正在显示的页面，进行深度数据重载
+    if (document.getElementById('page-jobs').classList.contains('active')) {
+        await loadJobs(); // 重新判定是显示人才市场，还是显示个人档案
+    }
+    
+    if (document.getElementById('page-profile').classList.contains('active')) {
+        await loadPassportData(); // 刷新护照信息
+        await loadInventory();    // 核心修复：强制刷新背包内容
+    }
+    
+    if (document.getElementById('page-life').classList.contains('active')) {
+        renderMall(); // 身份切换可能导致购买权限（信用等级）变化，必须重绘商城按钮
+    }
+    
+    // 3. 强制重载社交大厅（好友列表会随接管的账号改变）
+    loadContactList();
+}
+
         function switchPage(pageId, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1198,36 +1223,31 @@ async function renderDmTable() {
        
 
 
-        async function takeoverAccount(accId) {
-            // 如果是 DM 本人，则恢复为系统管理员身份
-            if (accId === "DM") {
-                currentAccount = { id: 0, nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
-            } else {
-                // 否则，从数据库拉取要接管的账号信息
-                const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
-                if(data) {
-                    const keepAdmin = currentAccount.is_dm; // 保留当前用户的管理员权限状态
-                    currentAccount = data;                   // 切换为新账号
-                    currentAccount.is_dm = keepAdmin;        // 将管理员权限赋予新账号
-                }
-            }
-
-            closeDmPanel(); 
-
-            // 如果处于私聊状态且接管了当前聊天的对象，退回大厅避免逻辑混乱
-            if(currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === currentAccount.id) {
-                openPublicChat();
-            } else {
-                // 否则，正常刷新聊天列表和历史记录以反映新身份
-                loadContactList();
-                loadHistory(); 
-            }
-            
-            // 如果当前正停留在个人档案页，则立即刷新档案信息
-            if (document.getElementById('page-profile').classList.contains('active')) {
-                loadPassportData();
-            }
+// --- DM 接管逻辑 ---
+async function takeoverAccount(accId) {
+    if (accId === "DM") {
+        currentAccount = { id: 0, nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
+    } else {
+        const { data } = await supabaseClient.from('omni_accounts').select('*').eq('id', accId).single();
+        if(data) {
+            const keepAdmin = currentAccount.is_dm; 
+            currentAccount = data;                   
+            currentAccount.is_dm = keepAdmin;        
         }
+    }
+
+    closeDmPanel(); 
+
+    // 核心：全盘强制同步 UI，确保护照、背包、资产瞬间切换到新身份
+    await syncOmniTerminal();
+
+    // 聊天室逻辑纠错
+    if(currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === currentAccount.id) {
+        openPublicChat();
+    } else {
+        loadHistory(); 
+    }
+}
 
 
 
@@ -2013,7 +2033,7 @@ function renderMyJob(work) {
         headerTitle = "📑 劳动力调配申请单";
         actionBtnHtml = `
             <div style="margin-top: 30px; padding: 15px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.85em; text-align: center;">
-                <strong>流程提示：</strong> 您的申请已进入帝国人力资源数据库排队序列。请保持终端在线，核算系统将静默完成背景调查与岗位匹配。
+                <strong>流程提示：</strong> 您的申请已进入帝国人力资源数据库排队序列，核算系统将完成背景调查与岗位匹配。
             </div>
             <button disabled style="margin-top: 15px; width: 100%; padding: 12px; background: #e2e8f0; color: #94a3b8; border: none; font-weight: bold; letter-spacing: 2px;">
                 正在等待系统回执...
@@ -2085,11 +2105,10 @@ function renderMyJob(work) {
     document.getElementById('my-job-details').innerHTML = html;
 }
 
-// --- 新增辅助函数：提交离职 ---
+// --- 提交离职申请 ---
 async function submitResignation(workId) {
     if (!confirm("【离职确认】\n确定要向劳工部提交辞呈吗？\n系统将冻结您的当前履职状态以进行资产清算与权限回收。在此期间，您将无法调配新的职位。")) return;
     
-    // 将状态改为 'resigning'，并重置 apply_time 以重新开始后台的静默计时
     const { error } = await supabaseClient.from('omni_user_jobs').update({
         status: 'resigning',
         apply_time: new Date().toISOString()
@@ -2097,7 +2116,8 @@ async function submitResignation(workId) {
 
     if (!error) {
         alert("【流程启动】辞呈已上传。帝国人力核算系统已接管，请等待终端的最终核算回执。");
-        loadJobs(); // 刷新页面
+        // 核心：调用全局同步，按钮瞬间变灰
+        await syncOmniTerminal(); 
     }
 }
 
@@ -2213,7 +2233,6 @@ async function applyForJob(jobId) {
     const job = allJobs.find(j => j.id === jobId);
     if (!job) return;
     
-    // 基础门槛校验 (信用等级 & 学历)
     const creditIdx = CREDIT_GRADES.indexOf(currentAccount.social_credit);
     const minCreditIdx = CREDIT_GRADES.indexOf(job.min_credit);
     const eduWeight = { "初中": 1, "大专": 2, "本科": 3, "硕士": 4, "博士": 5 };
@@ -2222,14 +2241,12 @@ async function applyForJob(jobId) {
         return alert("申请驳回：您的公民档案不符合该职位的最低准入标准。");
     }
 
-    // 检查是否已有工作或正在审批中
     const { data: existing } = await supabaseClient.from('omni_user_jobs').select('*').eq('account_id', currentAccount.id).maybeSingle();
     if (existing) {
         if (existing.status === 'approved') return alert("操作受限：您已在帝国劳动力池中拥有一份正式编制，请先离职。");
-        if (existing.status === 'pending') return alert("您的上一份申请正在政审序列中，请勿重复提交。");
+        if (existing.status === 'pending') return alert("您的上一份申请正在流程中，请勿重复提交。");
     }
 
-    // 写入申请，记录当前时间
     const { error } = await supabaseClient.from('omni_user_jobs').upsert([
         { 
             account_id: currentAccount.id, 
@@ -2241,7 +2258,8 @@ async function applyForJob(jobId) {
 
     if (!error) {
         alert("【流程启动】申请已上传至劳工部。");
-        loadJobs(); 
+        // 核心：调用全局同步，页面会瞬间隐藏人才市场，弹出蓝色的申请单
+        await syncOmniTerminal(); 
     }
 }
 
