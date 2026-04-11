@@ -2180,7 +2180,7 @@ async function autoProcessBureaucracy() {
         // 删除该职历记录，彻底恢复自由身，下次进页面就能重选工作了
         await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
         
-        alert("【系统通知】您的离职脱密政审已通过。帝国编制已注销，您现在可以重新进行劳动力调配。");
+        alert("【系统通知】您的离职已通过。帝国编制已注销，您现在可以重新进行劳动力调配。");
     }
 
     // 更新界面状态
@@ -2188,51 +2188,108 @@ async function autoProcessBureaucracy() {
     if (document.getElementById('page-jobs').classList.contains('active')) loadJobs();
 }
 
-// 2. 渲染职位卡片
+// --- 渲染人才市场职位列表  ---
 function renderJobs() {
     const container = document.getElementById('job-list-container');
     if (!container) return;
     container.innerHTML = '';
 
-    allJobs.forEach(job => {
-        // 隐藏内部/特聘职位
-        if (job.is_public === false) return; 
-        
-        let permitDisplay = "无";
-        if (job.provided_item_ids && job.provided_item_ids.trim() !== '') {
-            const ids = job.provided_item_ids.split(',').map(id => parseInt(id.trim()));
-            const names = ids.map(id => {
-                const item = mallItems.find(i => i.id === id);
-                return item ? `《${item.name}》` : `[未知授权]`;
-            });
-            permitDisplay = "核发 " + names.join('、');
-        }
+    // 1. 定义九大语区的固定展示顺序
+    const regionOrder = [
+        "蒂尔兰语区", "海外飞地", "格伦瑟语区", "卡法罗语区", 
+        "桐花语区", "奥斯特克语区", "安塔拉语区", "霍桑语区", "乌瑞克语区"
+    ];
 
-        const html = `
-            <div class="card" style="border: 1px solid #e2e8f0; margin-bottom: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <div style="font-size: 0.7em; color: #64748b; font-weight: bold;">[ ${job.employer} ]</div>
-                        <h4 style="margin: 5px 0;">${job.title}</h4>
-                        <div style="font-size: 0.85em; color: #1e293b;">坐标：${job.region} - ${job.sub_region} - ${job.specific_location}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="color: var(--omni-green); font-weight: bold;">${job.salary} CR / 月</div>
-                        <div style="font-size: 0.75em; color: #64748b;">周期：${job.promotion_interval || '--'}月/信用+1</div>
-                    </div>
-                </div>
-                <div style="margin-top: 10px; padding: 10px; background: #f8fafc; font-size: 0.8em; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>门槛：信用 ${job.min_credit} / 学历 ${job.required_edu}</div>
-                    <div>勤务：${job.work_schedule}</div>
-                    <div style="grid-column: span 2; color: #64748b;">授权：${permitDisplay}</div> 
-                </div>
-                <button onclick="applyForJob(${job.id})" style="width: 100%; margin-top: 10px; padding: 8px; background: var(--omni-text); color: white; border: none; cursor: pointer;">
-                    提交劳动力调配申请
-                </button>
+    // 2. 初始化分组容器
+    const groupedJobs = {};
+    regionOrder.forEach(r => groupedJobs[r] = []);
+    groupedJobs["其他区域"] = []; // 兜底容错
+
+    // 3. 过滤出公开职位，并装入对应的语区容器
+    allJobs.forEach(job => {
+        if (job.is_public === false) return; 
+        if (groupedJobs[job.region]) {
+            groupedJobs[job.region].push(job);
+        } else {
+            groupedJobs["其他区域"].push(job);
+        }
+    });
+
+    let finalHtml = '';
+
+    // 4. 遍历每个语区，进行排序和渲染
+    for (const [region, jobs] of Object.entries(groupedJobs)) {
+        if (jobs.length === 0) continue; // 如果该语区没职位，直接跳过不显示表头
+
+        // 【核心逻辑】：双重排序 (信用等级降序 -> 薪资降序)
+        jobs.sort((a, b) => {
+            const creditA = CREDIT_GRADES.indexOf(a.min_credit);
+            const creditB = CREDIT_GRADES.indexOf(b.min_credit);
+            
+            if (creditB !== creditA) {
+                return creditB - creditA; // 信用等级高的排前面 (索引值大)
+            }
+            return b.salary - a.salary;   // 信用相同，薪资高的排前面
+        });
+
+        // 生成语区分隔表头
+        finalHtml += `
+            <div style="margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid var(--omni-green); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <h4 style="margin: 0; color: var(--omni-text); letter-spacing: 2px; font-size: 1.1em;">📍 ${region}</h4>
+                <span style="font-size: 0.75em; color: #64748b;">当前收录岗位：${jobs.length} 个</span>
             </div>
         `;
-        container.insertAdjacentHTML('beforeend', html);
-    });
+
+        // 渲染该语区下的排序岗位
+        jobs.forEach(job => {
+            let permitDisplay = "无";
+            if (job.provided_item_ids && job.provided_item_ids.trim() !== '') {
+                const ids = job.provided_item_ids.split(',').map(id => parseInt(id.trim()));
+                const names = ids.map(id => {
+                    const item = mallItems.find(i => i.id === id);
+                    return item ? `《${item.name}》` : `[未知授权]`;
+                });
+                permitDisplay = names.join('、');
+            }
+
+            // 检查当前玩家是否符合该职位的最低信用标准（用于按钮变灰反馈）
+            const playerCreditIdx = CREDIT_GRADES.indexOf(currentAccount.social_credit);
+            const reqCreditIdx = CREDIT_GRADES.indexOf(job.min_credit);
+            const isCreditLocked = playerCreditIdx < reqCreditIdx;
+
+            finalHtml += `
+                <div class="card" style="border: 1px solid #e2e8f0; margin-bottom: 15px; border-radius: 0; position: relative;">
+                    ${isCreditLocked ? `<div style="position: absolute; top: 15px; right: 15px; font-size: 0.7em; color: var(--omni-danger); font-weight: bold; border: 1px solid var(--omni-danger); padding: 2px 6px;">信用等级不符</div>` : ''}
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-right: ${isCreditLocked ? '80px' : '0'};">
+                        <div>
+                            <div style="font-size: 0.7em; color: #64748b; font-weight: bold;">[ ${job.employer} ]</div>
+                            <h4 style="margin: 5px 0;">${job.title}</h4>
+                            <div style="font-size: 0.85em; color: #1e293b;">坐标：${job.sub_region} - ${job.specific_location}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: var(--omni-green); font-weight: bold; font-size: 1.1em;">${job.salary.toLocaleString()} CR / 月</div>
+                            <div style="font-size: 0.75em; color: #64748b;">晋升：${job.promotion_interval || '--'}月/信用+1</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 12px; background: #f8fafc; font-size: 0.8em; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 1px dashed #cbd5e1;">
+                        <div>准入标准：信用 <strong style="color:${isCreditLocked ? 'var(--omni-danger)' : 'var(--omni-text)'}">${job.min_credit}</strong> / 学历 ${job.required_edu}</div>
+                        <div>勤务序列：${job.work_schedule}</div>
+                        <div style="grid-column: span 2; color: #64748b;">随附授权：${permitDisplay}</div> 
+                    </div>
+                    
+                    <button onclick="applyForJob(${job.id})" 
+                            style="width: 100%; margin-top: 15px; padding: 10px; background: ${isCreditLocked ? '#cbd5e1' : 'var(--omni-text)'}; color: white; border: none; cursor: ${isCreditLocked ? 'not-allowed' : 'pointer'}; font-weight: bold; letter-spacing: 1px; transition: 0.3s;"
+                            ${isCreditLocked ? 'disabled title="您的信用评级过低，无法提交申请"' : ''}>
+                        提交劳动力调配申请
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    container.innerHTML = finalHtml;
 }
 
 // 3. 核心：申请逻辑
