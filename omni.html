@@ -478,12 +478,24 @@
             </div>
 
             <div id="page-jobs" class="page">
-                <div class="card">
-                    <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px; margin-bottom: 20px;">
-                        💼 帝国全境职位实时索引
-                    </h3>
-                    <div id="job-list-container" style="display: flex; flex-direction: column; gap: 15px;">
-                        </div>
+                <div id="job-market-view" style="display: none;">
+                    <div class="card">
+                        <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px; margin-bottom: 20px;">
+                            💼 帝国全境职位实时索引
+                        </h3>
+                        <div id="job-list-container" style="display: flex; flex-direction: column; gap: 15px;">
+                            </div>
+                    </div>
+                </div>
+
+                <div id="my-job-view" style="display: none;">
+                    <div class="card">
+                        <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px; margin-bottom: 20px;">
+                            🪪 帝国服役档案
+                        </h3>
+                        <div id="my-job-details">
+                            </div>
+                    </div>
                 </div>
             </div>
 
@@ -1088,35 +1100,6 @@
             if(tabId === 'manage') renderDmTable();
         }
 
-        // --- 核心功能 1：真正的表单注册，告别弹窗 ---
-        async function submitNewAccount() {
-            const name = document.getElementById('new-npc-name').value.trim();
-            const race = document.getElementById('new-npc-race').value.trim();
-            const credits = document.getElementById('new-npc-credits').value;
-            const avatar = document.getElementById('new-npc-avatar').value.trim();
-
-            if(!name) return alert("必须填写显示网名！");
-
-            const { error } = await supabaseClient.from('omni_accounts').insert([{
-                login_id: "USER_" + Date.now(), // 自动生成系统级账号ID
-                login_pass: "123456",
-                nickname: name,
-                race: race || "未知",
-                avatar_filename: avatar || "default.png",
-                credits: credits || 1000
-            }]);
-
-            if(!error) {
-                alert(`实体 [${name}] 已成功注册入库！`);
-                // 清空表单
-                document.getElementById('new-npc-name').value = '';
-                document.getElementById('new-npc-race').value = '';
-                // 刷新联系人列表
-                loadContactList(); 
-            } else {
-                alert("注册失败：" + error.message);
-            }
-        }
 
         // --- 更新公民状态 ---
         async function adminUpdateUser(accId) {
@@ -1210,17 +1193,8 @@ async function renderDmTable() {
     });
     tbody.innerHTML = html;
 }
-        // --- 核心功能 3：不经弹窗直接修改头像 ---
-        async function updateAvatar(accId) {
-            const newAvatar = document.getElementById(`edit-avatar-${accId}`).value.trim();
-            const { error } = await supabaseClient.from('omni_accounts').update({ avatar_filename: newAvatar }).eq('id', accId);
-            if(!error) {
-                alert("头像修改已同步至数据库！");
-                loadContactList(); // 刷新左侧联系人的头像显示
-            } else {
-                alert("修改失败：" + error.message);
-            }
-        }
+
+       
 
 
         async function takeoverAccount(accId) {
@@ -1254,25 +1228,7 @@ async function renderDmTable() {
             }
         }
 
-        // --- 资产操作 ---
-        async function purchase(name, price) {
-            if(currentAccount.is_dm && currentAccount.login_id === "DM") return alert("系统管理员账号无需扣费。");
-            const targetId = currentAccount.id; 
-            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', targetId).single();
-            if(data && data.credits < price) return alert("信用点不足。");
-            if(confirm(`确认花费 ${price} 信用点调配 [${name}] 吗？`)) {
-                await supabaseClient.from('omni_accounts').update({ credits: data.credits - price }).eq('id', targetId);
-                alert("支付成功，物资派发中。");
-                updateWallet();
-            }
-        }
 
-        async function adminAdjustCredits() {
-            const tid = document.getElementById('target-id').value;
-            const amt = document.getElementById('target-amt').value;
-            await supabaseClient.from('omni_accounts').update({ credits: amt }).eq('login_id', tid);
-            alert("资产调拨完成");
-        }
 
         async function updateWallet() {
             if(currentAccount.is_dm && currentAccount.login_id === "DM") {
@@ -1708,15 +1664,6 @@ async function syncImperialDate() {
             }
         }
 
-// 修改日期使用
-async function updateImperialDate(newDateStr) {
-    const { error } = await supabaseClient.from('omni_config').update({ value: newDateStr }).eq('key', 'current_date');
-    if (!error) {
-        alert("帝国标准时已同步更新。");
-        syncImperialDate();
-    }
-}
-
 // 【社交管理】删除好友
 async function deleteFriend(friendId, name) {
     if(!confirm(`确定要删除联系人 [${name}] 吗？`)) return;
@@ -2023,10 +1970,140 @@ async function loadInventory() {
 let allJobs = [];
 
 // 1. 加载职位列表
+// --- 增强后的 loadJobs：根据状态决定显示哪个视图 ---
 async function loadJobs() {
-    const { data } = await supabaseClient.from('omni_jobs').select('*');
-    allJobs = data || [];
-    renderJobs();
+    // 1. 检查公民是否已经有工作（在职 或 正在走离职审批）
+    const { data: myJob } = await supabaseClient
+        .from('omni_user_jobs')
+        .select('*, omni_jobs(*)')
+        .eq('account_id', currentAccount.id)
+        .in('status', ['approved', 'resigning'])
+        .maybeSingle();
+
+    if (myJob) {
+        // 有工作：隐藏市场，显示个人档案
+        document.getElementById('job-market-view').style.display = 'none';
+        document.getElementById('my-job-view').style.display = 'block';
+        renderMyJob(myJob); // 调用辅助渲染函数
+    } else {
+        // 没工作：显示市场，拉取公开职位
+        document.getElementById('job-market-view').style.display = 'block';
+        document.getElementById('my-job-view').style.display = 'none';
+
+        // 只拉取对平民公开的职位 (is_public = true)
+        const { data } = await supabaseClient.from('omni_jobs').select('*');
+        allJobs = data || [];
+        renderJobs(); // 依然使用你原有的 renderJobs
+    }
+}
+
+// --- 新增辅助函数：渲染“我的工作”面板 ---
+function renderMyJob(work) {
+    const job = work.omni_jobs;
+    const isResigning = work.status === 'resigning';
+    
+    // 状态标签
+    let statusHtml = isResigning 
+        ? `<span style="color:var(--omni-danger); font-weight:bold; padding: 4px 8px; border: 1px solid var(--omni-danger); font-size:0.8em;">离职政审中</span>` 
+        : `<span style="color:var(--omni-green); font-weight:bold; padding: 4px 8px; border: 1px solid var(--omni-green); font-size:0.8em;">正常履职中</span>`;
+
+    // 按钮逻辑：如果正在离职，按钮置灰不可点
+    let btnHtml = isResigning
+        ? `<button disabled style="width: 100%; margin-top: 20px; padding: 12px; background: #64748b; color: white; border: none; cursor: not-allowed; font-weight:bold; letter-spacing: 2px;">脱密审查进行中 (预计3小时)</button>`
+        : `<button onclick="submitResignation(${work.id})" style="width: 100%; margin-top: 20px; padding: 12px; background: transparent; color: var(--omni-danger); border: 1px solid var(--omni-danger); cursor: pointer; font-weight:bold; letter-spacing: 2px; transition: 0.3s;" onmouseover="this.style.background='var(--omni-danger)'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='var(--omni-danger)'">向帝国劳工部提交辞呈</button>`;
+
+    const html = `
+        <div style="background: #f8fafc; padding: 25px; border-radius: 4px; border: 1px solid #e2e8f0; position: relative;">
+            <div style="position: absolute; top: 25px; right: 25px;">${statusHtml}</div>
+            <div style="font-size: 0.8em; color: #64748b; font-weight: bold; margin-bottom: 5px;">[ ${job.employer} ]</div>
+            <h2 style="margin: 0 0 20px 0; color: var(--omni-text);">${job.title}</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size:0.95em; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">基础配给</span> <strong style="color:var(--omni-green); font-size:1.2em;">${job.salary} CR / 月</strong></div>
+                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">勤务序列</span> <strong>${job.work_schedule}</strong></div>
+                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">工作坐标</span> <strong>${job.region} - ${job.sub_region}</strong></div>
+                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">入职帝国历</span> <strong>${new Date(work.hire_date).toLocaleDateString()}</strong></div>
+            </div>
+            ${btnHtml}
+        </div>
+    `;
+    document.getElementById('my-job-details').innerHTML = html;
+}
+
+// --- 新增辅助函数：提交离职 ---
+async function submitResignation(workId) {
+    if (!confirm("⚠️ 警告：确定要提交辞呈吗？\n离开帝国编制需进行长达 3 小时的脱密政审，在此期间您将无法调配新岗位。")) return;
+    
+    // 将状态改为 'resigning'，并重置 apply_time 以重新开始 3 小时计时
+    const { error } = await supabaseClient.from('omni_user_jobs').update({
+        status: 'resigning',
+        apply_time: new Date().toISOString()
+    }).eq('id', workId);
+
+    if (!error) {
+        alert("【离职审批启动】您的辞呈已录入系统，预计脱密审核耗时：3.0 小时。");
+        loadJobs(); // 刷新页面，按钮会立刻变成灰色的“政审中”
+    }
+}
+
+// --- 静默审批 ---
+async function autoProcessBureaucracy() {
+    // 1. 查找待处理的流程（包括 pending 入职，和 resigning 离职）
+    const { data: work, error } = await supabaseClient
+        .from('omni_user_jobs')
+        .select('*, omni_jobs(*)')
+        .eq('account_id', currentAccount.id)
+        .in('status', ['pending', 'resigning'])
+        .maybeSingle();
+
+    if (!work || error) return; // 无事发生
+
+    // 2. 时间计算
+    const applyTime = new Date(work.apply_time);
+    const now = new Date();
+    const waitTimeHours = (now - applyTime) / (1000 * 60 * 60); 
+
+    // 3. 不满 3 小时，继续卡着
+    if (waitTimeHours < 3) return;
+
+    // 4. 满 3 小时，分支处理
+    if (work.status === 'pending') {
+        // --- 【入职审批分支】(保持你原有的 50% 逻辑) ---
+        const isApproved = Math.random() > 0.5;
+
+        if (isApproved) {
+            if (work.omni_jobs.provided_item_ids) {
+                const itemIds = work.omni_jobs.provided_item_ids.split(',').map(id => parseInt(id.trim()));
+                for (const itemId of itemIds) {
+                    await supabaseClient.from('omni_inventory').insert([
+                        { account_id: currentAccount.id, item_id: itemId, quantity: 1 }
+                    ]);
+                }
+            }
+
+            await supabaseClient.from('omni_user_jobs').update({
+                status: 'approved',
+                hire_date: now.toISOString(),
+                last_pay_date: now.toISOString()
+            }).eq('id', work.id);
+
+            alert("【系统通知】您的劳动力调配申请已通过审核。相关许可已下发。");
+        } else {
+            await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
+            alert("【系统通知】您的劳动力调配申请已被驳回。原因：档案匹配度不足或名额已满。");
+        }
+
+    } else if (work.status === 'resigning') {
+        // --- 【离职审批分支】(必定同意，直接删档) ---
+        // 删除该职历记录，彻底恢复自由身，下次进页面就能重选工作了
+        await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
+        
+        alert("【系统通知】您的离职脱密政审已通过。帝国编制已注销，您现在可以重新进行劳动力调配。");
+    }
+
+    // 更新界面状态
+    if (typeof loadInventory === 'function') loadInventory();
+    if (document.getElementById('page-jobs').classList.contains('active')) loadJobs();
 }
 
 // 2. 渲染职位卡片
@@ -2116,64 +2193,6 @@ async function applyForJob(jobId) {
     }
 }
 
-
-async function autoProcessBureaucracy() {
-    // 1. 查找当前公民是否有处于“审批中”的申请
-    const { data: work, error } = await supabaseClient
-        .from('omni_user_jobs')
-        .select('*, omni_jobs(*)')
-        .eq('account_id', currentAccount.id)
-        .eq('status', 'pending')
-        .maybeSingle();
-
-    if (!work || error) return; // 没有申请在排队，直接退出
-
-    // 2. 计算时间差
-    const applyTime = new Date(work.apply_time);
-    const now = new Date();
-    const waitTimeHours = (now - applyTime) / (1000 * 60 * 60); 
-
-    // 3. 判定：如果不满 3 小时，保持静默，什么都不做
-    if (waitTimeHours < 3) return;
-
-    // 4. 时间已满 3 小时，执行“伪审批”逻辑
-    // 随机概率判定 (50%)
-    const isApproved = Math.random() > 0.5;
-
-    if (isApproved) {
-        // --- 审批通过逻辑 ---
-        
-        // A. 自动发放职位关联的许可证
-        if (work.omni_jobs.provided_item_ids && work.omni_jobs.provided_item_ids.trim() !== "") {
-            const itemIds = work.omni_jobs.provided_item_ids.split(',').map(id => parseInt(id.trim()));
-            for (const itemId of itemIds) {
-                // 直接插入背包，利用数据库的 ID 关联你已录入的证件
-                await supabaseClient.from('omni_inventory').insert([
-                    { account_id: currentAccount.id, item_id: itemId, quantity: 1 }
-                ]);
-            }
-        }
-
-        // B. 更新职历状态为“已录取”
-        await supabaseClient.from('omni_user_jobs').update({
-            status: 'approved',
-            hire_date: now.toISOString(),
-            last_pay_date: now.toISOString()
-        }).eq('id', work.id);
-
-        // 提示公民（模拟终端收到的系统邮件回执）
-        alert("【系统通知】您的劳动力调配申请（政审编号：OMNI-RT-" + work.id + "）已通过审核。相关许可已下发。");
-
-    } else {
-        // --- 审批拒绝逻辑 ---
-        await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
-        
-        alert("【系统通知】您的劳动力调配申请已被驳回。原因：档案匹配度不足或名额已满。");
-    }
-
-    // 更新完成后刷新 UI
-    if (typeof loadInventory === 'function') loadInventory();
-}
 
 // 4. 自动结转：工资与信用 (建议放在 enterApp 中调用)
 async function processEmploymentRewards() {
