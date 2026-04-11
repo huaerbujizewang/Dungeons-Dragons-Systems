@@ -2019,7 +2019,7 @@ function renderJobs() {
 
     allJobs.forEach(job => {
         
-        // --- 新增逻辑：将 ID 字符串翻译成证件名称 ---
+        if (job.is_public === false) return;
         let permitDisplay = "无";
         if (job.provided_item_ids && job.provided_item_ids.trim() !== '') {
             // 把 "98,193" 切割成数组 [98, 193]
@@ -2184,6 +2184,42 @@ async function processEmploymentRewards() {
         console.log(`帝国财务部：已发放 ${totalPay} CR 工资。`);
     }
     
+}
+
+// DM 强制任命函数
+async function adminAppointJob(accId, jobId) {
+    const job = allJobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    if (!confirm(`确认要将公民 #${accId} 提拔为 [${job.employer} - ${job.title}] 吗？\n该操作将绕过所有政审流程并立即核发特许证件。`)) return;
+
+    // 1. 强行写入/更新职历表为“已录取”状态
+    const { error: jobErr } = await supabaseClient.from('omni_user_jobs').upsert([
+        { 
+            account_id: accId, 
+            job_id: jobId, 
+            status: 'approved', 
+            hire_date: new Date().toISOString(),
+            last_pay_date: new Date().toISOString()
+        }
+    ]);
+
+    if (jobErr) return alert("任命失败：" + jobErr.message);
+
+    // 2. 强行核发所有关联证件
+    if (job.provided_item_ids) {
+        const itemIds = job.provided_item_ids.split(',').map(id => parseInt(id.trim()));
+        for (const itemId of itemIds) {
+            // 检查重复，不重复则塞入
+            const { data: exists } = await supabaseClient.from('omni_inventory').select('*').eq('account_id', accId).eq('item_id', itemId).maybeSingle();
+            if (!exists) {
+                await supabaseClient.from('omni_inventory').insert([{ account_id: accId, item_id: itemId, quantity: 1 }]);
+            }
+        }
+    }
+
+    alert(`【帝国指令】公民 #${accId} 已正式就任 ${job.title}。`);
+    renderDmTable(); // 刷新管理列表
 }
 
 
