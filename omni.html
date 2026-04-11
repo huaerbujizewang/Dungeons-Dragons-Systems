@@ -1134,7 +1134,7 @@
             }
         }
 
-        // --- 重新编写的后台表格渲染 ---
+// --- 重新编写的后台表格渲染 ---
 async function renderDmTable() {
     const tbody = document.getElementById('dm-account-table-body');
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">正在扫描全境公民档案...</td></tr>';
@@ -1184,9 +1184,10 @@ async function renderDmTable() {
                     </div>
                 </td>
 
-                <td>
+               <td>
                     <button class="action-btn action-save" onclick="adminUpdateUser(${acc.id})" style="margin-bottom:5px;">应用</button>
-                    <button class="action-btn action-hijack" onclick="takeoverAccount(${acc.id})">接管</button>
+                    <button class="action-btn action-hijack" onclick="takeoverAccount(${acc.id})" style="margin-bottom:5px;">接管</button>
+                    <button class="action-btn" style="background:#8b5cf6;" onclick="adminEditHireDate(${acc.id})">改入职</button>
                 </td>
             </tr>
         `;
@@ -1997,34 +1998,79 @@ async function loadJobs() {
     }
 }
 
-// --- 新增辅助函数：渲染“我的工作”面板 ---
+// --- 渲染“我的工作”面板 ---
 function renderMyJob(work) {
     const job = work.omni_jobs;
     const isResigning = work.status === 'resigning';
-    
-    // 状态标签
-    let statusHtml = isResigning 
-        ? `<span style="color:var(--omni-danger); font-weight:bold; padding: 4px 8px; border: 1px solid var(--omni-danger); font-size:0.8em;">离职政审中</span>` 
-        : `<span style="color:var(--omni-green); font-weight:bold; padding: 4px 8px; border: 1px solid var(--omni-green); font-size:0.8em;">正常履职中</span>`;
+    const statusText = isResigning ? "离职核算中" : "正常履职中";
 
-    // 按钮逻辑：如果正在离职，按钮置灰不可点
-    let btnHtml = isResigning
-        ? `<button disabled style="width: 100%; margin-top: 20px; padding: 12px; background: #64748b; color: white; border: none; cursor: not-allowed; font-weight:bold; letter-spacing: 2px;">脱密审查进行中 (预计3小时)</button>`
-        : `<button onclick="submitResignation(${work.id})" style="width: 100%; margin-top: 20px; padding: 12px; background: transparent; color: var(--omni-danger); border: 1px solid var(--omni-danger); cursor: pointer; font-weight:bold; letter-spacing: 2px; transition: 0.3s;" onmouseover="this.style.background='var(--omni-danger)'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='var(--omni-danger)'">向帝国劳工部提交辞呈</button>`;
+    // 动态读取证件字典
+    let permitDisplay = "无";
+    if (job.provided_item_ids && job.provided_item_ids.trim() !== '') {
+        const ids = job.provided_item_ids.split(',').map(id => parseInt(id.trim()));
+        const names = ids.map(id => {
+            const item = mallItems.find(i => i.id === id);
+            return item ? `《${item.name}》` : `[未知授权]`;
+        });
+        permitDisplay = names.join('、');
+    }
 
     const html = `
-        <div style="background: #f8fafc; padding: 25px; border-radius: 4px; border: 1px solid #e2e8f0; position: relative;">
-            <div style="position: absolute; top: 25px; right: 25px;">${statusHtml}</div>
-            <div style="font-size: 0.8em; color: #64748b; font-weight: bold; margin-bottom: 5px;">[ ${job.employer} ]</div>
-            <h2 style="margin: 0 0 20px 0; color: var(--omni-text);">${job.title}</h2>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size:0.95em; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">基础配给</span> <strong style="color:var(--omni-green); font-size:1.2em;">${job.salary} CR / 月</strong></div>
-                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">勤务序列</span> <strong>${job.work_schedule}</strong></div>
-                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">工作坐标</span> <strong>${job.region} - ${job.sub_region}</strong></div>
-                <div><span style="color:#94a3b8; display:block; font-size:0.8em; text-transform:uppercase;">入职帝国历</span> <strong>${new Date(work.hire_date).toLocaleDateString()}</strong></div>
+        <div class="card" style="border: 2px solid var(--omni-text); border-radius: 0; padding: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--omni-text); padding-bottom: 15px; margin-bottom: 20px;">
+                <h3 style="margin: 0; letter-spacing: 4px;">💼 帝国就业档案</h3>
+                <span style="font-family: monospace; font-weight: bold; background: ${isResigning ? '#f59e0b' : 'var(--omni-green)'}; color: white; padding: 2px 10px;">
+                    ${statusText.toUpperCase()}
+                </span>
             </div>
-            ${btnHtml}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">EMPLOYER / 雇主单位</label>
+                         <strong style="font-size: 1.1em;">${job.employer}</strong></div>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">POSITION / 职衔</label>
+                         <strong>${job.title}</strong></div>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">LOCATION / 标准坐标</label>
+                         <span style="font-size: 0.9em;">${job.region} - ${job.sub_region} - ${job.specific_location}</span></div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">SALARY / 月度配给</label>
+                         <strong style="color: var(--omni-green); font-size: 1.1em;">${job.salary.toLocaleString()} CR</strong></div>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">SCHEDULE / 勤务序列</label>
+                         <strong>${job.work_schedule}</strong></div>
+                    <div><label style="color: #64748b; font-size: 0.75em; display: block;">HIRE DATE / 入职时间</label>
+                         <strong>帝国历 ${formatImperialDate(work.hire_date)}</strong></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 15px; background: #f8fafc; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; border-right: 1px solid #e2e8f0;">
+                    <label style="display: block; font-size: 0.7em; color: #64748b;">NEXT DISTRIBUTION / 下次配给发放</label>
+                    <strong style="font-size: 1.1em;">${getDaysUntilPayday(work.last_pay_date)} 天</strong>
+                </div>
+                <div style="text-align: center;">
+                    <label style="display: block; font-size: 0.7em; color: #64748b;">CREDIT PROMOTION / 距离信用晋升</label>
+                    <strong style="font-size: 1.1em;">${getMonthsUntilPromotion(work.hire_date, job.promotion_interval)}</strong>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <label style="color: #64748b; font-size: 0.75em; display: block; margin-bottom: 5px;">AUTHORIZED PERMITS / 关联授权</label>
+                <div style="font-size: 0.85em; font-family: monospace; color: #64748b;">
+                    ${permitDisplay}
+                </div>
+            </div>
+
+            ${!isResigning ? `
+                <button onclick="submitResignation(${work.id})" style="margin-top: 30px; width: 100%; padding: 12px; background: none; border: 1px solid var(--omni-danger); color: var(--omni-danger); cursor: pointer; font-weight: bold; letter-spacing: 2px;">
+                    提交辞呈
+                </button>
+            ` : `
+                <button disabled style="margin-top: 30px; width: 100%; padding: 12px; background: #f1f5f9; color: #94a3b8; border: none; font-weight: bold; letter-spacing: 2px;">
+                    离职核算中
+                </button>
+            `}
         </div>
     `;
     document.getElementById('my-job-details').innerHTML = html;
@@ -2032,17 +2078,17 @@ function renderMyJob(work) {
 
 // --- 新增辅助函数：提交离职 ---
 async function submitResignation(workId) {
-    if (!confirm("⚠️ 警告：确定要提交辞呈吗？\n离开帝国编制需进行长达 3 小时的脱密政审，在此期间您将无法调配新岗位。")) return;
+    if (!confirm("【离职确认】\n确定要向劳工部提交辞呈吗？\n系统将冻结您的当前履职状态以进行资产清算与权限回收。在此期间，您将无法调配新的职位。")) return;
     
-    // 将状态改为 'resigning'，并重置 apply_time 以重新开始 3 小时计时
+    // 将状态改为 'resigning'，并重置 apply_time 以重新开始后台的静默计时
     const { error } = await supabaseClient.from('omni_user_jobs').update({
         status: 'resigning',
         apply_time: new Date().toISOString()
     }).eq('id', workId);
 
     if (!error) {
-        alert("【离职审批启动】您的辞呈已录入系统，预计脱密审核耗时：3.0 小时。");
-        loadJobs(); // 刷新页面，按钮会立刻变成灰色的“政审中”
+        alert("【流程启动】辞呈已上传。帝国人力核算系统已接管，请等待终端的最终核算回执。");
+        loadJobs(); // 刷新页面
     }
 }
 
@@ -2113,22 +2159,18 @@ function renderJobs() {
     container.innerHTML = '';
 
     allJobs.forEach(job => {
+        // 隐藏内部/特聘职位
+        if (job.is_public === false) return; 
         
-        if (job.is_public === false) return;
         let permitDisplay = "无";
         if (job.provided_item_ids && job.provided_item_ids.trim() !== '') {
-            // 把 "98,193" 切割成数组 [98, 193]
             const ids = job.provided_item_ids.split(',').map(id => parseInt(id.trim()));
-            
-            // 去 mallItems 字典里找对应的名字
             const names = ids.map(id => {
                 const item = mallItems.find(i => i.id === id);
                 return item ? `《${item.name}》` : `[未知授权]`;
             });
-            
             permitDisplay = "核发 " + names.join('、');
         }
-        // ------------------------------------------
 
         const html = `
             <div class="card" style="border: 1px solid #e2e8f0; margin-bottom: 0;">
@@ -2259,7 +2301,73 @@ async function adminAppointJob(accId, jobId) {
     renderDmTable(); // 刷新管理列表
 }
 
+// 1. 帝国历标准化格式化 (例如：1092年04月11日)
+function formatImperialDate(dateStr) {
+    if (!dateStr) return "---";
+    const date = new Date(dateStr);
+    const impYear = date.getFullYear() - IMPERIAL_YEAR_OFFSET;
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${impYear}年${month}月${day}日`;
+}
 
+// 2. 距离下次配给发放天数 (30天周期)
+function getDaysUntilPayday(lastPayDateStr) {
+    if (!lastPayDateStr) return 30;
+    const lastPay = new Date(lastPayDateStr);
+    const nextPay = new Date(lastPay);
+    nextPay.setDate(lastPay.getDate() + 30);
+    const diff = nextPay - new Date();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+// 3. 距离下次信用晋升月数
+function getMonthsUntilPromotion(hireDateStr, interval) {
+    if (!hireDateStr || !interval || interval === 0) return "N/A";
+    const hireDate = new Date(hireDateStr);
+    const now = new Date();
+    const passedMonths = (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth());
+    const remaining = interval - (passedMonths % interval);
+    return `${remaining} 个月`;
+}
+
+// --- DM 功能：手动修正公民入职时间 ---
+async function adminEditHireDate(accId) {
+    // 1. 获取该公民当前的职历记录
+    const { data: work } = await supabaseClient
+        .from('omni_user_jobs')
+        .select('*')
+        .eq('account_id', accId)
+        .eq('status', 'approved')
+        .maybeSingle();
+
+    if (!work) return alert("该公民当前未持有任何有效编制。");
+
+    // 2. 弹窗输入新的入职日期
+    const oldDate = work.hire_date.split('T')[0];
+    const newDateStr = prompt(`[ 劳动力契约修正 ]\n当前公民 ID：#${accId}\n当前入职时间：${oldDate}\n\n请输入新的入职日期 (格式: YYYY-MM-DD)：`, oldDate);
+    
+    // 3. 校验并写入数据库
+    if (newDateStr && !isNaN(new Date(newDateStr).getTime())) {
+        const { error } = await supabaseClient
+            .from('omni_user_jobs')
+            .update({ hire_date: new Date(newDateStr).toISOString() })
+            .eq('id', work.id);
+
+        if (!error) {
+            alert("契约生效时间已重写。信用晋升周期已重新校准。");
+            
+            // 如果你是在接管该账号时修改了时间，就直接刷新界面让他看到变化
+            if (currentAccount.id === accId && typeof loadJobs === 'function') {
+                loadJobs(); 
+            }
+        } else {
+            alert("修改失败：" + error.message);
+        }
+    } else if (newDateStr !== null) {
+        alert("无效的日期格式，必须为类似 2024-05-20 的格式。");
+    }
+}
 
 
     </script>
