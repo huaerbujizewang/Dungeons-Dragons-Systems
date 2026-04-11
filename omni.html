@@ -744,6 +744,10 @@
             if(currentAccount.is_dm) {
                 document.getElementById('dm-admin-trigger').style.display = 'flex';
             }
+            setInterval(() => {
+                autoProcessBureaucracy();
+                processEmploymentRewards();
+            }, 60000); 
         }
 
 
@@ -2140,27 +2144,26 @@ let allJobs = [];
 
 // 1. 加载职位列表
 async function loadJobs() {
-    // 1. 检查公民是否已有记录 (无论是 入职中、离职中、还是 申请中)
+    // 【核心修改】无论有没有工作，先确保后台拿到了所有职位数据供 DM 调配
+    const { data: allData } = await supabaseClient.from('omni_jobs').select('*');
+    allJobs = allData || [];
+
+    // 接下来再处理 UI 渲染逻辑
     const { data: myJob } = await supabaseClient
         .from('omni_user_jobs')
         .select('*, omni_jobs(*)')
         .eq('account_id', currentAccount.id)
-        .in('status', ['approved', 'resigning', 'pending']) // 加入 pending 判定
+        .in('status', ['approved', 'resigning', 'pending'])
         .maybeSingle();
 
     if (myJob) {
-        // 只要有记录，就隐藏市场，显示“我的档案/申请”视图
         document.getElementById('job-market-view').style.display = 'none';
         document.getElementById('my-job-view').style.display = 'block';
         renderMyJob(myJob); 
     } else {
-        // 只有完全没记录时，才显示人才市场
         document.getElementById('job-market-view').style.display = 'block';
         document.getElementById('my-job-view').style.display = 'none';
-
-        const { data } = await supabaseClient.from('omni_jobs').select('*');
-        allJobs = data || [];
-        renderJobs();
+        renderJobs(); // 这里 renderJobs 会直接使用上面已经拿到的 allJobs
     }
 }
 
@@ -2281,50 +2284,66 @@ async function autoProcessBureaucracy() {
 
     if (!work || error) return; // 无事发生
 
-    // 2. 时间计算
-    const applyTime = new Date(work.apply_time);
-    const now = new Date();
+    // 2. 绝对时间戳计算
+    const applyTime = new Date(work.apply_time).getTime();
+    const now = new Date().getTime();
+    
+    // 计算得出纯粹的小时差
     const waitTimeHours = (now - applyTime) / (1000 * 60 * 60); 
 
-    // 3. 不满 3 小时，继续卡着
+    console.log(`[帝国人力系统] 当前流程排队时长: ${waitTimeHours.toFixed(2)} 小时`);
+
+    // 3. 不满 3 小时，继续卡着 
     if (waitTimeHours < 3) return;
 
     // 4. 满 3 小时，分支处理
     if (work.status === 'pending') {
-        // --- 【入职审批分支】(保持你原有的 50% 逻辑) ---
-        const isApproved = true;
+        // --- 【入职审批分支】 ---
+        // 恢复你原本备注的 50% 概率逻辑。如果想必过，改成 const isApproved = true;
+        const isApproved = Math.random() >= 0.5; 
 
         if (isApproved) {
+            // 如果该职位自带特许证件，核发到背包
             if (work.omni_jobs.provided_item_ids) {
                 const itemIds = work.omni_jobs.provided_item_ids.split(',').map(id => parseInt(id.trim()));
                 for (const itemId of itemIds) {
-                    await supabaseClient.from('omni_inventory').insert([
-                        { account_id: currentAccount.id, item_id: itemId, quantity: 1 }
-                    ]);
+                    // 增加查重逻辑，避免因为多次轮询导致重复发证
+                    const { data: existing } = await supabaseClient
+                        .from('omni_inventory')
+                        .select('id')
+                        .eq('account_id', currentAccount.id)
+                        .eq('item_id', itemId)
+                        .maybeSingle();
+                        
+                    if (!existing) {
+                        await supabaseClient.from('omni_inventory').insert([
+                            { account_id: currentAccount.id, item_id: itemId, quantity: 1 }
+                        ]);
+                    }
                 }
             }
 
+            // 更新职历状态为“正常履职”
             await supabaseClient.from('omni_user_jobs').update({
                 status: 'approved',
-                hire_date: now.toISOString(),
-                last_pay_date: now.toISOString()
+                hire_date: new Date().toISOString(),
+                last_pay_date: new Date().toISOString()
             }).eq('id', work.id);
 
             alert("【系统通知】您的劳动力调配申请已通过审核。相关许可已下发。");
         } else {
+            // 驳回直接删档，释放劳动力
             await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
             alert("【系统通知】您的劳动力调配申请已被驳回。原因：档案匹配度不足或名额已满。");
         }
 
     } else if (work.status === 'resigning') {
         // --- 【离职审批分支】(必定同意，直接删档) ---
-        // 删除该职历记录，彻底恢复自由身，下次进页面就能重选工作了
         await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
-        
         alert("【系统通知】您的离职已通过。帝国编制已注销，您现在可以重新进行劳动力调配。");
     }
 
-    // 更新界面状态
+    // 5. 强制刷新界面状态
     if (typeof loadInventory === 'function') loadInventory();
     if (document.getElementById('page-jobs').classList.contains('active')) loadJobs();
 }
