@@ -329,6 +329,20 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 20px; background: #f8fafc; border-left: 4px solid var(--omni-green);
 }
+
+/* --- 未读消息红点徽章 --- */
+.unread-badge {
+    background: var(--omni-danger);
+    color: white;
+    font-size: 0.75em;
+    font-weight: bold;
+    padding: 2px 7px;
+    border-radius: 12px;
+    margin-left: auto; 
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);
+}
+
+
     </style>
 </head>
 <body>
@@ -882,6 +896,7 @@ function switchPage(pageId, el) {
                                     <span class="contact-name">${acc.nickname}</span>
                                     <span style="font-size:0.7em; color:#94a3b8;">${acc.race || '未知'}</span>
                                 </div>
+                                <span id="badge-private-${acc.id}" class="unread-badge" style="display:none;">0</span>
                             </div>
                             
                             <!-- 删除按钮 (×)：点击仅触发删除好友逻辑 -->
@@ -897,6 +912,7 @@ function switchPage(pageId, el) {
                 });
             }
             box.innerHTML = html;
+            updateChatBadges();
         }
 
 // --- 修改后的群组列表渲染 ---
@@ -927,7 +943,9 @@ async function loadGroupList() {
                         <div class="contact-avatar" style="background:var(--omni-green); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.8em;">群</div>
                         <div style="display:flex; flex-direction:column; overflow:hidden;">
                             <span class="contact-name">${g.group_name}</span>
-                            <span style="font-size:0.7em; color:#94a3b8;">GID: ${g.id}</span> </div>
+                            <span style="font-size:0.7em; color:#94a3b8;">GID: ${g.id}</span>
+                        </div>
+                        <span id="badge-group-${g.id}" class="unread-badge" style="display:none;">0</span>
                     </div>
                     ${isOwner ? `<span onclick="disbandGroup(${g.id}, '${g.group_name}')" style="color:var(--omni-danger); cursor:pointer; font-size:1.2em; padding:0 5px;">×</span>` : ''}
                 </div>
@@ -955,6 +973,7 @@ async function createGroup() {
     // 修改提示词，包含 ID
     alert(`群组 [${name}] 已成功创建！\n群组识别码 (GID): ${group.id}\n请将此 ID 分享给其他公民以邀请加入。`);
     loadGroupList();
+    updateChatBadges();
 }
 
         // --- 聊天室切换逻辑 ---
@@ -966,13 +985,22 @@ async function createGroup() {
             loadHistory();
         }
 
-        function openPrivateChat(id, name) {
-            currentChatMode = 'private';
-            currentChatTarget = { id: id, name: name };
-            document.getElementById('chat-header-title').innerText = `私聊：${name}`;
-            loadContactList();
-            loadHistory();
-        }
+function openPrivateChat(id, name) {
+    currentChatMode = 'private';
+    currentChatTarget = { id: id, name: name };
+    document.getElementById('chat-header-title').innerText = `私聊：${name}`;
+
+    // 【新增】消除未读：将对方发给我的未读消息全部标为已读
+    supabaseClient.from('omni_messages')
+        .update({ is_read: true })
+        .eq('target_id', currentAccount.id)
+        .eq('sender_id', id)
+        .eq('is_read', false)
+        .then(() => updateChatBadges()); // 刷新红点
+
+    loadContactList();
+    loadHistory();
+}
 
 function openGroupChat(id, name) {
     currentChatMode = 'group';
@@ -984,6 +1012,14 @@ function openGroupChat(id, name) {
             <span style="font-size:0.7em; color:#94a3b8; font-weight:normal;">识别码: ${id}</span>
         </div>
     `;
+
+    // 【新增修复】消除群聊未读：将我的群聊阅读水位线更新到此时此刻
+    supabaseClient.from('omni_group_members')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('user_id', currentAccount.id)
+        .eq('group_id', id)
+        .then(() => updateChatBadges()); 
+
     loadGroupList();
     loadHistory();
 }
@@ -1068,7 +1104,18 @@ function openGroupChat(id, name) {
                     // 强制滚动到最新位置
                     const box = document.getElementById('chat-box');
                     if (box) box.scrollTop = box.scrollHeight;
+
+                    // 【新增修复】就地消化：如果正停留在当前聊天室，直接标为已读
+                    if (currentChatMode === 'private') {
+                        supabaseClient.from('omni_messages').update({is_read: true}).eq('id', m.id);
+                    } else if (currentChatMode === 'group') {
+                        supabaseClient.from('omni_group_members').update({last_read_at: new Date().toISOString()}).eq('user_id', currentAccount.id).eq('group_id', currentChatTarget.id);
+                    }
+                } else {
+                    // 【新增修复】如果当前没看这个窗口，触发红点扫描
+                    updateChatBadges();
                 }
+            })
             })
             .subscribe((status) => {
                 console.log("【全境网络监听器状态】:", status);
@@ -1687,27 +1734,72 @@ async function submitPlayerChanges() {
             document.getElementById('avatar-input').click();
         }
 
-        async function uploadAvatar() {
-            const file = document.getElementById('avatar-input').files[0];
-            if (!file) return;
+ // --- 带防卡死与转圈动画的头像上传逻辑 ---
+async function uploadAvatar() {
+    const file = document.getElementById('avatar-input').files[0];
+    if (!file) return;
 
-            const fileExt = file.name.split('.').pop();
-            const fileName = `avatar_${currentAccount.id}.${fileExt}`;
-            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file, { upsert: true });
-            if (error) return alert("生物识别上传失败：" + error.message);
+    // 1. 获取 DOM 元素并注入加载状态 (转圈动画)
+    const wrap = document.querySelector('.biometric-photo-wrap');
+    const img = document.getElementById('prof-avatar');
 
-            const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+    // 创建遮罩与转圈 UI
+    const loader = document.createElement('div');
+    loader.id = 'avatar-loader';
+    loader.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.85); color:var(--omni-green-bright); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:10; font-size:0.8em; font-weight:bold; letter-spacing: 2px;';
+    loader.innerHTML = '<div style="margin-bottom:12px; width:26px; height:26px; border:3px solid rgba(46, 204, 113, 0.2); border-top-color:var(--omni-green-bright); border-radius:50%; animation:omni-spin 0.8s linear infinite;"></div>特征提取中';
 
-            const finalUrl = publicUrl + "?t=" + Date.now();
-            const { error: updErr } = await supabaseClient.from('omni_accounts').update({ avatar_filename: finalUrl }).eq('id', currentAccount.id);
+    // 动态注入动画关键帧 (如果还不存在的话)
+    if (!document.getElementById('omni-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'omni-keyframes';
+        style.innerHTML = '@keyframes omni-spin { to { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+    }
 
-            if (!updErr) {
-                currentAccount.avatar_filename = finalUrl;
-                document.getElementById('prof-avatar').src = finalUrl;
-                alert("生物特征已同步。");
-                loadContactList(); 
-            }
-        }
+    // 挂载遮罩，压暗原图
+    wrap.appendChild(loader);
+    img.style.opacity = '0.2'; 
+
+    // 定义清理加载动画的函数
+    const cleanupLoader = () => {
+        const loaderEl = document.getElementById('avatar-loader');
+        if (loaderEl) loaderEl.remove();
+        img.style.opacity = '1';
+        document.getElementById('avatar-input').value = ''; // 清空 file input，确保下次传同名文件也能触发
+    };
+
+    try {
+        // 2. 核心上传逻辑
+        const fileExt = file.name.split('.').pop();
+        const fileName = `avatar_${currentAccount.id}.${fileExt}`;
+        
+        const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file, { upsert: true });
+        if (error) throw new Error(error.message);
+
+        const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+        const finalUrl = publicUrl + "?t=" + Date.now();
+        
+        const { error: updErr } = await supabaseClient.from('omni_accounts').update({ avatar_filename: finalUrl }).eq('id', currentAccount.id);
+        if (updErr) throw new Error("档案同步受阻：" + updErr.message);
+
+        // 3. 上传成功，更新本地数据和视图
+        currentAccount.avatar_filename = finalUrl;
+        
+        // 确保新图片完全加载完，再撤掉转圈遮罩 (避免图片闪烁)
+        img.onload = () => {
+            cleanupLoader();
+            alert("【帝国枢纽】生物特征已同步，您的全境视觉档案已更新。");
+            loadContactList(); // 刷新左侧聊天列表的头像
+        };
+        img.src = finalUrl; 
+
+    } catch (err) {
+        // 4. 如果发生错误（断网、图片太大等），立刻移除遮罩并报错，防止无限卡死
+        cleanupLoader();
+        alert("生物识别写入失败：" + err.message);
+    }
+}
 
         function escapeHTML(str) {
             return str.replace(/[&<>'"]/g, tag => ({
@@ -2640,6 +2732,62 @@ async function adminEditHireDate(accId) {
         }
     } else if (newDateStr !== null) {
         alert("无效的日期格式，必须为类似 2024-05-20 的格式。");
+    }
+}
+
+// --- OMNI 未读消息扫描引擎 ---
+async function updateChatBadges() {
+    if (!currentAccount) return;
+
+    // 1. 扫描私聊未读 (is_read = false)
+    const { data: unreadMsgs } = await supabaseClient
+        .from('omni_messages')
+        .select('sender_id')
+        .eq('target_id', currentAccount.id)
+        .eq('is_read', false);
+
+    const privateCounts = {};
+    if (unreadMsgs) {
+        unreadMsgs.forEach(m => {
+            privateCounts[m.sender_id] = (privateCounts[m.sender_id] || 0) + 1;
+        });
+    }
+
+    // 渲染私聊红点
+    document.querySelectorAll('[id^="badge-private-"]').forEach(el => el.style.display = 'none');
+    for (const [senderId, count] of Object.entries(privateCounts)) {
+        const badge = document.getElementById(`badge-private-${senderId}`);
+        if (badge) {
+            badge.innerText = count > 99 ? '99+' : count;
+            badge.style.display = 'inline-block';
+        }
+    }
+
+    // 2. 扫描群聊未读 (利用时间戳水位线)
+    const { data: myGroups } = await supabaseClient
+        .from('omni_group_members')
+        .select('group_id, last_read_at')
+        .eq('user_id', currentAccount.id);
+
+    if (myGroups) {
+        document.querySelectorAll('[id^="badge-group-"]').forEach(el => el.style.display = 'none');
+        for (const g of myGroups) {
+            const lastRead = g.last_read_at || '1970-01-01T00:00:00Z';
+            // 统计该群内，晚于我最后阅读时间的消息数量
+            const { count } = await supabaseClient
+                .from('omni_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('group_id', g.group_id)
+                .gt('created_at', lastRead);
+
+            if (count > 0) {
+                const badge = document.getElementById(`badge-group-${g.group_id}`);
+                if (badge) {
+                    badge.innerText = count > 99 ? '99+' : count;
+                    badge.style.display = 'inline-block';
+                }
+            }
+        }
     }
 }
 
