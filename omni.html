@@ -990,7 +990,7 @@ function openPrivateChat(id, name) {
     currentChatTarget = { id: id, name: name };
     document.getElementById('chat-header-title').innerText = `私聊：${name}`;
 
-    // 【新增】消除未读：将对方发给我的未读消息全部标为已读
+    // 【】消除未读：将对方发给我的未读消息全部标为已读
     supabaseClient.from('omni_messages')
         .update({ is_read: true })
         .eq('target_id', currentAccount.id)
@@ -1013,7 +1013,7 @@ function openGroupChat(id, name) {
         </div>
     `;
 
-    // 【新增修复】消除群聊未读：将我的群聊阅读水位线更新到此时此刻
+    // 消除群聊未读：将我的群聊阅读水位线更新到此时此刻
     supabaseClient.from('omni_group_members')
         .update({ last_read_at: new Date().toISOString() })
         .eq('user_id', currentAccount.id)
@@ -1105,17 +1105,16 @@ function openGroupChat(id, name) {
                     const box = document.getElementById('chat-box');
                     if (box) box.scrollTop = box.scrollHeight;
 
-                    // 【新增修复】就地消化：如果正停留在当前聊天室，直接标为已读
+                    // 就地消化：如果正停留在当前聊天室，直接标为已读
                     if (currentChatMode === 'private') {
                         supabaseClient.from('omni_messages').update({is_read: true}).eq('id', m.id);
                     } else if (currentChatMode === 'group') {
                         supabaseClient.from('omni_group_members').update({last_read_at: new Date().toISOString()}).eq('user_id', currentAccount.id).eq('group_id', currentChatTarget.id);
                     }
                 } else {
-                    // 【新增修复】如果当前没看这个窗口，触发红点扫描
+                    // 如果当前没看这个窗口，触发红点扫描
                     updateChatBadges();
                 }
-            })
             })
             .subscribe((status) => {
                 console.log("【全境网络监听器状态】:", status);
@@ -1817,7 +1816,7 @@ async function submitInitialProfile() {
     const education = document.getElementById('setup-edu-page').value;
     const military = document.getElementById('setup-military-page').checked;
     
-    // 获取新增的地址字段
+    // 获取的地址字段
     const region = document.getElementById('setup-region-page').value;
     const subRegion = document.getElementById('setup-subregion-page').value;
     const street = document.getElementById('setup-address-page').value.trim();
