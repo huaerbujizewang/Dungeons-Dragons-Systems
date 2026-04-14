@@ -483,8 +483,14 @@
                 <div class="chat-layout">
                     <div class="chat-sidebar">
                         <div class="sidebar-tabs">
-                            <div class="active" onclick="switchListTab('friends', this)">联系人</div>
-                            <div onclick="switchListTab('groups', this)">群组</div>
+                            <div class="active" onclick="switchListTab('friends', this)" style="position: relative;">
+                                联系人
+                                <span id="badge-tab-friends" class="unread-badge" style="position: absolute; top: 6px; right: 10px; padding: 2px 5px; font-size: 0.65em; display: none;">0</span>
+                            </div>
+                            <div onclick="switchListTab('groups', this)" style="position: relative;">
+                                群组
+                                <span id="badge-tab-groups" class="unread-badge" style="position: absolute; top: 6px; right: 10px; padding: 2px 5px; font-size: 0.65em; display: none;">0</span>
+                            </div>
                         </div>
                         <div class="contact-list" id="contact-list-box">
                             </div>
@@ -2849,7 +2855,9 @@ async function adminEditHireDate(accId) {
 async function updateChatBadges() {
     if (!currentAccount) return;
 
+    // ==========================================
     // 1. 扫描私聊未读 (is_read = false)
+    // ==========================================
     const { data: unreadMsgs } = await supabaseClient
         .from('omni_messages')
         .select('sender_id')
@@ -2857,13 +2865,16 @@ async function updateChatBadges() {
         .eq('is_read', false);
 
     const privateCounts = {};
+    let totalPrivateUnread = 0; // 统计私聊总未读
+
     if (unreadMsgs) {
         unreadMsgs.forEach(m => {
             privateCounts[m.sender_id] = (privateCounts[m.sender_id] || 0) + 1;
+            totalPrivateUnread++; // 每有一条未读，总数加一
         });
     }
 
-    // 渲染私聊红点
+    // 渲染名单内个人的私聊红点
     document.querySelectorAll('[id^="badge-private-"]').forEach(el => el.style.display = 'none');
     for (const [senderId, count] of Object.entries(privateCounts)) {
         const badge = document.getElementById(`badge-private-${senderId}`);
@@ -2873,11 +2884,23 @@ async function updateChatBadges() {
         }
     }
 
+    // 点亮“联系人”顶部大标签的红点
+    const tabBadgeFriends = document.getElementById('badge-tab-friends');
+    if (tabBadgeFriends) {
+        tabBadgeFriends.innerText = totalPrivateUnread > 99 ? '99+' : totalPrivateUnread;
+        tabBadgeFriends.style.display = totalPrivateUnread > 0 ? 'inline-block' : 'none';
+    }
+
+
+    // ==========================================
     // 2. 扫描群聊未读 (利用时间戳水位线)
+    // ==========================================
     const { data: myGroups } = await supabaseClient
         .from('omni_group_members')
         .select('group_id, last_read_at')
         .eq('user_id', currentAccount.id);
+
+    let totalGroupUnread = 0; // 新增：统计群聊总未读
 
     if (myGroups) {
         document.querySelectorAll('[id^="badge-group-"]').forEach(el => el.style.display = 'none');
@@ -2891,6 +2914,8 @@ async function updateChatBadges() {
                 .gt('created_at', lastRead);
 
             if (count > 0) {
+                totalGroupUnread += count; // 累加群聊总数
+                
                 const badge = document.getElementById(`badge-group-${g.group_id}`);
                 if (badge) {
                     badge.innerText = count > 99 ? '99+' : count;
@@ -2898,6 +2923,13 @@ async function updateChatBadges() {
                 }
             }
         }
+    }
+
+    // 点亮“群组”顶部大标签的红点
+    const tabBadgeGroups = document.getElementById('badge-tab-groups');
+    if (tabBadgeGroups) {
+        tabBadgeGroups.innerText = totalGroupUnread > 99 ? '99+' : totalGroupUnread;
+        tabBadgeGroups.style.display = totalGroupUnread > 0 ? 'inline-block' : 'none';
     }
 }
 
