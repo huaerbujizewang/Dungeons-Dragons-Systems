@@ -397,6 +397,11 @@
                         <span class="dm-modal-close" onclick="closeDmPanel()">✖</span>
                     </div>
                     <div class="dm-tabs">
+                        <div class="dm-tabs">
+                            <div class="dm-tab active" onclick="switchDmTab('create', this)">注册新实体</div>
+                            <div class="dm-tab" onclick="switchDmTab('manage', this)">数据库干预</div>
+                            <div class="dm-tab" onclick="switchDmTab('approve', this)">人力审批队列</div>
+                        </div>
                         <div class="dm-tab active" onclick="switchDmTab('create', this)">注册新实体</div>
                         <div class="dm-tab" onclick="switchDmTab('manage', this)">数据库干预</div>
                     </div>
@@ -464,6 +469,12 @@
                                     </tbody>
                             </table>
                         </div>
+                        <div id="dm-sec-approve" class="dm-section">
+                            <h3 style="color:var(--omni-green-bright); margin-top:0; border-bottom:1px solid #334155; padding-bottom:10px;">待处理劳动力调配申请 (全局队列)</h3>
+                            <div id="dm-approval-list" style="display:flex; flex-direction:column; gap:15px; margin-top: 20px;">
+                                </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -1211,9 +1222,11 @@ function openGroupChat(id, name) {
         function switchDmTab(tabId, el) {
             document.querySelectorAll('.dm-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.dm-section').forEach(s => s.classList.remove('active'));
-            el.classList.add('active'); // 替换掉 event.target.classList.add('active');
+            el.classList.add('active'); 
             document.getElementById('dm-sec-' + tabId).classList.add('active');
+            
             if(tabId === 'manage') renderDmTable();
+            if(tabId === 'approve') renderApprovalQueue(); 
         }
 
 
@@ -2679,6 +2692,89 @@ async function adminAppointJob(accId, jobId) {
 
     alert(`【帝国指令】公民 #${accId} 已正式就任 ${job.title}。`);
     renderDmTable(); // 刷新管理列表
+}
+
+// --- DM 功能：渲染全境待审批队列 ---
+async function renderApprovalQueue() {
+    const container = document.getElementById('dm-approval-list');
+    container.innerHTML = '<div style="color:#94a3b8; text-align:center;">正在扫描帝国人力资源数据库...</div>';
+
+    // 联合查询：查出所有的 pending 状态申请，并带上申请人信息和职位信息
+    const { data, error } = await supabaseClient
+        .from('omni_user_jobs')
+        .select('*, omni_accounts(nickname, real_name, social_credit, education), omni_jobs(id, title, employer, min_credit, provided_item_ids)')
+        .eq('status', 'pending')
+        .order('apply_time', { ascending: true });
+
+    if (error) return container.innerHTML = `<div style="color:var(--omni-danger);">读取失败：${error.message}</div>`;
+    if (!data || data.length === 0) return container.innerHTML = '<div style="color:#64748b; text-align:center; padding: 20px;">当前无积压的调配申请。官僚机器运转良好。</div>';
+
+    let html = '';
+    data.forEach(work => {
+        const acc = work.omni_accounts;
+        const job = work.omni_jobs;
+        if (!acc || !job) return;
+
+        // 检查申请人是否满足职位要求 (给 DM 的视觉提示)
+        const accCreditIdx = CREDIT_GRADES.indexOf(acc.social_credit);
+        const reqCreditIdx = CREDIT_GRADES.indexOf(job.min_credit);
+        const isQualified = accCreditIdx >= reqCreditIdx;
+        const warningTag = isQualified ? '' : `<span style="background:var(--omni-danger); color:white; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:10px;">信用不达标 建议驳回</span>`;
+
+        html += `
+            <div style="background:#0f172a; border:1px solid #334155; padding: 15px; border-left: 4px solid ${isQualified ? 'var(--omni-green)' : 'var(--omni-danger)'};">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <div style="color:#94a3b8; font-size:0.8em;">申请人：<strong style="color:white; font-size:1.2em;">${acc.nickname}</strong> <span style="font-size:0.9em;">(信用：${acc.social_credit} | 学历：${acc.education})</span> ${warningTag}</div>
+                        <div style="margin-top:8px; color:var(--omni-green-bright); font-weight:bold;">意向岗位：[${job.employer}] ${job.title}</div>
+                        <div style="font-size:0.75em; color:#64748b; margin-top:4px;">岗位门槛：${job.min_credit} | 申请时间：${new Date(work.apply_time).toLocaleString()}</div>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-direction:column;">
+                        <button onclick="dmProcessApplication(${work.id}, 'approved', ${job.id}, ${work.account_id}, '${job.provided_item_ids}')" style="background:var(--omni-green); color:white; border:none; padding:8px 15px; cursor:pointer; font-weight:bold; border-radius:4px;">✓ 批准入职</button>
+                        <button onclick="dmProcessApplication(${work.id}, 'rejected', null, null, null)" style="background:transparent; border:1px solid var(--omni-danger); color:var(--omni-danger); padding:8px 15px; cursor:pointer; font-weight:bold; border-radius:4px;">✖ 驳回申请</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// --- DM 功能：处理单条申请单 ---
+async function dmProcessApplication(workId, action, jobId, accId, itemIdsStr) {
+    if (action === 'approved') {
+        if (!confirm("确定批准该公民入职吗？系统将为其核发特许证件。")) return;
+
+        // 1. 发放工作证件
+        if (itemIdsStr && itemIdsStr !== 'null' && itemIdsStr.trim() !== '') {
+            const itemIds = itemIdsStr.split(',').map(id => parseInt(id.trim()));
+            for (const itemId of itemIds) {
+                const { data: exists } = await supabaseClient.from('omni_inventory').select('id').eq('account_id', accId).eq('item_id', itemId).maybeSingle();
+                if (!exists) {
+                    await supabaseClient.from('omni_inventory').insert([{ account_id: accId, item_id: itemId, quantity: 1 }]);
+                }
+            }
+        }
+
+        // 2. 更新职历状态
+        await supabaseClient.from('omni_user_jobs').update({
+            status: 'approved',
+            hire_date: new Date().toISOString(),
+            last_pay_date: new Date().toISOString()
+        }).eq('id', workId);
+        
+        alert("审批通过，公民已入职。");
+
+    } else if (action === 'rejected') {
+        if (!confirm("确定驳回该申请吗？该公民将收到效益不匹配通知。")) return;
+        
+        // 走我们之前写好的冷酷驳回流程
+        await supabaseClient.from('omni_user_jobs').update({ status: 'rejected' }).eq('id', workId);
+        alert("已驳回。");
+    }
+
+    // 刷新审批队列
+    renderApprovalQueue();
 }
 
 // 1. 帝国历标准化格式化 (例如：1092年04月11日)
