@@ -2266,7 +2266,7 @@ async function loadJobs() {
         .from('omni_user_jobs')
         .select('*, omni_jobs(*)')
         .eq('account_id', currentAccount.id)
-        .in('status', ['approved', 'resigning', 'pending'])
+        .in('status', ['approved', 'resigning', 'pending', 'rejected'])
         .maybeSingle();
 
     if (myJob) {
@@ -2313,6 +2313,19 @@ function renderMyJob(work) {
             </button>
         `;
     } 
+    else if (status === 'rejected') {
+        statusLabel = "申请被驳回";
+        statusBg = "var(--omni-danger)"; // 红色警告
+        headerTitle = "❌ 调配申请驳回通告";
+        actionBtnHtml = `
+            <div style="margin-top: 30px; padding: 15px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 0.85em; text-align: center;">
+                <strong>驳回理由：</strong> 您的档案参数（包含但不仅限于：社会信用评级、教育背景或服役记录）与该岗位所要求的帝国效益最大化算法不匹配。
+            </div>
+            <button onclick="clearRejectedJob(${work.id})" style="margin-top: 15px; width: 100%; padding: 12px; background: var(--omni-danger); color: white; border: none; font-weight: bold; letter-spacing: 2px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='brightness(1)'">
+                确认驳回结果(以重新申请)
+            </button>
+        `;
+    }
     else { // approved
         statusLabel = "正常履职中";
         statusBg = "var(--omni-green)";
@@ -2406,13 +2419,13 @@ async function autoProcessBureaucracy() {
 
     console.log(`[帝国人力系统] 当前流程排队时长: ${waitTimeHours.toFixed(2)} 小时`);
 
-    // 3. 不满 3 小时，继续卡着 
-    if (waitTimeHours < 3) return;
+    // 3. 不满 226 小时，继续卡着 
+    if (waitTimeHours < 226) return;
 
-    // 4. 满 3 小时，分支处理
+    // 4. 满 226 小时，分支处理
     if (work.status === 'pending') {
         // --- 【入职审批分支】 ---
-        // 恢复你原本备注的 50% 概率逻辑。如果想必过，改成 const isApproved = true;
+        // 通过概率
         const isApproved = Math.random() >= 0.5; 
 
         if (isApproved) {
@@ -2445,13 +2458,15 @@ async function autoProcessBureaucracy() {
 
             alert("【系统通知】您的劳动力调配申请已通过审核。相关许可已下发。");
         } else {
-            // 驳回直接删档，释放劳动力
-            await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
-            alert("【系统通知】您的劳动力调配申请已被驳回。原因：档案匹配度不足或名额已满。");
+            // 驳回不再直接删档，而是将状态修改为 'rejected'，强制玩家在 UI 上面对失败
+            await supabaseClient.from('omni_user_jobs').update({
+                status: 'rejected'
+            }).eq('id', work.id);
+            alert("【系统通知】您的劳动力调配申请已被驳回。请前往您的就业档案查看详细回执。");
         }
 
     } else if (work.status === 'resigning') {
-        // --- 【离职审批分支】(必定同意，直接删档) ---
+        // --- 【离职审批分支】 ---
         await supabaseClient.from('omni_user_jobs').delete().eq('id', work.id);
         alert("【系统通知】您的离职已通过。帝国编制已注销，您现在可以重新进行劳动力调配。");
     }
@@ -2787,6 +2802,19 @@ async function updateChatBadges() {
                 }
             }
         }
+    }
+}
+
+// --- 确认并销毁被驳回的申请单 ---
+async function clearRejectedJob(workId) {
+    const { error } = await supabaseClient.from('omni_user_jobs').delete().eq('id', workId);
+    
+    if (!error) {
+        console.log("【帝国人力系统】废弃申请单已销毁。");
+        // 全局刷新，蓝色的“我的工作”面板会消失，人才市场重新出现
+        await syncOmniTerminal(); 
+    } else {
+        alert("案底销毁失败：" + error.message);
     }
 }
 
