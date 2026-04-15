@@ -1017,14 +1017,16 @@ async function createGroup() {
     updateChatBadges();
 }
 
-        // --- 聊天室切换逻辑 ---
-        function openPublicChat() {
-            currentChatMode = 'public';
-            currentChatTarget = null;
-            document.getElementById('chat-header-title').innerText = "公共大厅";
-            loadContactList(); // 刷新左侧选中状态
-            loadHistory();
-        }
+// --- 聊天室切换逻辑 ---
+function openPublicChat() {
+    currentChatMode = 'public';
+    currentChatTarget = null;
+    document.getElementById('chat-header-title').innerText = "公共大厅";
+    refreshSidebar(); // 刷新左侧选中状态
+    loadHistory();
+    
+    toggleChatInput(); // 检查并应用权限
+}
 
 function openPrivateChat(id, name) {
     currentChatMode = 'private';
@@ -1041,6 +1043,7 @@ function openPrivateChat(id, name) {
 
     refreshSidebar();
     loadHistory();
+    toggleChatInput();
 }
 
 function openGroupChat(id, name) {
@@ -1067,6 +1070,39 @@ function openGroupChat(id, name) {
 
     refreshSidebar();
     loadHistory();
+    toggleChatInput();
+}
+
+// --- 公共大厅发言权限动态控制 ---
+function toggleChatInput() {
+    const inputBar = document.querySelector('.chat-input-bar');
+    if (!inputBar) return;
+
+    // 动态生成一个用于显示禁言警告的占位条
+    let mutedBar = document.getElementById('chat-muted-bar');
+    if (!mutedBar) {
+        mutedBar = document.createElement('div');
+        mutedBar.id = 'chat-muted-bar';
+        mutedBar.style.cssText = 'padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fef2f2; color: #991b1b; text-align: center; font-size: 0.85em; font-weight: bold; letter-spacing: 2px; display: none;';
+        mutedBar.innerHTML = '⚠️ 权限封锁：仅 [A+] 评级公民或帝国官员获准在公共频道进行全境广播。';
+        inputBar.parentNode.insertBefore(mutedBar, inputBar.nextSibling);
+    }
+
+    // 逻辑判定
+    if (currentChatMode === 'public') {
+        const hasPrivilege = currentAccount.social_credit === 'A+' || currentAccount.is_dm || currentAccount.id === 0;
+        if (hasPrivilege) {
+            inputBar.style.display = 'flex';
+            mutedBar.style.display = 'none';
+        } else {
+            inputBar.style.display = 'none'; 
+            mutedBar.style.display = 'block'; 
+        }
+    } else {
+        // 私聊和群聊不受公共等级限制，恢复发言框
+        inputBar.style.display = 'flex';
+        mutedBar.style.display = 'none';
+    }
 }
 
         // --- 聊天核心引擎 ---
@@ -1173,6 +1209,17 @@ function openGroupChat(id, name) {
             const inp = document.getElementById('chat-in');
             const val = inp.value.trim();
             if(!val) return;
+
+            // 【权限拦截 (防篡改 UI)】
+            const hasPrivilege = currentAccount.social_credit === 'A+' || currentAccount.is_dm || currentAccount.id === 0;
+            if (currentChatMode === 'public' && !hasPrivilege) {
+                // 借用你原有的警告框进行弹窗羞辱
+                const interceptBox = document.getElementById('intercept-msg');
+                interceptBox.innerHTML = '⚠️ <strong>安全拦截：</strong> 您的信用评级不足，无权向全境发送广播。';
+                interceptBox.style.display = 'block';
+                setTimeout(()=> interceptBox.style.display = 'none', 3000);
+                return;
+            }
 
             // --- 敏感词与违规处理逻辑 ---
             const prohibitedKeywords = ['伊莎贝拉', '女皇', '低等种族', '桐花独立', '杂种', '劣种', '劣等种族']; 
