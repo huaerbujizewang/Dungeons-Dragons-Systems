@@ -185,7 +185,10 @@
         /* 联系人列表项 */
         .contact-item { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
         .contact-item:hover { background: #e2e8f0; }
-        .contact-item.active { background: #e2e8f0; border-left: 3px solid var(--omni-green); }
+        .contact-item.active { 
+            background: rgba(46, 204, 113, 0.15) !important;
+            border-left: 4px solid var(--omni-green) !important; 
+        }
         .contact-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; background: #ddd; }
         .contact-name { font-size: 0.9em; font-weight: bold; color: var(--omni-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -703,6 +706,7 @@
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
         const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
+        let currentSidebarTab = 'friends'; 
 
         // GitHub 头像路径配置
         const GITHUB_USER = "huaerbujizewang"; 
@@ -807,7 +811,7 @@ async function syncOmniTerminal() {
     }
     
     // 3. 社交链路重载
-    loadContactList();
+    refreshSidebar();
 }
 
 function switchPage(pageId, el) {
@@ -828,10 +832,19 @@ function switchPage(pageId, el) {
 
         // --- 社交列表导航 ---
         function switchListTab(tab, el) {
+            currentSidebarTab = tab; // 记录当前标签
             document.querySelectorAll('.sidebar-tabs div').forEach(d => d.classList.remove('active'));
             el.classList.add('active');
-            if(tab === 'friends') loadContactList();
-            else loadGroupList();
+            refreshSidebar(); // 调用智能刷新
+        }
+
+        // 智能侧边栏刷新器
+        function refreshSidebar() {
+            if (currentSidebarTab === 'friends') {
+                loadContactList();
+            } else {
+                loadGroupList();
+            }
         }
 
         // --- 社交模块：好友与群组  ---
@@ -902,7 +915,7 @@ function switchPage(pageId, el) {
             // 渲染列表项
             if(queryData.length > 0) {
                 queryData.forEach(acc => {
-                    const isActive = (currentChatMode === 'private' && currentChatTarget && currentChatTarget.id === acc.id) ? 'active' : '';
+                    const isActive = (currentChatMode == 'private' && currentChatTarget && currentChatTarget.id === acc.id) ? 'active' : '';
                     
                     html += `
                         <div class="contact-item ${isActive}" style="display:flex; align-items:center; justify-content:space-between; padding-right:10px;">
@@ -951,7 +964,7 @@ async function loadGroupList() {
         memberships.forEach(m => {
             const g = m.omni_groups;
             if(!g) return;
-            const isActive = (currentChatMode === 'group' && currentChatTarget && currentChatTarget.id === g.id) ? 'active' : '';
+            const isActive = (currentChatMode == 'group' && currentChatTarget && currentChatTarget.id === g.id) ? 'active' : '';
             const isOwner = (g.creator_id === currentAccount.id || currentAccount.is_dm);
 
             html += `
@@ -1015,7 +1028,7 @@ function openPrivateChat(id, name) {
         .eq('is_read', false)
         .then(() => updateChatBadges()); // 刷新红点
 
-    loadContactList();
+    refreshSidebar();
     loadHistory();
 }
 
@@ -1037,7 +1050,7 @@ function openGroupChat(id, name) {
         .eq('group_id', id)
         .then(() => updateChatBadges()); 
 
-    loadGroupList();
+    refreshSidebar();
     loadHistory();
 }
 
@@ -1253,7 +1266,11 @@ function openGroupChat(id, name) {
 
             if (!error) {
                 alert(`公民 #${accId} 的档案已强制重写。`);
-                renderDmTable(); // 刷新表格
+                    const row = document.getElementById(`dm-row-${accId}`);
+                        if(row) {
+                            row.style.backgroundColor = 'rgba(46, 204, 113, 0.3)';
+                            setTimeout(() => row.style.backgroundColor = 'transparent', 800);
+                        }
         
                 // 如果修改的是当前接管的账号，同步更新缓存
                 if (currentAccount.id === accId) {
@@ -2697,7 +2714,11 @@ async function adminAppointJob(accId, jobId) {
     }
 
     alert(`【帝国指令】公民 #${accId} 已正式就任 ${job.title}。`);
-    renderDmTable(); // 刷新管理列表
+    const row = document.getElementById(`dm-row-${accId}`);
+    if(row) {
+        row.style.backgroundColor = 'rgba(46, 204, 113, 0.3)';
+        setTimeout(() => row.style.backgroundColor = 'transparent', 800);
+    }
 }
 
 // --- DM 功能：渲染全境待审批队列 ---
