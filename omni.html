@@ -404,6 +404,7 @@
                             <div class="dm-tab active" onclick="switchDmTab('create', this)">注册新实体</div>
                             <div class="dm-tab" onclick="switchDmTab('manage', this)">数据库干预</div>
                             <div class="dm-tab" onclick="switchDmTab('approve', this)">人力审批队列</div>
+                            <div class="dm-tab" onclick="switchDmTab('logs', this)">行为报告</div>
                         </div>
                         <div class="dm-tab active" onclick="switchDmTab('create', this)">注册新实体</div>
                         <div class="dm-tab" onclick="switchDmTab('manage', this)">数据库干预</div>
@@ -475,6 +476,14 @@
                         <div id="dm-sec-approve" class="dm-section">
                             <h3 style="color:var(--omni-green-bright); margin-top:0; border-bottom:1px solid #334155; padding-bottom:10px;">待处理劳动力调配申请 (全局队列)</h3>
                             <div id="dm-approval-list" style="display:flex; flex-direction:column; gap:15px; margin-top: 20px;">
+                                </div>
+                        </div>
+                        <div id="dm-sec-logs" class="dm-section">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid #334155; padding-bottom:10px; margin-bottom: 20px;">
+                                <h3 style="color:#a855f7; margin:0; letter-spacing: 2px;">👁️ 全境行为报告</h3>
+                                <button onclick="renderLogs()" style="background:transparent; border:1px solid #64748b; color:#94a3b8; padding:4px 8px; border-radius:4px; cursor:pointer;">🔄 手动刷新探头</button>
+                            </div>
+                            <div id="dm-logs-list" style="display:flex; flex-direction:column; gap:8px; max-height: 60vh; overflow-y: auto;">
                                 </div>
                         </div>
 
@@ -1015,6 +1024,7 @@ async function createGroup() {
     alert(`群组 [${name}] 已成功创建！\n群组识别码 (GID): ${group.id}\n请将此 ID 分享给其他公民以邀请加入。`);
     loadGroupList();
     updateChatBadges();
+    logAction('社交', `建立了一个名为 [${name}] 的群组网络。`);
 }
 
 // --- 聊天室切换逻辑 ---
@@ -1210,10 +1220,10 @@ function toggleChatInput() {
             const val = inp.value.trim();
             if(!val) return;
 
-            // 【权限拦截 (防篡改 UI)】
+            // 权限拦截
             const hasPrivilege = currentAccount.social_credit === 'A+' || currentAccount.is_dm || currentAccount.id === 0;
             if (currentChatMode === 'public' && !hasPrivilege) {
-                // 借用你原有的警告框进行弹窗羞辱
+
                 const interceptBox = document.getElementById('intercept-msg');
                 interceptBox.innerHTML = '⚠️ <strong>安全拦截：</strong> 您的信用评级不足，无权向全境发送广播。';
                 interceptBox.style.display = 'block';
@@ -1227,6 +1237,7 @@ function toggleChatInput() {
 
             if(isViolation) {
                 // 1. 显示警告 UI
+                logAction('违规', `触发安全拦截。试图发送违禁词汇。原句："${val}"`);
                 document.getElementById('intercept-msg').style.display = 'block';
                 setTimeout(()=> document.getElementById('intercept-msg').style.display = 'none', 3000);
 
@@ -1308,6 +1319,7 @@ function toggleChatInput() {
             
             if(tabId === 'manage') renderDmTable();
             if(tabId === 'approve') renderApprovalQueue(); 
+            if(tabId === 'logs') renderLogs(); 
         }
 
 
@@ -1522,6 +1534,7 @@ async function cancelSubscription(invId, itemName) {
     if (!error) {
         alert("【协议终止】权限已回收。期待您下次拥有充足预算时再次订阅。");
         loadInventory(); // 刷新背包
+        logAction('交易', `终止了《${itemName}》的特许协议。`);
     }
 }
 
@@ -2186,7 +2199,6 @@ function renderMall() {
 }
 
 // 3. 购买交易逻辑
-// 1. 升级版：购买/续费逻辑
 async function purchaseItem(itemId, price, isLocked) {
     if (isLocked) return alert("身份识别失败：您的社会信用等级不足，无权调配此服务。");
 
@@ -2230,8 +2242,9 @@ async function purchaseItem(itemId, price, isLocked) {
             }
         ]);
         alert(isSubscription ? "订阅协议已签署，服务已激活。" : "物资已存入您的个人资产。");
+        
     }
-
+    logAction('交易', isSubscription ? `签署了《${itemData.name}》的特许契约，花费 ${price} CR。` : `调配了物资《${itemData.name}》，花费 ${price} CR。`);
     updateWallet();
     loadInventory();
 }
@@ -2494,6 +2507,7 @@ async function submitResignation(workId) {
         // 核心：调用全局同步，按钮瞬间变灰
         await syncOmniTerminal(); 
     }
+    logAction('职权', `提交了辞呈，试图解除当前的劳工契约。`);
 }
 
 // --- 静默审批 ---
@@ -2711,6 +2725,7 @@ async function applyForJob(jobId) {
         // 核心：调用全局同步，页面会瞬间隐藏人才市场，弹出蓝色的申请单
         await syncOmniTerminal(); 
     }
+    logAction('职权', `向 [${job.employer}] 提交了 [${job.title}] 的劳动力调配申请。`);
 }
 
 
@@ -3116,6 +3131,62 @@ async function viewGroupMembers(groupId, groupName) {
 
 function closeGroupMembersModal() {
     document.getElementById('group-members-modal').classList.remove('show');
+}
+
+// --- 底层引擎：静默写入行为日志 ---
+async function logAction(type, description) {
+    // 忽略 DM 自己和未登录状态，我们只监视平民
+    if (!currentAccount || currentAccount.id === 0 || currentAccount.login_id === 'DM') return;
+
+    await supabaseClient.from('omni_logs').insert([{
+        account_id: currentAccount.id,
+        action_type: type,
+        description: description
+    }]);
+}
+
+// --- DM 功能：渲染行为监控矩阵 ---
+async function renderLogs() {
+    const container = document.getElementById('dm-logs-list');
+    container.innerHTML = '<div style="color:#94a3b8; text-align:center; font-family:monospace;">正在调取帝国网络底层的监控节点...</div>';
+
+    // 拉取最近的 200 条记录，并关联公民信息
+    const { data, error } = await supabaseClient
+        .from('omni_logs')
+        .select('*, omni_accounts(nickname, real_name, social_credit)')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+    if (error) return container.innerHTML = `<div style="color:var(--omni-danger);">探头连接失败：${error.message}</div>`;
+    if (!data || data.length === 0) return container.innerHTML = '<div style="color:#64748b; text-align:center;">监控矩阵一片死寂。</div>';
+
+    let html = '';
+    data.forEach(log => {
+        const acc = log.omni_accounts;
+        if (!acc) return;
+
+        // 为不同类型的动作分配颜色
+        let typeColor = '#64748b'; 
+        let typeBg = 'transparent';
+        if (log.action_type === '交易') { typeColor = 'var(--omni-green)'; }
+        if (log.action_type === '职权') { typeColor = '#3b82f6'; }
+        if (log.action_type === '违规') { typeColor = 'var(--omni-danger)'; typeBg = 'rgba(239,68,68,0.1)'; }
+        if (log.action_type === '社交') { typeColor = '#a855f7'; }
+
+        html += `
+            <div style="background:#0f172a; border-left:3px solid ${typeColor}; padding:10px; display:flex; gap:15px; font-family:monospace; background-color:${typeBg};">
+                <div style="color:#64748b; font-size:0.8em; white-space:nowrap;">
+                    ${new Date(log.created_at).toLocaleString([], {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit'})}
+                </div>
+                <div style="flex:1;">
+                    <span style="color:#f39c12;">#${log.account_id} [${acc.nickname}]</span> 
+                    <span style="color:${typeColor}; font-weight:bold; margin:0 5px;">[${log.action_type}]</span>
+                    <span style="color:#e2e8f0; font-size:0.9em;">${log.description}</span>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
 }
 
     </script>
