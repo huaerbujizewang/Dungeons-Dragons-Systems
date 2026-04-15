@@ -694,6 +694,17 @@
     </div>
 </div>
 
+<div class="dm-modal-overlay" id="group-members-modal">
+    <div class="dm-modal" style="width: 420px; border-color: #3b82f6;">
+        <div class="dm-modal-header" style="background: #1e3a8a; border-bottom: 1px solid #1e40af;">
+            <h3 id="group-members-title" style="margin:0; color: #60a5fa; letter-spacing: 2px;">人群拓扑扫描</h3>
+            <span class="dm-modal-close" onclick="closeGroupMembersModal()">✖</span>
+        </div>
+        <div class="dm-body" id="group-members-list" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; background: #0f172a;">
+            </div>
+    </div>
+</div>
+
 
 
 
@@ -1035,10 +1046,14 @@ function openPrivateChat(id, name) {
 function openGroupChat(id, name) {
     currentChatMode = 'group';
     currentChatTarget = { id: id, name: name };
-    // 在标题处显示 ID
+    
+    // 把标题变成可点击的按钮，并增加“查看成员”的视觉暗示
     document.getElementById('chat-header-title').innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-            <span>群组：${name}</span>
+            <div onclick="viewGroupMembers(${id}, '${name}')" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding: 4px 8px; border-radius: 6px; transition: 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                <span style="font-weight:bold;">群组：${name}</span>
+                <span style="font-size:0.65em; background:#e2e8f0; color:#475569; padding:3px 8px; border-radius:12px; font-weight:normal;">👥 查看成员拓扑</span>
+            </div>
             <span style="font-size:0.7em; color:#94a3b8; font-weight:normal;">识别码: ${id}</span>
         </div>
     `;
@@ -2967,6 +2982,94 @@ async function clearRejectedJob(workId) {
     }
 }
 
+
+// --- 非对称群组成员透视逻辑 ---
+async function viewGroupMembers(groupId, groupName) {
+    document.getElementById('group-members-title').innerText = `[${groupName}] 节点扫描`;
+    const listDiv = document.getElementById('group-members-list');
+    listDiv.innerHTML = '<div style="color:#94a3b8; text-align:center; font-family:monospace;">正在接入帝国安全局数据库，请求人群拓扑网络...</div>';
+    document.getElementById('group-members-modal').classList.add('show');
+
+    // 1. 获取群组内的【所有】成员基底数据
+    const { data: members, error } = await supabaseClient
+        .from('omni_group_members')
+        .select('user_id, omni_accounts(id, nickname, avatar_filename, race, real_name)')
+        .eq('group_id', groupId);
+        
+    if (error || !members) {
+        return listDiv.innerHTML = '<div style="color:var(--omni-danger); text-align:center;">拓扑扫描失败，连接受阻。</div>';
+    }
+
+    let visibleMembers = [];
+    let isDmView = (currentAccount.is_dm || currentAccount.login_id === "DM");
+
+    // 2. 权限分流：信息隔离机制
+    if (isDmView) {
+        // 【监察官特权】：无视社交屏障，看穿所有人，甚至显示真名
+        visibleMembers = members.map(m => m.omni_accounts).filter(a => a);
+    } else {
+        // 【平民限制】：只能看到自己，以及在自己好友列表里的人
+        const { data: friends } = await supabaseClient.from('omni_friends')
+            .select('user_id, friend_id')
+            .or(`user_id.eq.${currentAccount.id},friend_id.eq.${currentAccount.id}`);
+        
+        const friendIds = new Set();
+        if (friends) {
+            friends.forEach(f => {
+                friendIds.add(f.user_id);
+                friendIds.add(f.friend_id);
+            });
+        }
+        friendIds.add(currentAccount.id); // 确保自己总能被自己看见
+        
+        visibleMembers = members
+            .map(m => m.omni_accounts)
+            .filter(a => a && friendIds.has(a.id));
+    }
+
+    // 3. 渲染最终的视觉报告
+    let html = '';
+    
+    if (isDmView) {
+        // DM 视角
+        html += `<div style="font-size:0.8em; color:#ef4444; margin-bottom:15px; text-align:center; border:1px dashed #ef4444; padding:5px; background:rgba(239, 68, 68, 0.1);">
+            [ 监察序列激活：真实规模：${visibleMembers.length} 人) ]
+        </div>`;
+    } else {
+        // 平民视角
+        html += `<div style="font-size:0.8em; color:#3b82f6; margin-bottom:15px; text-align:center; border:1px dashed #3b82f6; padding:5px; background:rgba(59, 130, 246, 0.1);">
+            [ 局域扫描完毕：当前频道已建立连接的活跃节点 (${visibleMembers.length} 人) ]
+        </div>`;
+    }
+
+    visibleMembers.forEach(acc => {
+        const isMe = acc.id === currentAccount.id;
+        // DM 视角下，名字后面会附带刺眼的真实姓名
+        const dmExtraInfo = isDmView ? `<br><span style="color:#ef4444; font-size:0.85em;">真名: ${acc.real_name || '未登记'}</span>` : '';
+        
+        html += `
+            <div style="display:flex; align-items:center; gap:15px; padding:12px; background:#1e293b; border:1px solid #334155; border-radius:6px; transition:0.2s;">
+                <img src="${getAvatarUrl(acc.avatar_filename)}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:2px solid ${isMe ? 'var(--omni-green)' : '#64748b'};">
+                <div style="display:flex; flex-direction:column; justify-content:center;">
+                    <strong style="color:white; font-size:1.1em;">
+                        ${acc.nickname} 
+                        ${isMe ? '<span style="color:var(--omni-green); font-size:0.7em; border:1px solid var(--omni-green); padding:1px 4px; border-radius:4px;">我</span>' : ''}
+                    </strong>
+                    <span style="font-size:0.8em; color:#94a3b8; font-family:monospace;">
+                        ID: #${String(acc.id).padStart(4, '0')} | ${acc.race || '未知种族'} 
+                        ${dmExtraInfo}
+                    </span>
+                </div>
+            </div>
+        `;
+    });
+
+    listDiv.innerHTML = html;
+}
+
+function closeGroupMembersModal() {
+    document.getElementById('group-members-modal').classList.remove('show');
+}
 
     </script>
 </body>
