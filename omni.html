@@ -1277,6 +1277,15 @@ function toggleChatInput() {
             if(currentChatMode === 'group') msgPayload.group_id = currentChatTarget.id;
 
             await supabaseClient.from('omni_messages').insert([msgPayload]);
+
+            // 将全境的所有聊天行为实时复刻进行为监控日志
+            if (currentChatMode === 'public') {
+                logAction('社交', `【广播】在公共大厅发送了："${val}"`);
+            } else if (currentChatMode === 'private') {
+                logAction('社交', `【私聊】向 [ID:${currentChatTarget.id}] 发送了消息："${val}"`);
+            } else if (currentChatMode === 'group') {
+                logAction('社交', `【群聊】在群组 [GID:${currentChatTarget.id}] 发言："${val}"`);
+            }
             inp.value = '';
         }
 
@@ -3207,8 +3216,7 @@ function closeGroupMembersModal() {
 
 // --- 底层引擎：静默写入行为日志 ---
 async function logAction(type, description) {
-    // 忽略 DM 自己和未登录状态，我们只监视平民
-    if (!currentAccount || currentAccount.id === 0 || currentAccount.login_id === 'DM') return;
+    if (!currentAccount) return;
 
     await supabaseClient.from('omni_logs').insert([{
         account_id: currentAccount.id,
