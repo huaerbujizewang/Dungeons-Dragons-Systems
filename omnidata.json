@@ -3,8 +3,8 @@
     "omni": {
       "id": "omni",
       "title": "OMNI 全境网络",
-      "category": "基础设施 / INFRASTRUCTURE",
-      "security_level": "公开 (PUBLIC)",
+      "category": "基础设施",
+      "security_level": "公开",
       "content": "<p><strong>OMNI（Omnipresent Management & Network Interface）</strong> 是洛萨维亚帝国的数字化基石。该系统于帝国历 942 年正式替代了传统的零散官僚体系，实现了全境范围内的数据强耦合。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">系统使命</h4><p>OMNI 的核心存在逻辑是<strong>“秩序即效益”</strong>。通过实时监测公民的生物体征、消费习惯及社交频次，系统能够以微秒级的速度计算出帝国资源的最优分配方案，确保每一份信用点（CR）都能流向产生最大社会效益的节点。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">架构组成</h4><ul><li><strong>信用核算矩阵</strong>：实时处理全境交易，并根据公民行为即时调整社会信用分。</li><li><strong>劳力调配引擎</strong>：根据帝国生产需求，强制或引导公民进入最紧缺的行业岗位。</li><li><strong>枢纽通讯协议</strong>：全境统一的实时加密通讯网络，支持私聊、群组及全局广播。</li></ul><div style=\"margin-top: 50px; padding: 20px; background: #f8fafc; border: 1px dashed #cbd5e1; font-size: 0.85em; color: #64748b;\"><strong>备注：</strong> 任何试图绕过 OMNI 终端的行为都将被视为对帝国公共安全的直接威胁。</div>"
     }
   }
