@@ -3863,37 +3863,78 @@ async function loadOmniData() {
 // 渲染资料库索引列表
 function renderArchiveMenu() {
     const list = document.getElementById('archive-menu-list');
+    if (!list) return;
     list.innerHTML = '';
     
-    Object.values(LORE_DATA).forEach(entry => {
-        const item = document.createElement('div');
-        item.className = 'contact-item';
-        item.innerHTML = `
-            <div style="display:flex; flex-direction:column;">
-                <span class="contact-name">${entry.title}</span>
-                <span style="font-size:0.7em; color:#94a3b8;">${entry.security_level}</span>
-            </div>
-        `;
-        item.onclick = () => loadArchiveEntry(entry.id, item);
-        list.appendChild(item);
+    // 调用递归函数，初始层级为 0
+    renderTreeNodes(LORE_DATA, list, 0);
+}
+
+// 递归渲染核心函数
+function renderTreeNodes(nodes, container, level) {
+    nodes.forEach(node => {
+        // 1. 创建节点容器
+        const itemWrap = document.createElement('div');
+        
+        // 2. 创建可点击的标题栏
+        const titleBar = document.createElement('div');
+        // 根据层级缩进，第一级不缩进，后续每级缩进 15px
+        titleBar.style.cssText = `padding: 10px 15px 10px ${15 + (level * 15)}px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; transition: 0.2s;`;
+        titleBar.onmouseover = () => titleBar.style.background = "#f1f5f9";
+        titleBar.onmouseout = () => titleBar.style.background = "transparent";
+        
+        // 判断是否有子节点，如果有则加上一个折叠提示符
+        const hasChildren = node.children && node.children.length > 0;
+        const icon = hasChildren ? '▸ ' : '<span style="display:inline-block; width:12px;"></span>';
+        
+        titleBar.innerHTML = `<strong style="color:var(--omni-text); font-size:0.9em;">${icon}${node.title}</strong>`;
+        
+        // 3. 创建子节点的隐蔽容器 (默认隐藏)
+        const childrenContainer = document.createElement('div');
+        childrenContainer.style.display = 'none'; 
+        if (hasChildren) {
+            renderTreeNodes(node.children, childrenContainer, level + 1);
+        }
+
+        // 4. 绑定点击事件：右侧展示正文，左侧展开/收起子节点
+        titleBar.onclick = () => {
+            // 右侧加载正文
+            loadArchiveEntry(node);
+            
+            // 左侧如果有子节点，切换显示状态
+            if (hasChildren) {
+                const isHidden = childrenContainer.style.display === 'none';
+                childrenContainer.style.display = isHidden ? 'block' : 'none';
+                // 简单处理一下箭头方向变化
+                titleBar.querySelector('strong').innerHTML = `<strong style="color:var(--omni-text); font-size:0.9em;">${isHidden ? '▾ ' : '▸ '}${node.title}</strong>`;
+            }
+            
+            // UI 高亮当前选中的条目
+            document.querySelectorAll('#archive-menu-list .archive-title-bar').forEach(el => {
+                el.style.borderLeft = '4px solid transparent';
+                el.style.background = 'transparent';
+            });
+            titleBar.classList.add('archive-title-bar');
+            titleBar.style.borderLeft = '4px solid var(--omni-green)';
+            titleBar.style.background = 'rgba(46, 204, 113, 0.1)';
+        };
+
+        itemWrap.appendChild(titleBar);
+        itemWrap.appendChild(childrenContainer);
+        container.appendChild(itemWrap);
     });
 }
 
-// 加载词条正文内容
-function loadArchiveEntry(id, element) {
-    const entry = LORE_DATA[id];
-    if (!entry) return;
+// --- 右侧正文加载器 ---
+function loadArchiveEntry(node) {
+    const area = document.getElementById('archive-content-area');
+    if (!area) return;
 
-    // 更新菜单选中状态
-    document.querySelectorAll('#archive-menu-list .contact-item').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-
-    // 渲染正文
-    document.getElementById('archive-content-area').innerHTML = `
-        <div style="font-size: 0.8em; color: var(--omni-green); font-weight: bold; margin-bottom: 5px;">${entry.category}</div>
-        <h1 style="margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; font-size: 2em; letter-spacing: 2px;">${entry.title}</h1>
+    // 直接使用传入节点的数据进行渲染
+    area.innerHTML = `
+        <h1 style="margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; font-size: 2em; letter-spacing: 2px;">${node.title}</h1>
         <div style="margin-top: 30px;">
-            ${entry.content}
+            ${node.content}
         </div>
     `;
 }
