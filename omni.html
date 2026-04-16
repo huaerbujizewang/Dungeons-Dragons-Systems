@@ -558,9 +558,13 @@
             </div>
 
             <div id="page-wallet" class="page">
-                <div class="card" style="background:linear-gradient(135deg, #196f3d, #114b28); color:white; padding:40px;">
-                    <div style="opacity:0.8;">可用余额 (信用点)</div>
+                <div class="card" style="background:linear-gradient(135deg, #196f3d, #114b28); color:white; padding:40px; position:relative;">
+                    <div style="opacity:0.8;">账户可用余额 (信用点)</div>
                     <div id="wallet-val" style="font-size:3.5em; font-weight:bold; margin-top:10px;">0.00</div>
+                    
+                    <button onclick="openTransferModal()" style="position:absolute; bottom:40px; right:40px; padding:12px 25px; background:white; color:#114b28; border:none; border-radius:30px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.15); transition:0.3s;">
+                        ⇄ 转账服务
+                    </button>
                 </div>
             </div>
 
@@ -712,6 +716,44 @@
     </div>
 </div>
 
+
+<div class="dm-modal-overlay" id="transfer-create-modal">
+    <div class="dm-modal" style="width: 450px;">
+        <div class="dm-modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+            <h3 style="margin:0;">发起转账</h3>
+            <span class="dm-modal-close" onclick="document.getElementById('transfer-create-modal').classList.remove('show')">✖</span>
+        </div>
+        <div class="dm-body" style="background: white; color: #1e293b;">
+            <div class="dm-form-group" style="margin-bottom:15px;">
+                <label style="color: #64748b;">收款人 (从联系人选择)</label>
+                <select id="transfer-friend-select" style="padding:10px; background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; border-radius:4px;">
+                    <option value="">-- 请选择联系人 --</option>
+                </select>
+            </div>
+            <div style="text-align:center; color:#94a3b8; font-size:0.8em; margin-bottom:15px;">— 或输入精确身份凭证 —</div>
+            <div class="dm-form-group" style="margin-bottom:15px;">
+                <label style="color: #64748b;">收款人 (输入精确真实姓名)</label>
+                <input type="text" id="transfer-realname-input" placeholder="输入档案登记的真实姓名" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1;">
+            </div>
+            <div class="dm-form-group" style="margin-bottom:25px;">
+                <label style="color: #64748b;">转账金额 (CR)</label>
+                <input type="number" id="transfer-amount" placeholder="输入金额..." min="1" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-size:1.2em; font-weight:bold;">
+            </div>
+            <button class="dm-btn-submit" onclick="submitTransfer()" style="background: var(--omni-green); color: white;">确认转账</button>
+        </div>
+    </div>
+</div>
+
+<div class="dm-modal-overlay" id="transfer-view-modal">
+    <div class="dm-modal" style="width: 400px;">
+        <div class="dm-modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+            <h3 style="margin:0;">转账详情</h3>
+            <span class="dm-modal-close" onclick="document.getElementById('transfer-view-modal').classList.remove('show')">✖</span>
+        </div>
+        <div class="dm-body" id="transfer-view-content" style="text-align: center; padding: 30px; background: white; color: #1e293b;">
+            </div>
+    </div>
+</div>
 
 
 
@@ -1306,13 +1348,39 @@ function createMsgElement(m) {
     const isSelf = (m.sender_id == currentAccount.id);
     const avatarUrl = getAvatarUrl(m.sender_avatar_filename);
     
+    // 解析官方转账卡片指令
+    let displayContent = escapeHTML(m.content);
+    if (m.content.startsWith('[TRANSFER_REQ:')) {
+        const parts = m.content.split(':');
+        const tId = parts[1];
+        const tAmt = parts[2].replace(']', '');
+        
+        displayContent = `
+            <div style="background: ${isSelf ? '#ffffff' : '#ffffff'}; border:1px solid ${isSelf ? '#a7f3d0' : '#e2e8f0'}; padding:15px; border-radius:8px; cursor:pointer; width:220px; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition:0.2s;" 
+                 onclick="viewTransfer(${tId})" 
+                 onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.1)'" 
+                 onmouseout="this.style.boxShadow='0 2px 5px rgba(0,0,0,0.05)'">
+                <div style="color: #1e293b; font-weight:bold; font-size:1em; display:flex; align-items:center; gap:8px;">
+                    <div style="background:var(--omni-green); width:24px; height:24px; border-radius:50%; display:flex; justify-content:center; align-items:center; color:white; font-size:0.8em;">¥</div>
+                    转账交易
+                </div>
+                <div style="font-size:1.6em; font-weight:bold; color: #1e293b; margin-top:12px;">
+                    ${tAmt} <span style="font-size:0.5em; color:#64748b; font-weight:normal;">CR</span>
+                </div>
+                <div style="font-size:0.8em; color: #64748b; margin-top:10px; border-top:1px solid #f1f5f9; padding-top:10px;">
+                    查看转账详情 〉
+                </div>
+            </div>
+        `;
+    }
+
     const tempDiv = document.createElement('div');
     tempDiv.className = `message ${isSelf ? 'self' : ''}`;
     tempDiv.innerHTML = `
         <img src="${avatarUrl}" class="avatar-circle" onerror="this.src='${AVATAR_BASE}default.png'">
         <div class="msg-content">
             <div class="msg-sender-name">${escapeHTML(m.sender_name)}</div>
-            <div class="msg-bubble">${escapeHTML(m.content)}</div>
+            <div class="msg-bubble" style="${m.content.startsWith('[TRANSFER') ? 'padding:0; background:transparent; border:none;' : ''}">${displayContent}</div>
         </div>`;
     return tempDiv;
 }
@@ -3337,6 +3405,221 @@ async function loadMoreHistory() {
     }
     
     isHistoryLoading = false;
+}
+
+
+// ==========================================
+// --- OMNI 金融核心：资金转账模块 ---
+// ==========================================
+
+// 1. 打开转账面板并加载联系人
+async function openTransferModal() {
+    // 清空新的真实姓名输入框
+    document.getElementById('transfer-realname-input').value = '';
+    document.getElementById('transfer-amount').value = '';
+    
+    const select = document.getElementById('transfer-friend-select');
+    select.innerHTML = '<option value="">-- 加载联系人中... --</option>';
+    document.getElementById('transfer-create-modal').classList.add('show');
+
+    // 获取当前用户的好友列表
+    const { data: friends } = await supabaseClient.from('omni_friends')
+        .select('user_id, friend_id')
+        .or(`user_id.eq.${currentAccount.id},friend_id.eq.${currentAccount.id}`);
+    
+    let friendIds = [];
+    if (friends) {
+        friendIds = friends.map(f => f.user_id === currentAccount.id ? f.friend_id : f.user_id);
+    }
+
+    if (friendIds.length > 0) {
+        const { data: accs } = await supabaseClient.from('omni_accounts').select('id, nickname').in('id', friendIds);
+        select.innerHTML = '<option value="">-- 请选择联系人 --</option>';
+        accs.forEach(a => {
+            select.innerHTML += `<option value="${a.id}">${a.nickname} (账号: #${a.id})</option>`;
+        });
+    } else {
+        select.innerHTML = '<option value="">-- 联系人列表为空 --</option>';
+    }
+}
+
+// 2. 提交转账请求
+async function submitTransfer() {
+    const friendId = document.getElementById('transfer-friend-select').value;
+    const inputRealName = document.getElementById('transfer-realname-input').value.trim();
+    const amount = parseInt(document.getElementById('transfer-amount').value);
+
+    if (isNaN(amount) || amount <= 0) return alert("系统提示：转账金额必须为大于 0 的整数。");
+
+    let targetUser = null;
+
+    // 【修改核心】：优先使用手动输入的真实姓名进行精确匹配
+    if (inputRealName !== '') {
+        const { data } = await supabaseClient.from('omni_accounts').select('id, nickname, real_name').eq('real_name', inputRealName).maybeSingle();
+        if (!data) return alert(`系统提示：未找到真实姓名为 [${inputRealName}] 的登记账户，请检查输入是否准确。`);
+        targetUser = data;
+    } else if (friendId !== '') {
+        const { data } = await supabaseClient.from('omni_accounts').select('id, nickname').eq('id', friendId).single();
+        targetUser = data;
+    } else {
+        return alert("系统提示：请选择联系人或输入收款人真实姓名。");
+    }
+
+    if (targetUser.id === currentAccount.id) return alert("系统提示：无法向自己的账户进行转账。");
+
+    // 校验账户余额
+    const { data: myAcc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+    if (myAcc.credits < amount) return alert("支付失败：账户可用余额不足。");
+
+    // 步骤 A：从发送方账户扣除资金
+    await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: -amount });
+
+    // 步骤 B：生成转账记录
+    const { data: transferRecord, error } = await supabaseClient.from('omni_transfers').insert([{
+        sender_id: currentAccount.id,
+        receiver_id: targetUser.id,
+        amount: amount
+    }]).select().single();
+
+    if (error) {
+        // 若数据库异常导致记录生成失败，则回滚资金
+        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
+        return alert("系统繁忙，资金已退回：" + error.message);
+    }
+
+    // 步骤 C：向收款人发送资金卡片消息
+    const msgPayload = {
+        sender_id: currentAccount.id,
+        target_id: targetUser.id,
+        sender_name: currentAccount.nickname,
+        sender_race: currentAccount.race || "未知",
+        sender_avatar_filename: currentAccount.avatar_filename || "default.png",
+        content: `[TRANSFER_REQ:${transferRecord.id}:${amount}]`
+    };
+    await supabaseClient.from('omni_messages').insert([msgPayload]);
+
+    alert(`转账已发出：已向 [${targetUser.nickname}] (真名：${inputRealName || '通讯录联系人'}) 转账 ${amount} CR。\n注意：若对方 24 小时内未确认接收，资金将自动原路退回。`);
+    
+    document.getElementById('transfer-create-modal').classList.remove('show');
+    logAction('交易', `向 #${targetUser.id} 发起了 ${amount} CR 的转账。`);
+    updateWallet();
+}
+
+// 3. 查看账单详情 (包含超时自动退款机制)
+async function viewTransfer(transferId) {
+    const { data: t, error } = await supabaseClient.from('omni_transfers')
+        .select('*, sender:omni_accounts!sender_id(nickname), receiver:omni_accounts!receiver_id(nickname)')
+        .eq('id', transferId).single();
+        
+    if (error || !t) return alert("系统提示：无法查询到该笔转账记录。");
+
+    const contentDiv = document.getElementById('transfer-view-content');
+    const isSender = currentAccount.id === t.sender_id;
+    const isReceiver = currentAccount.id === t.receiver_id;
+
+    if (!isSender && !isReceiver && !currentAccount.is_dm) {
+        return alert("系统提示：您没有权限查看此转账记录。");
+    }
+
+    // 检查是否超过 24 小时未接收
+    let currentStatus = t.status;
+    const now = new Date();
+    const createdAt = new Date(t.created_at);
+    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
+
+    if (currentStatus === 'pending' && hoursDiff >= 24) {
+        // 执行超时自动退款逻辑
+        await supabaseClient.from('omni_transfers').update({ status: 'expired' }).eq('id', t.id);
+        await supabaseClient.rpc('increment_credits', { row_id: t.sender_id, amt: t.amount });
+        currentStatus = 'expired';
+        logAction('交易', `转账单号 #${t.id} 因超过 24 小时未接收，资金已自动退回。`);
+        if (isSender) updateWallet();
+    }
+
+    // 构建界面
+    let statusHtml = '';
+    let actionHtml = '';
+
+    if (currentStatus === 'pending') {
+        statusHtml = `<div style="color:#f59e0b; font-size:1.1em; margin-bottom:20px;">待接收</div>`;
+        if (isReceiver) {
+            actionHtml = `
+                <div style="display:flex; gap:10px; justify-content:center; margin-top:25px;">
+                    <button onclick="processTransfer(${t.id}, 'accepted', ${t.amount})" style="padding:10px 20px; background:var(--omni-green); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">确认收款</button>
+                    <button onclick="processTransfer(${t.id}, 'rejected', ${t.amount}, ${t.sender_id})" style="padding:10px 20px; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:4px; font-weight:bold; cursor:pointer;">退还资金</button>
+                </div>
+            `;
+        } else {
+            actionHtml = `<div style="color:#64748b; margin-top:25px; font-size:0.9em;">等待对方确认收款... (24小时内未收将自动退回)</div>`;
+        }
+    } else if (currentStatus === 'accepted') {
+        statusHtml = `<div style="color:var(--omni-green); font-size:1.1em; margin-bottom:20px;">已收款</div>`;
+    } else if (currentStatus === 'rejected') {
+        statusHtml = `<div style="color:#64748b; font-size:1.1em; margin-bottom:20px;">已退还</div>`;
+    } else if (currentStatus === 'expired') {
+        statusHtml = `<div style="color:#64748b; font-size:1.1em; margin-bottom:20px;">已过期并退回</div>`;
+    }
+
+    contentDiv.innerHTML = `
+        <div style="color:#94a3b8; font-size:0.85em; margin-bottom:10px;">转账单号: TX-${t.id}</div>
+        ${statusHtml}
+        <div style="font-size:2.5em; color:#1e293b; font-weight:bold; margin-bottom:20px;">${t.amount} <span style="font-size:0.4em; color:#64748b; font-weight:normal;">CR</span></div>
+        <div style="display:flex; justify-content:space-between; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.95em; border:1px solid #e2e8f0; text-align:left;">
+            <div>
+                <div style="color:#64748b; font-size:0.85em; margin-bottom:4px;">付款方</div>
+                <strong style="color:#1e293b;">${t.sender.nickname}</strong>
+            </div>
+            <div style="text-align:right;">
+                <div style="color:#64748b; font-size:0.85em; margin-bottom:4px;">收款方</div>
+                <strong style="color:#1e293b;">${t.receiver.nickname}</strong>
+            </div>
+        </div>
+        ${actionHtml}
+    `;
+
+    document.getElementById('transfer-view-modal').classList.add('show');
+}
+
+// 4. 收款人确认接收或退还
+async function processTransfer(transferId, action, amount, senderId = null) {
+    document.getElementById('transfer-view-content').innerHTML = "<div style='color:#64748b; padding:20px;'>系统处理中，请稍候...</div>";
+
+    if (action === 'accepted') {
+        // 更新记录状态，并增加收款人余额
+        await supabaseClient.from('omni_transfers').update({ status: 'accepted' }).eq('id', transferId);
+        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
+        alert(`转账已成功接收，账户增加 ${amount} CR。`);
+        logAction('交易', `成功接收了单号 #${transferId} 的转账。`);
+        updateWallet();
+    } 
+    else if (action === 'rejected') {
+        // 更新记录状态，并退款给发送人
+        await supabaseClient.from('omni_transfers').update({ status: 'rejected' }).eq('id', transferId);
+        await supabaseClient.rpc('increment_credits', { row_id: senderId, amt: amount });
+        alert("已将资金原路退还给付款方。");
+        logAction('交易', `退还了单号 #${transferId} 的转账。`);
+    }
+
+    document.getElementById('transfer-view-modal').classList.remove('show');
+}
+
+// --- 平民确认离职被驳回，被迫重返岗位 ---
+async function acknowledgeResignationRejection(workId) {
+    if (!confirm("系统提示：确认签署此同意书后，您的离职申请将被撤销，系统将要求您全心全意为帝国创造价值。是否继续？")) return;
+
+    // 将状态重新改回 approved，清除手写批注，并重置申请时间
+    const { error } = await supabaseClient.from('omni_user_jobs').update({
+        status: 'approved',
+        dm_note: null, 
+        apply_time: new Date().toISOString() 
+    }).eq('id', workId);
+
+    if (!error) {
+        alert("系统提示：签署完毕。您的履职档案已恢复至「正常履职中」。");
+        await syncOmniTerminal(); // 强制刷新界面，消除红色单据
+    } else {
+        alert("系统繁忙，签署失败：" + error.message);
+    }
 }
 
     </script>
