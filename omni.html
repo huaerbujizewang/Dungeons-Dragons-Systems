@@ -3854,7 +3854,7 @@ async function loadOmniData() {
         const data = await response.json();
         LORE_DATA = data.lore_data || {};
         
-        console.log("【帝国资料库】静态档案加载完毕，共收录词条数:", Object.keys(LORE_DATA).length);
+        console.log(`【帝国资料库】静态档案加载完毕，共收录词条数: ${LORE_DATA.archives.length}`);
     } catch (error) {
         console.error("档案读取异常:", error);
     }
@@ -3867,7 +3867,7 @@ function renderArchiveMenu() {
     list.innerHTML = '';
     
     // 调用递归函数，初始层级为 0
-    renderTreeNodes(LORE_DATA, list, 0);
+    renderTreeNodes(LORE_DATA.archives, list, 0);
 }
 
 // 递归渲染核心函数
