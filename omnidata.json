@@ -1,68 +1,15 @@
 {
   "archives": [
     {
-      "id": "facilities",
-      "title": "帝国设施",
-      "content": "<p>收录帝国境内的核心基础设施与重大工程项目档案。</p>",
-      "children": [
-        {
-          "id": "omni",
-          "title": "OMNI 全境网络",
-          "content": "<p><strong>OMNI（Omnipresent Management & Network Interface）</strong> 是洛萨维亚帝国的数字化基石。该系统于帝国历 1042 年正式替代了传统的零散官僚体系，实现了全境范围内的数据强耦合。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">系统使命</h4><p>OMNI 的核心存在逻辑是<strong>“秩序即效益”</strong>。通过实时监测公民的生物体征、消费习惯及社交频次，系统能够以微秒级的速度计算出帝国资源的最优分配方案，确保每一份信用点（CR）都能流向产生最大社会效益的节点。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">架构组成</h4><ul><li><strong>信用核算矩阵</strong>：实时处理全境交易，并根据公民行为即时调整社会信用分。</li><li><strong>劳力调配引擎</strong>：根据帝国生产需求，强制或引导公民进入最紧缺的行业岗位。</li><li><strong>枢纽通讯协议</strong>：全境统一的实时加密通讯网络，支持私聊、群组及全局广播。</li></ul>",
-          "children": []
-        }
-      ]
-    },
-    {
-      "id": "geography",
-      "title": "帝国地理",
-      "content": "<p>洛萨维亚帝国疆域辽阔，横跨多种极端气候带。本卷宗详细记录帝国各大板块、地形地貌及核心城市的地理坐标。</p>",
-      "children": [
-        {
-          "id": "eight_zones",
-          "title": "八大语区",
-          "content": "<p>帝国的核心版图被划分为八个具有鲜明文化与地理特征的语区。这些语区构成了帝国行政与人口统筹的基础区块。</p>",
-          "children": [
-            {
-              "id": "tierlan",
-              "title": "蒂尔兰语区",
-              "content": "<p>位于中央平原的蒂尔兰语区是帝国的心脏地带与核心政治板块。</p>",
-              "children": [
-                {
-                  "id": "inscalia",
-                  "title": "因斯卡利亚",
-                  "content": "<p>帝国现任首府，高度现代化的中枢城市，最高军事委员会所在地。</p>",
-                  "children": []
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "figures",
-      "title": "帝国人物",
-      "content": "<p>帝国历史及现役核心人员的官方档案库。</p>",
-      "children": [
-        {
-          "id": "isabella",
-          "title": "“不朽者” 伊莎贝拉·洛萨维亚",
-          "content": "<p><strong>“不朽者”伊莎贝拉·洛萨维亚</strong> 是洛萨维亚帝国历史上最为核心的统治者与军事统帅。作为赫克托三世之女，她结束了帝国的皇权分裂，缔造了横跨八大语区的超级霸权，并最终在保卫帝国本土的“神战”中光荣陨落。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">继位与帝国统一</h4><p>帝国历 528 年至 535 年间，赫克托三世驾崩，帝国陷入长达七年的继承人战争。面对拥有部分正统势力的兄长亚瑟·洛萨维亚，伊莎贝拉组建了世界上首个建制化情报机构——<strong>夜莺</strong>。凭借“夜莺”的绝对情报优势，伊莎贝拉成功瓦解了敌对阵营，最终迫使亚瑟自杀，重新完成了帝国的统一大业。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">领土扩张与世界大战</h4><p>伊莎贝拉掌权后开启了扩张时代。她通过履行外交承诺和平并入乌瑞克，并接连征服卡法罗、安塔拉与格伦瑟。在随后爆发的三次世界大战中，她展现了极高的战略统筹能力，接连击溃大齐王朝与反帝同盟。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">本土神战与法理传承</h4><p>第三次世界大战结束后，反帝同盟高层在帝国本土掀起“神战”。身兼九大权能的女皇亲自迎战。此役导致十二神陨落，前首府白城化为废墟。伊莎贝拉在成功保卫国土后肉体死亡。在女皇驾崩留下的权力真空期，最高军事委员会基于战时紧急法案，在法理上全权受命接管了国家最高统治权，完成了政体的平稳过渡。</p>",
-          "children": []
-        }
-      ]
-    },
-    {
-      "id": "institutions",
-      "title": "帝国机构",
-      "content": "<p>收录帝国官方与军方的核心行政、执法及情报机构档案。</p>",
+      "id": "omni",
+      "title": "OMNI 全境网络",
+      "content": "<p><strong>OMNI</strong> 是洛萨维亚帝国的数字化基石。该系统于帝国历 942 年正式替代了传统的官僚体系，实现了全境范围内的数据强耦合。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">系统使命</h4><p>OMNI 的核心存在逻辑是<strong>“秩序即效益”</strong>。通过实时监测公民的生物体征、消费习惯及社交频次，系统能够以微秒级的速度计算出帝国资源的最优分配方案，确保每一份信用点都能流向产生最大社会效益的节点。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">架构组成</h4><ul><li><strong>信用核算矩阵</strong>：实时处理全境交易，并根据公民行为即时调整社会信用分。</li><li><strong>劳力调配引擎</strong>：根据帝国生产需求，强制或引导公民进入最紧缺的行业岗位。</li><li><strong>枢纽通讯协议</strong>：全境统一的实时加密通讯网络。</li></ul><div style=\"margin-top: 50px; padding: 20px; background: #f8fafc; border: 1px dashed #cbd5e1; font-size: 0.85em; color: #64748b;\"><strong>备注：</strong> 任何试图绕过 OMNI 终端的行为都将被视为对帝国公共安全的直接威胁。</div>",
       "children": []
     },
     {
-      "id": "enterprises",
-      "title": "帝国企业",
-      "content": "<p>收录在帝国内部合法注册运营的各类企业实体档案，包含由帝国直接控股的重型国营产业集团。</p>",
+      "id": "isabella",
+      "title": "“不朽者” 伊莎贝拉·洛萨维亚",
+      "content": "<p><strong>“不朽者”伊莎贝拉·洛萨维亚</strong> 是洛萨维亚帝国历史上最为核心的统治者与军事统帅。作为赫克托三世之女，她结束了帝国的皇权分裂，缔造了横跨八大语区的超级霸权，并最终在保卫帝国本土的“神战”中光荣陨落。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">继位与帝国统一</h4><p>帝国历 528 年至 535 年间，赫克托三世驾崩，帝国陷入长达七年的继承人战争。面对拥有部分正统势力的兄长亚瑟·洛萨维亚，伊莎贝拉组建了世界上首个建制化情报机构——<strong>夜莺</strong>。凭借“夜莺”的绝对情报优势，伊莎贝拉成功瓦解了敌对阵营，最终迫使亚瑟自杀，重新完成了帝国的统一大业。</p><h4 style=\"margin-top: 30px; border-left: 4px solid var(--omni-green); padding-left: 15px;\">本土神战与法理传承</h4><p>第三次世界大战结束仅两天后，反帝同盟高层在帝国本土掀起“神战”。身兼九大权能的女皇亲自迎战。此役导致十二位神明于一日之内陨落，前首府白城化为充斥规则怪谈的废墟。伊莎贝拉在成功保卫国土后肉体死亡，其散落的“和平”与“农业”神格被旁系血脉爱德华·洛萨维亚勉强容纳。</p><p>在女皇驾崩留下的权力与法则真空期，帝国最高军事委员会基于战时紧急法案与女皇生前的既定部署，在法理上全权受命接管了国家最高统治权。</p>",
       "children": []
     }
   ]
