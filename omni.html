@@ -725,6 +725,10 @@
         const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
         const DM_UID = "1c00b7ed-69d7-40e2-8c28-84f854a4fa35";
         let currentSidebarTab = 'friends'; 
+        let oldestMsgTimestamp = null; // 记录当前页面最上方那条消息的时间戳（游标）
+        let hasMoreHistory = true;    // 是否还有更多历史记录
+        let isHistoryLoading = false; // 加载锁，防止重复触发
+        const PAGE_SIZE = 50;         // 每次加载的数量
 
         // GitHub 头像路径配置
         const GITHUB_USER = "huaerbujizewang"; 
@@ -775,6 +779,14 @@
         async function enterApp() {
             const overlay = document.getElementById('login-overlay');
             const card = document.querySelector('.login-card');
+            // 在 enterApp 函数中加入
+            const chatBox = document.getElementById('chat-box');
+            chatBox.onscroll = () => {
+                // 当滚动条距离顶部小于 10px 时触发
+                if (chatBox.scrollTop < 10) {
+                    loadMoreHistory();
+                }
+            };
             if(card && overlay) {
                 card.style.transform = "translateX(200%) skewX(-20deg)";
                 card.style.opacity = "0";
@@ -1117,34 +1129,35 @@ function toggleChatInput() {
 async function loadHistory() {
     let query = supabaseClient.from('omni_messages').select('*');
 
-    // 根据当前模式过滤消息
+    // 1. 基础过滤逻辑
     if(currentChatMode === 'public') {
         query = query.is('target_id', null).is('group_id', null);
-    } 
-    else if (currentChatMode === 'private') {
-        const myId = currentAccount.id;
-        const toId = currentChatTarget.id;
-        
-        query = query.or(`and(sender_id.eq.${myId},target_id.eq.${toId}),and(sender_id.eq.${toId},target_id.eq.${myId})`);
-    } 
-    else if (currentChatMode === 'group') {
+    } else if (currentChatMode === 'private') {
+        query = query.or(`and(sender_id.eq.${currentAccount.id},target_id.eq.${currentChatTarget.id}),and(sender_id.eq.${currentChatTarget.id},target_id.eq.${currentAccount.id})`);
+    } else if (currentChatMode === 'group') {
         query = query.eq('group_id', currentChatTarget.id);
     }
 
-    // 【修复核心】：改为按时间倒序（ascending: false），确保抓取的是“最新”的100000条
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(100000);
+    // 2. 只取最新的 PAGE_SIZE 条
+    const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE);
     
-    if (error) {
-        console.error("历史记录读取失败:", error);
-        return;
-    }
+    if (error) return console.error("历史记录读取失败:", error);
 
     const box = document.getElementById('chat-box');
     box.innerHTML = '';
     
-    if(data) {
-        // 【修复核心】：将取出的最新消息反转（reverse），恢复正常的“旧在上、新在下”阅读顺序
-        data.reverse().forEach(renderMsg);
+    // 重置分页状态
+    hasMoreHistory = true;
+    
+    if(data && data.length > 0) {
+        // 记录这批消息中最老的一条的时间，作为下次加载的起点
+        oldestMsgTimestamp = data[data.length - 1].created_at;
+        if(data.length < PAGE_SIZE) hasMoreHistory = false;
+
+        // 反转数据，渲染到页面
+        data.reverse().forEach(m => renderMsg(m));
         setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
     }
 }
@@ -1288,23 +1301,28 @@ async function loadHistory() {
             inp.value = '';
         }
 
-        function renderMsg(m) {
-            const box = document.getElementById('chat-box');
-            if (!box) return;
+// 仅负责生成 DOM 对象，不执行插入
+function createMsgElement(m) {
+    const isSelf = (m.sender_id == currentAccount.id);
+    const avatarUrl = getAvatarUrl(m.sender_avatar_filename);
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.className = `message ${isSelf ? 'self' : ''}`;
+    tempDiv.innerHTML = `
+        <img src="${avatarUrl}" class="avatar-circle" onerror="this.src='${AVATAR_BASE}default.png'">
+        <div class="msg-content">
+            <div class="msg-sender-name">${escapeHTML(m.sender_name)}</div>
+            <div class="msg-bubble">${escapeHTML(m.content)}</div>
+        </div>`;
+    return tempDiv;
+}
 
-            const isSelf = (m.sender_id == currentAccount.id);
-            const avatarUrl = getAvatarUrl(m.sender_avatar_filename);
-            
-            const html = `
-                <div class="message ${isSelf ? 'self' : ''}">
-                    <img src="${avatarUrl}" class="avatar-circle" onerror="this.src='${AVATAR_BASE}default.png'">
-                    <div class="msg-content">
-                        <div class="msg-sender-name">${escapeHTML(m.sender_name)}</div>
-                        <div class="msg-bubble">${escapeHTML(m.content)}</div>
-                    </div>
-                </div>`;
-            box.insertAdjacentHTML('beforeend', html);
-        }
+// 维持原有的插入逻辑，但改用新的组件生成器
+function renderMsg(m) {
+    const box = document.getElementById('chat-box');
+    if (!box) return;
+    box.appendChild(createMsgElement(m));
+}
 
         // --- 控制台 UI 交互 ---
         async function openDmPanel() {
@@ -3266,6 +3284,59 @@ async function renderLogs() {
         `;
     });
     container.innerHTML = html;
+}
+
+async function loadMoreHistory() {
+    if (!hasMoreHistory || isHistoryLoading || !oldestMsgTimestamp) return;
+    
+    isHistoryLoading = true;
+    const box = document.getElementById('chat-box');
+    const oldHeight = box.scrollHeight; // 记录加载前的总高度
+
+    // 1. 在顶部插入一个加载提示
+    const loader = document.createElement('div');
+    loader.id = 'history-loader';
+    loader.style.cssText = 'text-align:center; padding:10px; color:#94a3b8; font-size:0.8em;';
+    loader.innerText = '正在调取历史档案...';
+    box.prepend(loader);
+
+    // 2. 发起请求：查询早于 oldestMsgTimestamp 的数据
+    let query = supabaseClient.from('omni_messages').select('*').lt('created_at', oldestMsgTimestamp);
+
+    if(currentChatMode === 'public') {
+        query = query.is('target_id', null).is('group_id', null);
+    } else if (currentChatMode === 'private') {
+        query = query.or(`and(sender_id.eq.${currentAccount.id},target_id.eq.${currentChatTarget.id}),and(sender_id.eq.${currentChatTarget.id},target_id.eq.${currentAccount.id})`);
+    } else if (currentChatMode === 'group') {
+        query = query.eq('group_id', currentChatTarget.id);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(PAGE_SIZE);
+
+    if (!error && data) {
+        if (data.length < PAGE_SIZE) hasMoreHistory = false;
+        if (data.length > 0) {
+            oldestMsgTimestamp = data[data.length - 1].created_at;
+
+            // 将旧消息反向渲染并插入到顶部
+            const fragment = document.createDocumentFragment();
+            data.forEach(m => {
+                const msgDiv = createMsgElement(m); // 需要稍微重构一下 renderMsg
+                fragment.appendChild(msgDiv);
+            });
+            
+            document.getElementById('history-loader').remove();
+            box.prepend(fragment);
+
+            // 关键：保持滚动条相对位置，不让页面因为顶部内容增加而乱跳
+            const newHeight = box.scrollHeight;
+            box.scrollTop = newHeight - oldHeight;
+        } else {
+            document.getElementById('history-loader').innerText = '--- 已到达记录起点 ---';
+        }
+    }
+    
+    isHistoryLoading = false;
 }
 
     </script>
