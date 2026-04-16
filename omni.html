@@ -512,6 +512,7 @@
                         </div>
                         <div class="chat-history" id="chat-box"></div>
                         <div class="chat-input-bar">
+                            <button id="chat-transfer-btn" onclick="triggerChatTransfer()" style="padding:10px; background:transparent; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; display:none; font-size:1.2em;" title="转账">💸</button>
                             <input type="text" id="chat-in" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendMsg()">
                             <button onclick="sendMsg()" style="padding:10px 25px; background:var(--omni-green); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">发送</button>
                         </div>
@@ -558,17 +559,23 @@
             </div>
 
             <div id="page-wallet" class="page">
-                <div class="card" style="background:linear-gradient(135deg, #196f3d, #114b28); color:white; padding:40px; position:relative;">
+                <div class="card" style="background:linear-gradient(135deg, #196f3d, #114b28); color:white; padding:40px; position:relative; margin-bottom: 25px;">
                     <div style="opacity:0.8;">账户可用余额 (信用点)</div>
                     <div id="wallet-val" style="font-size:3.5em; font-weight:bold; margin-top:10px;">0.00</div>
-                    
-                    <button onclick="openTransferModal()" style="position:absolute; bottom:40px; right:40px; padding:12px 25px; background:white; color:#114b28; border:none; border-radius:30px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.15); transition:0.3s;">
-                        ⇄ 转账服务
+                    <button onclick="openTransferModal()" style="position:absolute; bottom:40px; right:40px; padding:12px 25px; background:white; color:#114b28; border:none; border-radius:30px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.15);">
+                        ⇄ 外部转账
                     </button>
+                </div>
+
+                <div class="card">
+                    <h3 style="border-bottom: 2px solid var(--omni-green); padding-bottom: 10px; margin-bottom: 20px;">📥 待入账汇款</h3>
+                    <div id="wallet-pending-transfers" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="color:#94a3b8; text-align:center; padding:20px;">暂无待处理的汇款。</div>
+                    </div>
                 </div>
             </div>
 
-<!-- ============= 公民通行证页面  ============ -->
+            <!-- ============= 公民通行证页面  ============ -->
             <div id="page-profile" class="page">
 
                 <!-- 视图一：首次档案登记表单 -->
@@ -752,6 +759,29 @@
         </div>
         <div class="dm-body" id="transfer-view-content" style="text-align: center; padding: 30px; background: white; color: #1e293b;">
             </div>
+    </div>
+</div>
+
+<div class="dm-modal-overlay" id="group-transfer-modal">
+    <div class="dm-modal" style="width: 400px;">
+        <div class="dm-modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+            <h3 style="margin:0;">发起群内定向转账</h3>
+            <span class="dm-modal-close" onclick="document.getElementById('group-transfer-modal').classList.remove('show')">✖</span>
+        </div>
+        <div class="dm-body" style="background: white; color: #1e293b;">
+            <div style="font-size:0.8em; color:#64748b; margin-bottom:20px; text-align:center;">
+                资金凭证将发送至当前群组，仅目标收款人可解密接收。
+            </div>
+            <div class="dm-form-group" style="margin-bottom:15px;">
+                <label style="color: #64748b;">收款人真实姓名 (精确匹配)</label>
+                <input type="text" id="gt-realname" placeholder="请输入对方登记的真名" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1;">
+            </div>
+            <div class="dm-form-group" style="margin-bottom:25px;">
+                <label style="color: #64748b;">转账金额 (CR)</label>
+                <input type="number" id="gt-amount" placeholder="0" min="1" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-size:1.2em; font-weight:bold;">
+            </div>
+            <button class="dm-btn-submit" onclick="submitGroupTransfer()" style="background: var(--omni-green); color: white;">确认打包并发送至群组</button>
+        </div>
     </div>
 </div>
 
@@ -1084,6 +1114,7 @@ function openPublicChat() {
     currentChatMode = 'public';
     currentChatTarget = null;
     document.getElementById('chat-header-title').innerText = "公共大厅";
+    document.getElementById('chat-transfer-btn').style.display = 'none';
     refreshSidebar(); // 刷新左侧选中状态
     loadHistory();
     
@@ -1094,7 +1125,7 @@ function openPrivateChat(id, name) {
     currentChatMode = 'private';
     currentChatTarget = { id: id, name: name };
     document.getElementById('chat-header-title').innerText = `私聊：${name}`;
-
+    document.getElementById('chat-transfer-btn').style.display = 'block';
     // 【】消除未读：将对方发给我的未读消息全部标为已读
     supabaseClient.from('omni_messages')
         .update({ is_read: true })
@@ -1106,12 +1137,14 @@ function openPrivateChat(id, name) {
     refreshSidebar();
     loadHistory();
     toggleChatInput();
+    
 }
+
 
 function openGroupChat(id, name) {
     currentChatMode = 'group';
     currentChatTarget = { id: id, name: name };
-    
+    document.getElementById('chat-transfer-btn').style.display = 'block';
     // 把标题变成可点击的按钮，并增加“查看成员”的视觉暗示
     document.getElementById('chat-header-title').innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
@@ -1546,14 +1579,40 @@ async function takeoverAccount(accId) {
 
 
 
-        async function updateWallet() {
-            if(currentAccount.is_dm && currentAccount.login_id === "DM") {
-                document.getElementById('wallet-val').innerText = "无限";
-                return;
-            }
-            const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-            if(data) document.getElementById('wallet-val').innerText = data.credits.toLocaleString();
-        }
+async function updateWallet() {
+    if(currentAccount.is_dm && currentAccount.login_id === "DM") {
+        document.getElementById('wallet-val').innerText = "无限";
+        return;
+    }
+    
+    // 1. 刷新余额
+    const { data } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+    if(data) document.getElementById('wallet-val').innerText = data.credits.toLocaleString();
+
+    // 2. 加载待处理转账列表
+    const container = document.getElementById('wallet-pending-transfers');
+    const { data: pendings } = await supabaseClient.from('omni_transfers')
+        .select('*, sender:omni_accounts!sender_id(nickname, real_name)')
+        .eq('receiver_id', currentAccount.id)
+        .eq('status', 'pending');
+
+    if (!pendings || pendings.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:20px;">暂无待处理的汇款。</div>';
+    } else {
+        container.innerHTML = pendings.map(t => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                <div>
+                    <div style="font-size:0.8em; color:#64748b;">来自: ${t.sender.nickname} (${t.sender.real_name})</div>
+                    <div style="font-weight:bold; font-size:1.2em; color:var(--omni-green);">${t.amount} CR</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="processTransfer(${t.id}, 'accepted', ${t.amount})" style="padding:6px 12px; background:var(--omni-green); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;">接收</button>
+                    <button onclick="processTransfer(${t.id}, 'rejected', ${t.amount}, ${t.sender_id})" style="padding:6px 12px; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer; font-size:0.85em;">退回</button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
 
         window.onload = init;
 
@@ -2535,7 +2594,7 @@ function renderMyJob(work) {
     else if (status === 'resignation_rejected') {
         statusLabel = "辞呈被驳回 (强制留职)";
         statusBg = "var(--omni-danger)";
-        headerTitle = "⚠️ 劳工契约强制维持通知单";
+        headerTitle = "⚠️ 离职申请驳回通知";
         
         // 提取 DM 留下的批注，如果没有则给个默认值
         const handwrittenNote = work.dm_note || "经审核不符合帝国法律中的条款，驳回。";
@@ -2544,7 +2603,7 @@ function renderMyJob(work) {
             <div style="margin-top: 30px; padding: 15px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 0.85em;">
                 <strong style="display:block; border-bottom: 1px dashed #f87171; padding-bottom:8px; margin-bottom:12px; text-align:center; letter-spacing:2px;">帝国人力资源部 离职驳回回执</strong>
                 <div style="margin-bottom: 15px; line-height: 1.6;">
-                    经核查，您的离职申请不符合当前帝国劳动力调配最优解。根据《战时劳工统筹法案》，您的辞呈已被作废。
+                    您的离职申请未通过审核，您的履职状态已恢复。
                 </div>
                 
                 <div style="padding: 15px 20px; background: rgba(0,0,0,0.02); border-radius: 4px; border-left: 4px solid #ef4444; position: relative;">
@@ -2556,7 +2615,7 @@ function renderMyJob(work) {
             </div>
             
             <button onclick="acknowledgeResignationRejection(${work.id})" style="margin-top: 15px; width: 100%; padding: 12px; background: var(--omni-danger); color: white; border: none; font-weight: bold; letter-spacing: 2px; cursor: pointer; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">
-                签署《强制履职同意书》并返回岗位
+                确认回执并返回岗位
             </button>
         `;
     }
@@ -2852,7 +2911,7 @@ async function applyForJob(jobId) {
 }
 
 
-// 4. 自动结转：工资与信用 (建议放在 enterApp 中调用)
+// 4. 自动结转：工资与信用
 async function processEmploymentRewards() {
     const { data: work } = await supabaseClient
         .from('omni_user_jobs')
@@ -2868,17 +2927,53 @@ async function processEmploymentRewards() {
     const lastPay = new Date(work.last_pay_date);
     const hireDate = new Date(work.hire_date);
 
-    // 计算过去了多少个月
+    // 计算距离上次发薪过去了多少个月
     const monthsDiff = (now.getFullYear() - lastPay.getFullYear()) * 12 + (now.getMonth() - lastPay.getMonth());
 
     if (monthsDiff >= 1) {
-        // 发工资
+        // 1. 发工资
         const totalPay = monthsDiff * job.salary;
-        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: totalPay }); // 需要在SQL定义自增函数
+        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: totalPay }); 
+
+        // 2. 核心新增：计算信用晋升
+        let promotionMsg = "";
+        if (job.promotion_interval && job.promotion_interval > 0) {
+            // 计算“上次发薪时”和“本次发薪时”分别距离入职总共多少个月
+            const prevMonths = (lastPay.getFullYear() - hireDate.getFullYear()) * 12 + (lastPay.getMonth() - hireDate.getMonth());
+            const newMonths = (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth());
+            
+            // 严谨计算：在这段时间跨度内，跨过了几次晋升周期
+            const bumps = Math.floor(newMonths / job.promotion_interval) - Math.floor(prevMonths / job.promotion_interval);
+            
+            if (bumps > 0) {
+                let curIdx = CREDIT_GRADES.indexOf(currentAccount.social_credit);
+                if (curIdx === -1) curIdx = 4; // 如果找不到当前等级，默认算作 'C' 级
+                
+                // 提升相应的级数，最高不超过 A+ (索引 11)
+                const newIdx = Math.min(curIdx + bumps, CREDIT_GRADES.length - 1);
+                const newCredit = CREDIT_GRADES[newIdx];
+                
+                if (newIdx > curIdx) {
+                    // 更新数据库
+                    await supabaseClient.from('omni_accounts').update({ social_credit: newCredit }).eq('id', currentAccount.id);
+                    currentAccount.social_credit = newCredit; // 更新本地缓存
+                    promotionMsg = `\n🎖️ 职务晋升：您的社会信用评级已提升至 [${newCredit}]！`;
+                }
+            }
+        }
+
+        // 3. 更新发薪时间
         await supabaseClient.from('omni_user_jobs').update({ last_pay_date: now.toISOString() }).eq('id', work.id);
-        console.log(`帝国财务部：已发放 ${totalPay} CR 工资。`);
+        
+        console.log(`帝国财务部：已发放 ${totalPay} CR 工资。${promotionMsg}`);
+        
+        // 4. 弹出官方通知并刷新涉及到的 UI 界面
+        alert(`【薪资与评级核算通知】\n已为您发放 ${monthsDiff} 个月的薪资，共计 ${totalPay.toLocaleString()} CR。${promotionMsg}`);
+        
+        updateWallet();
+        if (document.getElementById('page-profile').classList.contains('active')) loadPassportData();
+        if (document.getElementById('page-jobs').classList.contains('active')) loadJobs();
     }
-    
 }
 
 // DM 强制任命函数
@@ -3012,7 +3107,7 @@ async function dmProcessApplication(workId, action, workStatus, jobId, accId, it
             alert("审批通过，公民已入职。");
 
         } else if (action === 'rejected') {
-            const note = prompt("【强制驳回离职】\\n该公民的辞呈将被撕毁。\\n请在此输入您的手写批注（该批注将以手写体显示在平民终端上）：", "劳力短缺，不予批准。滚回去干活。");
+            const note = prompt("【驳回离职申请】\n请输入驳回理由（该批注将显示在用户终端）：", "经评估，不符合离职条件。");
             
             if (note === null) return; // DM 点击了取消
 
@@ -3028,18 +3123,18 @@ async function dmProcessApplication(workId, action, workStatus, jobId, accId, it
     } else if (workStatus === 'resigning') {
         // ================= 【离职申请分支】 =================
         if (action === 'approved') {
-            if (!confirm("【离职审批】确定批准吗？该公民的劳工契约将被彻底销毁，恢复自由身。")) return;
+            if (!confirm("【离职审批】确定批准吗？")) return;
             
             // 批准离职就是直接删除档案
             await supabaseClient.from('omni_user_jobs').delete().eq('id', workId);
             alert("已批准离职。");
 
         } else if (action === 'rejected') {
-            if (!confirm("【强制驳回离职】确定要驳回吗？\n该公民的辞呈将被撕毁，状态强行恢复为「正常履职中」，且必须继续为帝国工作。")) return;
+            if (!confirm("【强制驳回离职】确定要驳回吗？")) return;
             
             // 驳回离职：强行把状态改回 approved，不给任何解释
             await supabaseClient.from('omni_user_jobs').update({ status: 'approved' }).eq('id', workId);
-            alert("已驳回离职申请，系统勒令其重返岗位。");
+            alert("已驳回离职申请。");
         }
     }
 
@@ -3119,26 +3214,36 @@ async function adminEditHireDate(accId) {
 async function updateChatBadges() {
     if (!currentAccount) return;
 
-    // ==========================================
-    // 1. 扫描私聊未读 (is_read = false)
-    // ==========================================
-    const { data: unreadMsgs } = await supabaseClient
-        .from('omni_messages')
-        .select('sender_id')
-        .eq('target_id', currentAccount.id)
-        .eq('is_read', false);
-
-    const privateCounts = {};
-    let totalPrivateUnread = 0; // 统计私聊总未读
-
-    if (unreadMsgs) {
-        unreadMsgs.forEach(m => {
-            privateCounts[m.sender_id] = (privateCounts[m.sender_id] || 0) + 1;
-            totalPrivateUnread++; // 每有一条未读，总数加一
+    // A. 先获取当前好友列表的 ID 集合
+    const { data: friends } = await supabaseClient.from('omni_friends')
+        .select('user_id, friend_id')
+        .or(`user_id.eq.${currentAccount.id},friend_id.eq.${currentAccount.id}`);
+    
+    const friendIds = new Set();
+    if (friends) {
+        friends.forEach(f => {
+            friendIds.add(f.user_id === currentAccount.id ? f.friend_id : f.user_id);
         });
     }
 
-    // 渲染名单内个人的私聊红点
+    // B. 扫描私聊未读
+    const { data: unreadMsgs } = await supabaseClient.from('omni_messages')
+        .select('sender_id').eq('target_id', currentAccount.id).eq('is_read', false);
+
+    const privateCounts = {};
+    let totalPrivateUnread = 0;
+
+    if (unreadMsgs) {
+        unreadMsgs.forEach(m => {
+            // 【逻辑修正】：只有发送者在好友列表里，才计入红点
+            if (friendIds.has(m.sender_id)) {
+                privateCounts[m.sender_id] = (privateCounts[m.sender_id] || 0) + 1;
+                totalPrivateUnread++;
+            }
+        });
+    }
+
+    // 渲染红点（逻辑保持不变，但数据已过滤）
     document.querySelectorAll('[id^="badge-private-"]').forEach(el => el.style.display = 'none');
     for (const [senderId, count] of Object.entries(privateCounts)) {
         const badge = document.getElementById(`badge-private-${senderId}`);
@@ -3147,12 +3252,10 @@ async function updateChatBadges() {
             badge.style.display = 'inline-block';
         }
     }
-
-    // 点亮“联系人”顶部大标签的红点
     const tabBadgeFriends = document.getElementById('badge-tab-friends');
     if (tabBadgeFriends) {
-        tabBadgeFriends.innerText = totalPrivateUnread > 99 ? '99+' : totalPrivateUnread;
         tabBadgeFriends.style.display = totalPrivateUnread > 0 ? 'inline-block' : 'none';
+        tabBadgeFriends.innerText = totalPrivateUnread;
     }
 
 
@@ -3322,8 +3425,8 @@ async function renderLogs() {
         .order('created_at', { ascending: false })
         .limit(200);
 
-    if (error) return container.innerHTML = `<div style="color:var(--omni-danger);">探头连接失败：${error.message}</div>`;
-    if (!data || data.length === 0) return container.innerHTML = '<div style="color:#64748b; text-align:center;">监控矩阵一片死寂。</div>';
+    if (error) return container.innerHTML = `<div style="color:var(--omni-danger);">日志读取失败：${error.message}</div>`;
+    if (!data || data.length === 0) return container.innerHTML = '<div style="color:#64748b; text-align:center;">暂无系统操作日志。</div>';
 
     let html = '';
     data.forEach(log => {
@@ -3388,7 +3491,7 @@ async function loadMoreHistory() {
 
             // 将旧消息反向渲染并插入到顶部
             const fragment = document.createDocumentFragment();
-            data.forEach(m => {
+            data.reverse().forEach(m => {
                 const msgDiv = createMsgElement(m); // 需要稍微重构一下 renderMsg
                 fragment.appendChild(msgDiv);
             });
@@ -3605,7 +3708,7 @@ async function processTransfer(transferId, action, amount, senderId = null) {
 
 // --- 平民确认离职被驳回，被迫重返岗位 ---
 async function acknowledgeResignationRejection(workId) {
-    if (!confirm("系统提示：确认签署此同意书后，您的离职申请将被撤销，系统将要求您全心全意为帝国创造价值。是否继续？")) return;
+    if (!confirm("系统提示：点击确认后，您的离职申请将作废，档案将恢复为正常履职状态。是否继续？")) return;
 
     // 将状态重新改回 approved，清除手写批注，并重置申请时间
     const { error } = await supabaseClient.from('omni_user_jobs').update({
@@ -3620,6 +3723,94 @@ async function acknowledgeResignationRejection(workId) {
     } else {
         alert("系统繁忙，签署失败：" + error.message);
     }
+}
+
+// --- 处理聊天框内点击 💸 的动作 ---
+function triggerChatTransfer() {
+    if (currentChatMode === 'private') {
+        // 私聊：直接打开官方转账面板，并自动锁定对象
+        openTransferModal();
+        const select = document.getElementById('transfer-friend-select');
+        select.value = currentChatTarget.id;
+        document.getElementById('transfer-realname-input').value = ''; 
+    } else if (currentChatMode === 'group') {
+        // 群聊：打开刚刚写的“盲填转账面板”
+        document.getElementById('gt-realname').value = '';
+        document.getElementById('gt-amount').value = '';
+        document.getElementById('group-transfer-modal').classList.add('show');
+    }
+}
+
+// --- 新增：群内盲填定向转账核心逻辑 ---
+async function submitGroupTransfer() {
+    const inputRealName = document.getElementById('gt-realname').value.trim();
+    const amount = parseInt(document.getElementById('gt-amount').value);
+
+    if (!inputRealName) return alert("系统提示：收款人姓名不能为空。");
+    if (isNaN(amount) || amount <= 0) return alert("系统提示：转账金额必须为大于 0 的整数。");
+
+    // 校验余额
+    const { data: myAcc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+    if (myAcc.credits < amount) return alert("支付失败：账户可用余额不足。");
+
+    let targetUser = null;
+    let isValid = true;
+
+    // 【模糊校验引擎】：第一步，查全境数据库有没有这个真名
+    const { data: userMatch } = await supabaseClient.from('omni_accounts')
+        .select('id, nickname')
+        .eq('real_name', inputRealName)
+        .maybeSingle();
+
+    if (!userMatch) {
+        isValid = false; 
+    } else {
+        // 第二步，如果名字存在，查这个人是不是当前群聊的成员
+        const { data: memberMatch } = await supabaseClient.from('omni_group_members')
+            .select('id')
+            .eq('group_id', currentChatTarget.id)
+            .eq('user_id', userMatch.id)
+            .maybeSingle();
+            
+        if (!memberMatch) isValid = false;
+        else targetUser = userMatch;
+    }
+
+    // 【统一模糊报错】：防穷举猜测
+    if (!isValid) {
+        return alert("交易中断：查无此人或对方不在当前群组内。");
+    }
+
+    if (targetUser.id === currentAccount.id) return alert("系统提示：无法向自己的账户进行转账。");
+
+    // 扣款与记录
+    await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: -amount });
+    const { data: transferRecord, error } = await supabaseClient.from('omni_transfers').insert([{
+        sender_id: currentAccount.id,
+        receiver_id: targetUser.id,
+        amount: amount
+    }]).select().single();
+
+    if (error) {
+        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
+        return alert("系统繁忙，资金已退回：" + error.message);
+    }
+
+    // 【发卡片】：注意这里发的是群组 (group_id)
+    const msgPayload = {
+        sender_id: currentAccount.id,
+        group_id: currentChatTarget.id, // 将转账卡片扔进群里
+        sender_name: currentAccount.nickname,
+        sender_race: currentAccount.race || "未知",
+        sender_avatar_filename: currentAccount.avatar_filename || "default.png",
+        content: `[TRANSFER_REQ:${transferRecord.id}:${amount}]`
+    };
+    await supabaseClient.from('omni_messages').insert([msgPayload]);
+
+    alert("转账已发至群组。仅该指定用户可接收此笔资金。");
+    document.getElementById('group-transfer-modal').classList.remove('show');
+    logAction('交易', `在群组 [GID:${currentChatTarget.id}] 向真名为 ${inputRealName} 的目标发起 ${amount} CR 的确认打包并发送至群组。`);
+    updateWallet();
 }
 
     </script>
