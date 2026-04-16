@@ -1114,39 +1114,40 @@ function toggleChatInput() {
 }
 
         // --- 聊天核心引擎 ---
-        async function loadHistory() {
-            let query = supabaseClient.from('omni_messages').select('*');
+async function loadHistory() {
+    let query = supabaseClient.from('omni_messages').select('*');
 
-            // 根据当前模式过滤消息
-            if(currentChatMode === 'public') {
-                query = query.is('target_id', null).is('group_id', null);
-            } 
-            else if (currentChatMode === 'private') {
-                const myId = currentAccount.id;
-                const toId = currentChatTarget.id;
-                
-                // 使用最稳健的 or 过滤方式
-                query = query.or(`and(sender_id.eq.${myId},target_id.eq.${toId}),and(sender_id.eq.${toId},target_id.eq.${myId})`);
-            } 
-            else if (currentChatMode === 'group') {
-                query = query.eq('group_id', currentChatTarget.id);
-            }
+    // 根据当前模式过滤消息
+    if(currentChatMode === 'public') {
+        query = query.is('target_id', null).is('group_id', null);
+    } 
+    else if (currentChatMode === 'private') {
+        const myId = currentAccount.id;
+        const toId = currentChatTarget.id;
+        
+        query = query.or(`and(sender_id.eq.${myId},target_id.eq.${toId}),and(sender_id.eq.${toId},target_id.eq.${myId})`);
+    } 
+    else if (currentChatMode === 'group') {
+        query = query.eq('group_id', currentChatTarget.id);
+    }
 
-            const { data, error } = await query.order('created_at', {ascending:true}).limit(100);
-            
-            if (error) {
-                console.error("历史记录读取失败:", error);
-                return;
-            }
+    // 【修复核心】：改为按时间倒序（ascending: false），确保抓取的是“最新”的100000条
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(100000);
+    
+    if (error) {
+        console.error("历史记录读取失败:", error);
+        return;
+    }
 
-            const box = document.getElementById('chat-box');
-            box.innerHTML = '';
-            
-            if(data) {
-                data.forEach(renderMsg);
-                setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
-            }
-        }
+    const box = document.getElementById('chat-box');
+    box.innerHTML = '';
+    
+    if(data) {
+        // 【修复核心】：将取出的最新消息反转（reverse），恢复正常的“旧在上、新在下”阅读顺序
+        data.reverse().forEach(renderMsg);
+        setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
+    }
+}
 
         function subscribe() {
             // 1. 销毁可能存在的残留通道
