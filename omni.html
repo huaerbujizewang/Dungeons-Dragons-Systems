@@ -3847,14 +3847,18 @@ let LORE_DATA = {};
 // --- 核心引擎：从外部文件异步拉取世界观数据 ---
 async function loadOmniData() {
     try {
-        // 使用 fetch API 请求同目录下的 json 文件
         const response = await fetch('omnidata.json');
         if (!response.ok) throw new Error('数据核心连接失败');
         
         const data = await response.json();
-        LORE_DATA = data.lore_data || {};
         
-        console.log(`【帝国资料库】静态档案加载完毕，共收录词条数: ${LORE_DATA.archives.length}`);
+        // 兼容新老 JSON 结构
+        // 如果 JSON 里有 lore_data 就用它，如果没有就直接用整个 data
+        LORE_DATA = data.lore_data ? data.lore_data : data;
+        
+        // 安全读取长度，防止崩溃
+        const count = LORE_DATA.archives ? LORE_DATA.archives.length : 0;
+        console.log(`【帝国资料库】静态档案加载完毕，共收录词条数: ${count}`);
     } catch (error) {
         console.error("档案读取异常:", error);
     }
@@ -3866,8 +3870,9 @@ function renderArchiveMenu() {
     if (!list) return;
     list.innerHTML = '';
     
-    // 调用递归函数，初始层级为 0
-    renderTreeNodes(LORE_DATA.archives, list, 0);
+    // 【核心修复】：加上安全保底 || []，即使找不到 archives 也不会报 forEach 错误
+    const nodesToRender = LORE_DATA.archives || [];
+    renderTreeNodes(nodesToRender, list, 0);
 }
 
 // 递归渲染核心函数
