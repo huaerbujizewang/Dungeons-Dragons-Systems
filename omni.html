@@ -1259,7 +1259,7 @@
 
 
         <!-- 卡片 11：帝国聊天卡片 -->
-        <div class="card emp-card-content" onclick="window.location.href='omni.html?uid=' + viewingUserId" style="cursor:pointer;">
+        <div id="omni-card" class="card emp-card-content" onclick="window.location.href='omni.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #27ae60;">🌐</div>
             <div style="font-weight:bold; font-size:1.1em;">OMNI</div>
             <p style="font-size:0.8em; color:#666;">帝国公民综合生活与政务枢纽</p>
@@ -2603,12 +2603,24 @@ async function login() {
             // 初始化全局变量
             myId = user.id;
             currentUserEmail = user.email;
-            if (currentUserEmail === 'lmop@1.com') {
-                const warBtn = document.getElementById('war-tab-btn');
-                const gachaBtn = document.getElementById('gacha-tab-btn');
-                if (warBtn) warBtn.style.display = 'none';
-                if (gachaBtn) gachaBtn.style.display = 'none';
-            }
+        const isPhandalin = (currentUserEmail === 'lmop@1.com'); // 判断是否为凡达林玩家
+        
+        const warBtn = document.getElementById('war-tab-btn');
+        const gachaBtn = document.getElementById('gacha-tab-btn');
+        const omniCard = document.getElementById('omni-card');
+
+        if (isPhandalin) {
+            // 如果是凡达林玩家：隐藏战局、抽卡和 OMNI
+            if (warBtn) warBtn.style.display = 'none';
+            if (gachaBtn) gachaBtn.style.display = 'none';
+            if (omniCard) omniCard.style.display = 'none';
+            console.log("检测到凡达林权限：已隐藏敏感功能入口");
+        } else {
+            // 如果是 Master 或其他高级团玩家：确保这些入口显示
+            if (warBtn) warBtn.style.display = 'inline-block';
+            if (gachaBtn) gachaBtn.style.display = 'inline-block';
+            if (omniCard) omniCard.style.display = 'block';
+        }
             loadWarSituation();
             
             // 检查管理员权限
