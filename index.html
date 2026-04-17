@@ -1259,7 +1259,7 @@
 
 
         <!-- 卡片 11：帝国聊天卡片 -->
-        <div id="omni-card" class="card emp-card-content" onclick="window.location.href='omni.html?uid=' + viewingUserId" style="cursor:pointer;">
+        <div class="card emp-card-content" onclick="window.location.href='omni.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #27ae60;">🌐</div>
             <div style="font-weight:bold; font-size:1.1em;">OMNI</div>
             <p style="font-size:0.8em; color:#666;">帝国公民综合生活与政务枢纽</p>
@@ -6774,23 +6774,6 @@ function goToWorld() {
     // 非凡达林玩家（高级团）正常跳转
     window.location.href = 'world.html?uid=' + viewingUserId;
 }
-
-// 初始化 UI 权限控制
-function initUIPermissions() {
-    // 判断是否为凡达林玩家
-    const isLmopPlayer = (currentUser.email === 'lmop@1.com' || currentUser.campaign === 'lmop');
-
-    if (isLmopPlayer) {
-        // 直接从 DOM 中隐藏 OMNI 卡片
-        const omniCard = document.getElementById('omni-card');
-        if (omniCard) {
-            omniCard.style.display = 'none';
-        }
-    }
-}
-
-// 确保在页面加载后运行
-window.addEventListener('DOMContentLoaded', initUIPermissions);
 
 applyUIPermissions(currentUser);
 
