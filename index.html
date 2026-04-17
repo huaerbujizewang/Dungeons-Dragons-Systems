@@ -1209,7 +1209,7 @@
         </div>
 
         <!-- 卡片 4：领地管理 -->
-        <div class="card emp-card-content" onclick="window.location.href='territory.html?uid=' + viewingUserId" style="cursor:pointer; ;">
+        <div class="card emp-card-content" onclick="goToTerritory()" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px;">👑</div>
             <div style="font-weight:bold; font-size:1.1em;">领地治理</div>
             <p style="font-size:0.8em; color:#666;">税收、政策与城市概况</p>
@@ -6747,6 +6747,18 @@ function applyUIPermissions(user) {
         if (warBtn) warBtn.style.display = 'none';
         if (gachaBtn) gachaBtn.style.display = 'none';
     }
+}
+
+function goToTerritory() {
+    const isLmopPlayer = (currentUser.email === 'lmop@1.com' || currentUser.campaign === 'lmop');
+
+    if (isLmopPlayer) {
+        // 触发拦截弹窗
+        alert("啊哦~你没有领地。镇长哈宾·威斯特可不会轻易把凡达林的控制权交给你！");
+        
+        return; 
+    }
+    window.location.href = 'territory.html?uid=' + viewingUserId;
 }
 
 applyUIPermissions(currentUser);
