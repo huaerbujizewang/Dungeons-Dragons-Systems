@@ -1259,7 +1259,7 @@
 
 
         <!-- 卡片 11：帝国聊天卡片 -->
-        <div class="card emp-card-content" onclick="window.location.href='omni.html?uid=' + viewingUserId" style="cursor:pointer;">
+        <div id="omni-card" class="card emp-card-content" onclick="window.location.href='omni.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #27ae60;">🌐</div>
             <div style="font-weight:bold; font-size:1.1em;">OMNI</div>
             <p style="font-size:0.8em; color:#666;">帝国公民综合生活与政务枢纽</p>
@@ -1891,6 +1891,12 @@
     const DM_EMAIL = '739477825@qq.com';
     // === 怪物图鉴在线修改器 ===
     let adminMonsters = [];
+
+// 全局判定是否为凡达林玩家的函数
+function isPhandalinPlayer(email) {
+    if (!email) return false;
+    return email.toLowerCase().includes('lmop');
+}
 
     // 每次打开 DM 面板时，顺便调用这个刷新列表
     async function loadAdminMonsters() {
@@ -2603,6 +2609,24 @@ async function login() {
             // 初始化全局变量
             myId = user.id;
             currentUserEmail = user.email;
+const isPhandalin = isPhandalinPlayer(currentUserEmail); 
+
+const warBtn = document.getElementById('war-tab-btn');
+const gachaBtn = document.getElementById('gacha-tab-btn');
+const omniCard = document.getElementById('omni-card');
+
+if (isPhandalin) {
+    // 凡达林玩家：全部隐藏
+    if (warBtn) warBtn.style.display = 'none';
+    if (gachaBtn) gachaBtn.style.display = 'none';
+    if (omniCard) omniCard.style.display = 'none';
+    console.log("检测到凡达林权限：已隐藏敏感功能入口");
+} else {
+    // 领主/其他玩家：战局按钮由 loadWarSituation 决定，默认先隐藏以防冲突！
+    if (warBtn) warBtn.style.display = 'none'; 
+    if (gachaBtn) gachaBtn.style.display = 'inline-block';
+    if (omniCard) omniCard.style.display = 'block';
+}
             loadWarSituation();
             
             // 检查管理员权限
@@ -6731,51 +6755,26 @@ window.endWarTurn = async function() {
         }
     });
 
-// 假设这是你在用户登录后获取到的用户信息
-const currentUser = { 
-    email: 'lmop@1.com',
-    campaign: 'lmop' // 或者靠 group_id 区分
-};
 
-// 在页面渲染或初始化时执行
-function applyUIPermissions(user) {
-    // 如果是凡达林团的玩家，隐藏特定按钮
-    if (user.campaign === 'lmop' || user.email === 'lmop@1.com') {
-        const warBtn = document.getElementById('war-tab-btn');
-        const gachaBtn = document.getElementById('gacha-tab-btn');
-        
-        if (warBtn) warBtn.style.display = 'none';
-        if (gachaBtn) gachaBtn.style.display = 'none';
-    }
-}
+
 
 function goToTerritory() {
-    const isLmopPlayer = (currentUser.email === 'lmop@1.com' || currentUser.campaign === 'lmop');
-
-    if (isLmopPlayer) {
-        // 触发拦截弹窗
-        alert("啊哦~你没有领地。镇长哈宾·威斯特可不会轻易把凡达林的控制权交给你！");
-        
+    // 使用全局判定函数
+    if (isPhandalinPlayer(currentUserEmail)) {
+        alert(`啊哦~当前身份[${currentUserEmail}]没有领地。\n镇长哈宾·威斯特可不会轻易把控制权交给你！`);
         return; 
     }
     window.location.href = 'territory.html?uid=' + viewingUserId;
 }
 
 function goToWorld() {
-    // 判断是否为凡达林玩家
-    const isLmopPlayer = (currentUser.email === 'lmop@1.com' || currentUser.campaign === 'lmop');
-
-    if (isLmopPlayer) {
-        // 弹出你指定的文案
-        alert("世界这么大，但你在剑湾。");
-        return; // 拦截跳转
+    if (isPhandalinPlayer(currentUserEmail)) {
+        alert(`当前身份[${currentUserEmail}]：世界这么大，但你在剑湾。`);
+        return; 
     }
-
-    // 非凡达林玩家（高级团）正常跳转
     window.location.href = 'world.html?uid=' + viewingUserId;
 }
 
-applyUIPermissions(currentUser);
 
 
     
