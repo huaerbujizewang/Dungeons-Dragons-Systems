@@ -44,7 +44,7 @@
         {
           "id": "supreme_military_commission",
           "title": "最高军事委员会",
-          "content": "<p><strong>最高军事委员会</strong> 专指由四位帝国上将组成的最高决策核心。作为帝国的权力中枢，任何具有全境效力的正式议案必须同时具备四位上将的联合签名方可生效。该委员会包含以下成员，爱德华·洛萨维亚，艾米丽·埃尔南德斯，乔治·布切尔，忒弥斯。</p>",
+          "content": "<p><strong>最高军事委员会</strong> 专指由四位帝国上将组成的最高决策核心。作为帝国的权力中枢，任何具有全境效力的正式议案必须同时具备四位上将的联合签名方可生效。</p><div style=\"margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;\"><div style=\"padding: 15px; border: 1px solid rgba(46, 204, 113, 0.3); background: rgba(46, 204, 113, 0.05); text-align: center;\"><span style=\"font-size: 0.8em; color: #64748b;\">帝国上将</span><br><strong>爱德华·洛萨维亚</strong></div><div style=\"padding: 15px; border: 1px solid rgba(46, 204, 113, 0.3); background: rgba(46, 204, 113, 0.05); text-align: center;\"><span style=\"font-size: 0.8em; color: #64748b;\">帝国上将</span><br><strong>艾米丽·埃尔南德斯</strong></div><div style=\"padding: 15px; border: 1px solid rgba(46, 204, 113, 0.3); background: rgba(46, 204, 113, 0.05); text-align: center;\"><span style=\"font-size: 0.8em; color: #64748b;\">帝国上将</span><br><strong>乔治·布切尔</strong></div><div style=\"padding: 15px; border: 1px solid rgba(46, 204, 113, 0.3); background: rgba(46, 204, 113, 0.05); text-align: center;\"><span style=\"font-size: 0.8em; color: #64748b;\">帝国上将</span><br><strong>忒弥斯</strong></div></div><p style=\"margin-top: 30px; font-size: 0.85em; color: #64748b; text-align: center;\">—— 任何未经上述全体成员署名之文件均不具备法律效力 ——</p>",
           "children": []
         }
       ]
