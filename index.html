@@ -2490,11 +2490,13 @@ async function login() {
     if (!email || !password) return alert('请输入账号密码');
 
     // 1. 获取验证码 Token
-    const captchaToken = turnstile.getResponse(); 
+    /*
+    const captchaToken = turnstile.getResponse();
     if (!captchaToken) {
         alert('请点击验证码进行人机验证');
         return;
     }
+    */
 
     // 2. 锁定按钮，防止重复点击
     const originalBtnText = btn.innerText;
@@ -2522,13 +2524,13 @@ async function login() {
     }
 
     // 4. 发起 Supabase 登录请求
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ 
-        email, 
-        password,
-        options: {
-            captchaToken: captchaToken, // 后端校验 Token
-        }
-    });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+            // options: {
+            //     captchaToken: captchaToken
+            // }  <-- 这一整行都不要了！
+        });
 
     // 5. 无论成功失败，都必须重置验证码
     turnstile.reset();
