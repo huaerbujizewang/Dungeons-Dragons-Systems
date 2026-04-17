@@ -1204,7 +1204,7 @@
         <!-- 卡片 3：传记与间章 -->
         <div class="card emp-card-content" onclick="window.location.href='lore.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px;">📜</div>
-            <div style="font-weight:bold; font-size:1.1em;">人物志 / 间章</div>
+            <div style="font-weight:bold; font-size:1.1em;">人物志</div>
             <p style="font-size:0.8em; color:#666;">NPC 对话、背景故事与交流记录</p>
         </div>
 
@@ -1637,7 +1637,7 @@
                 
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <select id="adm-monster-select" style="flex:1; padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="loadMonsterForEdit()">
-                        <option value="">-- 选择已有怪物进行编辑，或留空以新增 --</option>
+                        <option value="">-- 选择已有怪物进行编辑，或留空以 --</option>
                     </select>
                     <button onclick="deleteMonster()" style="background:#c0392b; color:white; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">❌ 删除</button>
                 </div>
@@ -1897,7 +1897,7 @@
         const { data } = await supabaseClient.from('bestiary').select('*');
         adminMonsters = data || [];
         const sel = document.getElementById('adm-monster-select');
-        sel.innerHTML = '<option value="">-- 新增怪物 (留空) --</option>';
+        sel.innerHTML = '<option value="">-- 怪物 (留空) --</option>';
         adminMonsters.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name} (${m.faction})</option>`);
     }
 
