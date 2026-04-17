@@ -986,7 +986,7 @@
     <button class="tab-btn" onclick="switchTab('team')">队伍</button>
     <button class="tab-btn" onclick="switchTab('inventory')">背包</button>
     <button class="tab-btn" onclick="switchTab('employees')">雇员中心</button>
-    <button class="tab-btn" onclick="switchTab('gacha')">抽卡</button>
+    <button id="gacha-tab-btn" class="tab-btn" onclick="switchTab('gacha')">抽卡</button>
     <button class="tab-btn" onclick="switchTab('others')">其他内容</button>
     <button id="security-tab-btn" class="tab-btn" onclick="switchTab('security')" style="display:none; color:#e74c3c; border:1px solid #ff000033;">🛡️ 安全与权限</button>
     <span id="admin-link" style="display:none; color:#3498db; cursor:pointer; font-weight:bold; margin-left: 10px;" onclick="toggleAdmin()">⚙️ DM 控制台</span>
@@ -6730,6 +6730,26 @@ window.endWarTurn = async function() {
             window.location.reload(); 
         }
     });
+
+// 假设这是你在用户登录后获取到的用户信息
+const currentUser = { 
+    email: 'lmop@1.com',
+    campaign: 'lmop' // 或者靠 group_id 区分
+};
+
+// 在页面渲染或初始化时执行
+function applyUIPermissions(user) {
+    // 如果是凡达林团的玩家，隐藏特定按钮
+    if (user.campaign === 'lmop' || user.email === 'lmop@1.com') {
+        const warBtn = document.getElementById('war-tab-btn');
+        const gachaBtn = document.getElementById('gacha-tab-btn');
+        
+        if (warBtn) warBtn.style.display = 'none';
+        if (gachaBtn) gachaBtn.style.display = 'none';
+    }
+}
+
+applyUIPermissions(currentUser);
 
 
     
