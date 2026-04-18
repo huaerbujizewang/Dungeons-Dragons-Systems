@@ -1405,10 +1405,17 @@ async function sendMsg() {
         if(currentChatMode === 'private') msgPayload.target_id = currentChatTarget.id;
         if(currentChatMode === 'group') msgPayload.group_id = currentChatTarget.id;
 
-        const { error } = await supabaseClient.from('omni_messages').insert([msgPayload]);
+        // 【加上 .select() 让数据库立刻返回刚才插入的整条数据（包含生成的 ID）】
+        const { data, error } = await supabaseClient.from('omni_messages').insert([msgPayload]).select();
         
-        // 如果数据库报错，直接抛出异常交给 catch 处理，不执行后续清空逻辑
         if (error) throw error; 
+
+        // 【拿到返回值后，不等实时频道，立刻在本地调用渲染】
+        if (data && data.length > 0) {
+            renderMsg(data[0]);
+            const box = document.getElementById('chat-box');
+            if (box) box.scrollTop = box.scrollHeight; // 滚动到底部
+        }
 
         // 将全境的所有聊天行为实时复刻进行为监控日志
         if (currentChatMode === 'public') {
@@ -1443,7 +1450,7 @@ function createMsgElement(m) {
     const isSelf = (m.sender_id == currentAccount.id);
     const avatarUrl = getAvatarUrl(m.sender_avatar_filename);
     
-    // 解析官方转账卡片指令
+    // 解析官方转账卡片指令 (保持你原本的逻辑不变)
     let displayContent = escapeHTML(m.content);
     if (m.content.startsWith('[TRANSFER_REQ:')) {
         const parts = m.content.split(':');
@@ -1471,6 +1478,10 @@ function createMsgElement(m) {
 
     const tempDiv = document.createElement('div');
     tempDiv.className = `message ${isSelf ? 'self' : ''}`;
+    
+    // 【绑定数据库 ID，用于防重复】
+    tempDiv.dataset.msgId = m.id; 
+
     tempDiv.innerHTML = `
         <img src="${avatarUrl}" class="avatar-circle" onerror="this.src='${AVATAR_BASE}default.png'">
         <div class="msg-content">
@@ -1484,9 +1495,14 @@ function createMsgElement(m) {
 function renderMsg(m) {
     const box = document.getElementById('chat-box');
     if (!box) return;
+
+    // 如果屏幕上已经有这个 ID 的消息了，说明本地已经渲染过，直接丢弃实时广播过来的重复数据
+    if (m.id && box.querySelector(`[data-msg-id="${m.id}"]`)) {
+        return; 
+    }
+
     box.appendChild(createMsgElement(m));
 }
-
         // --- 控制台 UI 交互 ---
         async function openDmPanel() {
             document.getElementById('dm-modal').classList.add('show');
