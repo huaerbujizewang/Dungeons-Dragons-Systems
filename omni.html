@@ -1329,79 +1329,114 @@ async function loadHistory() {
             });
         }
 
-        async function sendMsg() {
-            const inp = document.getElementById('chat-in');
-            const val = inp.value.trim();
-            if(!val) return;
+// 在 sendMsg 外部定义一个全局状态锁
+let isSendingMsg = false; 
 
-            // 权限拦截
-            const hasPrivilege = currentAccount.social_credit === 'A+' || currentAccount.is_dm || currentAccount.id === 0;
-            if (currentChatMode === 'public' && !hasPrivilege) {
+async function sendMsg() {
+    // 【防连发核心】：如果当前正在发送中，直接忽略多余的点击或回车
+    if (isSendingMsg) return; 
 
-                const interceptBox = document.getElementById('intercept-msg');
-                interceptBox.innerHTML = '⚠️ <strong>安全拦截：</strong> 您的信用评级不足，无权向全境发送广播。';
-                interceptBox.style.display = 'block';
-                setTimeout(()=> interceptBox.style.display = 'none', 3000);
-                return;
+    const inp = document.getElementById('chat-in');
+    const sendBtn = inp.nextElementSibling; // 获取旁边的“发送”按钮
+    const val = inp.value.trim();
+    if(!val) return;
+
+    // 权限拦截
+    const hasPrivilege = currentAccount.social_credit === 'A+' || currentAccount.is_dm || currentAccount.id === 0;
+    if (currentChatMode === 'public' && !hasPrivilege) {
+        const interceptBox = document.getElementById('intercept-msg');
+        interceptBox.innerHTML = '⚠️ <strong>安全拦截：</strong> 您的信用评级不足，无权向全境发送广播。';
+        interceptBox.style.display = 'block';
+        setTimeout(()=> interceptBox.style.display = 'none', 3000);
+        return;
+    }
+
+    // --- 敏感词与违规处理逻辑 ---
+    const prohibitedKeywords = ['伊莎贝拉', '女皇', '低等种族', '桐花独立', '杂种', '劣种', '劣等种族']; 
+    const isViolation = prohibitedKeywords.some(k => val.includes(k));
+
+    if(isViolation) {
+        // 1. 显示警告 UI
+        logAction('违规', `触发安全拦截。试图发送违禁词汇。原句："${val}"`);
+        document.getElementById('intercept-msg').style.display = 'block';
+        setTimeout(()=> document.getElementById('intercept-msg').style.display = 'none', 3000);
+
+        // 2. 更新数据库中的违规计数
+        const { data: acc } = await supabaseClient.from('omni_accounts')
+            .select('id, violation_count, social_credit')
+            .eq('id', currentAccount.id).single();
+        
+        let newCount = (acc.violation_count || 0) + 1;
+        let newCredit = acc.social_credit;
+
+        // 3. 触发“三振出局”降级逻辑
+        if (newCount > 0 && newCount % 3 === 0) {
+            let curIdx = CREDIT_GRADES.indexOf(acc.social_credit);
+            if (curIdx > 0) {
+                newCredit = CREDIT_GRADES[curIdx - 1]; // 信用降低一级
+                alert(`⚠️ 警告：因累计 ${newCount} 次言论违规，您的社会信用等级已降至 ${newCredit}`);
             }
-
-            // --- 敏感词与违规处理逻辑 ---
-            const prohibitedKeywords = ['伊莎贝拉', '女皇', '低等种族', '桐花独立', '杂种', '劣种', '劣等种族']; 
-            const isViolation = prohibitedKeywords.some(k => val.includes(k));
-
-            if(isViolation) {
-                // 1. 显示警告 UI
-                logAction('违规', `触发安全拦截。试图发送违禁词汇。原句："${val}"`);
-                document.getElementById('intercept-msg').style.display = 'block';
-                setTimeout(()=> document.getElementById('intercept-msg').style.display = 'none', 3000);
-
-                // 2. 更新数据库中的违规计数
-                const { data: acc } = await supabaseClient.from('omni_accounts')
-                    .select('id, violation_count, social_credit')
-                    .eq('id', currentAccount.id).single();
-                
-                let newCount = (acc.violation_count || 0) + 1;
-                let newCredit = acc.social_credit;
-
-                // 3. 触发“三振出局”降级逻辑
-                if (newCount > 0 && newCount % 3 === 0) {
-                    let curIdx = CREDIT_GRADES.indexOf(acc.social_credit);
-                    if (curIdx > 0) {
-                        newCredit = CREDIT_GRADES[curIdx - 1]; // 信用降低一级
-                        alert(`⚠️ 警告：因累计 ${newCount} 次言论违规，您的社会信用等级已降至 ${newCredit}`);
-                    }
-                }
-
-                await supabaseClient.from('omni_accounts')
-                    .update({ violation_count: newCount, social_credit: newCredit })
-                    .eq('id', currentAccount.id);
-                
-                return; // 拦截消息，不予发送
-            }
-
-            // --- 正常发送逻辑 ---
-            let msgPayload = {
-                sender_id: currentAccount.id,
-                sender_name: currentAccount.nickname,
-                sender_race: currentAccount.race || "未知",
-                sender_avatar_filename: currentAccount.avatar_filename || "default.png",
-                content: val
-            };
-            if(currentChatMode === 'private') msgPayload.target_id = currentChatTarget.id;
-            if(currentChatMode === 'group') msgPayload.group_id = currentChatTarget.id;
-
-            await supabaseClient.from('omni_messages').insert([msgPayload]);
-
-            // 将全境的所有聊天行为实时复刻进行为监控日志
-            if (currentChatMode === 'public') {
-                logAction('社交', `【广播】在公共大厅发送了："${val}"`);
-            } else if (currentChatMode === 'private') {
-                logAction('社交', `【私聊】向 [ID:${currentChatTarget.id}] 发送了消息："${val}"`);
-            } else if (currentChatMode === 'group') {
-                logAction('社交', `【群聊】在群组 [GID:${currentChatTarget.id}] 发言："${val}"`);
-            }
-            inp.value = '';
         }
+
+        await supabaseClient.from('omni_accounts')
+            .update({ violation_count: newCount, social_credit: newCredit })
+            .eq('id', currentAccount.id);
+        
+        return; // 拦截消息，不予发送
+    }
+
+    // ==========================================
+    // 进入网络发送阶段，锁死 UI
+    // ==========================================
+    isSendingMsg = true;
+    inp.disabled = true; // 临时禁用输入框，防止继续输入
+    sendBtn.disabled = true; // 临时禁用按钮
+    sendBtn.innerText = "发送中"; // 给出明确的视觉反馈
+
+    try {
+        // --- 正常发送逻辑 ---
+        let msgPayload = {
+            sender_id: currentAccount.id,
+            sender_name: currentAccount.nickname,
+            sender_race: currentAccount.race || "未知",
+            sender_avatar_filename: currentAccount.avatar_filename || "default.png",
+            content: val
+        };
+        if(currentChatMode === 'private') msgPayload.target_id = currentChatTarget.id;
+        if(currentChatMode === 'group') msgPayload.group_id = currentChatTarget.id;
+
+        const { error } = await supabaseClient.from('omni_messages').insert([msgPayload]);
+        
+        // 如果数据库报错，直接抛出异常交给 catch 处理，不执行后续清空逻辑
+        if (error) throw error; 
+
+        // 将全境的所有聊天行为实时复刻进行为监控日志
+        if (currentChatMode === 'public') {
+            logAction('社交', `【广播】在公共大厅发送了："${val}"`);
+        } else if (currentChatMode === 'private') {
+            logAction('社交', `【私聊】向 [ID:${currentChatTarget.id}] 发送了消息："${val}"`);
+        } else if (currentChatMode === 'group') {
+            logAction('社交', `【群聊】在群组 [GID:${currentChatTarget.id}] 发言："${val}"`);
+        }
+        
+        // 只有数据成功写入数据库，才清空输入框
+        inp.value = ''; 
+
+    } catch (err) {
+        console.error("发送失败:", err);
+        // 如果网络卡顿导致插入失败，保留输入框原本的文字，避免玩家白打字
+        alert("网络波动，消息发送失败，请重试。");
+    } finally {
+        // ==========================================
+        // 无论成功还是失败，最后必须解锁 UI
+        // ==========================================
+        isSendingMsg = false;
+        inp.disabled = false;
+        sendBtn.disabled = false;
+        sendBtn.innerText = "发送";
+        inp.focus(); // 发完后自动帮玩家重新聚焦输入框，方便无缝衔接打字
+    }
+}
 
 // 仅负责生成 DOM 对象，不执行插入
 function createMsgElement(m) {
