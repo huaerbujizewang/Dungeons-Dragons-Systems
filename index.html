@@ -3069,39 +3069,38 @@ async function loadGold() {
 
 
 
-    // --- 购买逻辑 (支持30分钟退货记录) ---
-    async function buy(id, p, n, c) {
-        showLoading();
-        try {
-            const { data, error } = await supabaseClient.rpc('atomic_buy_item', {
-                p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
-                p_item_id: parseInt(id),  // 确保是数字
-                p_price: parseFloat(p),   // 确保支持小数数字
-                p_item_name: n,
-                p_category: c || '杂项'    // 确保不为 null
-            });
+// --- 购买逻辑 (支持30分钟退货记录) ---
+async function buy(id, p, n, c) {
+    showLoading();
+    try {
+        const { data, error } = await supabaseClient.rpc('atomic_buy_item', {
+            p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
+            p_item_id: parseInt(id),  // 确保是数字
+            p_price: parseFloat(p),   // 确保支持小数数字
+            p_item_name: n,
+            p_category: c || '杂项'    // 确保不为 null
+        });
 
-            if (error) {
-                console.error("RPC Error:", error);
-                throw error;
-            }
-
-            if (data && data.startsWith('success')) {
-                // 成功
-                await Promise.all([loadGold(), loadInventory()]);
-                alert(`[${n}] 购买成功！`);
-            } else {
-                // 后端返回的业务错误
-                alert(data ? data.replace('error:', '') : '未知错误');
-                loadShop(); 
-            }
-        } catch (e) {
-            console.error("Full Error Info:", e);
-            alert('交易失败：' + (e.message || '请检查网络'));
-        } finally {
-            hideLoading();
+        if (error) {
+            console.error("RPC Error:", error);
+            throw error;
         }
+
+        if (data && data.startsWith('success')) {
+            // 将 loadShop() 加入并发刷新队列
+            await Promise.all([loadGold(), loadInventory(), loadShop()]);
+            alert(`[${n}] 购买成功！`);
+        } else {
+            alert(data ? data.replace('error:', '') : '未知错误');
+            loadShop(); 
+        }
+    } catch (e) {
+        console.error("Full Error Info:", e);
+        alert('交易失败：' + (e.message || '请检查网络'));
+    } finally {
+        hideLoading();
     }
+}
 
     // ================== 通用日志函数 ==================
     async function logAction(actionType, details) {
