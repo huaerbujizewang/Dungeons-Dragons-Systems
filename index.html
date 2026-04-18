@@ -3076,7 +3076,7 @@ async function loadGold() {
             const { data, error } = await supabaseClient.rpc('atomic_buy_item', {
                 p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
                 p_item_id: parseInt(id),  // 确保是数字
-                p_price: parseInt(p),     // 确保是数字
+                p_price: parseFloat(p),   // 确保支持小数数字
                 p_item_name: n,
                 p_category: c || '杂项'    // 确保不为 null
             });
@@ -3606,7 +3606,7 @@ if (typeof loadAdminResearch === 'function') {
         const name = document.getElementById('adm-shop-name').value;
         const rarity = document.getElementById('adm-shop-rarity').value;
         const category = document.getElementById('adm-shop-cat').value;
-        const price = parseInt(document.getElementById('adm-shop-price').value);
+        const price = parseFloat(document.getElementById('adm-shop-price').value);
         const stock = parseInt(document.getElementById('adm-shop-stock').value);
         const description = document.getElementById('adm-shop-desc').value;
         const targetType = document.getElementById('adm-shop-target').value;
@@ -4126,7 +4126,7 @@ async function loadLoginLogs() {
             if (baseInfo && baseInfo.price) {
                 // --- 有图鉴数据，可以卖 ---
                 const ratio = getDailySellRatio(item.item_name); // 获取今日折扣
-                const sellPrice = Math.floor(baseInfo.price * ratio); // 最终回收价
+                const sellPrice = Math.round(baseInfo.price * ratio * 100) / 100; // 保留两位小数
                 const discount = Math.round(ratio * 100); // 显示百分比
 
                 sellHtml = `
@@ -4179,7 +4179,7 @@ async function loadLoginLogs() {
             // 1. 再次确认金币 (防止 userProfile 没加载)
             if (!userProfile) await loadGold();
 
-            const totalPrice = unitPrice * qty;
+            const totalPrice = Math.round(unitPrice * qty * 100) / 100;
 
             // 2. 扣除背包物品
             if (qty === maxQty) {
@@ -4189,7 +4189,7 @@ async function loadLoginLogs() {
             }
 
             // 3. 增加玩家金币
-            const newGold = userProfile.gold_gp + totalPrice;
+            const newGold = Math.round((userProfile.gold_gp + totalPrice) * 100) / 100;
             await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
 
             // 4. 记录日志
