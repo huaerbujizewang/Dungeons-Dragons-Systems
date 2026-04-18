@@ -3658,9 +3658,11 @@ async function openTransferModal() {
         select.innerHTML = '<option value="">-- 联系人列表为空 --</option>';
     }
 }
-
+let isTransactionProcessing = false;
 // 2. 提交转账请求
 async function submitTransfer() {
+    if (isTransactionProcessing) return; // 拦截连点
+
     const friendId = document.getElementById('transfer-friend-select').value;
     const inputRealName = document.getElementById('transfer-realname-input').value.trim();
     const amount = parseInt(document.getElementById('transfer-amount').value);
@@ -3669,10 +3671,9 @@ async function submitTransfer() {
 
     let targetUser = null;
 
-    // 【修改核心】：优先使用手动输入的真实姓名进行精确匹配
     if (inputRealName !== '') {
         const { data } = await supabaseClient.from('omni_accounts').select('id, nickname, real_name').eq('real_name', inputRealName).maybeSingle();
-        if (!data) return alert(`系统提示：未找到真实姓名为 [${inputRealName}] 的登记账户，请检查输入是否准确。`);
+        if (!data) return alert(`系统提示：未找到真实姓名为 [${inputRealName}] 的登记账户。`);
         targetUser = data;
     } else if (friendId !== '') {
         const { data } = await supabaseClient.from('omni_accounts').select('id, nickname').eq('id', friendId).single();
@@ -3683,42 +3684,58 @@ async function submitTransfer() {
 
     if (targetUser.id === currentAccount.id) return alert("系统提示：无法向自己的账户进行转账。");
 
-    // 校验账户余额
-    const { data: myAcc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-    if (myAcc.credits < amount) return alert("支付失败：账户可用余额不足。");
+    // 上锁并禁用界面
+    isTransactionProcessing = true;
+    const submitBtn = document.querySelector('#transfer-create-modal .dm-btn-submit');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = "资金冻结并打包中...";
+    submitBtn.style.background = "#94a3b8";
+    submitBtn.style.cursor = "not-allowed";
 
-    // 步骤 A：从发送方账户扣除资金
-    await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: -amount });
+    try {
+        const { data: myAcc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+        if (myAcc.credits < amount) throw new Error("支付失败：账户可用余额不足。");
 
-    // 步骤 B：生成转账记录
-    const { data: transferRecord, error } = await supabaseClient.from('omni_transfers').insert([{
-        sender_id: currentAccount.id,
-        receiver_id: targetUser.id,
-        amount: amount
-    }]).select().single();
+        // 步骤 A：从发送方账户扣除资金
+        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: -amount });
 
-    if (error) {
-        // 若数据库异常导致记录生成失败，则回滚资金
-        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
-        return alert("系统繁忙，资金已退回：" + error.message);
+        // 步骤 B：生成转账记录
+        const { data: transferRecord, error } = await supabaseClient.from('omni_transfers').insert([{
+            sender_id: currentAccount.id,
+            receiver_id: targetUser.id,
+            amount: amount
+        }]).select().single();
+
+        if (error) {
+            // 回滚资金
+            await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
+            throw new Error("系统繁忙，资金已退回：" + error.message);
+        }
+
+        // 步骤 C：向收款人发送资金卡片消息
+        const msgPayload = {
+            sender_id: currentAccount.id,
+            target_id: targetUser.id,
+            sender_name: currentAccount.nickname,
+            sender_race: currentAccount.race || "未知",
+            sender_avatar_filename: currentAccount.avatar_filename || "default.png",
+            content: `[TRANSFER_REQ:${transferRecord.id}:${amount}]`
+        };
+        await supabaseClient.from('omni_messages').insert([msgPayload]);
+
+        alert(`转账已发出：已向 [${targetUser.nickname}] 转账 ${amount} CR。`);
+        document.getElementById('transfer-create-modal').classList.remove('show');
+        logAction('交易', `向 #${targetUser.id} 发起了 ${amount} CR 的转账。`);
+        updateWallet();
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        // 解锁并恢复 UI
+        isTransactionProcessing = false;
+        submitBtn.innerText = originalText;
+        submitBtn.style.background = "var(--omni-green)";
+        submitBtn.style.cursor = "pointer";
     }
-
-    // 步骤 C：向收款人发送资金卡片消息
-    const msgPayload = {
-        sender_id: currentAccount.id,
-        target_id: targetUser.id,
-        sender_name: currentAccount.nickname,
-        sender_race: currentAccount.race || "未知",
-        sender_avatar_filename: currentAccount.avatar_filename || "default.png",
-        content: `[TRANSFER_REQ:${transferRecord.id}:${amount}]`
-    };
-    await supabaseClient.from('omni_messages').insert([msgPayload]);
-
-    alert(`转账已发出：已向 [${targetUser.nickname}] (真名：${inputRealName || '通讯录联系人'}) 转账 ${amount} CR。\n注意：若对方 24 小时内未确认接收，资金将自动原路退回。`);
-    
-    document.getElementById('transfer-create-modal').classList.remove('show');
-    logAction('交易', `向 #${targetUser.id} 发起了 ${amount} CR 的转账。`);
-    updateWallet();
 }
 
 // 3. 查看账单详情 (包含超时自动退款机制)
@@ -3798,25 +3815,47 @@ async function viewTransfer(transferId) {
 
 // 4. 收款人确认接收或退还
 async function processTransfer(transferId, action, amount, senderId = null) {
-    document.getElementById('transfer-view-content').innerHTML = "<div style='color:#64748b; padding:20px;'>系统处理中，请稍候...</div>";
+    if (isTransactionProcessing) return; // 【绝对防御】拦截同一订单的连点并发
+    
+    isTransactionProcessing = true;
+    const contentDiv = document.getElementById('transfer-view-content');
+    if(contentDiv) contentDiv.innerHTML = "<div style='color:#f59e0b; padding:20px; font-weight:bold; letter-spacing: 2px;'>帝国财务局核算中，请勿关闭窗口...</div>";
 
-    if (action === 'accepted') {
-        // 更新记录状态，并增加收款人余额
-        await supabaseClient.from('omni_transfers').update({ status: 'accepted' }).eq('id', transferId);
-        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
-        alert(`转账已成功接收，账户增加 ${amount} CR。`);
-        logAction('交易', `成功接收了单号 #${transferId} 的转账。`);
+    try {
+        // --- 再次去数据库里核实这个订单到底是不是 pending 状态 ---
+        // 这一步是为了防止用户开着两个浏览器同时点接收，或者被脚本刷接口
+        const { data: checkTransfer, error: checkErr } = await supabaseClient
+            .from('omni_transfers')
+            .select('status')
+            .eq('id', transferId)
+            .single();
+
+        if (checkErr || !checkTransfer) throw new Error("订单状态校验失败，操作中止。");
+        if (checkTransfer.status !== 'pending') {
+            document.getElementById('transfer-view-modal').classList.remove('show');
+            throw new Error("操作无效：该笔转账已被处理，请勿重复点击！");
+        }
+
+        if (action === 'accepted') {
+            await supabaseClient.from('omni_transfers').update({ status: 'accepted' }).eq('id', transferId);
+            await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
+            alert(`转账已成功接收，账户增加 ${amount} CR。`);
+            logAction('交易', `成功接收了单号 #${transferId} 的转账。`);
+        } 
+        else if (action === 'rejected') {
+            await supabaseClient.from('omni_transfers').update({ status: 'rejected' }).eq('id', transferId);
+            await supabaseClient.rpc('increment_credits', { row_id: senderId, amt: amount });
+            alert("已将资金原路退还给付款方。");
+            logAction('交易', `退还了单号 #${transferId} 的转账。`);
+        }
+
+        document.getElementById('transfer-view-modal').classList.remove('show');
         updateWallet();
-    } 
-    else if (action === 'rejected') {
-        // 更新记录状态，并退款给发送人
-        await supabaseClient.from('omni_transfers').update({ status: 'rejected' }).eq('id', transferId);
-        await supabaseClient.rpc('increment_credits', { row_id: senderId, amt: amount });
-        alert("已将资金原路退还给付款方。");
-        logAction('交易', `退还了单号 #${transferId} 的转账。`);
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        isTransactionProcessing = false;
     }
-
-    document.getElementById('transfer-view-modal').classList.remove('show');
 }
 
 // --- 平民确认离职被驳回，被迫重返岗位 ---
@@ -3854,76 +3893,78 @@ function triggerChatTransfer() {
     }
 }
 
-// --- 新增：群内盲填定向转账核心逻辑 ---
+// --- 群内盲填定向转账核心逻辑 ---
 async function submitGroupTransfer() {
+    if (isTransactionProcessing) return; // 拦截连点
+
     const inputRealName = document.getElementById('gt-realname').value.trim();
     const amount = parseInt(document.getElementById('gt-amount').value);
 
     if (!inputRealName) return alert("系统提示：收款人姓名不能为空。");
     if (isNaN(amount) || amount <= 0) return alert("系统提示：转账金额必须为大于 0 的整数。");
 
-    // 校验余额
-    const { data: myAcc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
-    if (myAcc.credits < amount) return alert("支付失败：账户可用余额不足。");
+    // 上锁并禁用界面
+    isTransactionProcessing = true;
+    const submitBtn = document.querySelector('#group-transfer-modal .dm-btn-submit');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = "数据打包与校验中...";
+    submitBtn.style.background = "#94a3b8";
+    submitBtn.style.cursor = "not-allowed";
 
-    let targetUser = null;
-    let isValid = true;
+    try {
+        const { data: myAcc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
+        if (myAcc.credits < amount) throw new Error("支付失败：账户可用余额不足。");
 
-    // 【模糊校验引擎】：第一步，查全境数据库有没有这个真名
-    const { data: userMatch } = await supabaseClient.from('omni_accounts')
-        .select('id, nickname')
-        .eq('real_name', inputRealName)
-        .maybeSingle();
+        let targetUser = null;
+        let isValid = true;
 
-    if (!userMatch) {
-        isValid = false; 
-    } else {
-        // 第二步，如果名字存在，查这个人是不是当前群聊的成员
-        const { data: memberMatch } = await supabaseClient.from('omni_group_members')
-            .select('id')
-            .eq('group_id', currentChatTarget.id)
-            .eq('user_id', userMatch.id)
-            .maybeSingle();
-            
-        if (!memberMatch) isValid = false;
-        else targetUser = userMatch;
+        const { data: userMatch } = await supabaseClient.from('omni_accounts').select('id, nickname').eq('real_name', inputRealName).maybeSingle();
+
+        if (!userMatch) {
+            isValid = false; 
+        } else {
+            const { data: memberMatch } = await supabaseClient.from('omni_group_members').select('id').eq('group_id', currentChatTarget.id).eq('user_id', userMatch.id).maybeSingle();
+            if (!memberMatch) isValid = false;
+            else targetUser = userMatch;
+        }
+
+        if (!isValid) throw new Error("交易中断：查无此人或对方不在当前群组内。");
+        if (targetUser.id === currentAccount.id) throw new Error("系统提示：无法向自己的账户进行转账。");
+
+        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: -amount });
+        const { data: transferRecord, error } = await supabaseClient.from('omni_transfers').insert([{
+            sender_id: currentAccount.id,
+            receiver_id: targetUser.id,
+            amount: amount
+        }]).select().single();
+
+        if (error) {
+            await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
+            throw new Error("系统繁忙，资金已退回：" + error.message);
+        }
+
+        const msgPayload = {
+            sender_id: currentAccount.id,
+            group_id: currentChatTarget.id,
+            sender_name: currentAccount.nickname,
+            sender_race: currentAccount.race || "未知",
+            sender_avatar_filename: currentAccount.avatar_filename || "default.png",
+            content: `[TRANSFER_REQ:${transferRecord.id}:${amount}]`
+        };
+        await supabaseClient.from('omni_messages').insert([msgPayload]);
+
+        alert("转账已发至群组。仅该指定用户可接收此笔资金。");
+        document.getElementById('group-transfer-modal').classList.remove('show');
+        logAction('交易', `在群组 [GID:${currentChatTarget.id}] 向真名为 ${inputRealName} 的目标发起 ${amount} CR 的转账。`);
+        updateWallet();
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        isTransactionProcessing = false;
+        submitBtn.innerText = originalText;
+        submitBtn.style.background = "var(--omni-green)";
+        submitBtn.style.cursor = "pointer";
     }
-
-    // 【统一模糊报错】：防穷举猜测
-    if (!isValid) {
-        return alert("交易中断：查无此人或对方不在当前群组内。");
-    }
-
-    if (targetUser.id === currentAccount.id) return alert("系统提示：无法向自己的账户进行转账。");
-
-    // 扣款与记录
-    await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: -amount });
-    const { data: transferRecord, error } = await supabaseClient.from('omni_transfers').insert([{
-        sender_id: currentAccount.id,
-        receiver_id: targetUser.id,
-        amount: amount
-    }]).select().single();
-
-    if (error) {
-        await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
-        return alert("系统繁忙，资金已退回：" + error.message);
-    }
-
-    // 【发卡片】：注意这里发的是群组 (group_id)
-    const msgPayload = {
-        sender_id: currentAccount.id,
-        group_id: currentChatTarget.id, // 将转账卡片扔进群里
-        sender_name: currentAccount.nickname,
-        sender_race: currentAccount.race || "未知",
-        sender_avatar_filename: currentAccount.avatar_filename || "default.png",
-        content: `[TRANSFER_REQ:${transferRecord.id}:${amount}]`
-    };
-    await supabaseClient.from('omni_messages').insert([msgPayload]);
-
-    alert("转账已发至群组。仅该指定用户可接收此笔资金。");
-    document.getElementById('group-transfer-modal').classList.remove('show');
-    logAction('交易', `在群组 [GID:${currentChatTarget.id}] 向真名为 ${inputRealName} 的目标发起 ${amount} CR 的确认打包并发送至群组。`);
-    updateWallet();
 }
 
 
