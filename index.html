@@ -238,13 +238,82 @@
         .btn-leave { position: absolute; top: 10px; right: 10px; font-size: 0.7em; color: #999; cursor: pointer; border: 1px solid #eee; padding: 2px 8px; border-radius: 4px; background: #fff; }
         .btn-leave:hover { background: #fee; color: #e74c3c; border-color: #e74c3c; }
 
-        /* 装备槽 */
+        /* 装备槽
         .slots-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
         .slot { aspect-ratio: 1; border: 1px dashed #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7em; text-align: center; cursor: pointer; background: #fafafa; padding: 2px; overflow: hidden; transition: 0.2s; color: #aaa; }
         .slot:hover { border-color: #333; background: #fff; color: #333; }
         .slot.filled { border: 1px solid #bbb; background: #fff; border-style: solid; color: #333; font-weight: 600; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
         .slot-name { word-break: break-all; pointer-events: none; transform: scale(0.9); line-height: 1.1; }
-        
+         */
+
+/* --- 无限制动态装备栏样式 --- */
+.equip-container { 
+    display: flex; 
+    flex-wrap: wrap; /* 允许自动换行 */
+    gap: 8px; 
+    margin-top: 10px; 
+}
+
+/* 单个装备标签 */
+.equip-tag {
+    background: #fff; 
+    border: 1px solid #bbb; 
+    border-radius: 16px; /* 圆角标签风格 */
+    padding: 4px 12px; 
+    font-size: 0.85em; 
+    display: flex; 
+    align-items: center; 
+    gap: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+    color: #333; 
+    transition: 0.2s;
+    cursor: default;
+}
+
+.equip-tag:hover { 
+    border-color: #e74c3c; 
+    box-shadow: 0 2px 5px rgba(231, 76, 60, 0.15);
+}
+
+/* 卸下装备的 X 按钮 */
+.unequip-btn { 
+    color: #999; 
+    cursor: pointer; 
+    font-weight: bold; 
+    border-radius: 50%; 
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.unequip-btn:hover { 
+    color: #e74c3c; 
+    background: #fee; 
+}
+
+/* 添加装备按钮 */
+.equip-add-btn {
+    background: #fafafa; 
+    border: 1px dashed #ccc; 
+    border-radius: 16px;
+    padding: 4px 15px; 
+    font-size: 0.85em; 
+    color: #777; 
+    cursor: pointer; 
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.equip-add-btn:hover { 
+    border-color: #333; 
+    color: #333; 
+    background: #fff; 
+}
+
         /* 雇员中心卡片 */
         .emp-card-content { text-align: center; }
         .emp-card-content img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 1px solid #eee; }
@@ -2071,66 +2140,79 @@ function isPhandalinPlayer(email) {
             .subscribe();
     }
 
-    // --- 队伍管理 (统一显示，不隔开) ---
-    async function loadTeam() {
-        const container = document.getElementById('team-container');
-        if (!container) return; 
+// --- 队伍管理 (统一显示，不隔开) ---
+async function loadTeam() {
+    const container = document.getElementById('team-container');
+    if (!container) return; 
+    
+    container.innerHTML = '加载队员数据...';
+    
+    // 查询数据
+    const { data: members } = await supabaseClient
+        .from('employees')
+        .select('*')
+        .eq('is_in_party', true)
+        .eq('user_id', viewingUserId)
+        .order('id');
         
-        container.innerHTML = '加载队员数据...';
-        
-        // 查询数据
-        const { data: members } = await supabaseClient
-            .from('employees')
-            .select('*')
-            .eq('is_in_party', true)
-            .eq('user_id', viewingUserId) // 只看当前视角的
-            .order('id');
-            
-        const { data: equipped } = await supabaseClient.from('equipped_items').select('*');
+    const { data: equipped } = await supabaseClient.from('equipped_items').select('*');
 
-        // 清空容器，准备重新渲染
-        container.innerHTML = '';
-        
-        // 1. 渲染现有队员
-        if (members && members.length > 0) {
-            members.forEach(m => {
-                let slotsHtml = '';
-                for (let i = 0; i < 10; i++) {
-                    const item = equipped.find(e => e.employee_id === m.id && e.slot_index === i);
-                    if (item) {
-                        slotsHtml += `<div class="slot filled" onclick="unequipItem(${item.id})" title="${item.item_name}"><div class="slot-name">${item.item_name}</div></div>`;
-                    } else {
-                        slotsHtml += `<div class="slot" onclick="openEquipModal(${m.id}, ${i})">+</div>`;
-                    }
-                }
-                
-                // 将卡片加入容器
-                container.innerHTML += `
-                    <div class="team-card">
-                        <div class="btn-leave" onclick="removeFromParty(${m.id})" title="移出队伍">✕ 离队</div>
-                        <div class="team-header">
-                            <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
-                            <div class="team-info">
-                                <h3>${m.name}</h3>
-                                <p>${m.role || '雇员'}${m.role === '核心队友' ? '' : ' | ' + m.salary + ' GP'}</p>
-                            </div>
-                        </div>
-                        <div class="slots-container">${slotsHtml}</div>
+    container.innerHTML = '';
+    
+    if (members && members.length > 0) {
+        members.forEach(m => {
+            // 1. 提取当前角色的所有装备
+            const empItems = equipped.filter(e => e.employee_id === m.id);
+            let slotsHtml = '';
+            
+            // 2. 动态渲染所有已装备的物品（无限数量）
+            empItems.forEach(item => {
+                slotsHtml += `
+                    <div class="equip-tag" title="${item.item_name}">
+                        <span>${item.item_name}</span>
+                        <div class="unequip-btn" onclick="unequipItem(${item.id})" title="卸下装备">×</div>
                     </div>`;
             });
-        }
-
-        // 2. 渲染添加按钮 (如果人数不满8人)
-        if (!members || members.length < 8) {
-            container.innerHTML += `
-                <div class="team-card add-member-card" onclick="openMemberModal()">
-                    <div style="font-size:3em;">+</div>
-                    <div>添加队员 (${members ? members.length : 0}/8)</div>
+            
+            // 3. 计算下一个安全的新 slot_index (防止数据库唯一约束冲突)
+            // 找出当前最大的 slot_index，新装备用 最大值 + 1
+            const nextSlotIndex = empItems.length > 0 
+                ? Math.max(...empItems.map(e => e.slot_index || 0)) + 1 
+                : 0;
+            
+            // 4. 追加一个永久存在的“添加装备”按钮
+            slotsHtml += `
+                <div class="equip-add-btn" onclick="openEquipModal(${m.id}, ${nextSlotIndex})">
+                    + 装备
                 </div>`;
-        }
-        
-        container.className = 'team-grid';
+            
+            // 将卡片加入容器 (把 class 换成了新的 equip-container)
+            container.innerHTML += `
+                <div class="team-card">
+                    <div class="btn-leave" onclick="removeFromParty(${m.id})" title="移出队伍">✕ 离队</div>
+                    <div class="team-header">
+                        <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
+                        <div class="team-info">
+                            <h3>${m.name}</h3>
+                            <p>${m.role || '雇员'}${m.role === '核心队友' ? '' : ' | ' + m.salary + ' GP'}</p>
+                        </div>
+                    </div>
+                    <div class="equip-container">${slotsHtml}</div>
+                </div>`;
+        });
     }
+
+    if (!members || members.length < 8) {
+        container.innerHTML += `
+            <div class="team-card add-member-card" onclick="openMemberModal()">
+                <div style="font-size:3em;">+</div>
+                <div>添加队员 (${members ? members.length : 0}/8)</div>
+            </div>`;
+    }
+    
+    container.className = 'team-grid';
+}
+
     // --- 图片预加载系统 ---
     const preloadedCache = new Set(); 
 
