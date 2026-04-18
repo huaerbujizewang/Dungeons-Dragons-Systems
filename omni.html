@@ -1174,7 +1174,7 @@ function openGroupChat(id, name) {
     currentChatMode = 'group';
     currentChatTarget = { id: id, name: name };
     document.getElementById('chat-transfer-btn').style.display = 'block';
-    // 把标题变成可点击的按钮，并增加“查看成员”的视觉暗示
+    
     document.getElementById('chat-header-title').innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
             <div onclick="viewGroupMembers(${id}, '${name}')" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding: 4px 8px; border-radius: 6px; transition: 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
@@ -1185,9 +1185,14 @@ function openGroupChat(id, name) {
         </div>
     `;
 
-    // 消除群聊未读：将我的群聊阅读水位线更新到此时此刻
+    // ==========================================
+    // 解决电脑时钟比服务器慢导致的水位线 Bug
+    // ==========================================
+    let safeTime = new Date();
+    safeTime.setMinutes(safeTime.getMinutes() + 1); // 强行推后 1 分钟作为容错缓冲
+
     supabaseClient.from('omni_group_members')
-        .update({ last_read_at: new Date().toISOString() })
+        .update({ last_read_at: safeTime.toISOString() })
         .eq('user_id', currentAccount.id)
         .eq('group_id', id)
         .then(() => updateChatBadges()); 
@@ -1312,11 +1317,24 @@ async function loadHistory() {
                     const box = document.getElementById('chat-box');
                     if (box) box.scrollTop = box.scrollHeight;
 
-                    // 就地消化：如果正停留在当前聊天室，直接标为已读
+                    // ==========================================
+                    //精准消除未读状态，拒绝盲目 update
+                    // ==========================================
                     if (currentChatMode === 'private') {
-                        supabaseClient.from('omni_messages').update({is_read: true}).eq('id', m.id);
+                        // 私聊：只有“别人发给我”的消息，才需要去消除未读。自己发的不处理。
+                        if (m.target_id == currentAccount.id) {
+                            supabaseClient.from('omni_messages')
+                                .update({is_read: true})
+                                .eq('id', m.id)
+                                .then(()=>{}); // 静默执行，无需等待
+                        }
                     } else if (currentChatMode === 'group') {
-                        supabaseClient.from('omni_group_members').update({last_read_at: new Date().toISOString()}).eq('user_id', currentAccount.id).eq('group_id', currentChatTarget.id);
+                        // 群聊：绝对不能用本地 new Date()，必须使用这条消息自带的服务器创建时间！
+                        supabaseClient.from('omni_group_members')
+                            .update({last_read_at: m.created_at})
+                            .eq('user_id', currentAccount.id)
+                            .eq('group_id', currentChatTarget.id)
+                            .then(()=>{}); 
                     }
                 } else {
                     // 如果当前没看这个窗口，触发红点扫描
