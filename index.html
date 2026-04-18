@@ -3524,8 +3524,8 @@ if (typeof loadAdminResearch === 'function') {
     }
 
     // --- 计算城市月度净收支 ---
-    async function calculateCityNetIncome(targetUserId) {
-    console.log(`[财务结算] 开始为用户 ${targetUserId} 进行全领地核算...`);
+async function calculateCityNetIncome(targetUserId) {
+    console.log(`[财务结算] 开始为用户 ${targetUserId} 进行全领地小数核算...`);
     
     // 1. 获取该玩家名下的所有城市
     const { data: cities, error: statsErr } = await supabaseClient
@@ -3556,24 +3556,25 @@ if (typeof loadAdminResearch === 'function') {
         const incomes = incomeRes.data || [];
         const employees = empRes.data || [];
 
-        // --- 收入计算 ---
-        // 使用 ?? 处理 0 税率，防止 fallback 到 1.2
-        const taxIncome = Math.ceil(city.population * (city.tax_rate ?? 1.2));
+        // --- 收入计算 (支持小数) ---
+        // 使用 ?? 处理 0 税率，防止 fallback 到 1.2。并且去掉了 Math.ceil，保留真实税收
+        const taxIncome = city.population * (city.tax_rate ?? 1.2);
         
         const tradeIncome = incomes.reduce((sum, item) => {
             const count = item.count || 1;
-            const price = item.unit_price || item.amount;
+            const price = parseFloat(item.unit_price || item.amount || 0); // 确保读取为小数
             return sum + (count * price);
         }, 0);
         
-        const cityTotalIncome = taxIncome + (city.subsidy || 0) + tradeIncome;
+        const cityTotalIncome = taxIncome + parseFloat(city.subsidy || 0) + tradeIncome;
 
-        // --- 支出计算 ---
+        // --- 支出计算 (支持小数) ---
         let cityTotalExpense = 0;
-        expenses.forEach(e => cityTotalExpense += (e.count * e.unit_cost));
-        cityTotalExpense += employees.reduce((sum, e) => sum + e.salary, 0);
+        expenses.forEach(e => cityTotalExpense += (e.count * parseFloat(e.unit_cost)));
+        cityTotalExpense += employees.reduce((sum, e) => sum + parseFloat(e.salary), 0);
 
-        const cityNet = cityTotalIncome - cityTotalExpense;
+        // 计算净利并处理 JS 浮点数 Bug (四舍五入保留两位小数)
+        const cityNet = Math.round((cityTotalIncome - cityTotalExpense) * 100) / 100;
         totalEmpireNetIncome += cityNet;
 
         // --- 自动写入历史记录表 (增加 location 字段) ---
@@ -3585,8 +3586,8 @@ if (typeof loadAdminResearch === 'function') {
             location: loc, // 【关键】记录这笔钱是哪个城市的
             year: recordYear,
             month: recordMonth,
-            total_income: cityTotalIncome,
-            total_expense: cityTotalExpense,
+            total_income: Math.round(cityTotalIncome * 100) / 100, // 存入前也兜底保留两位
+            total_expense: Math.round(cityTotalExpense * 100) / 100,
             net_income: cityNet
         });
 
@@ -3598,7 +3599,8 @@ if (typeof loadAdminResearch === 'function') {
     }
 
     console.log(`[结算完毕] 领地总计月利润: ${totalEmpireNetIncome} GP`);
-    return totalEmpireNetIncome;
+    // 最终返回给外层时，再次确保是完美的两份小数
+    return Math.round(totalEmpireNetIncome * 100) / 100;
 }
 
 
