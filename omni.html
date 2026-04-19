@@ -898,13 +898,13 @@
             // 启动核心功能
             openPublicChat(); 
             if (!currentRealtimeChannel) subscribe(); 
+            await processEmploymentRewards(); // 结算工资
             updateWallet();
             loadContactList();
             await loadMallItems(); 
             await syncOmniTerminal();
             loadInventory(); 
             await autoProcessBureaucracy();
-            await processEmploymentRewards(); // 结算工资
             await processSubscriptions();
 
             if(currentAccount.is_dm) {
@@ -1733,6 +1733,16 @@ async function updateWallet() {
 async function processSubscriptions() {
     console.log("【帝国财务部】正在扫描特许协议账单...");
     
+    // 先查数据库获取最新余额！
+    // 因为前面的发薪函数可能刚刚把钱打进数据库，但本地的 currentAccount.credits 还没更新
+    const { data: latestAcc } = await supabaseClient
+        .from('omni_accounts')
+        .select('credits')
+        .eq('id', currentAccount.id)
+        .single();
+        
+    if (!latestAcc) return;
+
     const { data: inv } = await supabaseClient
         .from('omni_inventory')
         .select('*, omni_items(name, price, category)')
@@ -1740,7 +1750,7 @@ async function processSubscriptions() {
 
     if (!inv) return;
 
-    let walletBalance = currentAccount.credits;
+    let walletBalance = latestAcc.credits; // 使用绝对准确的最新余额
     let isWalletUpdated = false;
     let autoRenewMsg = "";
 
@@ -1748,30 +1758,57 @@ async function processSubscriptions() {
         // 只处理带有过期时间的订阅类商品
         if (row.omni_items?.category !== 'sub' || !row.expires_at) continue;
 
-        const expDate = new Date(row.expires_at);
+        let expDate = new Date(row.expires_at);
         const now = getImperialNow();
 
         // 如果协议已经过期，尝试触发自动扣费
         if (now > expDate) {
             const price = row.omni_items.price;
             
-            if (walletBalance >= price) {
-                // 钱够，直接划走！
-                walletBalance -= price;
+            // ==========================================
+            // 计算到底欠了多少个周期
+            // ==========================================
+            const overdueMs = now.getTime() - expDate.getTime();
+            const overdueDays = Math.floor(overdueMs / (1000 * 60 * 60 * 24));
+            
+            // 逾期 0~29 天算 1 个周期，30~59 天算 2 个周期，以此类推
+            const cyclesOwed = Math.floor(overdueDays / 30) + 1;
+            const totalArrears = cyclesOwed * price;
+
+            if (walletBalance >= totalArrears) {
+                // 1. 钱够补缴所有欠款，直接全额划走！
+                walletBalance -= totalArrears;
                 isWalletUpdated = true;
 
-                // 强制续期 30 天 (以当前系统时间起算)
-                const newExp = new Date(now);
-                newExp.setDate(newExp.getDate() + 30);
+                // 强制续期：必须从【原过期时间】往后叠加，绝不能从当前系统时间算，防止玩家白嫖冻结期的服务
+                expDate.setDate(expDate.getDate() + (cyclesOwed * 30));
 
                 await supabaseClient.from('omni_inventory')
-                    .update({ expires_at: newExp.toISOString() })
+                    .update({ expires_at: expDate.toISOString() })
                     .eq('id', row.id);
 
-                autoRenewMsg += `\n- 《${row.omni_items.name}》自动续费成功 (-${price} CR)`;
+                autoRenewMsg += `\n- 《${row.omni_items.name}》补缴并续费成功 (-${totalArrears} CR，补交 ${cyclesOwed} 个周期)`;
+                
+            } else if (walletBalance >= price) {
+                // 2. 钱不够全额补缴，但够交一部分周期的？
+                // 帝国逻辑：你有多少交得起，就先强制扣多少！扣完可能还是冻结状态！
+                const affordableCycles = Math.floor(walletBalance / price);
+                const partialPayment = affordableCycles * price;
+                
+                walletBalance -= partialPayment;
+                isWalletUpdated = true;
+                
+                expDate.setDate(expDate.getDate() + (affordableCycles * 30));
+                
+                await supabaseClient.from('omni_inventory')
+                    .update({ expires_at: expDate.toISOString() })
+                    .eq('id', row.id);
+
+                autoRenewMsg += `\n- ⚠️《${row.omni_items.name}》执行强制部分追缴 (-${partialPayment} CR，偿还 ${affordableCycles} 周期)。协议仍处于欠费冻结状态，请尽快补足余款！`;
+                
             } else {
-                // 钱不够，不扣费，保留过期状态，等下次他有钱了再扣
-                console.log(`【扣费受阻】《${row.omni_items.name}》账户余额不足，协议冻结中。`);
+                // 3. 连一个周期的钱都不够
+                console.log(`【扣费受阻】《${row.omni_items.name}》账户余额不足，协议持续冻结中。当前总欠款: ${totalArrears} CR`);
             }
         }
     }
@@ -1786,7 +1823,7 @@ async function processSubscriptions() {
         updateWallet(); // 刷新界面余额
         
         // 发送不可抗拒的扣费通知
-        alert(`【帝国财务部账单通知】\n您的部分特许协议已到期，系统已执行静默续费：${autoRenewMsg}\n\n如有异议，请在资产清单中主动终止契约。`);
+        alert(`【帝国财务部账单通知】\n您的部分特许协议已到期，系统已执行静默续费/追缴：${autoRenewMsg}\n\n如有异议，请在资产清单中主动终止契约。`);
     }
 }
 
