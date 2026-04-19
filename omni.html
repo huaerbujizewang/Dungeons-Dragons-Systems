@@ -3311,7 +3311,10 @@ function getDaysUntilPayday(lastPayDateStr) {
     const lastPay = new Date(lastPayDateStr);
     const nextPay = new Date(lastPay);
     nextPay.setDate(lastPay.getDate() + 30);
-    const diff = nextPay - new Date();
+    
+    // 【修改点】：用帝国时间 (getImperialNow) 替换真实的 (new Date)
+    const diff = nextPay.getTime() - getImperialNow().getTime(); 
+    
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
