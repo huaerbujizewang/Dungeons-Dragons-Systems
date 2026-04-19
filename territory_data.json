@@ -7,18 +7,18 @@
   "almorel": {
     "name": "ALMOREL",
     "subtitle": "艾尔莫瑞尔",
-    "population": 7036,
+    "population": 7236,
     "order": {
       "status": "优秀",
       "color": "green",
       "desc": "稳中向好，蒸蒸日上"
     },
     "raceData": [
-      { "label": "人类", "value": 61.9, "color": "#2c3e50" },
+      { "label": "人类", "value": 59.5, "color": "#2c3e50" }, 
       { "label": "矮人", "value": 10.4, "color": "#7f8c8d" },
       { "label": "半精灵", "value": 6.9, "color": "#e67e22" },
+      { "label": "龙裔", "value": 5.6, "color": "#B22222" }, 
       { "label": "精灵", "value": 3.8, "color": "#27ae60" },
-      { "label": "龙裔", "value": 3.2, "color": "#B22222" },
       { "label": "地精", "value": 3.0, "color": "#8e44ad" },
       { "label": "兽人", "value": 2.5, "color": "#f1c40f" },
       { "label": "提夫林", "value": 2.5, "color": "#800000" },
@@ -29,12 +29,12 @@
       { "label": "龙", "value": 0.2, "color": "#E5E4E2" }
     ],
     "faithData": [
-      { "label": "巴哈姆特", "value": 71, "color": "#D7BE69" },
+      { "label": "巴哈姆特", "value": 69, "color": "#D7BE69" },
       { "label": "渥金", "value": 8, "color": "#f1c40f" },
-      { "label": "洛山达", "value": 6, "color": "#f39c12" },
+      { "label": "洛山达", "value": 8, "color": "#f39c12" },
       { "label": "塞伦涅", "value": 4, "color": "#bdc3c7" },
-      { "label": "欧格玛", "value": 3, "color": "#3498db" },
-      { "label": "密丝特拉", "value": 2, "color": "#9b59b6" },
+      { "label": "密丝瑞尔", "value": 3, "color": "#9b59b6" },
+      { "label": "欧格玛", "value": 2, "color": "#3498db" },
       { "label": "淑妮", "value": 2, "color": "#e84393" },
       { "label": "坦帕斯", "value": 1, "color": "#7f8c8d" },
       { "label": "贡德", "value": 1, "color": "#d35400" },
@@ -54,7 +54,7 @@
         "title": "MILITARY / 军事概况",
         "items": [
           { "title": "象征性兵役制", "desc": "所有适龄人口在达到 18 岁时必须服役2个月。这确保了在边境冲突频繁的动荡年代，城市始终保有充足的兵员储备。" },
-          { "title": "重组的参谋部", "desc": "名义上的参谋指挥系统正在进行改组，但成果犹未可知。" },
+          { "title": "改组的参谋部", "desc": "参谋指挥系统已完成改组。得益于一批新锐力量的加入，指挥效率和战术执行力得到了质的飞跃。" },
           { "title": "中央尖塔", "desc": "这是艾尔莫瑞尔最令人敬畏防御核心。这座魔法尖塔能够向全城范围释放毁灭性的闪电风暴。" },
           { "title": "死灵医学研究所", "desc": "对外不挂牌，实则是一个半地下的死灵法术设施。" },
           { "title": "军备储备", "desc": "得益于专项拨款，卫队的武器装备得到了全面更新，治安所也进行了扩建。" }
@@ -158,7 +158,7 @@
       { "label": "加尔·闪金", "value": 10, "color": "#e67e22" },
       { "label": "库尔图马克", "value": 6, "color": "#c0392b" },
       { "label": "洛山达", "value": 4, "color": "#f39c12" },
-      { "label": "泰摩拉", "value": 3, "color": "#2ecc71" },
+      { "label": "太姬", "value": 3, "color": "#2ecc71" },
       { "label": "贡德", "value": 2, "color": "#d35400" }
     ],
     "menus": [
