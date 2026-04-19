@@ -1749,7 +1749,7 @@ async function processSubscriptions() {
         if (row.omni_items?.category !== 'sub' || !row.expires_at) continue;
 
         const expDate = new Date(row.expires_at);
-        const now = new Date();
+        const now = getImperialNow();
 
         // 如果协议已经过期，尝试触发自动扣费
         if (now > expDate) {
@@ -2284,7 +2284,10 @@ function populateCreditDropdown() {
 let GLOBAL_IMPERIAL_DATE = "1092-04-10"; // 全局缓存
 
 let IMPERIAL_DAY_OFFSET = 0; // 全局天数偏移量缓存
-
+// 获取当前经过偏移的帝国标准时间
+function getImperialNow() {
+    return new Date(new Date().getTime() + (IMPERIAL_DAY_OFFSET * 86400000));
+}
 async function syncImperialDate() {
     try {
         // 同时拉取年份和天数偏移
@@ -2532,7 +2535,7 @@ async function loadInventory() {
         return;
     }
 
-    const now = new Date();
+    const now = getImperialNow();
 
     // 1. 初始化四个分类的容器
     const categories = {
@@ -3036,7 +3039,7 @@ async function processEmploymentRewards() {
     if (!work) return;
 
     const job = work.omni_jobs;
-    const now = new Date();
+    const now = getImperialNow();
     const lastPay = new Date(work.last_pay_date);
     const hireDate = new Date(work.hire_date);
 
@@ -3279,7 +3282,7 @@ function getDaysUntilPayday(lastPayDateStr) {
 function getMonthsUntilPromotion(hireDateStr, interval) {
     if (!hireDateStr || !interval || interval === 0) return "N/A";
     const hireDate = new Date(hireDateStr);
-    const now = new Date();
+    const now = getImperialNow();
     const passedMonths = (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth());
     const remaining = interval - (passedMonths % interval);
     return `${remaining} 个月`;
@@ -3756,7 +3759,7 @@ async function viewTransfer(transferId) {
 
     // 检查是否超过 24 小时未接收
     let currentStatus = t.status;
-    const now = new Date();
+    const now = getImperialNow();
     const createdAt = new Date(t.created_at);
     const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
 
