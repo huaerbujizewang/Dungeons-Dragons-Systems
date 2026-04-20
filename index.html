@@ -2410,40 +2410,32 @@ async function equipItem(invId, itemName) {
         if (!confirm('确定卸下该装备？')) return;
         showLoading();
         try {
-            // 1. 获取装备信息
-            const { data: eqItem } = await supabaseClient.from('equipped_items').select('*').eq('id', equipId).single();
+            // 1. 先简单拿一下名字用于日志记录（这步很快）
+            const { data: eqItem } = await supabaseClient.from('equipped_items').select('item_name, employee_id').eq('id', equipId).single();
             if (!eqItem) throw new Error("装备不存在");
 
-            // 2. 尝试放回背包
-            const { data: exist } = await supabaseClient.from('user_inventory')
-                .select('*')
-                .eq('user_id', userProfile.id)
-                .eq('item_name', eqItem.item_name)
-                .maybeSingle();
+            // 2. 调用极速 RPC 接口
+            const { data, error } = await supabaseClient.rpc('atomic_unequip_item', {
+                p_user_id: viewingUserId,
+                p_equip_id: parseInt(equipId)
+            });
 
-            if (exist) {
-                await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
-            } else {
-                await supabaseClient.from('user_inventory').insert([{ 
-                    user_id: userProfile.id, 
-                    item_name: eqItem.item_name, 
-                    quantity: 1, 
-                    category: '装备' // 默认归类
-                }]);
+            if (error || (data && data.startsWith('error'))) {
+                alert(data ? data.replace('error:', '') : '操作失败');
+                return;
             }
 
-            // 3. 从身上删除
-            await supabaseClient.from('equipped_items').delete().eq('id', equipId);
+            // 3. 后台异步发送日志，不让玩家等日志写完
+            logAction('卸下装备', `卸下了 [${eqItem.item_name}] (队员ID:${eqItem.employee_id})`)
+                .catch(e => console.error("日志写入失败", e));
 
-            // 4. 记录日志
-            await logAction('卸下装备', `卸下了 [${eqItem.item_name}] (队员ID:${eqItem.employee_id})`);
-
-            // 5. 统一刷新界面
+            // 4. 瞬间刷新界面
             await refreshActiveUIs();
-                } catch(e) { 
-                    console.error(e); 
-                    alert('卸载失败');
-                } finally {
+            
+        } catch(e) { 
+            console.error(e); 
+            alert('卸载失败');
+        } finally {
             hideLoading();
         }
     }
