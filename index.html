@@ -277,11 +277,18 @@
     background: #fffcf0;
 }
 
-/* 编辑按钮微调：居中、实色、比例协调 */
+/* 强制拉高队员卡片 */
+.team-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 200px; /* 和添加队员卡片高度保持绝对一致 */
+}
+
 .edit-bag-btn {
     display: block;
-    width: 80%;
-    margin: 15px auto 5px auto; /* 居中排列 */
+    width: 80%; /* 保持你原来的宽度 */
+    margin: auto auto 0 auto;
+    
     padding: 8px 0;
     background: #333;
     color: #fff;
