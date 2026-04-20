@@ -245,40 +245,58 @@
         .slot.filled { border: 1px solid #bbb; background: #fff; border-style: solid; color: #333; font-weight: 600; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
         .slot-name { word-break: break-all; pointer-events: none; transform: scale(0.9); line-height: 1.1; }
 
-/* --- 角色专属 99格 装备背包 --- */
+/* --- 角色 99格 装备背包样式优化 --- */
+#character-bag-modal { z-index: 2500; } /* 基础弹窗层级 */
+#equip-modal { z-index: 3000 !important; } /* 确保选择框永远在背包最上方 */
+
 .bag-slots-container { 
     display: grid; 
-    grid-template-columns: repeat(9, 1fr); /* 一行9个格子 */
-    gap: 8px; 
-    max-height: 60vh; 
-    overflow-y: auto; 
-    padding: 15px;
-    background: #fafafa;
-    border-radius: 6px;
-    border: 1px inset #eee;
+    grid-template-columns: repeat(6, 1fr); /* 减少列数，让格子变大 */
+    gap: 12px; 
+    max-height: 65vh; 
+    padding: 20px;
+    background: #f4f4f4;
+    border-radius: 8px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
 }
 
-/* 队伍卡片上的打开背包按钮 */
-.open-bag-btn {
+/* 槽位尺寸加大 */
+.bag-slots-container .slot {
+    aspect-ratio: 1;
     width: 100%;
-    padding: 12px;
-    background: #fdfdfd;
-    border: 1px dashed #bbb;
+    min-height: 85px; /* 显著加大格子 */
+    border: 1px solid #ccc;
+    background: #fff;
     border-radius: 6px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: #555;
+    font-size: 0.85em;
     font-weight: bold;
-    margin-top: 15px;
 }
 
-.open-bag-btn:hover {
-    border-color: #333;
-    background: #fff;
-    color: #333;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+.bag-slots-container .slot:hover {
+    border-color: #822000;
+    background: #fffcf0;
+}
+
+/* 编辑按钮微调：居中、实色、比例协调 */
+.edit-bag-btn {
+    display: block;
+    width: 80%;
+    margin: 15px auto 5px auto; /* 居中排列 */
+    padding: 8px 0;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.edit-bag-btn:hover {
+    background: #555;
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
         
         /* 雇员中心卡片 */
@@ -2139,9 +2157,7 @@ function isPhandalinPlayer(email) {
                                 <p>${m.role || '雇员'}${m.role === '核心队友' ? '' : ' | ' + m.salary + ' GP'}</p>
                             </div>
                         </div>
-                        <div class="open-bag-btn" onclick="openCharacterBag(${m.id}, '${m.name}')">
-                            🎒 查看 / 编辑装备
-                        </div>
+                        <button class="edit-bag-btn" onclick="openCharacterBag(${m.id}, '${m.name}')">编辑装备</button>
                     </div>`;
             });
         }
@@ -2159,61 +2175,54 @@ function isPhandalinPlayer(email) {
     }
 
     // --- 全新的 99 格角色背包逻辑 ---
-    let currentBagEmpId = null; // 记录当前打开了谁的背包
+    let currentBagEmpId = null;
 
     async function openCharacterBag(empId, empName) {
         currentBagEmpId = empId;
-        document.getElementById('cb-title').innerText = `${empName} 的装备背包`;
+        document.getElementById('cb-emp-name').innerText = empName;
         document.getElementById('character-bag-modal').style.display = 'flex';
+        
+        // 锁死背景网页，防止滚动穿透
+        document.body.style.overflow = 'hidden'; 
+        
         await renderCharacterBagSlots();
     }
 
     async function renderCharacterBagSlots() {
         if (!currentBagEmpId) return;
         const container = document.getElementById('cb-slots');
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:#999;">正在读取装备数据...</div>';
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px;">同步位面数据...</div>';
 
-        // 查出该角色的所有装备
-        const { data: equipped } = await supabaseClient
+        // 获取该角色已穿戴的装备
+        const { data: equipped, error } = await supabaseClient
             .from('equipped_items')
             .select('*')
             .eq('employee_id', currentBagEmpId);
 
-        let slotsHtml = '';
-        // 循环生成 99 个格子
+        if (error) return container.innerHTML = '读取失败';
+
+        let html = '';
         for (let i = 0; i < 99; i++) {
             const item = equipped ? equipped.find(e => e.slot_index === i) : null;
             if (item) {
-                // 有装备：点击卸下
-                slotsHtml += `<div class="slot filled" onclick="unequipItem(${item.id})" title="卸下 ${item.item_name}"><div class="slot-name">${item.item_name}</div></div>`;
+                // 有装备：显示名字，点击卸下
+                html += `<div class="slot filled" onclick="unequipItem(${item.id})" title="点击卸下">
+                            <div class="slot-name">${item.item_name}</div>
+                         </div>`;
             } else {
-                // 空槽位：点击穿戴
-                slotsHtml += `<div class="slot" onclick="openEquipModal(${currentBagEmpId}, ${i})" title="装备物品到此处">+</div>`;
+                // 空位：显示加号，点击弹出选择框
+                html += `<div class="slot" onclick="openEquipModal(${currentBagEmpId}, ${i})" title="点击装备">+</div>`;
             }
         }
-        container.innerHTML = slotsHtml;
+        container.innerHTML = html;
     }
-    // --- 图片预加载系统 ---
-    const preloadedCache = new Set(); 
 
-    function preloadImages(urlList) {
-        if (!urlList || urlList.length === 0) return;
-
-        // 使用 requestIdleCallback 或 setTimeout 来避免阻塞主界面渲染
-        const runPreload = () => {
-            urlList.forEach(url => {
-                if (!url || preloadedCache.has(url)) return; // 已经加载过就不管了
-                
-                const img = new Image();
-                img.src = url;
-                preloadedCache.add(url);
-            });
-        };
-
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(runPreload);
-        } else {
-            setTimeout(runPreload, 1000); // 延迟1秒执行，优先渲染界面
+    // --- 3. 修正刷新逻辑 (重要！) ---
+    // 确保在执行 equipItem 和 unequipItem 成功后，检查背包弹窗是否开启，如果是则刷新
+    async function refreshActiveUIs() {
+        await Promise.all([loadTeam(), loadInventory()]);
+        if (document.getElementById('character-bag-modal').style.display === 'flex') {
+            await renderCharacterBagSlots();
         }
     }
 
@@ -2393,11 +2402,7 @@ async function equipItem(invId, itemName) {
             closeModal('equip-modal'); 
             
             // 5. 刷新界面
-            await Promise.all([loadTeam(), loadInventory()]);
-            // 如果 99 格背包弹窗是开着的，实时刷新它里面的格子
-            if (document.getElementById('character-bag-modal').style.display === 'flex') {
-                await renderCharacterBagSlots();
-            }
+            await refreshActiveUIs();
 
         } catch (e) {
             console.error("装备出错:", e);
@@ -2439,10 +2444,8 @@ async function equipItem(invId, itemName) {
             // 4. 记录日志
             await logAction('卸下装备', `卸下了 [${eqItem.item_name}] (队员ID:${eqItem.employee_id})`);
 
-            await Promise.all([loadTeam(), loadInventory()]);
-                if (document.getElementById('character-bag-modal').style.display === 'flex') {
-                    await renderCharacterBagSlots();
-                }
+            // 5. 统一刷新界面
+            await refreshActiveUIs();
                 } catch(e) { 
                     console.error(e); 
                     alert('卸载失败');
@@ -2529,7 +2532,12 @@ async function openEquipModal(empId, slotIdx) {
     }
 
     // 辅助
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function closeModal(id) { 
+        document.getElementById(id).style.display = 'none'; 
+        
+        // 关闭弹窗时，恢复背景的滚动
+        document.body.style.overflow = ''; 
+    }
     //队员弹窗
     async function openMemberModal() {
         const list = document.getElementById('member-select-list');
@@ -6888,17 +6896,17 @@ function goToWorld() {
 </div>
 
 <div id="character-bag-modal" class="modal" onclick="if(event.target === this) closeModal('character-bag-modal')">
-    <div class="modal-box" style="width: 750px; max-width: 95%;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 15px;">
-            <h3 id="cb-title" style="margin: 0; color:#2c3e50;">角色装备栏</h3>
-            <span style="font-size:0.8em; color:#999;">容量: 99格</span>
+    <div class="modal-box" style="width: 600px; max-width: 95%; background: #fff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 15px;">
+            <h3 id="cb-title" style="margin: 0; color:#333; letter-spacing:1px;">编辑装备</h3>
+            <span id="cb-emp-name" style="font-weight:bold; color:#822000;"></span>
         </div>
         
         <div id="cb-slots" class="bag-slots-container">
             </div>
         
-        <button onclick="closeModal('character-bag-modal')" style="width:100%; margin-top:20px; padding:12px; background:#333; color:white; border:none; border-radius:4px; font-weight:bold; font-size:1.1em; cursor:pointer;">
-            关闭背包
+        <button onclick="closeModal('character-bag-modal')" style="width:100%; margin-top:20px; padding:12px; background:#822000; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
+            完成编辑
         </button>
     </div>
 </div>
