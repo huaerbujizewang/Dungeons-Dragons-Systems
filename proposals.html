@@ -318,12 +318,12 @@ async function autoSettleExpiredProposalV1(proposal, allVotes) {
 }
 
 // ==========================================
-// 主加载流：并行拉取，时间轴混合排序
+// 双轨混合并行，实时显示预算
 // ==========================================
 async function loadProposals(userId) {
     document.getElementById('loading').style.display = 'block';
 
-    // 平行拉取两张表的数据
+    // 1. 并行拉取两套系统的议案和选票
     let [v1PropsRes, v2PropsRes, v1VotesRes, v2VotesRes] = await Promise.all([
         supabaseClient.from('city_proposals').select('*').eq('user_id', userId),
         supabaseClient.from('city_proposals_v2').select('*').eq('user_id', userId),
@@ -338,7 +338,7 @@ async function loadProposals(userId) {
     const nowMs = new Date().getTime();
     let hasJustSettled = false;
 
-    // 独立判定 V2 逾期
+    // 2. 独立处理 V2 逾期逻辑 (多轮决胜)
     for (let prop of listV2) {
         if (prop.status === 'pending' && (nowMs - new Date(prop.created_at).getTime() > EXPIRE_MS)) {
             const roundVotes = votesV2.filter(v => v.proposal_id === prop.id && v.round_num === prop.current_round);
@@ -347,7 +347,7 @@ async function loadProposals(userId) {
         }
     }
 
-    // 独立判定 V1 逾期
+    // 3. 独立处理 V1 逾期逻辑 (是非题)
     for (let prop of listV1) {
         if (prop.status === 'pending' && (nowMs - new Date(prop.created_at).getTime() > EXPIRE_MS)) {
             const currentV1Votes = votesV1.filter(v => v.proposal_id === prop.id);
@@ -357,15 +357,15 @@ async function loadProposals(userId) {
     }
 
     if (hasJustSettled) {
-        location.reload();
+        location.reload(); // 发生结算则刷新
         return;
     }
 
-    // === 核心修改：为数据打上类型标签并混合排序 ===
+    // 4. 数据标准化与统一排序 (不再区分新旧版本)
     const normalizedV1 = listV1.map(p => ({ ...p, _isChoice: false, _votesData: votesV1 }));
     const normalizedV2 = listV2.map(p => ({ ...p, _isChoice: true, _votesData: votesV2 }));
     
-    // 按时间倒序排列（最新发布的议案在最上面，无论是单选还是多选）
+    // 按照发布时间 created_at 混合排序（最新发布的排最上面）
     const combinedList = [...normalizedV1, ...normalizedV2].sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
@@ -375,13 +375,14 @@ async function loadProposals(userId) {
     const historyBox = document.getElementById('history-list');
     pendingBox.innerHTML = ''; historyBox.innerHTML = '';
 
-    // ================= 渲染卡片 =================
-    combinedList.forEach(item => {
+    // 5. 内部辅助函数：生成单条议案卡片的 HTML
+    function createCardHTML(item) {
         const isV2 = item._isChoice;
         const allVotesData = item._votesData;
         const avatarUrl = employeeMap[item.proposer_name] || 'https://via.placeholder.com/70';
         
         let myVote = null, currentRoundVotes = [];
+        // 区分获取选票逻辑
         if (isV2) {
             currentRoundVotes = allVotesData.filter(v => v.proposal_id === item.id && v.round_num === item.current_round);
             myVote = currentRoundVotes.find(v => v.voter_name === currentVoter.name);
@@ -390,7 +391,7 @@ async function loadProposals(userId) {
             myVote = currentRoundVotes.find(v => v.voter_name === currentVoter.name);
         }
 
-        // 批注记录
+        // 拼接批注记录 (包含轮次 R1/R2)
         let notesHtml = '';
         const propAllVotes = allVotesData.filter(v => v.proposal_id === item.id);
         if (propAllVotes.length > 0) {
@@ -410,24 +411,35 @@ async function loadProposals(userId) {
 
         let actionButtons = '', voteStatsHtml = '', costHtml = '';
         const titleExtra = (isV2 && item.current_round > 1) ? `<span class="round-tag">第 ${item.current_round} 轮决胜</span>` : '';
-        // ❌ 删除了 versionBadge 的“旧档”逻辑，不再区分新旧
 
+        // 渲染核心：区分 [多选题] 与 [是非题]
         if (isV2 && item.proposal_type === 'choice') {
-            costHtml = `<div class="cost-tag" style="color: #8e44ad;">⚖️ 独立预算</div>`;
+            // --- 多选题逻辑 ---
+            costHtml = `<div class="cost-tag" style="color: #8e44ad;">⚖️ 独立预算方案</div>`;
             (item.options || []).forEach(opt => {
                 const count = currentRoundVotes.filter(v => v.vote_type === opt.id).length;
-                voteStatsHtml += `<span style="color:#2980b9;">${escapeHTML(opt.text)}: ${count}票</span> | `;
+                const optCost = opt.cost || 0;
+                const costStr = optCost > 0 ? `-${optCost.toLocaleString()}` : (optCost < 0 ? `+${Math.abs(optCost).toLocaleString()}` : '0');
+                // 统计行：显示每项票数及开销
+                voteStatsHtml += `<span style="color:#2980b9; font-weight:bold;">${escapeHTML(opt.text)}: ${count}票 <small style="color:#7f8c8d;">[${costStr} GP]</small></span> | `;
             });
+
             if (myVote) {
-                const txt = item.options.find(o => o.id === myVote.vote_type)?.text || '已投';
-                actionButtons = `<button class="btn-voted">本轮已投: ${escapeHTML(txt)}</button>`;
+                const selectedOpt = item.options.find(o => o.id === myVote.vote_type);
+                actionButtons = `<button class="btn-voted">本轮已投: ${escapeHTML(selectedOpt ? selectedOpt.text : '已投')}</button>`;
             } else {
                 (item.options || []).forEach(opt => {
-                    actionButtons += `<button class="btn-choice" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">🗳️ ${escapeHTML(opt.text)}</button>`;
+                    const optCost = opt.cost || 0;
+                    const costStr = optCost > 0 ? `-${optCost.toLocaleString()}` : (optCost < 0 ? `+${Math.abs(optCost).toLocaleString()}` : '0');
+                    // 按钮上明确标出 (0 GP) 等开销
+                    actionButtons += `<button class="btn-choice" style="margin-bottom:5px;" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">
+                        🗳️ ${escapeHTML(opt.text)} <span style="font-size:0.8em; opacity:0.8;">(${costStr} GP)</span>
+                    </button>`;
                 });
             }
         } else {
-            let costVal = item.cost;
+            // --- 是非题逻辑 (无论是 V1 还是 V2 的是非题) ---
+            let costVal = item.cost || 0;
             if (costVal > 0) costHtml = `<div class="cost-tag" style="color: #c0392b;">💰 -${costVal.toLocaleString()}</div>`;
             else if (costVal < 0) costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(costVal).toLocaleString()}</div>`;
             else costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 0 预算</div>`;
@@ -439,7 +451,7 @@ async function loadProposals(userId) {
             if (myVote) {
                 actionButtons = `<button class="btn-voted">本轮已投: ${myVote.vote_type === 'approve' ? '✅' : '❌'}</button>`;
             } else {
-                const voteFunc = isV2 ? 'castVoteV2' : 'castVoteV1';
+                const voteFunc = isV2 ? 'castVoteV2' : 'castVoteV1'; // 根据存储表决定投票目标
                 actionButtons = `
                     <button class="btn-approve" onclick="${voteFunc}(${item.id}, 'approve')">✅ 赞成</button>
                     <button class="btn-reject" onclick="${voteFunc}(${item.id}, 'reject')">❌ 反对</button>
@@ -447,20 +459,58 @@ async function loadProposals(userId) {
             }
         }
 
+        // 返回完整的卡片 HTML
         if (item.status === 'pending') {
             const expireDateStr = new Date(new Date(item.created_at).getTime() + EXPIRE_MS).toLocaleString();
             let roundNote = item.decision_reason ? `<div class="decision-note">${escapeHTML(item.decision_reason)}</div>` : '';
-            // ❌ 移除了 ${versionBadge}
-            pendingBox.innerHTML += `<div class="proposal-card"><div class="avatar-box"><img src="${avatarUrl}" class="avatar"><div class="proposer-name">${item.proposer_name}</div></div><div class="content-box"><div><div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div><div class="prop-desc">${escapeHTML(item.description)}</div>${roundNote}${notesHtml}</div><div class="action-bar">${costHtml}<div class="btn-group"><div class="vote-stats">${voteStatsHtml}<div>⏳ 截止: ${expireDateStr}</div></div>${actionButtons}</div></div></div></div>`;
+            return `<div class="proposal-card">
+                <div class="avatar-box"><img src="${avatarUrl}" class="avatar"><div class="proposer-name">${item.proposer_name}</div></div>
+                <div class="content-box">
+                    <div>
+                        <div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div>
+                        <div class="prop-desc">${escapeHTML(item.description)}</div>
+                        ${roundNote}${notesHtml}
+                    </div>
+                    <div class="action-bar">
+                        ${costHtml}
+                        <div class="btn-group">
+                            <div class="vote-stats">
+                                ${voteStatsHtml}
+                                <div style="font-size: 0.8em; color: #e67e22; margin-top: 4px;">⏳ 截止: ${expireDateStr}</div>
+                            </div>
+                            ${actionButtons}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
         } else {
             const statusTag = item.status === 'approved' ? `<span class="status-badge status-approved">已批准</span>` : `<span class="status-badge status-rejected">已否决</span>`;
-            // ❌ 移除了 ${versionBadge}
-            historyBox.innerHTML += `<div class="proposal-card history-card ${item.status}"><div class="avatar-box"><img src="${avatarUrl}" class="avatar" style="filter:grayscale(80%)"></div><div class="content-box"><div style="display:flex; justify-content:space-between;"><div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div>${statusTag}</div><div class="prop-desc">${escapeHTML(item.description)}</div>${notesHtml}<div class="decision-note">📝 判定：<br>${escapeHTML(item.decision_reason)}</div></div></div>`;
+            return `<div class="proposal-card history-card ${item.status}">
+                <div class="avatar-box"><img src="${avatarUrl}" class="avatar" style="filter:grayscale(80%)"></div>
+                <div class="content-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div>
+                        ${statusTag}
+                    </div>
+                    <div class="prop-desc" style="color:#888;">${escapeHTML(item.description)}</div>
+                    ${notesHtml}
+                    <div class="decision-note">📝 判定：<br>${escapeHTML(item.decision_reason)}</div>
+                    <div class="decision-time">归档时间: ${item.decided_at ? new Date(item.decided_at).toLocaleString() : ''}</div>
+                </div>
+            </div>`;
         }
+    }
+
+    // 6. 遍历组合后的列表，将生成的 HTML 插入页面
+    combinedList.forEach(item => {
+        const cardHTML = createCardHTML(item);
+        if (item.status === 'pending') pendingBox.innerHTML += cardHTML;
+        else historyBox.innerHTML += cardHTML;
     });
 
     document.getElementById('pending-section').style.display = pendingBox.innerHTML ? 'block' : 'none';
     document.getElementById('history-section').style.display = historyBox.innerHTML ? 'block' : 'none';
+    if (!pendingBox.innerHTML && !historyBox.innerHTML) document.getElementById('loading').innerText = "暂无任何议案。";
 }
 
 
