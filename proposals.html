@@ -167,13 +167,12 @@
 
         const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         if (emps) { 
+            renderLoginScreen(targetId);
             voterEmployees = emps.filter(emp => authorizedVoters.includes(emp.name));
             totalVotersCount = voterEmployees.length;
             const majorityCount = Math.floor(totalVotersCount / 2) + 1;
             document.getElementById('majority-req').innerText = majorityCount;
-
             emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
-            renderLoginScreen(targetId);
         }
 
         setupRealtime(targetId);
