@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>政务厅</title>
+    <title>政务厅 - 艾尔莫瑞尔 (V2)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg-color: #f4f1ea; --card-bg: #fff; --text: #2c3e50; --border: #dcd6cc; }
@@ -109,7 +109,7 @@
         <div id="loading" style="text-align:center; color:#999;">正在同步议会卷宗...</div>
 
         <div id="pending-section" style="display:none;">
-            <div class="section-title">🔴 待审议案</div>
+            <div class="section-title">🔴 待审议案 (需要 <span id="majority-req"></span> 票多数决)</div>
             <div id="pending-list"></div>
         </div>
 
@@ -167,11 +167,13 @@
 
         const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         if (emps) { 
-            renderLoginScreen(targetId);
             voterEmployees = emps.filter(emp => authorizedVoters.includes(emp.name));
             totalVotersCount = voterEmployees.length;
             const majorityCount = Math.floor(totalVotersCount / 2) + 1;
+            document.getElementById('majority-req').innerText = majorityCount;
+
             emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
+            renderLoginScreen(targetId);
         }
 
         setupRealtime(targetId);
@@ -427,10 +429,10 @@ async function loadProposals(userId) {
                 actionButtons = `<button class="btn-voted">本轮已投: ${escapeHTML(selectedOpt ? selectedOpt.text : '已投')}</button>`;
             } else {
                 (item.options || []).forEach(opt => {
-                        actionButtons += `<button class="btn-choice" style="margin-bottom:5px;" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">
-                            🗳️ ${escapeHTML(opt.text)}
-                        </button>`;
-                    });
+        actionButtons += `<button class="btn-choice" style="margin-bottom:5px;" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">
+            🗳️ ${escapeHTML(opt.text)}
+        </button>`;
+    });
             }
         } else {
             // --- 是非题逻辑 (无论是 V1 还是 V2 的是非题) ---
