@@ -200,275 +200,307 @@
         loadProposals(targetId);
     }
 
-    // 核心函数：动态计算票数胜者，并执行结算或发起多轮决胜
-    async function calculateWinnerAndSettle(proposal, roundVotes, isExpired = false) {
-        const isChoice = proposal.proposal_type === 'choice';
-        const voteCounts = {};
-        
-        // 初始化计分板
-        if (isChoice) {
-            (proposal.options || []).forEach(opt => voteCounts[opt.id] = 0);
-        } else {
-            voteCounts['approve'] = 0; voteCounts['reject'] = 0;
-        }
+// ==========================================
+// V2 新版结算引擎 (严格区分单选3票与多选相对多数)
+// ==========================================
+async function calculateWinnerAndSettleV2(proposal, roundVotes, isExpired = false) {
+    const isChoice = proposal.proposal_type === 'choice';
+    const voteCounts = {};
+    const totalVotesInRound = roundVotes.length;
 
-        // 统计当前轮票数
-        roundVotes.forEach(v => {
-            if (voteCounts[v.vote_type] !== undefined) voteCounts[v.vote_type]++;
-        });
+    // 初始化计分
+    if (isChoice) {
+        (proposal.options || []).forEach(opt => voteCounts[opt.id] = 0);
+    } else {
+        voteCounts['approve'] = 0; voteCounts['reject'] = 0;
+    }
 
-        // 动态寻找最高票 (处理 2:2:0, 1:1:1 等任何情况)
-        const maxVotes = Math.max(...Object.values(voteCounts));
-        const winners = Object.keys(voteCounts).filter(k => voteCounts[k] === maxVotes);
+    roundVotes.forEach(v => {
+        if (voteCounts[v.vote_type] !== undefined) voteCounts[v.vote_type]++;
+    });
 
-        let finalDecision = null;
-        let finalReason = '';
-        let finalCost = 0;
-        const timePrefix = isExpired ? `⏳ 议案已逾期 (${EXPIRE_DAYS}天)。` : '✅ 全员投票完毕。';
+    const sortedVotes = Object.entries(voteCounts).sort((a, b) => b[1] - a[1]);
+    const maxVotes = sortedVotes[0][1];
+    const winners = sortedVotes.filter(s => s[1] === maxVotes);
 
-        if (maxVotes === 0) {
+    let finalDecision = null;
+    let finalReason = '';
+    let finalCost = 0;
+    const timePrefix = isExpired ? `⏳ 议案已逾期。` : '✅ 全员投票完毕。';
+
+    if (maxVotes === 0) {
+        finalDecision = 'rejected';
+        finalReason = `${timePrefix}无人投票，议案自动废弃。`;
+    } 
+    else if (!isChoice) {
+        // === 是非题：严格要求 3 票多数决 ===
+        if (voteCounts['approve'] >= 3) {
+            finalDecision = 'approved';
+            finalCost = proposal.cost || 0;
+            finalReason = `${timePrefix}赞成票达到3票，法案正式通过。`;
+        } else if (voteCounts['reject'] >= 3) {
             finalDecision = 'rejected';
-            finalReason = `${timePrefix}无人投票，议案作废。`;
-        } 
-        else if (winners.length === 1) {
-            // 唯一胜出者
-            if (isChoice) {
-                const winOpt = proposal.options.find(o => o.id === winners[0]);
-                finalDecision = 'approved';
-                finalCost = winOpt.cost || 0;
-                finalReason = `${timePrefix}方案【${winOpt.text}】以 ${maxVotes} 票绝对优势胜出。`;
-            } else {
-                finalDecision = winners[0] === 'approve' ? 'approved' : 'rejected';
-                finalCost = proposal.cost || 0;
-                finalReason = `${timePrefix}多数决 (${voteCounts['approve']}赞成 : ${voteCounts['reject']}反对)，法案${finalDecision === 'approved' ? '通过' : '否决'}。`;
-            }
-        } 
-        else {
-            // 发生平票 (winners.length > 1)
-            if (!isChoice) {
-                // 原版是非题平票处理：打回重批
-                finalDecision = 'rejected';
-                finalReason = `${timePrefix}赞成与反对票数战平，法案打回重批。`;
-            } else {
-                // ！！！选择题平票：进入下一轮决胜 ！！！
-                // 剔除所有未获得最高票的选项
-                const nextOptions = proposal.options.filter(o => winners.includes(o.id));
-                
-                await supabaseClient.from('city_proposals_v2').update({
-                    current_round: proposal.current_round + 1,
-                    options: nextOptions,
-                    status: 'pending', // 保持待办状态
-                    created_at: new Date().toISOString(), // 重置倒计时
-                    decision_reason: (proposal.decision_reason || '') + `\n🔄 第${proposal.current_round}轮决胜：最高票战平，剔除其余选项，开启第${proposal.current_round + 1}轮投票。`
-                }).eq('id', proposal.id);
-                
-                return; // 进入下一轮，直接结束当前结算流
-            }
+            finalReason = `${timePrefix}反对票达到3票，法案被正式否决。`;
+        } else if (totalVotesInRound >= totalVotersCount || isExpired) {
+            // 投满了或过期了，但没人达到3票 (例如 2:2且1弃权，或 2:1过期)
+            finalDecision = 'rejected';
+            finalReason = `${timePrefix}未能达成3票绝对多数共识，议案作废。`;
         }
-
-        // 如果得出了最终结果（通过或否决），执行金币扣除和数据库归档
-        if (finalDecision) {
-            if (finalDecision === 'approved' && finalCost !== 0) {
-                const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
-                if (finalCost > 0 && currentProf.gold_gp < finalCost) {
-                    finalDecision = 'rejected';
-                    finalReason = `${finalReason}\n⚠️ 但由于国库资金不足以支付 ${finalCost} GP，议案被财务官强制驳回！`;
-                } else {
-                    const newGold = currentProf.gold_gp - finalCost;
-                    await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
-                }
-            }
-
+    } 
+    else {
+        // === 选择题：相对多数决 (最高票唯一即胜出) ===
+        if (winners.length === 1) {
+            const winOpt = proposal.options.find(o => o.id === winners[0][0]);
+            finalDecision = 'approved';
+            finalCost = winOpt.cost || 0;
+            finalReason = `${timePrefix}方案【${winOpt.text}】以相对多数 (${maxVotes}票) 胜出。`;
+        } else if (totalVotesInRound >= totalVotersCount || isExpired) {
+            // 平票且投满或过期 -> 剔除末位，开启下一轮决胜
+            const nextOptions = proposal.options.filter(o => winners.map(w => w[0]).includes(o.id));
             await supabaseClient.from('city_proposals_v2').update({
-                status: finalDecision,
-                decision_reason: finalReason,
-                decided_at: new Date().toISOString()
+                current_round: proposal.current_round + 1,
+                options: nextOptions,
+                status: 'pending',
+                created_at: new Date().toISOString(), // 重置倒计时
+                decision_reason: (proposal.decision_reason || '') + `\n🔄 第${proposal.current_round}轮决胜：${winners.length}项方案平票(${maxVotes}票)，开启新一轮。`
             }).eq('id', proposal.id);
+            return;
         }
     }
 
-    async function loadProposals(userId) {
-        document.getElementById('loading').style.display = 'block';
-
-        // 注意这里全改为了读取 _v2 表
-        let [propsRes, votesRes] = await Promise.all([
-            supabaseClient.from('city_proposals_v2').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-            supabaseClient.from('proposal_votes_v2').select('*') 
-        ]);
-
-        let list = propsRes.data || [];
-        const allVotes = votesRes.data || [];
-        const nowMs = new Date().getTime();
-        let hasJustSettled = false;
-
-        // 1. 检查逾期
-        for (let i = 0; i < list.length; i++) {
-            if (list[i].status === 'pending') {
-                const createdAtMs = new Date(list[i].created_at).getTime();
-                if (nowMs - createdAtMs > EXPIRE_MS) {
-                    const currentRoundVotes = allVotes.filter(v => v.proposal_id === list[i].id && v.round_num === list[i].current_round);
-                    await calculateWinnerAndSettle(list[i], currentRoundVotes, true);
-                    hasJustSettled = true;
-                }
+    // 最终扣款与归档
+    if (finalDecision) {
+        if (finalDecision === 'approved' && finalCost !== 0) {
+            const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
+            if (finalCost > 0 && currentProf.gold_gp < finalCost) {
+                finalDecision = 'rejected';
+                finalReason = `${finalReason}\n⚠️ 但由于国库资金不足以支付 ${finalCost} GP，被财务官强制驳回！`;
+            } else {
+                const newGold = currentProf.gold_gp - finalCost;
+                await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
             }
         }
+        await supabaseClient.from('city_proposals_v2').update({
+            status: finalDecision, decision_reason: finalReason, decided_at: new Date().toISOString()
+        }).eq('id', proposal.id);
+    }
+}
 
-        if (hasJustSettled) {
-            const refreshedProps = await supabaseClient.from('city_proposals_v2').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-            list = refreshedProps.data || [];
+// ==========================================
+// V1 旧版数据逾期结算保留 (独立逻辑)
+// ==========================================
+async function autoSettleExpiredProposalV1(proposal, allVotes) {
+    const propVotes = allVotes.filter(v => v.proposal_id === proposal.id);
+    const approves = propVotes.filter(v => v.vote_type === 'approve').length;
+    const rejects = propVotes.filter(v => v.vote_type === 'reject').length;
+
+    let finalDecision = (approves > rejects) ? 'approved' : 'rejected';
+    let finalReason = `⏳ 议案已逾期 (5天)。最终票数 ${approves}赞成 : ${rejects}反对，法案${finalDecision === 'approved' ? '通过' : '被否决'}。`;
+
+    if (approves === rejects) {
+        finalDecision = 'rejected';
+        finalReason = `⏳ 议案已逾期 (5天)。最终票数战平，法案自动打回。`;
+    }
+
+    if (finalDecision === 'approved' && proposal.cost !== 0) {
+        const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
+        if (proposal.cost > 0 && currentProf.gold_gp < proposal.cost) {
+            finalDecision = 'rejected';
+            finalReason += `\n⚠️ 国库资金不足，强制驳回。`;
+        } else {
+            const newGold = currentProf.gold_gp - proposal.cost;
+            await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
+        }
+    }
+    await supabaseClient.from('city_proposals').update({
+        status: finalDecision, decision_reason: finalReason, decided_at: new Date().toISOString()
+    }).eq('id', proposal.id);
+}
+
+// ==========================================
+// 主加载流：并行拉取，时间轴混合排序
+// ==========================================
+async function loadProposals(userId) {
+    document.getElementById('loading').style.display = 'block';
+
+    // 平行拉取两张表的数据
+    let [v1PropsRes, v2PropsRes, v1VotesRes, v2VotesRes] = await Promise.all([
+        supabaseClient.from('city_proposals').select('*').eq('user_id', userId),
+        supabaseClient.from('city_proposals_v2').select('*').eq('user_id', userId),
+        supabaseClient.from('proposal_votes').select('*'),
+        supabaseClient.from('proposal_votes_v2').select('*')
+    ]);
+
+    let listV1 = v1PropsRes.data || [];
+    let listV2 = v2PropsRes.data || [];
+    const votesV1 = v1VotesRes.data || [];
+    const votesV2 = v2VotesRes.data || [];
+    const nowMs = new Date().getTime();
+    let hasJustSettled = false;
+
+    // 独立判定 V2 逾期
+    for (let prop of listV2) {
+        if (prop.status === 'pending' && (nowMs - new Date(prop.created_at).getTime() > EXPIRE_MS)) {
+            const roundVotes = votesV2.filter(v => v.proposal_id === prop.id && v.round_num === prop.current_round);
+            await calculateWinnerAndSettleV2(prop, roundVotes, true);
+            hasJustSettled = true;
+        }
+    }
+
+    // 独立判定 V1 逾期
+    for (let prop of listV1) {
+        if (prop.status === 'pending' && (nowMs - new Date(prop.created_at).getTime() > EXPIRE_MS)) {
+            const currentV1Votes = votesV1.filter(v => v.proposal_id === prop.id);
+            await autoSettleExpiredProposalV1(prop, currentV1Votes);
+            hasJustSettled = true;
+        }
+    }
+
+    if (hasJustSettled) {
+        location.reload();
+        return;
+    }
+
+    // === 核心修改：为数据打上类型标签并混合排序 ===
+    const normalizedV1 = listV1.map(p => ({ ...p, _isChoice: false, _votesData: votesV1 }));
+    const normalizedV2 = listV2.map(p => ({ ...p, _isChoice: true, _votesData: votesV2 }));
+    
+    // 按时间倒序排列（最新发布的议案在最上面，无论是单选还是多选）
+    const combinedList = [...normalizedV1, ...normalizedV2].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    document.getElementById('loading').style.display = 'none';
+    const pendingBox = document.getElementById('pending-list');
+    const historyBox = document.getElementById('history-list');
+    pendingBox.innerHTML = ''; historyBox.innerHTML = '';
+
+    // ================= 渲染卡片 =================
+    combinedList.forEach(item => {
+        const isV2 = item._isChoice;
+        const allVotesData = item._votesData;
+        const avatarUrl = employeeMap[item.proposer_name] || 'https://via.placeholder.com/70';
+        
+        let myVote = null, currentRoundVotes = [];
+        if (isV2) {
+            currentRoundVotes = allVotesData.filter(v => v.proposal_id === item.id && v.round_num === item.current_round);
+            myVote = currentRoundVotes.find(v => v.voter_name === currentVoter.name);
+        } else {
+            currentRoundVotes = allVotesData.filter(v => v.proposal_id === item.id);
+            myVote = currentRoundVotes.find(v => v.voter_name === currentVoter.name);
         }
 
-        document.getElementById('loading').style.display = 'none';
-        const pendingBox = document.getElementById('pending-list');
-        const historyBox = document.getElementById('history-list');
-        pendingBox.innerHTML = ''; historyBox.innerHTML = '';
+        // 批注记录
+        let notesHtml = '';
+        const propAllVotes = allVotesData.filter(v => v.proposal_id === item.id);
+        if (propAllVotes.length > 0) {
+            notesHtml = `<div style="margin-top: 15px; font-size: 0.9em; background: #fdfbf7; padding: 10px; border: 1px dashed #dcd6cc; border-radius: 4px;">
+                <div style="font-weight: bold; margin-bottom: 5px; color: #7f8c8d;">📜 议员批注记录：</div>
+                ${propAllVotes.map(v => {
+                    let voteText = v.vote_type === 'approve' ? '赞成' : (v.vote_type === 'reject' ? '反对' : v.vote_type);
+                    if (isV2 && item.options) {
+                        const matchedOpt = item.options.find(o => o.id === v.vote_type);
+                        if(matchedOpt) voteText = matchedOpt.text;
+                    }
+                    const roundTag = isV2 ? `<span style="color:#aaa; font-size:0.8em;">[R${v.round_num}]</span> ` : '';
+                    return `<div style="margin-bottom: 4px;">${roundTag}<b>${v.voter_name}</b> 选择 <b>[${escapeHTML(voteText)}]</b>: <span style="color:#555;">${escapeHTML(v.vote_reason || '无')}</span></div>`;
+                }).join('')}
+            </div>`;
+        }
 
-        let hasPending = false, hasHistory = false;
+        let actionButtons = '', voteStatsHtml = '', costHtml = '';
+        const titleExtra = (isV2 && item.current_round > 1) ? `<span class="round-tag">第 ${item.current_round} 轮决胜</span>` : '';
+        // ❌ 删除了 versionBadge 的“旧档”逻辑，不再区分新旧
 
-        list.forEach(item => {
-            const avatarUrl = employeeMap[item.proposer_name] || 'https://via.placeholder.com/70';
-            
-            // 过滤出该议案的【当前轮次】的投票记录
-            const currentRoundVotes = allVotes.filter(v => v.proposal_id === item.id && v.round_num === item.current_round);
-            const myVote = currentRoundVotes.find(v => v.voter_name === currentVoter.name);
-
-            // 构建历史议员批注（显示所有轮次）
-            let notesHtml = '';
-            const propAllVotes = allVotes.filter(v => v.proposal_id === item.id);
-            if (propAllVotes.length > 0) {
-                notesHtml = `
-                <div style="margin-top: 15px; font-size: 0.9em; background: #fdfbf7; padding: 10px; border: 1px dashed #dcd6cc; border-radius: 4px;">
-                    <div style="font-weight: bold; margin-bottom: 5px; color: #7f8c8d;">📜 议员批注记录：</div>
-                    ${propAllVotes.map(v => {
-                        let voteText = v.vote_type;
-                        if(v.vote_type === 'approve') voteText = '赞成';
-                        else if(v.vote_type === 'reject') voteText = '反对';
-                        else {
-                            // 尝试寻找选项文本
-                            const matchedOpt = (item.options||[]).find(o => o.id === v.vote_type);
-                            if(matchedOpt) voteText = matchedOpt.text;
-                        }
-                        return `<div style="margin-bottom: 4px; border-bottom: 1px dotted #eee; padding-bottom:3px;">
-                            <span style="color:#aaa; font-size:0.8em;">[R${v.round_num}]</span> 
-                            <b>${v.voter_name}</b> 选择 <b>[${escapeHTML(voteText)}]</b>: 
-                            <span style="color:#555;">${escapeHTML(v.vote_reason || '无')}</span>
-                        </div>`;
-                    }).join('')}
-                </div>`;
-            }
-
-            // === 渲染核心块 ===
-            let actionButtons = '';
-            let voteStatsHtml = '';
-            let costHtml = '';
-
-            const titleExtra = item.current_round > 1 ? `<span class="round-tag">第 ${item.current_round} 轮决胜</span>` : '';
-
-            if (item.proposal_type === 'choice') {
-                // 多选议案
-                costHtml = `<div class="cost-tag" style="color: #8e44ad;">⚖️ 选项独立预算</div>`;
-                const options = item.options || [];
-                
-                options.forEach(opt => {
-                    const count = currentRoundVotes.filter(v => v.vote_type === opt.id).length;
-                    voteStatsHtml += `<span style="color:#2980b9; font-weight:bold;">${escapeHTML(opt.text)}: ${count}票</span> | `;
+        if (isV2 && item.proposal_type === 'choice') {
+            costHtml = `<div class="cost-tag" style="color: #8e44ad;">⚖️ 独立预算</div>`;
+            (item.options || []).forEach(opt => {
+                const count = currentRoundVotes.filter(v => v.vote_type === opt.id).length;
+                voteStatsHtml += `<span style="color:#2980b9;">${escapeHTML(opt.text)}: ${count}票</span> | `;
+            });
+            if (myVote) {
+                const txt = item.options.find(o => o.id === myVote.vote_type)?.text || '已投';
+                actionButtons = `<button class="btn-voted">本轮已投: ${escapeHTML(txt)}</button>`;
+            } else {
+                (item.options || []).forEach(opt => {
+                    actionButtons += `<button class="btn-choice" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">🗳️ ${escapeHTML(opt.text)}</button>`;
                 });
-
-                if (myVote) {
-                    const myChoiceText = options.find(o => o.id === myVote.vote_type)?.text || '已投票';
-                    actionButtons = `<button class="btn-voted">本轮已投: ${escapeHTML(myChoiceText)}</button>`;
-                } else {
-                    options.forEach(opt => {
-                        let btnCost = opt.cost > 0 ? `-${opt.cost}` : (opt.cost < 0 ? `+${Math.abs(opt.cost)}` : '0');
-                        actionButtons += `<button class="btn-choice" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">
-                            🗳️ ${escapeHTML(opt.text)} (💰${btnCost})
-                        </button>`;
-                    });
-                }
-            } else {
-                // 原版是非议案
-                if (item.cost > 0) costHtml = `<div class="cost-tag" style="color: #c0392b;">💰 -${item.cost.toLocaleString()}</div>`;
-                else if (item.cost < 0) costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(item.cost).toLocaleString()}</div>`;
-                else costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 0 预算</div>`;
-
-                const approves = currentRoundVotes.filter(v => v.vote_type === 'approve').length;
-                const rejects = currentRoundVotes.filter(v => v.vote_type === 'reject').length;
-                voteStatsHtml = `<span class="vote-count approve">${approves} 赞成</span> | <span class="vote-count reject">${rejects} 反对</span>`;
-
-                if (myVote) {
-                    const myChoice = myVote.vote_type === 'approve' ? '✅ 赞成' : '❌ 反对';
-                    actionButtons = `<button class="btn-voted">本轮已投: ${myChoice}</button>`;
-                } else {
-                    actionButtons = `
-                        <button class="btn-approve" onclick="castVoteV2(${item.id}, 'approve')">✅ 赞成</button>
-                        <button class="btn-reject" onclick="castVoteV2(${item.id}, 'reject')">❌ 反反对</button>
-                    `;
-                }
             }
+        } else {
+            let costVal = item.cost;
+            if (costVal > 0) costHtml = `<div class="cost-tag" style="color: #c0392b;">💰 -${costVal.toLocaleString()}</div>`;
+            else if (costVal < 0) costHtml = `<div class="cost-tag" style="color: #27ae60;">💰 +${Math.abs(costVal).toLocaleString()}</div>`;
+            else costHtml = `<div class="cost-tag" style="color: #f39c12;">✨ 0 预算</div>`;
 
-            if (item.status === 'pending') {
-                hasPending = true;
-                const expireDateStr = new Date(new Date(item.created_at).getTime() + EXPIRE_MS).toLocaleString();
+            const approves = currentRoundVotes.filter(v => v.vote_type === 'approve').length;
+            const rejects = currentRoundVotes.filter(v => v.vote_type === 'reject').length;
+            voteStatsHtml = `<span class="vote-count approve">${approves} 赞成</span> | <span class="vote-count reject">${rejects} 反对</span>`;
 
-                // 决胜轮的历史说明
-                let roundNote = item.decision_reason ? `<div class="decision-note" style="margin-bottom:10px;">${escapeHTML(item.decision_reason)}</div>` : '';
-
-                pendingBox.innerHTML += `
-                    <div class="proposal-card">
-                        <div class="avatar-box">
-                            <img src="${avatarUrl}" class="avatar">
-                            <div class="proposer-name">${item.proposer_name}</div>
-                        </div>
-                        <div class="content-box">
-                            <div>
-                                <div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div>
-                                <div class="prop-desc">${escapeHTML(item.description)}</div>
-                                ${roundNote}
-                                ${notesHtml}
-                            </div>
-                            <div class="action-bar" style="margin-top:15px;">
-                                ${costHtml}
-                                <div class="btn-group">
-                                    <div class="vote-stats">
-                                        ${voteStatsHtml}
-                                        <div style="font-size: 0.8em; color: #e67e22; margin-top: 4px;">⏳ 截止: ${expireDateStr}</div>
-                                    </div>
-                                    ${actionButtons}
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
+            if (myVote) {
+                actionButtons = `<button class="btn-voted">本轮已投: ${myVote.vote_type === 'approve' ? '✅' : '❌'}</button>`;
             } else {
-                hasHistory = true;
-                const isApproved = item.status === 'approved';
-                const statusTag = isApproved 
-                    ? `<span class="status-badge status-approved">已批准</span>`
-                    : `<span class="status-badge status-rejected">已否决</span>`;
-                
-                const dateStr = item.decided_at ? new Date(item.decided_at).toLocaleString() : '';
-                historyBox.innerHTML += `
-                    <div class="proposal-card history-card ${item.status}">
-                        <div class="avatar-box">
-                            <img src="${avatarUrl}" class="avatar" style="filter:grayscale(80%)">
-                        </div>
-                        <div class="content-box">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div>
-                                ${statusTag}
-                            </div>
-                            <div class="prop-desc" style="color:#888;">${escapeHTML(item.description)}</div>
-                            ${notesHtml}
-                            <div class="decision-note" style="margin-top:10px;">📝 系统最终判定：<br>${escapeHTML(item.decision_reason)}</div>
-                            <div class="decision-time">归档时间: ${dateStr}</div>
-                        </div>
-                    </div>`;
+                const voteFunc = isV2 ? 'castVoteV2' : 'castVoteV1';
+                actionButtons = `
+                    <button class="btn-approve" onclick="${voteFunc}(${item.id}, 'approve')">✅ 赞成</button>
+                    <button class="btn-reject" onclick="${voteFunc}(${item.id}, 'reject')">❌ 反对</button>
+                `;
             }
-        });
+        }
 
-        document.getElementById('pending-section').style.display = hasPending ? 'block' : 'none';
-        document.getElementById('history-section').style.display = hasHistory ? 'block' : 'none';
-        if (!hasPending && !hasHistory) document.getElementById('loading').innerText = "暂无任何议案。";
+        if (item.status === 'pending') {
+            const expireDateStr = new Date(new Date(item.created_at).getTime() + EXPIRE_MS).toLocaleString();
+            let roundNote = item.decision_reason ? `<div class="decision-note">${escapeHTML(item.decision_reason)}</div>` : '';
+            // ❌ 移除了 ${versionBadge}
+            pendingBox.innerHTML += `<div class="proposal-card"><div class="avatar-box"><img src="${avatarUrl}" class="avatar"><div class="proposer-name">${item.proposer_name}</div></div><div class="content-box"><div><div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div><div class="prop-desc">${escapeHTML(item.description)}</div>${roundNote}${notesHtml}</div><div class="action-bar">${costHtml}<div class="btn-group"><div class="vote-stats">${voteStatsHtml}<div>⏳ 截止: ${expireDateStr}</div></div>${actionButtons}</div></div></div></div>`;
+        } else {
+            const statusTag = item.status === 'approved' ? `<span class="status-badge status-approved">已批准</span>` : `<span class="status-badge status-rejected">已否决</span>`;
+            // ❌ 移除了 ${versionBadge}
+            historyBox.innerHTML += `<div class="proposal-card history-card ${item.status}"><div class="avatar-box"><img src="${avatarUrl}" class="avatar" style="filter:grayscale(80%)"></div><div class="content-box"><div style="display:flex; justify-content:space-between;"><div class="prop-title">${escapeHTML(item.title)} ${titleExtra}</div>${statusTag}</div><div class="prop-desc">${escapeHTML(item.description)}</div>${notesHtml}<div class="decision-note">📝 判定：<br>${escapeHTML(item.decision_reason)}</div></div></div>`;
+        }
+    });
+
+    document.getElementById('pending-section').style.display = pendingBox.innerHTML ? 'block' : 'none';
+    document.getElementById('history-section').style.display = historyBox.innerHTML ? 'block' : 'none';
+}
+
+
+// ==========================================
+// 是非题 专用投票函数
+// ==========================================
+async function castVoteV1(proposalId, voteType) {
+    const defaultReason = voteType === 'approve' ? '同意执行。' : '暂缓议案。';
+    const reason = await new Promise((resolve) => {
+        const modal = document.getElementById('vote-modal');
+        // ❌ 修改了弹窗标题，去掉了“针对旧档”字样
+        document.getElementById('vote-modal-title').innerText = `您决定投票给 [${voteType === 'approve'?'赞成':'反对'}]。\n请输入您的决策理由/批注:`;
+        const textarea = document.getElementById('vote-modal-text');
+        textarea.value = defaultReason;
+        modal.style.display = 'flex'; textarea.focus();
+        document.getElementById('vote-btn-confirm').onclick = () => { modal.style.display = 'none'; resolve(textarea.value); };
+        document.getElementById('vote-btn-cancel').onclick = () => { modal.style.display = 'none'; resolve(null); };
+    });
+
+    if (reason === null) return;
+    
+    // 提交选票
+    await supabaseClient.from('proposal_votes').insert({
+        proposal_id: proposalId, 
+        voter_name: currentVoter.name, 
+        vote_type: voteType, 
+        vote_reason: reason || '无意见'
+    });
+    
+    // 检查是非题是否投满，投满则立刻触发结算
+    const { data: latestV1Votes } = await supabaseClient.from('proposal_votes').select('*').eq('proposal_id', proposalId);
+    if (latestV1Votes.length >= totalVotersCount) {
+        const { data: propV1 } = await supabaseClient.from('city_proposals').select('*').eq('id', proposalId).single();
+        if (propV1) {
+            await autoSettleExpiredProposalV1(propV1, latestV1Votes); 
+        }
     }
+
+    loadProposals(userProfile.id);
+}
 
     async function castVoteV2(proposalId, voteType, choiceText = null) {
         // 获取该议案当前状态和轮次
@@ -511,22 +543,30 @@
         
         // 如果全员投完，触发结算逻辑
         if (latestRoundVotes.length >= totalVotersCount) {
-            await calculateWinnerAndSettle(prop, latestRoundVotes, false);
+            await calculateWinnerAndSettleV2(prop, latestRoundVotes, false); 
         }
 
         loadProposals(userProfile.id);
     }
 
     function setupRealtime(targetId) {
-        supabaseClient.channel('city_realtime_v2')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'city_proposals_v2' }, () => {
-                if(currentVoter) loadProposals(targetId); refreshGoldDisplay(targetId);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes_v2' }, () => {
-                if(currentVoter) loadProposals(targetId);
-            })
-            .subscribe();
-    }
+    supabaseClient.channel('city_realtime_all')
+        // 监听 V2
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'city_proposals_v2' }, () => {
+            if(currentVoter) loadProposals(targetId); refreshGoldDisplay(targetId);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes_v2' }, () => {
+            if(currentVoter) loadProposals(targetId);
+        })
+        // 监听 V1 (新增)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'city_proposals' }, () => {
+            if(currentVoter) loadProposals(targetId); refreshGoldDisplay(targetId);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes' }, () => {
+            if(currentVoter) loadProposals(targetId);
+        })
+        .subscribe();
+}
 
     async function refreshGoldDisplay(userId) {
         const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userId).single();
