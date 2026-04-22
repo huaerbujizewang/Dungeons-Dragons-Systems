@@ -429,13 +429,10 @@ async function loadProposals(userId) {
                 actionButtons = `<button class="btn-voted">本轮已投: ${escapeHTML(selectedOpt ? selectedOpt.text : '已投')}</button>`;
             } else {
                 (item.options || []).forEach(opt => {
-                    const optCost = opt.cost || 0;
-                    const costStr = optCost > 0 ? `-${optCost.toLocaleString()}` : (optCost < 0 ? `+${Math.abs(optCost).toLocaleString()}` : '0');
-                    // 按钮上明确标出 (0 GP) 等开销
-                    actionButtons += `<button class="btn-choice" style="margin-bottom:5px;" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">
-                        🗳️ ${escapeHTML(opt.text)} <span style="font-size:0.8em; opacity:0.8;">(${costStr} GP)</span>
-                    </button>`;
-                });
+                        actionButtons += `<button class="btn-choice" style="margin-bottom:5px;" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">
+                            🗳️ ${escapeHTML(opt.text)}
+                        </button>`;
+                    });
             }
         } else {
             // --- 是非题逻辑 (无论是 V1 还是 V2 的是非题) ---
