@@ -29,12 +29,39 @@ update auth.users set email_confirmed_at = now() where email = '玩家邮箱@exa
 ```
 
 ---
+### 2. 📜 政务厅 (V2)：发布新议案与多轮决胜
 
-### 2. 📜 政务厅：发布新议案
+这是推动领地剧情的核心功能。在 V2 版本中，你可以发布传统的“是非题”议案，也可以发布带有不同预算的“多项选择题”议案。
 
-这是推动剧情的核心功能。你需要手动插入数据来让玩家看到新的审批卡片。
+#### 场景一：发布一条【是非题】提案 
+最基础的赞成/反对模式。
 
-#### 发布一条新提案
+```sql
+do $$
+declare
+  target_uid uuid;
+begin
+  -- 1. 选定目标玩家 (请替换为真实的玩家邮箱或ID)
+  select id into target_uid from auth.users where email = 'master@almorel.com';
+
+  if target_uid is not null then
+    -- 2. 插入提案
+    insert into city_proposals_v2 (user_id, proposer_name, title, description, proposal_type, cost) values
+    (
+      target_uid, 
+      '薇艾拉', -- 提案人名字 (必须是该玩家有的雇员，否则头像不显示)
+      '增加城门夜间守卫', 
+      '最近城外流寇频发，我建议将夜班守卫数量增加一倍，以防万一。', 
+      'boolean', -- 指定为是非题
+      500 -- 批准所需扣除的金币
+    );
+  end if;
+end $$;
+```
+
+#### 场景二：发布一条【选择题】提案
+当事件包含多个走向，且每个选项开销不同（甚至可以赚钱）时使用。
+
 ```sql
 do $$
 declare
@@ -44,27 +71,59 @@ begin
   select id into target_uid from auth.users where email = 'master@almorel.com';
 
   if target_uid is not null then
-    -- 2. 插入提案
-    insert into city_proposals (user_id, proposer_name, title, description, cost) values
+    -- 2. 插入提案。注意 choice 类型不需要填外层的 cost，而是在 options 的 JSON 里填
+    insert into city_proposals_v2 (user_id, proposer_name, title, description, proposal_type, options) values
     (
       target_uid, 
-      '艾琳', -- 提案人名字 (必须是该玩家有的雇员，否则头像不显示)
-      '扩建奥术研究室', -- 标题
-      '随着研究的深入，现有的场地已不足以支撑更高环阶的法术实验。我们需要扩建地下设施。', -- 描述
-      2000 -- 批准所需的金币 (0表示不花钱)
+      '克莱门汀·瓦勒留斯', 
+      '关于北区贫民窟的实地查探与改建评估', 
+      '致各位真龙领主：关于北墙外的贫民窟，我已完成初步的情报汇总。请诸位在以下方案中做出抉择。', 
+      'choice', -- 指定为选择题
+      -- 核心：用 JSONB 格式定义选项池。cost 可以是正数(扣钱)、0 或负数(赚钱)
+      '[
+        {"id": "opt_A", "text": "方案A：交由竖琴手同盟暗中代管", "cost": 15000},
+        {"id": "opt_B", "text": "方案B：雇佣冒险者公会武力接管", "cost": 30000},
+        {"id": "opt_C", "text": "方案C：保留黑市，抽取高额特许税", "cost": -20000}
+      ]'::jsonb 
     );
   end if;
 end $$;
 ```
 
-#### 重置/删除某个提案
-```sql
--- 删除某个标题的提案
-delete from city_proposals where title = '扩建奥术研究室';
+#### 场景三：重置/删除提案
+由于 V2 版本引入了多轮投票机制（`proposal_votes_v2` 表），在重置状态时，最好连同旧选票一起清理，并重置时间，以便让玩家重新走一遍流程。
 
--- 或者重置状态为“待审批”
-update city_proposals set status = 'pending' where title = '扩建奥术研究室';
+```sql
+-- 1. 删除某个标题的提案
+-- (注：我们在建表时使用了 ON DELETE CASCADE，所以这里删除了议案，对应的投票记录也会自动删掉，非常安全)
+delete from city_proposals_v2 where title = '关于北区贫民窟的实地查探与改建评估';
+
+-- 2. 重置某个提案（让大家重新投第一轮）
+do $$
+declare
+  target_prop_id integer;
+begin
+  -- 找到目标提案的 ID
+  select id into target_prop_id from city_proposals_v2 where title = '关于北区贫民窟的实地查探与改建评估' limit 1;
+  
+  if target_prop_id is not null then
+    -- 清空所有的投票记录
+    delete from proposal_votes_v2 where proposal_id = target_prop_id;
+    
+    -- 将状态打回待办，轮次归1，清空系统判定理由，重置倒计时为今天
+    update city_proposals_v2 
+    set status = 'pending', 
+        current_round = 1, 
+        decision_reason = null, 
+        created_at = now() 
+    where id = target_prop_id;
+  end if;
+end $$;
 ```
+
+***
+
+这份 Readme 把 JSONB 插入和关联表的重置逻辑都交代清楚了，你在后台编排剧情的时候直接复制微调一下就能用！
 
 ---
 ### 3. 🏰 领地经济：修改收支与人口 (多城架构版)
