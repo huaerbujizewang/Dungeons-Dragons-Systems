@@ -345,6 +345,80 @@
     box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);
 }
 
+/* --- 生物识别模块专属样式 --- */
+.bestiary-wrapper {
+    display: flex;
+    align-items: flex-start;
+    padding: 0;
+    min-height: 100%;
+}
+
+/* 立绘吸顶容器 */
+.bestiary-visual-column {
+    width: 40%;
+    height: calc(100vh - 160px);
+    position: sticky;
+    top: 0;
+    background: #f1f5f9;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.bestiary-visual-column img {
+    max-width: 100%;
+    max-height: 85%;
+    object-fit: contain; /* 适配 4:3 比例图片 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border: 1px solid #cbd5e1;
+}
+
+.bestiary-visual-column .specimen-tag {
+    margin-top: 15px;
+    font-family: monospace;
+    font-size: 0.75em;
+    color: #64748b;
+    letter-spacing: 2px;
+}
+
+/* 右侧长文滚动区 */
+.bestiary-info-column {
+    width: 60%;
+    padding: 50px 60px;
+    box-sizing: border-box;
+}
+
+.bestiary-info-column h1 {
+    font-size: 2.2em;
+    margin-top: 0;
+    color: var(--omni-text);
+    border-bottom: 2px solid var(--omni-green);
+    padding-bottom: 15px;
+}
+
+.bestiary-info-column .scientific-name {
+    font-style: italic;
+    color: #64748b;
+    margin-bottom: 30px;
+    display: block;
+}
+
+.bestiary-info-column .section-block {
+    margin-bottom: 30px;
+    line-height: 1.8;
+}
+
+.bestiary-info-column h3 {
+    font-size: 1.1em;
+    color: #1e293b;
+    border-left: 4px solid var(--omni-green);
+    padding-left: 12px;
+    margin-bottom: 12px;
+}
 
     </style>
 </head>
@@ -379,6 +453,7 @@
             <div class="nav-item" onclick="switchPage('wallet', this)">💳 资产结算</div>
             <div class="nav-item" onclick="switchPage('profile', this)">🛂 公民通行证</div>
             <div class="nav-item" onclick="switchPage('archives', this)">📚 帝国资料库</div>
+            <div class="nav-item" onclick="switchPage('bestiary', this)">🧬 物种识别图鉴</div>
             <div style="margin-top:auto; padding:20px; opacity:0.5; cursor:pointer;" onclick="logout()">⬅ 退出</div>
         </nav>
 
@@ -577,6 +652,28 @@
                     </div>
                 </div>
             </div>
+
+ <!-- ============= 物种图鉴  ============ -->
+<div id="page-bestiary" class="page">
+    <div class="chat-layout" style="height: calc(100vh - 160px);">
+        <div class="chat-sidebar" style="width: 260px; background: #f8fafc; border-right: 1px solid #e2e8f0;">
+            <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b; font-size: 0.85em; letter-spacing: 2px;">
+                物种索引
+            </div>
+            <div class="contact-list" id="bestiary-menu-list">
+                </div>
+        </div>
+        
+        <div class="chat-main" style="background: white; overflow-y: hidden;">
+            <div id="bestiary-content-area" style="display: flex; height: 100%; width: 100%;">
+                <div style="margin: auto; text-align: center; color: #94a3b8;">
+                    <div style="font-size: 3em; margin-bottom: 20px;">🔬</div>
+                    <p>等待接入帝国生物学数据库...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- ============= 公民通行证页面  ============ -->
             <div id="page-profile" class="page">
@@ -843,7 +940,7 @@
         let currentChatMode = 'public'; // 'public', 'private', 'group'
         let currentChatTarget = null;   // 存储当前私聊对象 {id, name} 或群组 {id, name}
         let currentRealtimeChannel = null; // 用于实时监听
-
+        let BESTIARY_DATA = [];
         // --- 初始化与登录 ---
         async function init() {
             await syncImperialDate(); // 先同步全局日期
@@ -959,6 +1056,71 @@ function switchPage(pageId, el) {
     if(pageId === 'jobs') loadJobs();
     if(pageId === 'life') renderMall();
     if(pageId === 'archives') renderArchiveMenu();
+    if(pageId === 'bestiary') loadBestiary();
+}
+
+
+
+// 加载生物名录数据
+async function loadBestiary() {
+    try {
+        const response = await fetch('bestiary.json');
+        BESTIARY_DATA = await response.json();
+        renderBestiaryMenu();
+    } catch (err) {
+        console.error("【无法调阅生物档案】:", err);
+    }
+}
+
+// 渲染左侧名录
+function renderBestiaryMenu() {
+    const list = document.getElementById('bestiary-menu-list');
+    list.innerHTML = '';
+    BESTIARY_DATA.forEach(species => {
+        const item = document.createElement('div');
+        item.className = 'contact-item';
+        item.innerHTML = `
+            <div style="display:flex; flex-direction:column;">
+                <span class="contact-name">${species.name}</span>
+                <span style="font-size:0.7em; color:#94a3b8;">${species.type}</span>
+            </div>
+        `;
+        item.onclick = () => {
+            document.querySelectorAll('#bestiary-menu-list .contact-item').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+            renderSpeciesDetail(species);
+        };
+        list.appendChild(item);
+    });
+}
+
+// 渲染右侧详情页
+function renderSpeciesDetail(s) {
+    const container = document.getElementById('bestiary-main-container');
+    // 强制滚动回到顶部
+    container.scrollTop = 0;
+
+    let sectionsHtml = s.sections.map(sec => `
+        <div class="section-block">
+            <h3>${sec.title}</h3>
+            <div>${sec.content}</div>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="bestiary-wrapper">
+            <div class="bestiary-visual-column">
+                <img src="${s.image_path}" alt="${s.name}">
+                <div class="specimen-tag">// ARCHIVE_ID: ${s.id} //</div>
+            </div>
+            
+            <div class="bestiary-info-column">
+                <h1>${s.name}</h1>
+                <span class="scientific-name">${s.latin_name} | ${s.status}</span>
+                ${sectionsHtml}
+            </div>
+        </div>
+    `;
 }
 
         // --- 社交列表导航 ---
