@@ -39,7 +39,7 @@
     "id": "GL-001",
     "name": "格伦虫族",
     "type": "异形",
-    "image_path": "assets/bestiary/glencoe_zerg_full.png",
+    "image_path": "assets/biology/glencoe_zerg_full.png",
     "sections": [
       {
         "title": "【群落概述与深空适应性】",
