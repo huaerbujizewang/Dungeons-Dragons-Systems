@@ -94,7 +94,7 @@
   {
     "id": "MM-002",
     "name": "心智机械",
-    "type": "机械神明从属种族",
+    "type": "构装体",
     "image_path": "assets/biology/mind_machine_full.png",
     "sections": [
       {
