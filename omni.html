@@ -1097,7 +1097,6 @@ function renderBestiaryMenu() {
 // 渲染右侧详情页
 function renderSpeciesDetail(s) {
     const container = document.getElementById('bestiary-main-container');
-    // 强制滚动回到顶部
     container.scrollTop = 0;
 
     let sectionsHtml = s.sections.map(sec => `
@@ -1116,7 +1115,9 @@ function renderSpeciesDetail(s) {
             
             <div class="bestiary-info-column">
                 <h1>${s.name}</h1>
-                <span class="scientific-name">${s.latin_name} | ${s.status}</span>
+                <span style="color: #64748b; margin-bottom: 30px; display: block; font-size: 0.9em; letter-spacing: 1px;">
+                    CLASSIFICATION: ${s.type}
+                </span>
                 ${sectionsHtml}
             </div>
         </div>
