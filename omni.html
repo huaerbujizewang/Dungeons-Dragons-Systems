@@ -3297,15 +3297,16 @@ async function adminAppointJob(accId, jobId) {
     if (!confirm(`确认要将公民 #${accId} 提拔为 [${job.employer} - ${job.title}] 吗？\n该操作将绕过所有政审流程并立即核发特许证件。`)) return;
 
     // 1. 强行写入/更新职历表为“已录取”状态
-    const { error: jobErr } = await supabaseClient.from('omni_user_jobs').upsert([
-        { 
-            account_id: accId, 
-            job_id: jobId, 
-            status: 'approved', 
-            hire_date: new Date().toISOString(),
-            last_pay_date: new Date().toISOString()
-        }
-    ]);
+    const { error: jobErr } = await supabaseClient.from('omni_user_jobs').upsert(
+    { 
+        account_id: accId, 
+        job_id: jobId, 
+        status: 'approved', 
+        hire_date: new Date().toISOString(),
+        last_pay_date: new Date().toISOString()
+    },
+    { onConflict: 'account_id' } 
+);
 
     if (jobErr) return alert("任命失败：" + jobErr.message);
 
