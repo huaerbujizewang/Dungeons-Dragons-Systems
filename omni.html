@@ -931,6 +931,64 @@
         }
 
         let currentAccount = null;
+        let dmSessionAccount = null;
+
+        function getSessionAccount() {
+            const raw = sessionStorage.getItem('omni_session');
+            if (!raw) return null;
+            try {
+                return JSON.parse(raw);
+            } catch (error) {
+                sessionStorage.removeItem('omni_session');
+                return null;
+            }
+        }
+
+        async function verifyDmAccess(silent = false) {
+            const identity = dmSessionAccount || getSessionAccount() || currentAccount;
+            if (!identity || !identity.login_id || !identity.login_pass) {
+                if (!silent) alert("权限校验失败：请重新以 DM 身份登录。");
+                return false;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('omni_accounts')
+                .select('id, login_id, login_pass, nickname, race, avatar_filename, is_dm')
+                .eq('login_id', identity.login_id)
+                .eq('login_pass', identity.login_pass)
+                .single();
+
+            if (error || !data || !data.is_dm) {
+                if (!silent) alert("权限不足：该操作仅限 DM 执行。");
+                return false;
+            }
+
+            dmSessionAccount = data;
+            return true;
+        }
+
+        async function isCurrentUserGroupMember(groupId) {
+            const { data, error } = await supabaseClient
+                .from('omni_group_members')
+                .select('user_id')
+                .eq('group_id', groupId)
+                .eq('user_id', currentAccount.id)
+                .maybeSingle();
+
+            return !error && !!data;
+        }
+
+        async function canCurrentUserManageGroup(groupId) {
+            if (await verifyDmAccess(true)) return true;
+
+            const { data, error } = await supabaseClient
+                .from('omni_groups')
+                .select('creator_id')
+                .eq('id', groupId)
+                .maybeSingle();
+
+            return !error && data && data.creator_id === currentAccount.id;
+        }
 
         // --- 聊天状态管理 ---
         let currentChatMode = 'public'; // 'public', 'private', 'group'
@@ -944,9 +1002,10 @@
             // 在系统初始阶段，从本地 JSON 加载外部世界观档案
             await loadOmniData(); 
     
-            const saved = sessionStorage.getItem('omni_session');
+            const saved = getSessionAccount();
             if(saved) {
-                currentAccount = JSON.parse(saved);
+                currentAccount = saved;
+                if (currentAccount.is_dm) dmSessionAccount = currentAccount;
                 enterApp();
             }
         }
@@ -957,6 +1016,7 @@
             const { data, error } = await supabaseClient.from('omni_accounts').select('*').eq('login_id', u).eq('login_pass', p).single();
             if(data) {
                 currentAccount = data;
+                if (data.is_dm) dmSessionAccount = data;
                 sessionStorage.setItem('omni_session', JSON.stringify(data));
                 enterApp();
             } else {
@@ -1000,7 +1060,7 @@
             await autoProcessBureaucracy();
             await processSubscriptions();
 
-            if(currentAccount.is_dm) {
+            if(await verifyDmAccess(true)) {
                 document.getElementById('dm-admin-trigger').style.display = 'flex';
             }
             setInterval(() => {
@@ -1207,21 +1267,24 @@ function renderSpeciesDetail(s) {
             if(queryData.length > 0) {
                 queryData.forEach(acc => {
                     const isActive = (currentChatMode == 'private' && currentChatTarget && currentChatTarget.id === acc.id) ? 'active' : '';
+                    const safeNick = escapeHTML(acc.nickname);
+                    const safeRace = escapeHTML(acc.race || '未知');
+                    const nickArg = jsStringAttr(acc.nickname);
                     
                     html += `
                         <div class="contact-item ${isActive}" style="display:flex; align-items:center; justify-content:space-between; padding-right:10px;">
                             <!-- 点击左侧区域进入私聊 -->
-                            <div onclick="openPrivateChat(${acc.id}, '${acc.nickname}')" style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
+                            <div onclick="openPrivateChat(${acc.id}, ${nickArg})" style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
                                 <img src="${getAvatarUrl(acc.avatar_filename)}" class="contact-avatar">
                                 <div style="display:flex; flex-direction:column; overflow:hidden;">
-                                    <span class="contact-name">${acc.nickname}</span>
-                                    <span style="font-size:0.7em; color:#94a3b8;">${acc.race || '未知'}</span>
+                                    <span class="contact-name">${safeNick}</span>
+                                    <span style="font-size:0.7em; color:#94a3b8;">${safeRace}</span>
                                 </div>
                                 <span id="badge-private-${acc.id}" class="unread-badge" style="display:none;">0</span>
                             </div>
                             
                             <!-- 删除按钮 (×)：点击仅触发删除好友逻辑 -->
-                            <span onclick="event.stopPropagation(); deleteFriend(${acc.id}, '${acc.nickname}')" 
+                            <span onclick="event.stopPropagation(); deleteFriend(${acc.id}, ${nickArg})" 
                                   title="从名单中移除"
                                   style="color:#cbd5e1; cursor:pointer; font-size:1.5em; font-weight:light; transition:color 0.2s; padding: 0 5px;"
                                   onmouseover="this.style.color='var(--omni-danger)'" 
@@ -1257,18 +1320,20 @@ async function loadGroupList() {
             if(!g) return;
             const isActive = (currentChatMode == 'group' && currentChatTarget && currentChatTarget.id === g.id) ? 'active' : '';
             const isOwner = (g.creator_id === currentAccount.id || currentAccount.is_dm);
+            const safeGroupName = escapeHTML(g.group_name);
+            const groupNameArg = jsStringAttr(g.group_name);
 
             html += `
                 <div class="contact-item ${isActive}" style="justify-content: space-between;">
-                    <div onclick="openGroupChat(${g.id}, '${g.group_name}')" style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
+                    <div onclick="openGroupChat(${g.id}, ${groupNameArg})" style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
                         <div class="contact-avatar" style="background:var(--omni-green); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.8em;">群</div>
                         <div style="display:flex; flex-direction:column; overflow:hidden;">
-                            <span class="contact-name">${g.group_name}</span>
+                            <span class="contact-name">${safeGroupName}</span>
                             <span style="font-size:0.7em; color:#94a3b8;">GID: ${g.id}</span>
                         </div>
                         <span id="badge-group-${g.id}" class="unread-badge" style="display:none;">0</span>
                     </div>
-                    ${isOwner ? `<span onclick="disbandGroup(${g.id}, '${g.group_name}')" style="color:var(--omni-danger); cursor:pointer; font-size:1.2em; padding:0 5px;">×</span>` : ''}
+                    ${isOwner ? `<span onclick="disbandGroup(${g.id}, ${groupNameArg})" style="color:var(--omni-danger); cursor:pointer; font-size:1.2em; padding:0 5px;">×</span>` : ''}
                 </div>
             `;
         });
@@ -1330,15 +1395,19 @@ function openPrivateChat(id, name) {
 }
 
 
-function openGroupChat(id, name) {
+async function openGroupChat(id, name) {
+    if (!await isCurrentUserGroupMember(id)) return alert("权限不足：您不在该群组内。");
+
     currentChatMode = 'group';
     currentChatTarget = { id: id, name: name };
     document.getElementById('chat-transfer-btn').style.display = 'block';
+    const safeName = escapeHTML(name);
+    const nameArg = jsStringAttr(name);
     
     document.getElementById('chat-header-title').innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-            <div onclick="viewGroupMembers(${id}, '${name}')" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding: 4px 8px; border-radius: 6px; transition: 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
-                <span style="font-weight:bold;">群组：${name}</span>
+            <div onclick="viewGroupMembers(${id}, ${nameArg})" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding: 4px 8px; border-radius: 6px; transition: 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                <span style="font-weight:bold;">群组：${safeName}</span>
                 <span style="font-size:0.65em; background:#e2e8f0; color:#475569; padding:3px 8px; border-radius:12px; font-weight:normal;">👥 查看成员</span>
             </div>
             <span style="font-size:0.7em; color:#94a3b8; font-weight:normal;">识别码: ${id}</span>
@@ -1537,13 +1606,20 @@ async function sendMsg() {
     if(!val) return;
 
     // 权限拦截
-    const hasPrivilege = currentAccount.social_credit === 'A+' || currentAccount.is_dm || currentAccount.id === 0;
-    if (currentChatMode === 'public' && !hasPrivilege) {
-        const interceptBox = document.getElementById('intercept-msg');
-        interceptBox.innerHTML = '⚠️ <strong>安全拦截：</strong> 您的信用评级不足，无权向全境发送广播。';
-        interceptBox.style.display = 'block';
-        setTimeout(()=> interceptBox.style.display = 'none', 3000);
-        return;
+    if (currentChatMode === 'public') {
+        const { data: speechAcc } = currentAccount.id === 0
+            ? { data: null }
+            : await supabaseClient.from('omni_accounts').select('social_credit').eq('id', currentAccount.id).single();
+        if (speechAcc?.social_credit) currentAccount.social_credit = speechAcc.social_credit;
+
+        const hasPrivilege = speechAcc?.social_credit === 'A+' || await verifyDmAccess(true);
+        if (!hasPrivilege) {
+            const interceptBox = document.getElementById('intercept-msg');
+            interceptBox.innerHTML = '⚠️ <strong>安全拦截：</strong> 您的信用评级不足，无权向全境发送广播。';
+            interceptBox.style.display = 'block';
+            setTimeout(()=> interceptBox.style.display = 'none', 3000);
+            return;
+        }
     }
 
     // --- 敏感词与违规处理逻辑 ---
@@ -1589,6 +1665,20 @@ async function sendMsg() {
     sendBtn.innerText = "发送中"; // 给出明确的视觉反馈
 
     try {
+        if (currentChatMode === 'group' && !await isCurrentUserGroupMember(currentChatTarget.id)) {
+            throw new Error("权限不足：您不在该群组内，无法发送群聊消息。");
+        }
+
+        if (currentChatMode === 'private' && !currentAccount.is_dm && currentAccount.id !== 0) {
+            const { data: friendLink } = await supabaseClient
+                .from('omni_friends')
+                .select('id')
+                .or(`and(user_id.eq.${currentAccount.id},friend_id.eq.${currentChatTarget.id}),and(user_id.eq.${currentChatTarget.id},friend_id.eq.${currentAccount.id})`)
+                .maybeSingle();
+
+            if (!friendLink) throw new Error("权限不足：只能向联系人发送私聊消息。");
+        }
+
         // --- 正常发送逻辑 ---
         let msgPayload = {
             sender_id: currentAccount.id,
@@ -1627,7 +1717,7 @@ async function sendMsg() {
     } catch (err) {
         console.error("发送失败:", err);
         // 如果网络卡顿导致插入失败，保留输入框原本的文字，避免玩家白打字
-        alert("网络波动，消息发送失败，请重试。");
+        alert(err.message || "网络波动，消息发送失败，请重试。");
     } finally {
         // ==========================================
         // 无论成功还是失败，最后必须解锁 UI
@@ -1700,6 +1790,7 @@ function renderMsg(m) {
 }
         // --- 控制台 UI 交互 ---
         async function openDmPanel() {
+            if (!await verifyDmAccess()) return;
             document.getElementById('dm-modal').classList.add('show');
             await loadJobs(); // 确保职位数据已同步
             renderDmTable(); 
@@ -1725,6 +1816,7 @@ function renderMsg(m) {
 
         // --- 更新公民状态 ---
         async function adminUpdateUser(accId) {
+            if (!await verifyDmAccess()) return;
             const newCredit = document.getElementById(`edit-credit-${accId}`).value;
             const newBalance = parseFloat(document.getElementById(`edit-balance-${accId}`).value);
 
@@ -1762,6 +1854,7 @@ function renderMsg(m) {
 
 // --- 重新编写的后台表格渲染 ---
 async function renderDmTable() {
+    if (!await verifyDmAccess()) return;
     const tbody = document.getElementById('dm-account-table-body');
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">正在扫描全境公民档案...</td></tr>';
 
@@ -1781,11 +1874,13 @@ async function renderDmTable() {
         CREDIT_GRADES.forEach(grade => {
             creditOptions += `<option value="${grade}" ${acc.social_credit === grade ? 'selected' : ''}>${grade}</option>`;
         });
+        const safeNickname = escapeHTML(acc.nickname);
+        const safeRealName = escapeHTML(acc.real_name || '');
 
         html += `
             <tr style="border-bottom: 1px solid #334155;">
                 <td style="color:#f39c12; font-family:monospace;">#${acc.id}</td>
-                <td><strong>${acc.nickname}</strong><br><small style="color:#64748b">${acc.real_name || ''}</small></td>
+                <td><strong>${safeNickname}</strong><br><small style="color:#64748b">${safeRealName}</small></td>
                 
                 <td>
                     <select id="edit-credit-${acc.id}" style="padding:5px; background:#0f172a; color:var(--omni-green); border:1px solid #334155;">
@@ -1826,6 +1921,7 @@ async function renderDmTable() {
 
 // --- DM 接管逻辑 ---
 async function takeoverAccount(accId) {
+    if (!await verifyDmAccess()) return;
     if (accId === "DM") {
         currentAccount = { id: 0, nickname: "系统管理员", race: "后台", is_dm: true, login_id: "DM", avatar_filename: "default.png" };
     } else {
@@ -1872,10 +1968,13 @@ async function updateWallet() {
     if (!pendings || pendings.length === 0) {
         container.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:20px;">暂无待处理的汇款。</div>';
     } else {
-        container.innerHTML = pendings.map(t => `
+        container.innerHTML = pendings.map(t => {
+            const senderName = escapeHTML(t.sender?.nickname || '未知');
+            const senderRealName = escapeHTML(t.sender?.real_name || '未登记');
+            return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
                 <div>
-                    <div style="font-size:0.8em; color:#64748b;">来自: ${t.sender.nickname} (${t.sender.real_name})</div>
+                    <div style="font-size:0.8em; color:#64748b;">来自: ${senderName} (${senderRealName})</div>
                     <div style="font-weight:bold; font-size:1.2em; color:var(--omni-green);">${t.amount} CR</div>
                 </div>
                 <div style="display:flex; gap:8px;">
@@ -1883,7 +1982,8 @@ async function updateWallet() {
                     <button onclick="processTransfer(${t.id}, 'rejected', ${t.amount}, ${t.sender_id})" style="padding:6px 12px; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer; font-size:0.85em;">退回</button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 }
 
@@ -2155,6 +2255,7 @@ function updateSubRegionsForUser() {
 }
 
 async function submitImperialAccount() {
+            if (!await verifyDmAccess()) return;
             // 获取输入框
             const realName = document.getElementById('npc-real-name').value;
             const nick = document.getElementById('npc-nick-name').value;
@@ -2375,9 +2476,13 @@ async function uploadAvatar() {
 }
 
         function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({
+            return String(str ?? '').replace(/[&<>'"]/g, tag => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             }[tag] || tag));
+        }
+
+        function jsStringAttr(value) {
+            return escapeHTML(JSON.stringify(String(value ?? '')));
         }
 
 async function submitInitialProfile() {
@@ -2523,6 +2628,7 @@ async function deleteFriend(friendId, name) {
 
 // 【社交管理】解散群组
 async function disbandGroup(groupId, name) {
+    if (!await canCurrentUserManageGroup(groupId)) return alert("权限不足：只有群主或 DM 可以解散该群组。");
     if(!confirm(`确定要彻底解散群组 [${name}] 吗？此操作不可逆。`)) return;
     
     const { error } = await supabaseClient.from('omni_groups').delete().eq('id', groupId);
@@ -2553,6 +2659,7 @@ async function joinGroupById() {
 
         // 重设帝国历年份偏移量
         async function adminShiftTime() {
+            if (!await verifyDmAccess()) return;
             const newOffset = prompt("请输入新的年份偏移量 (当前减去多少年能得到帝国历):\n(例如：2026 - 1014 = 1012年)", IMPERIAL_YEAR_OFFSET);
             if (!newOffset || isNaN(newOffset)) return;
 
@@ -2569,6 +2676,7 @@ async function joinGroupById() {
         }
 
 async function adminShiftDay() {
+    if (!await verifyDmAccess()) return;
     const newDayOffset = prompt("请输入天数偏移量 (正数超前，负数滞后):\n当前偏移: " + IMPERIAL_DAY_OFFSET, IMPERIAL_DAY_OFFSET);
     if (newDayOffset === null || isNaN(newDayOffset)) return;
 
@@ -3291,6 +3399,7 @@ async function processEmploymentRewards() {
 
 // DM 强制任命函数
 async function adminAppointJob(accId, jobId) {
+    if (!await verifyDmAccess()) return;
     const job = allJobs.find(j => j.id === jobId);
     if (!job) return;
 
@@ -3332,6 +3441,7 @@ async function adminAppointJob(accId, jobId) {
 
 // --- DM 功能：渲染全境待审批队列 ---
 async function renderApprovalQueue() {
+    if (!await verifyDmAccess()) return;
     const container = document.getElementById('dm-approval-list');
     container.innerHTML = '<div style="color:#94a3b8; text-align:center; font-family:monospace;">正在扫描帝国人力资源数据库...</div>';
 
@@ -3371,20 +3481,27 @@ async function renderApprovalQueue() {
         }
 
         const borderColor = isResigning ? '#f59e0b' : (isQualified ? 'var(--omni-green)' : 'var(--omni-danger)');
+        const safeNickname = escapeHTML(acc.nickname);
+        const safeCredit = escapeHTML(acc.social_credit);
+        const safeEducation = escapeHTML(acc.education);
+        const safeEmployer = escapeHTML(job.employer);
+        const safeTitle = escapeHTML(job.title);
+        const itemIdsArg = jsStringAttr(job.provided_item_ids || '');
+        const workStatusArg = jsStringAttr(work.status);
 
         html += `
             <div style="background:#0f172a; border:1px solid #334155; padding: 15px; border-left: 4px solid ${borderColor};">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
-                        <div style="color:#94a3b8; font-size:0.8em;">申请人：<strong style="color:white; font-size:1.2em;">${acc.nickname}</strong> <span style="font-size:0.9em;">(信用：${acc.social_credit} | 学历：${acc.education})</span> ${warningTag}</div>
-                        <div style="margin-top:8px; color:#e2e8f0;">${typeLabel} 岗位：[${job.employer}] ${job.title}</div>
+                        <div style="color:#94a3b8; font-size:0.8em;">申请人：<strong style="color:white; font-size:1.2em;">${safeNickname}</strong> <span style="font-size:0.9em;">(信用：${safeCredit} | 学历：${safeEducation})</span> ${warningTag}</div>
+                        <div style="margin-top:8px; color:#e2e8f0;">${typeLabel} 岗位：[${safeEmployer}] ${safeTitle}</div>
                         <div style="font-size:0.75em; color:#64748b; margin-top:4px;">岗位门槛：${job.min_credit} | 提交时间：${new Date(work.apply_time).toLocaleString()}</div>
                     </div>
                     <div style="display:flex; gap:10px; flex-direction:column;">
-                        <button onclick="dmProcessApplication(${work.id}, 'approved', '${work.status}', ${job.id}, ${work.account_id}, '${job.provided_item_ids}')" style="background:var(--omni-green); color:white; border:none; padding:8px 15px; cursor:pointer; font-weight:bold; border-radius:4px;">
+                        <button onclick="dmProcessApplication(${work.id}, 'approved', ${workStatusArg}, ${job.id}, ${work.account_id}, ${itemIdsArg})" style="background:var(--omni-green); color:white; border:none; padding:8px 15px; cursor:pointer; font-weight:bold; border-radius:4px;">
                             ${isResigning ? '✓ 批准离职' : '✓ 批准入职'}
                         </button>
-                        <button onclick="dmProcessApplication(${work.id}, 'rejected', '${work.status}', null, null, null)" style="background:transparent; border:1px solid var(--omni-danger); color:var(--omni-danger); padding:8px 15px; cursor:pointer; font-weight:bold; border-radius:4px;">
+                        <button onclick="dmProcessApplication(${work.id}, 'rejected', ${workStatusArg}, null, null, null)" style="background:transparent; border:1px solid var(--omni-danger); color:var(--omni-danger); padding:8px 15px; cursor:pointer; font-weight:bold; border-radius:4px;">
                             ${isResigning ? '✖ 驳回离职' : '✖ 驳回申请'}
                         </button>
                     </div>
@@ -3397,6 +3514,7 @@ async function renderApprovalQueue() {
 
 // --- DM 功能：处理单条申请单 ---
 async function dmProcessApplication(workId, action, workStatus, jobId, accId, itemIdsStr) {
+    if (!await verifyDmAccess()) return;
     if (workStatus === 'pending') {
         // ================= 【入职申请分支】 =================
         if (action === 'approved') {
@@ -3491,6 +3609,7 @@ function getMonthsUntilPromotion(hireDateStr, interval) {
 
 // --- DM 功能：手动修正公民入职时间 ---
 async function adminEditHireDate(accId) {
+    if (!await verifyDmAccess()) return;
     // 1. 获取该公民当前的职历记录
     const { data: work } = await supabaseClient
         .from('omni_user_jobs')
@@ -3633,6 +3752,11 @@ async function clearRejectedJob(workId) {
 
 // --- 非对称群组成员透视逻辑 ---
 async function viewGroupMembers(groupId, groupName) {
+    const isDmView = await verifyDmAccess(true);
+    if (!isDmView && !await isCurrentUserGroupMember(groupId)) {
+        return alert("权限不足：您不在该群组内，无法查看成员。");
+    }
+
     document.getElementById('group-members-title').innerText = `[${groupName}] 节点扫描`;
     const listDiv = document.getElementById('group-members-list');
     listDiv.innerHTML = '<div style="color:#94a3b8; text-align:center; font-family:monospace;">正在接入帝国安全局数据库，请求人群拓扑网络...</div>';
@@ -3649,7 +3773,6 @@ async function viewGroupMembers(groupId, groupName) {
     }
 
     let visibleMembers = [];
-    let isDmView = (currentAccount.is_dm || currentAccount.login_id === "DM");
 
     // 2. 权限分流：信息隔离机制
     if (isDmView) {
@@ -3693,18 +3816,20 @@ async function viewGroupMembers(groupId, groupName) {
     visibleMembers.forEach(acc => {
         const isMe = acc.id === currentAccount.id;
         // DM 视角下，名字后面会附带刺眼的真实姓名
-        const dmExtraInfo = isDmView ? `<br><span style="color:#ef4444; font-size:0.85em;">真名: ${acc.real_name || '未登记'}</span>` : '';
+        const safeNickname = escapeHTML(acc.nickname);
+        const safeRace = escapeHTML(acc.race || '未知种族');
+        const dmExtraInfo = isDmView ? `<br><span style="color:#ef4444; font-size:0.85em;">真名: ${escapeHTML(acc.real_name || '未登记')}</span>` : '';
         
         html += `
             <div style="display:flex; align-items:center; gap:15px; padding:12px; background:#1e293b; border:1px solid #334155; border-radius:6px; transition:0.2s;">
                 <img src="${getAvatarUrl(acc.avatar_filename)}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:2px solid ${isMe ? 'var(--omni-green)' : '#64748b'};">
                 <div style="display:flex; flex-direction:column; justify-content:center;">
                     <strong style="color:white; font-size:1.1em;">
-                        ${acc.nickname} 
+                        ${safeNickname} 
                         ${isMe ? '<span style="color:var(--omni-green); font-size:0.7em; border:1px solid var(--omni-green); padding:1px 4px; border-radius:4px;">我</span>' : ''}
                     </strong>
                     <span style="font-size:0.8em; color:#94a3b8; font-family:monospace;">
-                        ID: #${String(acc.id).padStart(4, '0')} | ${acc.race || '未知种族'} 
+                        ID: #${String(acc.id).padStart(4, '0')} | ${safeRace} 
                         ${dmExtraInfo}
                     </span>
                 </div>
@@ -3732,6 +3857,7 @@ async function logAction(type, description) {
 
 // --- DM 功能：渲染行为监控矩阵 ---
 async function renderLogs() {
+    if (!await verifyDmAccess()) return;
     const container = document.getElementById('dm-logs-list');
     container.innerHTML = '<div style="color:#94a3b8; text-align:center; font-family:monospace;">正在调取帝国网络底层的监控节点...</div>';
 
@@ -3757,6 +3883,9 @@ async function renderLogs() {
         if (log.action_type === '职权') { typeColor = '#3b82f6'; }
         if (log.action_type === '违规') { typeColor = 'var(--omni-danger)'; typeBg = 'rgba(239,68,68,0.1)'; }
         if (log.action_type === '社交') { typeColor = '#a855f7'; }
+        const safeNickname = escapeHTML(acc.nickname);
+        const safeActionType = escapeHTML(log.action_type);
+        const safeDescription = escapeHTML(log.description);
 
         html += `
             <div style="background:#0f172a; border-left:3px solid ${typeColor}; padding:10px; display:flex; gap:15px; font-family:monospace; background-color:${typeBg};">
@@ -3764,9 +3893,9 @@ async function renderLogs() {
                     ${new Date(log.created_at).toLocaleString([], {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit'})}
                 </div>
                 <div style="flex:1;">
-                    <span style="color:#f39c12;">#${log.account_id} [${acc.nickname}]</span> 
-                    <span style="color:${typeColor}; font-weight:bold; margin:0 5px;">[${log.action_type}]</span>
-                    <span style="color:#e2e8f0; font-size:0.9em;">${log.description}</span>
+                    <span style="color:#f39c12;">#${log.account_id} [${safeNickname}]</span> 
+                    <span style="color:${typeColor}; font-weight:bold; margin:0 5px;">[${safeActionType}]</span>
+                    <span style="color:#e2e8f0; font-size:0.9em;">${safeDescription}</span>
                 </div>
             </div>
         `;
@@ -3998,6 +4127,9 @@ async function viewTransfer(transferId) {
         statusHtml = `<div style="color:#64748b; font-size:1.1em; margin-bottom:20px;">已过期并退回</div>`;
     }
 
+    const senderName = escapeHTML(t.sender?.nickname || '未知');
+    const receiverName = escapeHTML(t.receiver?.nickname || '未知');
+
     contentDiv.innerHTML = `
         <div style="color:#94a3b8; font-size:0.85em; margin-bottom:10px;">转账单号: TX-${t.id}</div>
         ${statusHtml}
@@ -4005,11 +4137,11 @@ async function viewTransfer(transferId) {
         <div style="display:flex; justify-content:space-between; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.95em; border:1px solid #e2e8f0; text-align:left;">
             <div>
                 <div style="color:#64748b; font-size:0.85em; margin-bottom:4px;">付款方</div>
-                <strong style="color:#1e293b;">${t.sender.nickname}</strong>
+                <strong style="color:#1e293b;">${senderName}</strong>
             </div>
             <div style="text-align:right;">
                 <div style="color:#64748b; font-size:0.85em; margin-bottom:4px;">收款方</div>
-                <strong style="color:#1e293b;">${t.receiver.nickname}</strong>
+                <strong style="color:#1e293b;">${receiverName}</strong>
             </div>
         </div>
         ${actionHtml}
@@ -4021,6 +4153,7 @@ async function viewTransfer(transferId) {
 // 4. 收款人确认接收或退还
 async function processTransfer(transferId, action, amount, senderId = null) {
     if (isTransactionProcessing) return; // 【绝对防御】拦截同一订单的连点并发
+    if (!['accepted', 'rejected'].includes(action)) return alert("无效的转账操作。");
     
     isTransactionProcessing = true;
     const contentDiv = document.getElementById('transfer-view-content');
@@ -4031,25 +4164,37 @@ async function processTransfer(transferId, action, amount, senderId = null) {
         // 这一步是为了防止用户开着两个浏览器同时点接收，或者被脚本刷接口
         const { data: checkTransfer, error: checkErr } = await supabaseClient
             .from('omni_transfers')
-            .select('status')
+            .select('id, sender_id, receiver_id, amount, status')
             .eq('id', transferId)
             .single();
 
         if (checkErr || !checkTransfer) throw new Error("订单状态校验失败，操作中止。");
+        if (checkTransfer.receiver_id !== currentAccount.id) throw new Error("权限不足：只有该笔转账的指定收款方可以处理。");
         if (checkTransfer.status !== 'pending') {
             document.getElementById('transfer-view-modal').classList.remove('show');
             throw new Error("操作无效：该笔转账已被处理，请勿重复点击！");
         }
 
+        const { data: updatedTransfer, error: updateErr } = await supabaseClient
+            .from('omni_transfers')
+            .update({ status: action })
+            .eq('id', transferId)
+            .eq('status', 'pending')
+            .select('id')
+            .maybeSingle();
+
+        if (updateErr || !updatedTransfer) {
+            document.getElementById('transfer-view-modal').classList.remove('show');
+            throw new Error("操作无效：该笔转账已被其他窗口处理。");
+        }
+
         if (action === 'accepted') {
-            await supabaseClient.from('omni_transfers').update({ status: 'accepted' }).eq('id', transferId);
-            await supabaseClient.rpc('increment_credits', { row_id: currentAccount.id, amt: amount });
-            alert(`转账已成功接收，账户增加 ${amount} CR。`);
+            await supabaseClient.rpc('increment_credits', { row_id: checkTransfer.receiver_id, amt: checkTransfer.amount });
+            alert(`转账已成功接收，账户增加 ${checkTransfer.amount} CR。`);
             logAction('交易', `成功接收了单号 #${transferId} 的转账。`);
         } 
         else if (action === 'rejected') {
-            await supabaseClient.from('omni_transfers').update({ status: 'rejected' }).eq('id', transferId);
-            await supabaseClient.rpc('increment_credits', { row_id: senderId, amt: amount });
+            await supabaseClient.rpc('increment_credits', { row_id: checkTransfer.sender_id, amt: checkTransfer.amount });
             alert("已将资金原路退还给付款方。");
             logAction('交易', `退还了单号 #${transferId} 的转账。`);
         }
@@ -4117,6 +4262,10 @@ async function submitGroupTransfer() {
     submitBtn.style.cursor = "not-allowed";
 
     try {
+        if (!await isCurrentUserGroupMember(currentChatTarget.id)) {
+            throw new Error("权限不足：您不在当前群组内，无法发起群内转账。");
+        }
+
         const { data: myAcc } = await supabaseClient.from('omni_accounts').select('credits').eq('id', currentAccount.id).single();
         if (myAcc.credits < amount) throw new Error("支付失败：账户可用余额不足。");
 
