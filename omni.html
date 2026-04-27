@@ -3960,7 +3960,8 @@ async function viewTransfer(transferId) {
 
     // 检查是否超过 24 小时未接收
     let currentStatus = t.status;
-    const now = getImperialNow();
+    // 转账 created_at 来自数据库真实时间，不能叠加帝国历偏移，否则会瞬间过期。
+    const now = new Date();
     const createdAt = new Date(t.created_at);
     const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
 
