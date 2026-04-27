@@ -323,6 +323,9 @@
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 5000; align-items: center; justify-content: center; flex-direction: column; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #333; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #auth-verifying-overlay { display: none; position: fixed; inset: 0; z-index: 6000; background: rgba(255,255,255,0.55); backdrop-filter: blur(1px); align-items: center; justify-content: center; pointer-events: all; }
+        .auth-verifying-card { min-width: 190px; padding: 18px 22px; background: rgba(255,255,255,0.96); border: 1px solid #e0e0e0; border-radius: 10px; box-shadow: 0 12px 35px rgba(0,0,0,0.16); display: flex; align-items: center; gap: 14px; color: #2c3e50; font-weight: bold; }
+        .auth-verifying-card .spinner { width: 28px; height: 28px; border-width: 3px; flex: none; }
         
         /* 按钮与输入 */
         button { cursor: pointer; font-family: inherit; }
@@ -1023,6 +1026,17 @@
 <div id="loading-overlay">
     <div class="spinner"></div>
     <div style="margin-top:15px; color:#555; font-weight:bold;">正在同步位面数据...</div>
+</div>
+
+<!-- 权限校验遮罩 -->
+<div id="auth-verifying-overlay" aria-live="polite" aria-busy="true">
+    <div class="auth-verifying-card">
+        <div class="spinner"></div>
+        <div>
+            <div>正在验证权限...</div>
+            <div style="font-size:0.75em; color:#888; font-weight:normal; margin-top:3px;">Checking access token</div>
+        </div>
+    </div>
 </div>
 
 <!-- 登录界面 (独立居中) -->
@@ -1967,6 +1981,22 @@
         return escapeHTML(JSON.stringify(String(value ?? '')));
     }
 
+    let authVerifyDepth = 0;
+
+    function showAuthVerifying() {
+        authVerifyDepth++;
+        const overlay = document.getElementById('auth-verifying-overlay');
+        if (overlay) overlay.style.display = 'flex';
+    }
+
+    function hideAuthVerifying() {
+        authVerifyDepth = Math.max(0, authVerifyDepth - 1);
+        if (authVerifyDepth > 0) return;
+
+        const overlay = document.getElementById('auth-verifying-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
     async function getVerifiedUser() {
         const { data: { user }, error } = await supabaseClient.auth.getUser();
         if (error || !user) return null;
@@ -1998,12 +2028,17 @@
     }
 
     async function requireAdminRole(allowedRoles = ADMIN_ROLES) {
-        const role = await refreshCurrentRole(true);
-        if (!allowedRoles.includes(role)) {
-            alert('权限不足：该操作需要 DM 权限。');
-            return false;
+        showAuthVerifying();
+        try {
+            const role = await refreshCurrentRole(true);
+            if (!allowedRoles.includes(role)) {
+                alert('权限不足：该操作需要 DM 权限。');
+                return false;
+            }
+            return true;
+        } finally {
+            hideAuthVerifying();
         }
-        return true;
     }
 
     function isCurrentAdmin() {
@@ -2015,23 +2050,28 @@
     }
 
     async function requireWarAccess(faction = null) {
-        const user = await getVerifiedUser();
-        if (!user) {
-            alert('身份凭证已失效，请重新登录。');
-            return false;
+        showAuthVerifying();
+        try {
+            const user = await getVerifiedUser();
+            if (!user) {
+                alert('身份凭证已失效，请重新登录。');
+                return false;
+            }
+
+            currentUserEmail = user.email || currentUserEmail;
+            const email = currentUserEmail.toLowerCase();
+            const isController = WAR_CONTROLLER_EMAILS.includes(email);
+            const isFactionOwner = faction ? window.myWarFaction === faction : !!window.myWarFaction;
+
+            if (!isController && !isFactionOwner) {
+                alert('战局权限不足，无法执行该操作。');
+                return false;
+            }
+
+            return true;
+        } finally {
+            hideAuthVerifying();
         }
-
-        currentUserEmail = user.email || currentUserEmail;
-        const email = currentUserEmail.toLowerCase();
-        const isController = WAR_CONTROLLER_EMAILS.includes(email);
-        const isFactionOwner = faction ? window.myWarFaction === faction : !!window.myWarFaction;
-
-        if (!isController && !isFactionOwner) {
-            alert('战局权限不足，无法执行该操作。');
-            return false;
-        }
-
-        return true;
     }
     // === 怪物图鉴在线修改器 ===
     let adminMonsters = [];
