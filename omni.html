@@ -4122,12 +4122,25 @@ async function submitGroupTransfer() {
         let targetUser = null;
         let isValid = true;
 
-        const { data: userMatch } = await supabaseClient.from('omni_accounts').select('id, nickname').eq('real_name', inputRealName).maybeSingle();
+        const { data: userMatch, error: userError } = await supabaseClient
+            .from('omni_accounts')
+            .select('id, nickname')
+            .eq('real_name', inputRealName)
+            .maybeSingle();
+
+        if (userError) throw new Error("交易中断：收款人身份校验失败。" + userError.message);
 
         if (!userMatch) {
             isValid = false; 
         } else {
-            const { data: memberMatch } = await supabaseClient.from('omni_group_members').select('id').eq('group_id', currentChatTarget.id).eq('user_id', userMatch.id).maybeSingle();
+            const { data: memberMatch, error: memberError } = await supabaseClient
+                .from('omni_group_members')
+                .select('user_id')
+                .eq('group_id', currentChatTarget.id)
+                .eq('user_id', userMatch.id)
+                .maybeSingle();
+
+            if (memberError) throw new Error("交易中断：群组成员校验失败。" + memberError.message);
             if (!memberMatch) isValid = false;
             else targetUser = userMatch;
         }
