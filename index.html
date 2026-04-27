@@ -9,6 +9,10 @@
     frame-src 'self' https://challenges.cloudflare.com;
     style-src 'self' 'unsafe-inline'; 
     img-src 'self' data: https: blob:;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
 ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D 小队管理系统</title>
@@ -1950,6 +1954,85 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const DM_EMAIL = '739477825@qq.com';
+    const ADMIN_ROLES = ['dm', 'root'];
+    const WAR_CONTROLLER_EMAILS = [DM_EMAIL, 'master@almorel.com'];
+
+    function escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[ch]));
+    }
+
+    function jsStringAttr(value) {
+        return escapeHTML(JSON.stringify(String(value ?? '')));
+    }
+
+    async function getVerifiedUser() {
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        if (error || !user) return null;
+        return user;
+    }
+
+    async function refreshCurrentRole(force = false) {
+        const user = await getVerifiedUser();
+        if (!user) {
+            myId = null;
+            currentUserEmail = '';
+            currentUserRole = 'player';
+            return 'guest';
+        }
+
+        myId = user.id;
+        currentUserEmail = user.email || '';
+
+        if (!force && currentUserRole && currentUserRole !== 'player') return currentUserRole;
+
+        const { data: adminData } = await supabaseClient
+            .from('admin_users')
+            .select('role_level')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        currentUserRole = adminData?.role_level || 'player';
+        return currentUserRole;
+    }
+
+    async function requireAdminRole(allowedRoles = ADMIN_ROLES) {
+        const role = await refreshCurrentRole(true);
+        if (!allowedRoles.includes(role)) {
+            alert('权限不足：该操作需要 DM 权限。');
+            return false;
+        }
+        return true;
+    }
+
+    function isCurrentAdmin() {
+        return ADMIN_ROLES.includes(currentUserRole);
+    }
+
+    function isCurrentRoot() {
+        return currentUserRole === 'root';
+    }
+
+    async function requireWarAccess(faction = null) {
+        const user = await getVerifiedUser();
+        if (!user) {
+            alert('身份凭证已失效，请重新登录。');
+            return false;
+        }
+
+        currentUserEmail = user.email || currentUserEmail;
+        const email = currentUserEmail.toLowerCase();
+        const isController = WAR_CONTROLLER_EMAILS.includes(email);
+        const isFactionOwner = faction ? window.myWarFaction === faction : !!window.myWarFaction;
+
+        if (!isController && !isFactionOwner) {
+            alert('战局权限不足，无法执行该操作。');
+            return false;
+        }
+
+        return true;
+    }
     // === 怪物图鉴在线修改器 ===
     let adminMonsters = [];
 
@@ -1961,6 +2044,7 @@ function isPhandalinPlayer(email) {
 
     // 每次打开 DM 面板时，顺便调用这个刷新列表
     async function loadAdminMonsters() {
+        if (!await requireAdminRole()) return;
         const { data } = await supabaseClient.from('bestiary').select('*');
         adminMonsters = data || [];
         const sel = document.getElementById('adm-monster-select');
@@ -1998,6 +2082,7 @@ function isPhandalinPlayer(email) {
 
     // 保存怪物到数据库
     async function saveMonster() {
+        if (!await requireAdminRole()) return;
         const id = document.getElementById('edit-mon-id').value;
         const visibleStr = document.getElementById('edit-mon-visible').value || 'all';
         const visibleArr = visibleStr.split(',').map(s => s.trim());
@@ -2056,6 +2141,7 @@ function isPhandalinPlayer(email) {
 
 
     async function deleteMonster() {
+        if (!await requireAdminRole()) return;
         const id = document.getElementById('adm-monster-select').value;
         if (!id) return alert('请先选择一个要删除的怪物');
         if (confirm('警告：确定要彻底删除该怪物档案吗？')) {
@@ -2127,7 +2213,7 @@ function isPhandalinPlayer(email) {
             // 6. 科研进度条变动 (Research 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'research_projects', filter: `user_id=eq.${targetId}` }, (payload) => {
             console.log('科研进度有变动');
-            loadAdminResearch(); 
+            if (isCurrentAdmin()) loadAdminResearch(); 
             })
             .subscribe();
     }
@@ -2663,15 +2749,13 @@ async function login() {
     async function checkUser() {
         const loadingMask = document.getElementById('global-loading-mask');
         
-        // 1. 获取当前登录用户
-        const { data: { session } } = await supabaseClient.auth.getSession();
+        // 1. 服务端验证当前登录用户，避免仅凭本地 session 恢复主界面
+        const user = await getVerifiedUser();
         
         // 稍微等待一下，防止画面切换太快
         await new Promise(r => setTimeout(r, 100));
 
-        if (session) {
-            const user = session.user;
-            
+        if (user) {
             // --- A. 已登录 ---
             console.log(">> 身份验证通过:", user.email);
 
@@ -2699,26 +2783,24 @@ if (isPhandalin) {
             loadWarSituation();
             
             // 检查管理员权限
-            const { data: adminData } = await supabaseClient
-                .from('admin_users')
-                .select('role_level')
-                .eq('id', user.id)
-                .maybeSingle();
+            await refreshCurrentRole(true);
 
-            if (adminData) {
-                currentUserRole = adminData.role_level;
+            if (isCurrentAdmin()) {
                 // 显示 DM 入口
                 document.getElementById('admin-link').style.display = 'inline';
                 const badge = document.getElementById('role-badge');
                 if (badge) badge.innerText = currentUserRole.toUpperCase();
                 
-                if (currentUserRole === 'root') {
+                if (isCurrentRoot()) {
                     const secBtn = document.getElementById('security-tab-btn');
                     if (secBtn) secBtn.style.display = 'inline-block';
                 }
                 loadAdminData();
             } else {
                 currentUserRole = 'player';
+                document.getElementById('admin-link').style.display = 'none';
+                const secBtn = document.getElementById('security-tab-btn');
+                if (secBtn) secBtn.style.display = 'none';
             }
             
             // 初始化视图 ID
@@ -2785,6 +2867,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
 
     // 2. ：任意修改时间逻辑
     async function updateTimeManual() {
+    if (!await requireAdminRole()) return;
     if (!viewingUserId) return alert('请先选择一个视角');
 
     // 1. 获取输入的新日期
@@ -2902,7 +2985,9 @@ async function loadGold() {
     }
 
 
-    function switchTab(tab) {
+    async function switchTab(tab) {
+        if (tab === 'security' && !await requireAdminRole(['root'])) return;
+
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         
@@ -2920,7 +3005,9 @@ async function loadGold() {
         }
     }
 
-    function toggleAdmin() {
+    async function toggleAdmin() {
+        if (!await requireAdminRole()) return;
+
         const p = document.getElementById('admin-panel');
         p.style.display = p.style.display === 'block' ? 'none' : 'block';
 
@@ -2983,15 +3070,21 @@ async function loadGold() {
         });
 
         // 4. 渲染卡片
-        const canManage = currentUserRole === 'root' || currentUserRole === 'dm';
+        const canManage = isCurrentAdmin();
         
         grid.innerHTML = filteredData.map(i => {
             const color = rarityColors[i.rarity] || '#ccc';
             const isOut = i.stock <= 0;
+            const safeName = escapeHTML(i.name);
+            const safeCategory = escapeHTML(i.category || '杂项');
+            const safeRarity = escapeHTML(i.rarity || '普通');
+            const safeDescription = escapeHTML(i.description || '暂无描述');
+            const nameArg = jsStringAttr(i.name);
+            const categoryArg = jsStringAttr(i.category);
             
             // 下架按钮 (仅管理员可见)
             const deleteBtn = canManage ? 
-                `<button onclick="deleteShopItem(${i.id}, '${i.name}')" 
+                `<button onclick="deleteShopItem(${i.id}, ${nameArg})" 
                     style="background:#e74c3c; color:white; border:none; margin-top:8px; font-size:0.8em; padding:5px; width:100%; border-radius:4px; opacity:0.8;">
                     🗑️ 下架商品
                 </button>` : '';
@@ -3018,19 +3111,19 @@ async function loadGold() {
                         right:8px; 
                         font-weight:bold; 
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        ${i.rarity || '普通'}
+                        ${safeRarity}
                     </span>
 
                     ${specialTag}
                     
-                    <b style="font-size:1.1em;">${i.name}</b>
+                    <b style="font-size:1.1em;">${safeName}</b>
                     
                     <div style="font-size:0.8em; color:#666; margin:5px 0;">
-                        [${i.category || '杂项'}]
+                        [${safeCategory}]
                     </div>
                     
                     <div style="font-size:0.75em; color:#777; margin:5px 0; line-height:1.4; min-height:2.8em;">
-                        ${i.description || '暂无描述'}
+                        ${safeDescription}
                     </div>
                     
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
@@ -3041,7 +3134,7 @@ async function loadGold() {
                     </div>
                     
                     <button class="btn-buy" 
-                        onclick="buy(${i.id}, ${i.price}, '${i.name}', '${i.category}')" 
+                        onclick="buy(${i.id}, ${i.price}, ${nameArg}, ${categoryArg})" 
                         ${isOut ? 'disabled' : ''}
                         style="margin-top:10px;">
                         ${isOut ? '缺货' : '确认购买'}
@@ -3054,6 +3147,7 @@ async function loadGold() {
 
     // 3. ：下架商品逻辑
     async function deleteShopItem(id, name) {
+        if (!await requireAdminRole()) return;
         if (!confirm(`确定要将 [${name}] 永久下架吗？`)) return;
         
         showLoading();
@@ -3071,6 +3165,7 @@ async function loadGold() {
 
     // --- 加载待审批请求 ---
     async function loadPendingRequests() {
+        if (!await requireAdminRole()) return;
         const listDiv = document.getElementById('pending-requests-list');
         if (!listDiv) return;
 
@@ -3112,6 +3207,7 @@ async function loadGold() {
 
     // --- 处理审批 ---
     async function approveFire(empId, isApproved) {
+        if (!await requireAdminRole()) return;
         showLoading();
         try {
             // 如果批准，状态改为 '离职' (这样就不扣钱了，但也还在列表里)
@@ -3187,6 +3283,7 @@ async function buy(id, p, n, c) {
 
     // 加载管理员所需数据
     async function loadAdminData() {
+        if (!await requireAdminRole()) return;
         const ulist = document.getElementById('adm-user-list');
         ulist.innerHTML = '<option value="">加载中...</option>';
 
@@ -3217,7 +3314,7 @@ async function buy(id, p, n, c) {
         ulist.innerHTML = '<option value="">-- 选择玩家 --</option>';
         if (users && users.length > 0) {
             users.forEach(u => {
-                ulist.innerHTML += `<option value="${u.id}">${u.email}</option>`;
+                ulist.innerHTML += `<option value="${escapeHTML(u.id)}">${escapeHTML(u.email)}</option>`;
             });
         } else {
             ulist.innerHTML = '<option value="">(无关联玩家)</option>';
@@ -3235,6 +3332,7 @@ async function buy(id, p, n, c) {
     let selectedUserId = null;
 // --- 加载玩家详情 ---
     async function loadUserDetail() {
+        if (!await requireAdminRole()) return;
         selectedUserId = document.getElementById('adm-user-list').value;
         const detailBox = document.getElementById('user-detail');
 
@@ -3264,19 +3362,24 @@ async function buy(id, p, n, c) {
         const invDiv = document.getElementById('adm-user-inv');
         
         if (inv && inv.length > 0) {
-            invDiv.innerHTML = inv.map(i => `
+            invDiv.innerHTML = inv.map(i => {
+                const safeCategory = escapeHTML(i.category || '杂');
+                const safeName = escapeHTML(i.item_name);
+                const itemNameArg = jsStringAttr(i.item_name);
+                return `
                 <div style="display:flex; justify-content:space-between; font-size:0.85em; border-bottom:1px dashed #eee; padding:2px; align-items:center;">
                     <span>
-                        <span style="color:#999; font-size:0.8em;">[${i.category||'杂'}]</span> 
-                        ${i.item_name} 
+                        <span style="color:#999; font-size:0.8em;">[${safeCategory}]</span> 
+                        ${safeName} 
                     </span>
                     <div style="display:flex; align-items:center; gap:5px;">
                         <strong>x${i.quantity}</strong>
-                        <button onclick="admRemoveInv(${i.id}, '${i.item_name}', ${i.quantity})" 
+                        <button onclick="admRemoveInv(${i.id}, ${itemNameArg}, ${i.quantity})" 
                             style="border:none; background:#e74c3c; color:white; cursor:pointer; border-radius:3px; padding:0 5px;">×</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         } else {
             invDiv.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">(背包是空的)</div>';
         }
@@ -3292,7 +3395,7 @@ async function buy(id, p, n, c) {
         
         if (emps && emps.length > 0) {
             emps.forEach(e => {
-                const opt = `<option value="${e.id}">${e.name}</option>`;
+                const opt = `<option value="${e.id}">${escapeHTML(e.name)}</option>`;
                 empSelect.innerHTML += opt;
                 sheetSelect.innerHTML += opt; // 同时填入数据
             });
@@ -3308,6 +3411,7 @@ async function buy(id, p, n, c) {
     }
 
     async function assignDM() {
+        if (!await requireAdminRole(['root'])) return;
         const dmId = document.getElementById('adm-assign-dm-list').value;
         showLoading();
         await supabaseClient.from('profiles').update({ assigned_dm_id: dmId || null }).eq('id', selectedUserId);
@@ -3317,6 +3421,7 @@ async function buy(id, p, n, c) {
 
     // 2. ：DM 删除玩家物品逻辑
     async function admRemoveInv(itemId, itemName, currentQty) {
+        if (!await requireAdminRole()) return;
         // 1. 获取删除数量
         let removeQty = prompt(`要把 [${itemName}] 删除多少个？\n(当前拥有: ${currentQty})\n输入 'all' 或数字`, "1");
         
@@ -3407,6 +3512,7 @@ async function buy(id, p, n, c) {
 
     // ================== ：加载日志 ==================
     async function loadLogs() {
+        if (!await requireAdminRole(['root'])) return;
         const logBox = document.getElementById('audit-log-container');
         logBox.innerHTML = '加载日志中...';
         
@@ -3423,16 +3529,20 @@ async function buy(id, p, n, c) {
 
         logBox.innerHTML = logs.map(log => {
             const time = new Date(log.created_at).toLocaleString();
+            const safeEmail = escapeHTML(log.user_email);
+            const safeAction = escapeHTML(log.action_type);
+            const safeDetails = escapeHTML(log.details);
             return `
                 <div style="border-bottom:1px solid #eee; padding:8px 0; font-size:0.9em;">
-                    <div style="color:#999; font-size:0.8em;">${time} - ${log.user_email}</div>
-                    <div><span style="font-weight:bold; color:#333">[${log.action_type}]</span> ${log.details}</div>
+                    <div style="color:#999; font-size:0.8em;">${time} - ${safeEmail}</div>
+                    <div><span style="font-weight:bold; color:#333">[${safeAction}]</span> ${safeDetails}</div>
                 </div>`;
         }).join('');
     }
 
     // 3. 修改金币
 async function updateUserGold() {
+        if (!await requireAdminRole()) return;
         if (!selectedUserId) return;
         const newGold = document.getElementById('adm-user-gold').value;
         showLoading();
@@ -3446,6 +3556,7 @@ async function updateUserGold() {
 
     // 4. 上帝发装备
     async function admAddInv() {
+        if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择一个玩家');
         
         const itemName = document.getElementById('adm-new-item').value;
@@ -3491,6 +3602,7 @@ async function updateUserGold() {
     }
 
     async function uploadAvatar() {
+        if (!await requireAdminRole()) return;
         const f = document.getElementById('adm-emp-avatar').files[0];
         const id = document.getElementById('adm-emp-list').value;
         showLoading();
@@ -3673,6 +3785,7 @@ async function calculateCityNetIncome(targetUserId) {
 
 
     async function adminAddItem() {
+        if (!await requireAdminRole()) return;
         const name = document.getElementById('adm-shop-name').value;
         const rarity = document.getElementById('adm-shop-rarity').value;
         const category = document.getElementById('adm-shop-cat').value;
@@ -3724,6 +3837,7 @@ async function calculateCityNetIncome(targetUserId) {
 
 
 async function loadLoginLogs() {
+        if (!await requireAdminRole(['root'])) return;
         const container = document.getElementById('login-log-container');
         container.innerHTML = '加载中...';
 
@@ -3740,8 +3854,12 @@ async function loadLoginLogs() {
             const isFail = log.status.indexOf('失败') !== -1;
             const color = isFail ? '#e74c3c' : '#2ecc71';
             const bgColor = isFail ? '#fff0f0' : '#f0fff0';
-            const uaParts = log.user_agent.split(' | ');
+            const uaParts = String(log.user_agent || '').split(' | ');
             const deviceId = uaParts[0]; 
+            const safeEmail = escapeHTML(log.email);
+            const safeIp = escapeHTML(log.ip_address);
+            const safeDeviceId = escapeHTML(deviceId);
+            const safeStatus = escapeHTML(log.status);
 
             return `
                 <div style="border-bottom:1px solid #eee; padding:8px; background:${bgColor}; margin-bottom:2px; border-radius:4px;">
@@ -3749,15 +3867,16 @@ async function loadLoginLogs() {
                         <span style="color:#666;">${time}</span>
                         <span style="font-weight:bold; color:${color}">${isFail ? '拒绝访问' : '验证通过'}</span>
                     </div>
-                    <div style="font-weight:bold; margin:3px 0;">用户: ${log.email}</div>
-                    <div style="font-size:0.8em; color:#444;">IP: ${log.ip_address}</div>
-                    <div style="font-size:0.7em; color:#999; word-break:break-all;">设备指纹: ${deviceId}</div>
-                    ${isFail ? `<div style="color:red; font-size:0.8em; font-weight:bold;">${log.status}</div>` : ''}
+                    <div style="font-weight:bold; margin:3px 0;">用户: ${safeEmail}</div>
+                    <div style="font-size:0.8em; color:#444;">IP: ${safeIp}</div>
+                    <div style="font-size:0.7em; color:#999; word-break:break-all;">设备指纹: ${safeDeviceId}</div>
+                    ${isFail ? `<div style="color:red; font-size:0.8em; font-weight:bold;">${safeStatus}</div>` : ''}
                 </div>`;
         }).join('');
     }
     // --- 加载所有账号 (查 profiles 表) ---
     async function loadAllAccounts() {
+        if (!await requireAdminRole(['root'])) return;
         const container = document.getElementById('account-list-container');
         container.innerHTML = '正在拉取全服名单...';
 
@@ -3774,9 +3893,10 @@ async function loadLoginLogs() {
 
         // 获取权限表
         const { data: roles } = await supabaseClient.from('admin_users').select('*');
+        const roleRows = roles || [];
         
         const getRole = (id) => {
-            const r = roles.find(x => x.id === id);
+            const r = roleRows.find(x => x.id === id);
             return r ? r.role_level : 'player';
         };
 
@@ -3787,17 +3907,20 @@ async function loadLoginLogs() {
             const isMe = u.id === myId;
             // 因为 profiles 表可能没有 created_at，我们暂时不显示注册时间，或者显示 "已激活"
             const statusText = u.assigned_dm_id ? "已分配DM" : "未分配";
+            const safeEmail = escapeHTML(u.email);
+            const safeStatus = escapeHTML(statusText);
+            const idArg = jsStringAttr(u.id);
 
             return `
                 <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="overflow:hidden; text-overflow:ellipsis;">
-                        <div style="font-weight:bold;">${u.email}</div>
-                        <div style="font-size:0.8em; color:#999;">${statusText}</div>
+                        <div style="font-weight:bold;">${safeEmail}</div>
+                        <div style="font-size:0.8em; color:#999;">${safeStatus}</div>
                     </div>
                     <div style="text-align:right;">
                         <span style="font-size:0.8em; color:${roleColor}; font-weight:bold; margin-right:5px;">${role.toUpperCase()}</span>
                         ${!isMe ? `
-                        <select onchange="changeUserRole('${u.id}', this.value)" style="font-size:0.8em; padding:2px;">
+                        <select onchange="changeUserRole(${idArg}, this.value)" style="font-size:0.8em; padding:2px;">
                             <option value="">-- 改权限 --</option>
                             <option value="player">设为 Player</option>
                             <option value="dm">设为 DM</option>
@@ -3809,6 +3932,7 @@ async function loadLoginLogs() {
 
     // --- 修改用户权限 ---
     async function changeUserRole(targetId, newRole) {
+        if (!await requireAdminRole(['root'])) return;
         if (!newRole) return;
         if (!confirm(`确定要将该用户的权限修改为 [${newRole.toUpperCase()}] 吗？`)) return;
 
@@ -3832,7 +3956,10 @@ async function loadLoginLogs() {
         }
     }
     // --- 图鉴搜索功能 ---
+    let compendiumSearchResults = [];
+
     async function searchCompendium() {
+        if (!await requireAdminRole()) return;
         const query = document.getElementById('compendium-search').value;
         const resultBox = document.getElementById('compendium-results');
         
@@ -3851,13 +3978,19 @@ async function loadLoginLogs() {
             return;
         }
 
-        resultBox.innerHTML = data.map(item => `
-            <div onclick='fillShopForm(${JSON.stringify(item)})' 
+        compendiumSearchResults = data;
+        resultBox.innerHTML = data.map((item, index) => `
+            <div onclick="fillShopFormByIndex(${index})" 
                  style="padding:5px; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9em; display:flex; justify-content:space-between;">
-                <span>${item.name}</span>
+                <span>${escapeHTML(item.name)}</span>
                 <span style="color:#666">${item.price} GP</span>
             </div>
         `).join('');
+    }
+
+    function fillShopFormByIndex(index) {
+        const item = compendiumSearchResults[index];
+        if (item) fillShopForm(item);
     }
 
     // 选中后自动填表
@@ -3980,6 +4113,7 @@ async function loadLoginLogs() {
     }
     // --- 随机进货功能 ---
     async function randomRestock() {
+        if (!await requireAdminRole()) return;
         // 1. 确定进货目标
         // 如果 selectedUserId 有值，说明 DM 选中了某个玩家，进货给他
         // 如果没值 (null)，说明是公共进货
@@ -4032,15 +4166,17 @@ async function loadLoginLogs() {
 
         container.innerHTML = onlineUsers.map(user => {
             const roleColor = user.role === 'root' ? 'red' : (user.role === 'dm' ? 'blue' : 'green');
+            const safeEmail = escapeHTML(user.email);
+            const safeRole = escapeHTML(String(user.role || 'player').toUpperCase());
             return `
             <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-weight:bold; display:flex; align-items:center; gap:8px;">
                         <span style="display:inline-block; width:8px; height:8px; background-color:${roleColor}; border-radius:50%;"></span>
-                        ${user.email}
+                        ${safeEmail}
                     </div>
                 </div>
-                <span style="font-size:0.8em; color:${roleColor}; font-weight:bold;">${user.role.toUpperCase()}</span>
+                <span style="font-size:0.8em; color:${roleColor}; font-weight:bold;">${safeRole}</span>
             </div>
             `;
         }).join('');
@@ -4071,6 +4207,7 @@ async function loadLoginLogs() {
     }
 
     async function bulkAddWanted() {
+        if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择目标玩家的位面');
         const text = document.getElementById('adm-wanted-bulk').value;
         if (!text) return;
@@ -4098,6 +4235,7 @@ async function loadLoginLogs() {
     }
 
     async function addWantedPoster() {
+        if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择玩家');
         const name = document.getElementById('adm-wanted-name').value;
         const amount = document.getElementById('adm-wanted-amount').value;
@@ -4418,6 +4556,7 @@ async function loadLoginLogs() {
     // --- DM 控制台功能：加载雇员到下拉框 ---
 
     async function updateStatBlockSelect() {
+        if (!await requireAdminRole()) return;
         const empId = document.getElementById('adm-sheet-list').value;
         if (!empId) return;
 
@@ -4461,6 +4600,7 @@ async function loadLoginLogs() {
     }
 
     async function saveCharacterSheet() {
+        if (!await requireAdminRole()) return;
         const empId = document.getElementById('adm-sheet-list').value;
         const jsonStr = document.getElementById('adm-sheet-json').value;
 
@@ -4488,6 +4628,7 @@ async function loadLoginLogs() {
     }
 
     async function deleteCharacterSheet() {
+        if (!await requireAdminRole()) return;
         const empId = document.getElementById('adm-sheet-list').value;
         
         // 1. 检查是否选择了人
@@ -5089,6 +5230,7 @@ async function getRobustIP() {
     */
 
     async function loadEmpForRarity(uid) {
+        if (!await requireAdminRole()) return;
         const select = document.getElementById('adm-rarity-emp-list');
         select.innerHTML = '<option>加载中...</option>';
         const { data } = await supabaseClient.from('employees').select('id, name, rarity').eq('user_id', uid);
@@ -5101,6 +5243,7 @@ async function getRobustIP() {
     }
 
     async function updateEmpRarity() {
+        if (!await requireAdminRole()) return;
         const empId = document.getElementById('adm-rarity-emp-list').value;
         const rarity = document.getElementById('adm-rarity-val').value;
         if(!empId) return;
@@ -5133,6 +5276,7 @@ async function getRobustIP() {
     }
 
     async function uploadPoolAvatar() {
+        if (!await requireAdminRole()) return;
         const id = document.getElementById('adm-pool-id').value;
         const file = document.getElementById('adm-pool-file').files[0];
         
@@ -5241,6 +5385,7 @@ async function getRobustIP() {
     }
 
     async function uploadPoolStand() {
+    if (!await requireAdminRole()) return;
     const id = document.getElementById('adm-pool-id').value; // 复用之前的搜索选择ID
     const file = document.getElementById('adm-pool-stand-file').files[0];
     
@@ -5331,6 +5476,7 @@ async function getRobustIP() {
 
     // 执行上传
     async function uploadPoolStand() {
+        if (!await requireAdminRole()) return;
         const id = document.getElementById('adm-pool-stand-id').value;
         const file = document.getElementById('adm-pool-stand-file').files[0];
         if(!id || !file) return alert('请先搜索确定角色并选择文件');
@@ -5690,6 +5836,7 @@ function goToStandImg(index) {
 
     // --- 为现有雇员上传立绘 ---
     async function uploadExistingStand() {
+        if (!await requireAdminRole()) return;
         const file = document.getElementById('adm-emp-stand').files[0];
         const empId = document.getElementById('adm-emp-list').value;
         
@@ -5881,6 +6028,7 @@ async function clearExistingStand() {
     // 科研与工程控制逻辑
 
     async function loadAdminResearch() {
+        if (!await requireAdminRole()) return;
         const listDiv = document.getElementById('adm-res-list');
         if (!selectedUserId) return listDiv.innerHTML = '请先选择玩家';
         
@@ -5964,6 +6112,7 @@ async function clearExistingStand() {
 
     // 1. 下发新项目
     async function adminCreateResearch() {
+        if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择玩家');
         const name = document.getElementById('adm-res-name').value;
         const max = parseInt(document.getElementById('adm-res-max').value);
@@ -5998,6 +6147,7 @@ async function clearExistingStand() {
 
     // 2. 手动修改当前进度
     async function adminUpdateResProgress(pid, maxProg) {
+        if (!await requireAdminRole()) return;
         let newProg = parseInt(document.getElementById(`prog_${pid}`).value);
         if (isNaN(newProg) || newProg < 0) return alert('请输入有效的进度数值');
         
@@ -6017,6 +6167,7 @@ async function clearExistingStand() {
 
     // 3. 修改每日速度
     async function adminUpdateResSpeed(pid) {
+        if (!await requireAdminRole()) return;
         const speed = parseInt(document.getElementById(`spd_${pid}`).value);
         if (isNaN(speed) || speed < 0) return alert('速度必须是有效数字');
         showLoading();
@@ -6028,6 +6179,7 @@ async function clearExistingStand() {
 
     // 4. 调入人员（锁死为 科研中）
     async function adminAddResEmp(pid) {
+        if (!await requireAdminRole()) return;
         const eid = parseInt(document.getElementById(`sel_emp_${pid}`).value);
         if (!eid) return;
 
@@ -6046,6 +6198,7 @@ async function clearExistingStand() {
 
     // 5. 撤出人员（恢复为 在职）
     async function adminRemoveResEmp(pid, eid) {
+        if (!await requireAdminRole()) return;
         if(!confirm('确定将该雇员从项目中撤出并恢复自由待命状态吗？')) return;
         showLoading();
         
@@ -6062,6 +6215,7 @@ async function clearExistingStand() {
     
     // 6.删除已废弃/已完成的项目
     async function adminDeleteResearch(pid) {
+        if (!await requireAdminRole()) return;
         if(!confirm('⚠️ 确定要彻底删除这个工程记录吗？\n（如果有雇员正在该项目中，他们将被自动恢复为“在职”待命状态）')) return;
         showLoading();
         
@@ -6374,12 +6528,13 @@ window.fetchWarLogs = async function() {
     if (box && data) {
         box.innerHTML = data.map(log => {
             const time = new Date(log.created_at).toLocaleTimeString();
-            return `<div class="log-line"><span class="log-time">[${time}]</span>${log.log_text}</div>`;
+            return `<div class="log-line"><span class="log-time">[${time}]</span>${escapeHTML(log.log_text)}</div>`;
         }).join('');
     }
 };
 
 window.addWarLog = async function(text) {
+    if (!await requireWarAccess()) return;
     await supabaseClient.from('war_logs').insert([{ log_text: text }]);
     await fetchWarLogs(); 
 };
@@ -6534,6 +6689,7 @@ window.handleCardClick = function(faction, cardId) {
 // 5. 结算与底层数据操作
 window.processDiscard = async function(faction, cardId, logText) {
     if (isWarProcessing) return;
+    if (!await requireWarAccess(faction)) return;
     isWarProcessing = true;
     showLoading();
     try {
@@ -6557,6 +6713,7 @@ window.discardForResource = async function(faction, resourceType) {
 };
 
 window.discardForReadiness = async function(bonus) {
+    if (!await requireWarAccess('empire')) return;
     closeModal('card-action-menu');
     const cardName = allWarCards[selectedCardId].name;
     let newReadiness = warState.empire_readiness + bonus;
@@ -6567,6 +6724,7 @@ window.discardForReadiness = async function(bonus) {
 };
 
 window.executeDraw = async function(faction, count) {
+    if (!await requireWarAccess(faction)) return [];
     let deck = warDecks[faction];
     let drawPile = [...deck.draw_pile];
     let discardPile = [...deck.discard_pile];
@@ -6596,6 +6754,7 @@ window.executeDraw = async function(faction, count) {
 // 6. 核心：打出卡牌事件
 window.playCardEvent = async function(faction) {
     if (isWarProcessing) return;
+    if (!await requireWarAccess(faction)) return;
     isWarProcessing = true;
     showLoading();
     
@@ -6648,6 +6807,7 @@ window.playCardEvent = async function(faction) {
 
 window.resolveQuest = async function(cardId, isSuccess) {
     if (isWarProcessing) return;
+    if (!await requireWarAccess()) return;
     isWarProcessing = true;
     showLoading();
     
@@ -6703,6 +6863,7 @@ window.calculateDrawCount = function(faction) {
 // 7. 回合与阶段流转
 window.drawPhaseCards = async function(faction) {
     if (isWarProcessing) return;
+    if (!await requireWarAccess(faction)) return;
     isWarProcessing = true;
     showLoading();
     try {
@@ -6727,6 +6888,7 @@ window.drawPhaseCards = async function(faction) {
 // DM 手动洗牌功能
 window.shuffleDeck = async function(faction) {
     if (isWarProcessing) return;
+    if (!await requireWarAccess()) return;
     if (!confirm(`确定要洗切【${faction === 'alliance' ? '联军' : '帝国'}】的抽牌堆吗？`)) return;
     
     isWarProcessing = true;
@@ -6748,6 +6910,7 @@ window.shuffleDeck = async function(faction) {
 
 window.changePhase = async function(newPhase) {
     if (isWarProcessing) return;
+    if (!await requireWarAccess(warState.active_faction)) return;
     isWarProcessing = true;
     showLoading();
     try {
@@ -6764,6 +6927,7 @@ window.changePhase = async function(newPhase) {
 
 window.endWarTurn = async function() {
     if (isWarProcessing) return;
+    if (!await requireWarAccess(warState.active_faction)) return;
     if (!confirm('确定结束本阵营的回合吗？')) return;
     
     isWarProcessing = true;
