@@ -115,6 +115,37 @@
         .tag-cost { background: #fdeaea; color: #c0392b; } 
         .tag-special { background: #fff8e1; color: #f39c12; } 
 
+        .military-layout { display: grid; grid-template-columns: minmax(220px, 0.82fr) minmax(360px, 1.18fr); gap: 16px; }
+        .force-roster { background: #1f2933; border: 1px solid #111827; color: #e5e7eb; min-height: 260px; }
+        .force-roster-header { padding: 12px 14px; background: #111827; border-bottom: 2px solid var(--accent-gold); font-weight: bold; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+        .force-unit-list { display: flex; flex-direction: column; max-height: 420px; overflow-y: auto; }
+        .force-unit { border: 0; border-bottom: 1px solid rgba(255,255,255,0.08); background: transparent; color: inherit; padding: 12px 14px; cursor: pointer; text-align: left; transition: 0.16s; font-family: inherit; }
+        .force-unit:hover { background: rgba(197,160,89,0.12); }
+        .force-unit.active { background: #304055; box-shadow: inset 4px 0 0 var(--accent-gold); }
+        .force-unit-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: bold; }
+        .force-unit-meta { margin-top: 7px; display: flex; gap: 6px; flex-wrap: wrap; color: #cbd5e1; font-size: 0.78em; }
+        .force-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: rgba(255,255,255,0.06); }
+        .force-detail { border: 1px solid #c8c0b3; background: linear-gradient(180deg, #fbfaf6 0%, #fff 100%); min-height: 260px; }
+        .force-detail-header { padding: 15px 18px; border-bottom: 1px solid #dcd6cc; display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; background: #f8f4ec; }
+        .force-detail-title { font-size: 1.15em; font-weight: bold; color: #1f2933; }
+        .force-detail-sub { color: #6b7280; margin-top: 4px; font-size: 0.86em; }
+        .force-readiness { text-align: right; min-width: 92px; }
+        .force-readiness strong { display: block; font-size: 1.4em; color: var(--accent-blue); }
+        .force-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 18px; border-bottom: 1px solid #eee; }
+        .force-stat { background: #f8f9fa; border: 1px solid #ece7df; padding: 10px; text-align: center; }
+        .force-stat label { display: block; color: #777; font-size: 0.75em; margin-bottom: 4px; }
+        .force-stat b { font-size: 1.2em; color: #2c3e50; }
+        .equipment-list { padding: 14px 18px 18px; display: grid; gap: 9px; }
+        .equipment-row { display: grid; grid-template-columns: 1fr 82px 96px; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid #eee; background: #fff; }
+        .equipment-name { font-weight: bold; color: #2c3e50; }
+        .equipment-cat { color: #8a8175; font-size: 0.78em; margin-top: 2px; }
+        .equipment-count { font-family: monospace; text-align: right; color: #374151; }
+        .equipment-status { text-align: center; font-size: 0.8em; font-weight: bold; padding: 4px 6px; border-radius: 3px; }
+        .equipment-status.ok { background: #eafaf1; color: #1f8f4d; }
+        .equipment-status.low { background: #fff8e1; color: #b7791f; }
+        .equipment-status.bad { background: #fdeaea; color: #c0392b; }
+        .force-empty { padding: 28px; text-align: center; color: #7f8c8d; background: #fafafa; border: 1px dashed #ddd; }
+
         #detail-panel { display: none; animation: fadeIn 0.3s; height: 100%; }
         .suzerain-container { background: var(--panel-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.1); height: 100%; display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; }
         .suz-header { background: var(--accent-blue); color: #fff; padding: 15px; text-align: center; font-size: 1.2em; letter-spacing: 2px; font-weight: bold; border-bottom: 4px solid var(--accent-gold); }
@@ -237,6 +268,16 @@
                 </div>
 
                 <div class="data-section">
+                    <div class="section-header">
+                        <span>⚔️ 军备与部队编制</span>
+                        <span id="force-summary" style="font-size:0.8em; color:#666; font-weight:normal;">--</span>
+                    </div>
+                    <div id="military-panel" class="military-layout">
+                        <div class="force-empty">正在读取军备数据库...</div>
+                    </div>
+                </div>
+
+                <div class="data-section">
                     <div class="section-header"><span>⚖️ 贸易与产业收支</span></div>
                     <table class="finance-table">
                         <thead><tr><th>项目名称</th><th>类型</th><th>详情</th><th class="amount-col">月度额度</th></tr></thead>
@@ -296,6 +337,14 @@
     let currentLocation = 'almorel';
     let territoryData = null;
     let chartInstances = {};
+    let militaryUnitsCache = [];
+    let militaryEquipmentCache = {};
+
+    function escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[ch]));
+    }
 
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -363,6 +412,7 @@
 
         // 5. 拉取数据
         await loadAndRenderFinance(globalUserId); 
+        await loadAndRenderMilitary(globalUserId);
         await loadHistoricalTrends(globalUserId); 
         toggleOverview(true); 
     }
@@ -554,6 +604,154 @@
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } } }
         });
+    }
+
+    async function loadAndRenderMilitary(userId) {
+        const panel = document.getElementById('military-panel');
+        const summary = document.getElementById('force-summary');
+        if (!panel || !summary) return;
+
+        panel.innerHTML = '<div class="force-empty">正在读取军备数据库...</div>';
+        summary.innerText = '--';
+
+        let unitQ = supabaseClient
+            .from('city_military_units')
+            .select('*')
+            .eq('user_id', userId)
+            .order('sort_order', { ascending: true })
+            .order('created_at', { ascending: true });
+
+        if (currentLocation !== 'overview') unitQ = unitQ.eq('location', currentLocation);
+
+        const { data: units, error: unitError } = await unitQ;
+        if (unitError) {
+            panel.innerHTML = '<div class="force-empty">尚未部署军备数据库。请先运行本次提供的 SQL。</div>';
+            summary.innerText = '未接入';
+            return;
+        }
+
+        militaryUnitsCache = units || [];
+        const unitIds = militaryUnitsCache.map(u => u.id);
+        militaryEquipmentCache = {};
+
+        if (unitIds.length > 0) {
+            const { data: equipment, error: equipError } = await supabaseClient
+                .from('city_military_equipment')
+                .select('*')
+                .in('unit_id', unitIds)
+                .order('sort_order', { ascending: true })
+                .order('created_at', { ascending: true });
+
+            if (!equipError && equipment) {
+                equipment.forEach(item => {
+                    if (!militaryEquipmentCache[item.unit_id]) militaryEquipmentCache[item.unit_id] = [];
+                    militaryEquipmentCache[item.unit_id].push(item);
+                });
+            }
+        }
+
+        renderMilitaryPanel();
+    }
+
+    function renderMilitaryPanel(activeUnitId = null) {
+        const panel = document.getElementById('military-panel');
+        const summary = document.getElementById('force-summary');
+        if (!panel || !summary) return;
+
+        if (!militaryUnitsCache.length) {
+            panel.innerHTML = '<div class="force-empty">当前辖区暂无登记部队。</div>';
+            summary.innerText = '0 人';
+            return;
+        }
+
+        const totalPersonnel = militaryUnitsCache.reduce((sum, u) => sum + Number(u.personnel_count || 0), 0);
+        const totalEquipment = Object.values(militaryEquipmentCache)
+            .flat()
+            .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        summary.innerText = `${totalPersonnel.toLocaleString()} 人 / ${totalEquipment.toLocaleString()} 件装备`;
+
+        const activeUnit = militaryUnitsCache.find(u => u.id === activeUnitId) || militaryUnitsCache[0];
+
+        const rosterHtml = `
+            <div class="force-roster">
+                <div class="force-roster-header">
+                    <span>ORDER OF BATTLE</span>
+                    <span style="font-size:0.8em; color:#cbd5e1;">${militaryUnitsCache.length} 编制</span>
+                </div>
+                <div class="force-unit-list">
+                    ${militaryUnitsCache.map(unit => {
+                        const isActive = unit.id === activeUnit.id ? 'active' : '';
+                        const readiness = Math.max(0, Math.min(100, Number(unit.readiness ?? 100)));
+                        return `
+                            <button class="force-unit ${isActive}" onclick="renderMilitaryPanel(${unit.id})">
+                                <div class="force-unit-title">
+                                    <span>${escapeHTML(unit.unit_name)}</span>
+                                    <span>${readiness}%</span>
+                                </div>
+                                <div class="force-unit-meta">
+                                    <span class="force-pill">👥 ${Number(unit.personnel_count || 0).toLocaleString()}</span>
+                                    <span class="force-pill">${escapeHTML(unit.unit_type || '部队')}</span>
+                                    <span class="force-pill">${escapeHTML(unit.location || '未知辖区')}</span>
+                                </div>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+
+        panel.innerHTML = rosterHtml + renderMilitaryDetail(activeUnit);
+    }
+
+    function renderMilitaryDetail(unit) {
+        const equipment = militaryEquipmentCache[unit.id] || [];
+        const personnel = Number(unit.personnel_count || 0);
+        const readiness = Math.max(0, Math.min(100, Number(unit.readiness ?? 100)));
+        const requiredTotal = equipment.reduce((sum, item) => sum + Number(item.required_quantity || 0), 0);
+        const actualTotal = equipment.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const fillRate = requiredTotal > 0 ? Math.round((actualTotal / requiredTotal) * 100) : 100;
+
+        const equipmentRows = equipment.length ? equipment.map(item => {
+            const qty = Number(item.quantity || 0);
+            const req = Number(item.required_quantity || 0);
+            const delta = req ? qty - req : 0;
+            const statusClass = !req || delta >= 0 ? 'ok' : (qty / req >= 0.75 ? 'low' : 'bad');
+            const statusText = !req ? '登记' : (delta >= 0 ? `+${delta}` : `${delta}`);
+
+            return `
+                <div class="equipment-row">
+                    <div>
+                        <div class="equipment-name">${escapeHTML(item.equipment_name)}</div>
+                        <div class="equipment-cat">${escapeHTML(item.category || '装备')} ${item.notes ? ' / ' + escapeHTML(item.notes) : ''}</div>
+                    </div>
+                    <div class="equipment-count">${qty.toLocaleString()}${req ? ` / ${req.toLocaleString()}` : ''}</div>
+                    <div class="equipment-status ${statusClass}">${statusText}</div>
+                </div>
+            `;
+        }).join('') : '<div class="force-empty">该部队暂无装备登记。</div>';
+
+        return `
+            <div class="force-detail">
+                <div class="force-detail-header">
+                    <div>
+                        <div class="force-detail-title">${escapeHTML(unit.unit_name)}</div>
+                        <div class="force-detail-sub">${escapeHTML(unit.unit_type || '部队')} / ${escapeHTML(unit.training_level || '训练等级未登记')} / ${escapeHTML(unit.doctrine || '未指定战术')}</div>
+                    </div>
+                    <div class="force-readiness">
+                        <strong>${readiness}%</strong>
+                        <span>战备率</span>
+                    </div>
+                </div>
+                <div class="force-stat-grid">
+                    <div class="force-stat"><label>人员</label><b>${personnel.toLocaleString()}</b></div>
+                    <div class="force-stat"><label>装备满足</label><b style="color:${fillRate >= 100 ? '#27ae60' : fillRate >= 75 ? '#b7791f' : '#c0392b'}">${fillRate}%</b></div>
+                    <div class="force-stat"><label>装备项目</label><b>${equipment.length}</b></div>
+                </div>
+                <div class="equipment-list">
+                    ${equipmentRows}
+                </div>
+            </div>
+        `;
     }
 
     async function loadHistoricalTrends(userId) {
