@@ -128,15 +128,17 @@
         .force-detail { border: 1px solid #c8c0b3; background: linear-gradient(180deg, #fbfaf6 0%, #fff 100%); min-height: 260px; }
         .force-detail-header { padding: 15px 18px; border-bottom: 1px solid #dcd6cc; display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; background: #f8f4ec; }
         .force-detail-title { font-size: 1.15em; font-weight: bold; color: #1f2933; }
-        .force-detail-sub { color: #6b7280; margin-top: 4px; font-size: 0.86em; }
+        .force-detail-sub { color: #6b7280; margin-top: 7px; font-size: 0.86em; display: flex; gap: 6px; flex-wrap: wrap; }
+        .force-chip { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: #fff; border: 1px solid #ded7cb; color: #4b5563; }
+        .force-doctrine { margin-top: 10px; padding: 9px 11px; background: rgba(52, 73, 94, 0.06); border-left: 3px solid var(--accent-blue); color: #34495e; font-size: 0.86em; line-height: 1.45; }
         .force-readiness { text-align: right; min-width: 92px; }
         .force-readiness strong { display: block; font-size: 1.4em; color: var(--accent-blue); }
-        .force-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 18px; border-bottom: 1px solid #eee; }
+        .force-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px 18px; border-bottom: 1px solid #eee; }
         .force-stat { background: #f8f9fa; border: 1px solid #ece7df; padding: 10px; text-align: center; }
         .force-stat label { display: block; color: #777; font-size: 0.75em; margin-bottom: 4px; }
         .force-stat b { font-size: 1.2em; color: #2c3e50; }
         .equipment-list { padding: 14px 18px 18px; display: grid; gap: 9px; }
-        .equipment-row { display: grid; grid-template-columns: 1fr 82px 96px; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid #eee; background: #fff; }
+        .equipment-row { display: grid; grid-template-columns: 1fr 118px 96px; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid #eee; background: #fff; }
         .equipment-name { font-weight: bold; color: #2c3e50; }
         .equipment-cat { color: #8a8175; font-size: 0.78em; margin-top: 2px; }
         .equipment-count { font-family: monospace; text-align: right; color: #374151; }
@@ -144,6 +146,7 @@
         .equipment-status.ok { background: #eafaf1; color: #1f8f4d; }
         .equipment-status.low { background: #fff8e1; color: #b7791f; }
         .equipment-status.bad { background: #fdeaea; color: #c0392b; }
+        .equipment-need { color: #8a8175; font-size: 0.78em; margin-top: 2px; text-align: right; }
         .force-empty { padding: 28px; text-align: center; color: #7f8c8d; background: #fafafa; border: 1px dashed #ddd; }
 
         #detail-panel { display: none; animation: fadeIn 0.3s; height: 100%; }
@@ -344,6 +347,45 @@
         return String(value ?? '').replace(/[&<>'"]/g, ch => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
         }[ch]));
+    }
+
+    const TRAINING_SCORE = {
+        '乌合之众': 25,
+        '动员民兵': 40,
+        '杂牌军': 50,
+        '整训中': 60,
+        '常备军': 75,
+        '老兵': 88,
+        '精锐': 100
+    };
+
+    function getTrainingStatus(unit) {
+        return unit.training_status || unit.training_level || '常备军';
+    }
+
+    function getTrainingScore(unit) {
+        const status = getTrainingStatus(unit);
+        return TRAINING_SCORE[status] ?? 60;
+    }
+
+    function calculateEquipmentFillRate(equipment) {
+        const requiredItems = equipment.filter(item => Number(item.required_quantity || 0) > 0);
+        const requiredTotal = requiredItems.reduce((sum, item) => sum + Number(item.required_quantity || 0), 0);
+        if (requiredTotal <= 0) return 0;
+
+        const coveredTotal = requiredItems.reduce((sum, item) => {
+            const qty = Number(item.quantity || 0);
+            const req = Number(item.required_quantity || 0);
+            return sum + Math.min(qty, req);
+        }, 0);
+
+        return Math.round((coveredTotal / requiredTotal) * 100);
+    }
+
+    function calculateReadiness(unit, equipment) {
+        const equipmentFill = calculateEquipmentFillRate(equipment);
+        const trainingScore = getTrainingScore(unit);
+        return Math.round((equipmentFill + trainingScore) / 2);
     }
 
     async function init() {
@@ -681,7 +723,9 @@
                 <div class="force-unit-list">
                     ${militaryUnitsCache.map(unit => {
                         const isActive = unit.id === activeUnit.id ? 'active' : '';
-                        const readiness = Math.max(0, Math.min(100, Number(unit.readiness ?? 100)));
+                        const equipment = militaryEquipmentCache[unit.id] || [];
+                        const readiness = calculateReadiness(unit, equipment);
+                        const trainingStatus = getTrainingStatus(unit);
                         return `
                             <button class="force-unit ${isActive}" onclick="renderMilitaryPanel(${unit.id})">
                                 <div class="force-unit-title">
@@ -691,7 +735,7 @@
                                 <div class="force-unit-meta">
                                     <span class="force-pill">👥 ${Number(unit.personnel_count || 0).toLocaleString()}</span>
                                     <span class="force-pill">${escapeHTML(unit.unit_type || '部队')}</span>
-                                    <span class="force-pill">${escapeHTML(unit.location || '未知辖区')}</span>
+                                    <span class="force-pill">${escapeHTML(trainingStatus)}</span>
                                 </div>
                             </button>
                         `;
@@ -706,17 +750,17 @@
     function renderMilitaryDetail(unit) {
         const equipment = militaryEquipmentCache[unit.id] || [];
         const personnel = Number(unit.personnel_count || 0);
-        const readiness = Math.max(0, Math.min(100, Number(unit.readiness ?? 100)));
-        const requiredTotal = equipment.reduce((sum, item) => sum + Number(item.required_quantity || 0), 0);
-        const actualTotal = equipment.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        const fillRate = requiredTotal > 0 ? Math.round((actualTotal / requiredTotal) * 100) : 100;
+        const trainingStatus = getTrainingStatus(unit);
+        const trainingScore = getTrainingScore(unit);
+        const fillRate = calculateEquipmentFillRate(equipment);
+        const readiness = calculateReadiness(unit, equipment);
 
         const equipmentRows = equipment.length ? equipment.map(item => {
             const qty = Number(item.quantity || 0);
             const req = Number(item.required_quantity || 0);
             const delta = req ? qty - req : 0;
             const statusClass = !req || delta >= 0 ? 'ok' : (qty / req >= 0.75 ? 'low' : 'bad');
-            const statusText = !req ? '登记' : (delta >= 0 ? `+${delta}` : `${delta}`);
+            const statusText = !req ? '登记' : (delta === 0 ? '满编' : (delta > 0 ? `余 ${delta}` : `缺 ${Math.abs(delta)}`));
 
             return `
                 <div class="equipment-row">
@@ -724,7 +768,10 @@
                         <div class="equipment-name">${escapeHTML(item.equipment_name)}</div>
                         <div class="equipment-cat">${escapeHTML(item.category || '装备')} ${item.notes ? ' / ' + escapeHTML(item.notes) : ''}</div>
                     </div>
-                    <div class="equipment-count">${qty.toLocaleString()}${req ? ` / ${req.toLocaleString()}` : ''}</div>
+                    <div>
+                        <div class="equipment-count">现有 ${qty.toLocaleString()}</div>
+                        <div class="equipment-need">${req ? `编制 ${req.toLocaleString()}` : '无编制需求'}</div>
+                    </div>
                     <div class="equipment-status ${statusClass}">${statusText}</div>
                 </div>
             `;
@@ -735,7 +782,12 @@
                 <div class="force-detail-header">
                     <div>
                         <div class="force-detail-title">${escapeHTML(unit.unit_name)}</div>
-                        <div class="force-detail-sub">${escapeHTML(unit.unit_type || '部队')} / ${escapeHTML(unit.training_level || '训练等级未登记')} / ${escapeHTML(unit.doctrine || '未指定战术')}</div>
+                        <div class="force-detail-sub">
+                            <span class="force-chip">${escapeHTML(unit.unit_type || '部队')}</span>
+                            <span class="force-chip">训练：${escapeHTML(trainingStatus)}</span>
+                            <span class="force-chip">${escapeHTML(unit.location || '未知辖区')}</span>
+                        </div>
+                        <div class="force-doctrine">${escapeHTML(unit.doctrine || '未指定战术')}</div>
                     </div>
                     <div class="force-readiness">
                         <strong>${readiness}%</strong>
@@ -744,7 +796,8 @@
                 </div>
                 <div class="force-stat-grid">
                     <div class="force-stat"><label>人员</label><b>${personnel.toLocaleString()}</b></div>
-                    <div class="force-stat"><label>装备满足</label><b style="color:${fillRate >= 100 ? '#27ae60' : fillRate >= 75 ? '#b7791f' : '#c0392b'}">${fillRate}%</b></div>
+                    <div class="force-stat"><label>装备满足率</label><b style="color:${fillRate >= 100 ? '#27ae60' : fillRate >= 75 ? '#b7791f' : '#c0392b'}">${fillRate}%</b></div>
+                    <div class="force-stat"><label>训练状态</label><b>${trainingScore}%</b></div>
                     <div class="force-stat"><label>装备项目</label><b>${equipment.length}</b></div>
                 </div>
                 <div class="equipment-list">
