@@ -399,7 +399,48 @@ WHERE faction = 'empire';
 TRUNCATE TABLE war_logs RESTART IDENTITY;
 INSERT INTO war_logs (log_text) VALUES ('【系统】旧的战局已归档。全新楚尔特战役推演正式启动！');
 ```
-```
+## 授权说明
+
+本仓库采用双重授权结构。
+
+### 代码部分
+
+本仓库中的源代码使用 **GNU General Public License v3.0** 授权。
+
+包括但不限于：
+
+- 各类html
+- 配置文件
+- 构建相关代码
+
+详见 [`LICENSE`](./LICENSE)。
+
+### 非代码内容部分
+
+除非另有说明，本仓库中的非代码内容使用  
+**Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International**  
+即 **CC BY-NC-SA 4.0** 授权。
+
+包括但不限于：
+
+- 世界观设定
+- 任何剧情文本
+- 角色描述
+- 阵营描述
+- 地图
+- 图片
+- 插画
+- UI 视觉稿
+- 设定文档
+- 叙事内容
+
+详见 [`LICENSE-CONTENT`](./LICENSE-CONTENT)。
+
+### 商业使用
+
+未经版权持有人明确书面许可，不得将非代码内容用于商业用途。
+
+Copyright © 2026 滑而不稽则罔.
 
 ---
 
