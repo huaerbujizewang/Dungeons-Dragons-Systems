@@ -1982,6 +1982,13 @@
     }
 
     let authVerifyDepth = 0;
+    const AUTHZ_CACHE_TTL = 10 * 60 * 1000;
+    let authzCache = {
+        userId: null,
+        email: '',
+        role: 'player',
+        checkedAt: 0
+    };
 
     function showAuthVerifying() {
         authVerifyDepth++;
@@ -2003,9 +2010,31 @@
         return user;
     }
 
+    function clearAuthzCache() {
+        authzCache = {
+            userId: null,
+            email: '',
+            role: 'player',
+            checkedAt: 0
+        };
+    }
+
+    function applyAuthzCache() {
+        myId = authzCache.userId;
+        currentUserEmail = authzCache.email;
+        currentUserRole = authzCache.role;
+    }
+
     async function refreshCurrentRole(force = false) {
+        const now = Date.now();
+        if (!force && authzCache.userId && now - authzCache.checkedAt < AUTHZ_CACHE_TTL) {
+            applyAuthzCache();
+            return authzCache.role;
+        }
+
         const user = await getVerifiedUser();
         if (!user) {
+            clearAuthzCache();
             myId = null;
             currentUserEmail = '';
             currentUserRole = 'player';
@@ -2023,21 +2052,28 @@
             .eq('id', user.id)
             .maybeSingle();
 
-        currentUserRole = adminData?.role_level || 'player';
+        authzCache = {
+            userId: user.id,
+            email: user.email || '',
+            role: adminData?.role_level || 'player',
+            checkedAt: now
+        };
+        applyAuthzCache();
         return currentUserRole;
     }
 
-    async function requireAdminRole(allowedRoles = ADMIN_ROLES) {
-        showAuthVerifying();
+    async function requireAdminRole(allowedRoles = ADMIN_ROLES, force = false) {
+        const shouldShowVerify = force || !authzCache.userId || Date.now() - authzCache.checkedAt >= AUTHZ_CACHE_TTL;
+        if (shouldShowVerify) showAuthVerifying();
         try {
-            const role = await refreshCurrentRole(true);
+            const role = await refreshCurrentRole(force);
             if (!allowedRoles.includes(role)) {
                 alert('权限不足：该操作需要 DM 权限。');
                 return false;
             }
             return true;
         } finally {
-            hideAuthVerifying();
+            if (shouldShowVerify) hideAuthVerifying();
         }
     }
 
@@ -2050,15 +2086,15 @@
     }
 
     async function requireWarAccess(faction = null) {
-        showAuthVerifying();
+        const shouldShowVerify = !authzCache.userId || Date.now() - authzCache.checkedAt >= AUTHZ_CACHE_TTL;
+        if (shouldShowVerify) showAuthVerifying();
         try {
-            const user = await getVerifiedUser();
-            if (!user) {
+            const role = await refreshCurrentRole(false);
+            if (role === 'guest') {
                 alert('身份凭证已失效，请重新登录。');
                 return false;
             }
 
-            currentUserEmail = user.email || currentUserEmail;
             const email = currentUserEmail.toLowerCase();
             const isController = WAR_CONTROLLER_EMAILS.includes(email);
             const isFactionOwner = faction ? window.myWarFaction === faction : !!window.myWarFaction;
@@ -2070,7 +2106,7 @@
 
             return true;
         } finally {
-            hideAuthVerifying();
+            if (shouldShowVerify) hideAuthVerifying();
         }
     }
     // === 怪物图鉴在线修改器 ===
@@ -3026,7 +3062,7 @@ async function loadGold() {
 
 
     async function switchTab(tab) {
-        if (tab === 'security' && !await requireAdminRole(['root'])) return;
+        if (tab === 'security' && !await requireAdminRole(['root'], true)) return;
 
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -3451,7 +3487,7 @@ async function buy(id, p, n, c) {
     }
 
     async function assignDM() {
-        if (!await requireAdminRole(['root'])) return;
+        if (!await requireAdminRole(['root'], true)) return;
         const dmId = document.getElementById('adm-assign-dm-list').value;
         showLoading();
         await supabaseClient.from('profiles').update({ assigned_dm_id: dmId || null }).eq('id', selectedUserId);
@@ -3552,7 +3588,7 @@ async function buy(id, p, n, c) {
 
     // ================== ：加载日志 ==================
     async function loadLogs() {
-        if (!await requireAdminRole(['root'])) return;
+        if (!await requireAdminRole(['root'], true)) return;
         const logBox = document.getElementById('audit-log-container');
         logBox.innerHTML = '加载日志中...';
         
@@ -3877,7 +3913,7 @@ async function calculateCityNetIncome(targetUserId) {
 
 
 async function loadLoginLogs() {
-        if (!await requireAdminRole(['root'])) return;
+        if (!await requireAdminRole(['root'], true)) return;
         const container = document.getElementById('login-log-container');
         container.innerHTML = '加载中...';
 
@@ -3916,7 +3952,7 @@ async function loadLoginLogs() {
     }
     // --- 加载所有账号 (查 profiles 表) ---
     async function loadAllAccounts() {
-        if (!await requireAdminRole(['root'])) return;
+        if (!await requireAdminRole(['root'], true)) return;
         const container = document.getElementById('account-list-container');
         container.innerHTML = '正在拉取全服名单...';
 
@@ -3972,7 +4008,7 @@ async function loadLoginLogs() {
 
     // --- 修改用户权限 ---
     async function changeUserRole(targetId, newRole) {
-        if (!await requireAdminRole(['root'])) return;
+        if (!await requireAdminRole(['root'], true)) return;
         if (!newRole) return;
         if (!confirm(`确定要将该用户的权限修改为 [${newRole.toUpperCase()}] 吗？`)) return;
 
@@ -7023,6 +7059,9 @@ window.endWarTurn = async function() {
     // 强制踢人
     supabaseClient.auth.onAuthStateChange((event, session) => {
         console.log("Auth Event:", event);
+        if (event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+            clearAuthzCache();
+        }
         if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
             alert('身份凭证已失效或账号被锁定，请重新登录。');
             window.location.reload(); 
