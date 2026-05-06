@@ -478,20 +478,19 @@
                 <div class="eyebrow">Archive XII</div>
                 <h1>超位法术</h1>
                 <p class="lead">
-                    记录凡常法术位之外的宏观奇迹：覆盖城市的迷锁、由神性驱动的工程，以及足以改写地脉与秩序的高等魔法。
-                    已授权档案会根据当前登录身份显示。
+                    记录凡常法术位之外的宏观奇迹：隔绝天地的广域迷锁、以信仰铸就的神迹，以及足以重塑世界底层法则的高等魔法。
                 </p>
             </div>
 
             <div class="mythal-diagram" aria-label="超位法术示意图">
-                <div class="sigil tree">⌘<small>生机</small></div>
-                <div class="sigil water">≈<small>净水</small></div>
-                <div class="sigil light">✦<small>永昼</small></div>
-                <div class="sigil ward">◇<small>结界</small></div>
+                <div class="sigil tree">⌘<small>权柄</small></div>
+                <div class="sigil water">≈<small>逆熵</small></div>
+                <div class="sigil light">✦<small>塑源</small></div>
+                <div class="sigil ward">◇<small>永恒</small></div>
                 <div class="diagram-core">
                     <div>
-                        <strong>授权档案</strong>
-                        <span>SUPERNAL ARCANA</span>
+                        <strong>᚛ ᚫᚢᚦᚩᚱ ᛉᛖᛞ ᚜</strong>
+                        <span>ᛋᚢᛈᛖᚱᚾᚪᛚ ᛫ ᚪᚱᚳᚪᚾᚪ</span>
                     </div>
                 </div>
             </div>
@@ -500,11 +499,11 @@
         <nav class="tabs" aria-label="超位法术分类">
             <button class="tab active" data-panel="mythal" onclick="switchArchive('mythal')">
                 <strong>迷锁</strong>
-                <span>城市级奥术结界与授权领域</span>
+                <span>编织地脉，重塑一方天地的至高结界</span>
             </button>
             <button class="tab" data-panel="divine" onclick="switchArchive('divine')">
-                <strong>神性工程</strong>
-                <span>神力、信仰与奇迹结构</span>
+                <strong>神迹</strong>
+                <span>神力、信仰与具现的奇迹和伟力</span>
             </button>
             <button class="tab" data-panel="high" onclick="switchArchive('high')">
                 <strong>高等魔法</strong>
@@ -611,7 +610,7 @@
 
         <section class="panel" id="panel-divine">
             <div class="empty-state">
-                <h2>神性工程</h2>
+                <h2>神迹</h2>
                 <p>暂无公开档案。</p>
             </div>
         </section>
@@ -645,15 +644,36 @@
             });
         }
 
+        async function getTargetUserEmail(sessionUser, targetUid) {
+            if (!targetUid || targetUid === sessionUser.id) {
+                return sessionUser.email || '';
+            }
+
+            const { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('email')
+                .eq('id', targetUid)
+                .maybeSingle();
+
+            if (error) {
+                console.error('读取目标账号档案失败:', error);
+                return '';
+            }
+
+            return profile?.email || '';
+        }
+
         async function checkAccess() {
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (!user) {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
                 window.location.href = 'index.html';
                 return;
             }
 
-            const userEmail = (user.email || '').toLowerCase();
-            const canViewAlmorelMythal = userEmail === ALMOREL_MYTHAL_OWNER_EMAIL;
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetUid = urlParams.get('uid') || session.user.id;
+            const targetEmail = (await getTargetUserEmail(session.user, targetUid)).toLowerCase();
+            const canViewAlmorelMythal = targetEmail === ALMOREL_MYTHAL_OWNER_EMAIL;
 
             document.getElementById('almorel-mythal-record').style.display = canViewAlmorelMythal ? 'grid' : 'none';
             document.getElementById('mythal-no-access').style.display = canViewAlmorelMythal ? 'none' : 'block';
