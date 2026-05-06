@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D 系统 - 超位法术</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --ink: #20252b;
+            --muted: #68717a;
+            --line: #dfe5e8;
+            --paper: #f8faf9;
+            --green: #1f8a63;
+            --teal: #237b8d;
+            --gold: #c9922e;
+            --violet: #7651a8;
+            --red: #b8453d;
+            --shadow: 0 14px 36px rgba(22, 34, 45, 0.11);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--ink);
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248,250,249,0.98)),
+                repeating-linear-gradient(90deg, rgba(31,138,99,0.05) 0 1px, transparent 1px 72px),
+                var(--paper);
+        }
+
+        button { font: inherit; }
+
+        .page {
+            width: min(1180px, calc(100% - 36px));
+            margin: 0 auto;
+            padding: 28px 0 52px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .back-btn {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            border-radius: 6px;
+            padding: 9px 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(20, 35, 45, 0.06);
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-1px);
+            border-color: var(--teal);
+            box-shadow: 0 8px 18px rgba(35, 123, 141, 0.14);
+        }
+
+        .archive-code {
+            color: var(--muted);
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+            gap: 28px;
+            align-items: stretch;
+            margin-bottom: 24px;
+        }
+
+        .hero-copy {
+            padding: 14px 0;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--teal);
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 32px;
+            height: 2px;
+            background: var(--teal);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2.2rem, 5vw, 4.8rem);
+            line-height: 1.02;
+            letter-spacing: 0;
+            color: #111820;
+        }
+
+        .lead {
+            max-width: 760px;
+            margin: 18px 0 0;
+            color: #44515c;
+            font-size: 1.02rem;
+            line-height: 1.85;
+        }
+
+        .mythal-diagram {
+            min-height: 330px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(35, 123, 141, 0.22);
+            border-radius: 8px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.86), rgba(236,246,241,0.95)),
+                linear-gradient(45deg, rgba(201,146,46,0.12), transparent 46%),
+                #f3f8f5;
+            box-shadow: var(--shadow);
+        }
+
+        .mythal-diagram::before,
+        .mythal-diagram::after {
+            content: "";
+            position: absolute;
+            inset: 36px;
+            border: 1px solid rgba(31, 138, 99, 0.34);
+            transform: rotate(45deg);
+        }
+
+        .mythal-diagram::after {
+            inset: 76px;
+            border-color: rgba(118, 81, 168, 0.25);
+            transform: rotate(0deg);
+        }
+
+        .diagram-core {
+            position: absolute;
+            inset: 50%;
+            width: 138px;
+            height: 138px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 2px solid rgba(201, 146, 46, 0.72);
+            display: grid;
+            place-items: center;
+            text-align: center;
+            background: rgba(255,255,255,0.82);
+            box-shadow: 0 0 0 12px rgba(31,138,99,0.08), 0 18px 32px rgba(30, 52, 43, 0.14);
+            z-index: 2;
+        }
+
+        .diagram-core strong {
+            display: block;
+            font-size: 1.05rem;
+            color: #1d6048;
+        }
+
+        .diagram-core span {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .sigil {
+            position: absolute;
+            z-index: 1;
+            display: grid;
+            place-items: center;
+            width: 82px;
+            height: 82px;
+            border: 1px solid rgba(32, 37, 43, 0.12);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.68);
+            color: var(--ink);
+            font-size: 1.8rem;
+            box-shadow: 0 8px 18px rgba(25, 45, 55, 0.08);
+        }
+
+        .sigil small {
+            position: absolute;
+            bottom: 8px;
+            font-size: 0.68rem;
+            color: var(--muted);
+        }
+
+        .sigil.tree { left: 26px; top: 30px; color: var(--green); }
+        .sigil.water { right: 34px; top: 50px; color: var(--teal); }
+        .sigil.light { left: 54px; bottom: 38px; color: var(--gold); }
+        .sigil.ward { right: 48px; bottom: 30px; color: var(--violet); }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 24px 0 26px;
+        }
+
+        .tab {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--muted);
+            border-radius: 8px;
+            padding: 14px 16px;
+            text-align: left;
+            cursor: pointer;
+            transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .tab:hover { border-color: var(--teal); color: var(--ink); }
+
+        .tab.active {
+            border-color: rgba(31, 138, 99, 0.55);
+            color: #113a2c;
+            box-shadow: inset 0 -3px 0 var(--green), 0 8px 20px rgba(31, 138, 99, 0.12);
+        }
+
+        .tab strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 1rem;
+        }
+
+        .tab span {
+            font-size: 0.82rem;
+        }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .record {
+            display: grid;
+            grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .profile,
+        .function-board,
+        .active-power,
+        .empty-state {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.92);
+            box-shadow: 0 8px 26px rgba(24, 40, 50, 0.07);
+        }
+
+        .profile { overflow: hidden; }
+
+        .profile-head {
+            padding: 22px;
+            color: #fff;
+            background:
+                linear-gradient(135deg, rgba(31,138,99,0.92), rgba(35,123,141,0.82)),
+                #1f8a63;
+        }
+
+        .profile-head .label {
+            font-size: 0.74rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            opacity: 0.82;
+        }
+
+        .profile-head h2 {
+            margin: 8px 0 8px;
+            font-size: 2rem;
+            letter-spacing: 0;
+        }
+
+        .profile-head p {
+            margin: 0;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.86);
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+
+        .profile-item {
+            padding: 17px 20px;
+            border-top: 1px solid var(--line);
+        }
+
+        .profile-item span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.78rem;
+            margin-bottom: 5px;
+        }
+
+        .profile-item strong {
+            font-size: 1rem;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(31, 138, 99, 0.28);
+            border-radius: 999px;
+            padding: 5px 11px;
+            color: #176449;
+            background: rgba(31, 138, 99, 0.08);
+            font-weight: 800;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 0 4px rgba(31, 138, 99, 0.12);
+        }
+
+        .function-board { padding: 22px; }
+
+        .board-title,
+        .active-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .board-title h2,
+        .active-title h2 {
+            margin: 0;
+            font-size: 1.35rem;
+            letter-spacing: 0;
+        }
+
+        .count-mark {
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .function-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .function-card {
+            min-height: 146px;
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--green);
+            border-radius: 8px;
+            padding: 16px;
+            background: #fff;
+        }
+
+        .function-card:nth-child(2) { border-left-color: var(--gold); }
+        .function-card:nth-child(3) { border-left-color: var(--violet); }
+        .function-card:nth-child(4) { border-left-color: #e1b94b; }
+        .function-card:nth-child(5) { border-left-color: var(--teal); }
+        .function-card:nth-child(6) { border-left-color: var(--red); }
+
+        .function-card h3 {
+            margin: 0 0 10px;
+            font-size: 1.05rem;
+            letter-spacing: 0;
+            color: #182028;
+        }
+
+        .function-card p {
+            margin: 0;
+            color: #495663;
+            font-size: 0.92rem;
+            line-height: 1.72;
+        }
+
+        .active-power {
+            margin-top: 18px;
+            padding: 20px;
+            border-color: rgba(201, 146, 46, 0.42);
+            background:
+                linear-gradient(90deg, rgba(201,146,46,0.08), rgba(255,255,255,0.88) 34%),
+                #fff;
+        }
+
+        .active-rule {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin: 14px 0 16px;
+        }
+
+        .rule-chip {
+            border: 1px solid rgba(201, 146, 46, 0.36);
+            border-radius: 8px;
+            padding: 11px 12px;
+            background: rgba(255,255,255,0.8);
+        }
+
+        .rule-chip span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.74rem;
+            margin-bottom: 5px;
+        }
+
+        .rule-chip strong {
+            font-size: 0.95rem;
+            color: #4d3510;
+        }
+
+        .active-desc {
+            margin: 0;
+            color: #4f3b1f;
+            line-height: 1.75;
+        }
+
+        .empty-state {
+            padding: 52px 24px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .empty-state h2 {
+            margin: 0 0 8px;
+            color: var(--ink);
+            letter-spacing: 0;
+        }
+
+        .empty-state p {
+            margin: 0;
+            line-height: 1.7;
+        }
+
+        @media (max-width: 860px) {
+            .page { width: min(100% - 24px, 1180px); padding-top: 18px; }
+            .topbar { align-items: flex-start; flex-direction: column; }
+            .hero, .record { grid-template-columns: 1fr; }
+            .mythal-diagram { min-height: 280px; }
+            .tabs { grid-template-columns: 1fr; }
+            .function-list { grid-template-columns: 1fr; }
+            .active-rule { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 520px) {
+            h1 { font-size: 2.3rem; }
+            .mythal-diagram { min-height: 250px; }
+            .sigil { width: 66px; height: 66px; font-size: 1.4rem; }
+            .sigil small { display: none; }
+            .diagram-core { width: 118px; height: 118px; }
+            .active-rule { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page" id="page-content" style="display:none;">
+        <div class="topbar">
+            <button class="back-btn" onclick="goBack()">← 返回主界面</button>
+            <div class="archive-code">超位法术档案 / Supernal Arcana</div>
+        </div>
+
+        <section class="hero">
+            <div class="hero-copy">
+                <div class="eyebrow">Archive XII</div>
+                <h1>超位法术</h1>
+                <p class="lead">
+                    记录凡常法术位之外的宏观奇迹：覆盖城市的迷锁、由神性驱动的工程，以及足以改写地脉与秩序的高等魔法。
+                    已授权档案会根据当前登录身份显示。
+                </p>
+            </div>
+
+            <div class="mythal-diagram" aria-label="超位法术示意图">
+                <div class="sigil tree">⌘<small>生机</small></div>
+                <div class="sigil water">≈<small>净水</small></div>
+                <div class="sigil light">✦<small>永昼</small></div>
+                <div class="sigil ward">◇<small>结界</small></div>
+                <div class="diagram-core">
+                    <div>
+                        <strong>授权档案</strong>
+                        <span>SUPERNAL ARCANA</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <nav class="tabs" aria-label="超位法术分类">
+            <button class="tab active" data-panel="mythal" onclick="switchArchive('mythal')">
+                <strong>迷锁</strong>
+                <span>城市级奥术结界与授权领域</span>
+            </button>
+            <button class="tab" data-panel="divine" onclick="switchArchive('divine')">
+                <strong>神性工程</strong>
+                <span>神力、信仰与奇迹结构</span>
+            </button>
+            <button class="tab" data-panel="high" onclick="switchArchive('high')">
+                <strong>高等魔法</strong>
+                <span>超越常规施法框架的仪式</span>
+            </button>
+        </nav>
+
+        <section class="panel active" id="panel-mythal">
+            <div class="record" id="almorel-mythal-record">
+                <aside class="profile">
+                    <div class="profile-head">
+                        <div class="label">城市级迷锁</div>
+                        <h2>穹光圣域</h2>
+                        <p>以世界树枝丫、海神河水性与天界律令编织而成的艾尔莫瑞尔守护领域。</p>
+                    </div>
+                    <div class="profile-grid">
+                        <div class="profile-item">
+                            <span>所属城市</span>
+                            <strong>艾尔莫瑞尔</strong>
+                        </div>
+                        <div class="profile-item">
+                            <span>类型</span>
+                            <strong>城市级迷锁</strong>
+                        </div>
+                        <div class="profile-item">
+                            <span>状态</span>
+                            <strong class="status-pill"><i class="status-dot"></i>已激活</strong>
+                        </div>
+                        <div class="profile-item">
+                            <span>掌控者</span>
+                            <strong>艾尔莫瑞尔城主府</strong>
+                        </div>
+                    </div>
+                </aside>
+
+                <div>
+                    <section class="function-board">
+                        <div class="board-title">
+                            <h2>被动功能</h2>
+                            <span class="count-mark">6 项常驻效应</span>
+                        </div>
+                        <div class="function-list">
+                            <article class="function-card">
+                                <h3>禁制传送</h3>
+                                <p>迷锁范围内免疫一切未经掌控者授权的跨位面旅行与传送法术，包括区域内的短距传送。</p>
+                            </article>
+                            <article class="function-card">
+                                <h3>四季如春</h3>
+                                <p>世界树的枝丫散发无尽生机。范围内免疫一切极端天气，植物类魔宠或生物每天获得 20 点临时生命值。</p>
+                            </article>
+                            <article class="function-card">
+                                <h3>破邪结界</h3>
+                                <p>邪魔与不死生物必须完成注册，或自身带有神性，方可进入迷锁范围；友方角色默认视为已获授权。</p>
+                            </article>
+                            <article class="function-card">
+                                <h3>永昼之境</h3>
+                                <p>范围内光线可随掌控者心意调节，且绝不会被非神器来源的魔法黑暗所笼罩。</p>
+                            </article>
+                            <article class="function-card">
+                                <h3>极乐之水</h3>
+                                <p>范围内所有天然水源带有微弱海神河水特性。友方生物在迷锁内完成长休后，额外消除 1 级力竭，并在接下来 24 小时内免疫魅惑和恐惧。</p>
+                            </article>
+                            <article class="function-card">
+                                <h3>净化律动</h3>
+                                <p>任何携带疾病、毒素或普通诅咒的生物，只要在迷锁内连续停留满 24 小时，相关负面状态便会被自动净化。</p>
+                            </article>
+                        </div>
+                    </section>
+
+                    <section class="active-power">
+                        <div class="active-title">
+                            <h2>主动功能：天界武装</h2>
+                            <span class="count-mark">战时权限</span>
+                        </div>
+                        <div class="active-rule">
+                            <div class="rule-chip">
+                                <span>启动者</span>
+                                <strong>迷锁掌控者</strong>
+                            </div>
+                            <div class="rule-chip">
+                                <span>持续时间</span>
+                                <strong>1 小时</strong>
+                            </div>
+                            <div class="rule-chip">
+                                <span>使用次数</span>
+                                <strong>每日 1 次</strong>
+                            </div>
+                            <div class="rule-chip">
+                                <span>适用对象</span>
+                                <strong>范围内友方</strong>
+                            </div>
+                        </div>
+                        <p class="active-desc">
+                            启动后，迷锁范围内所有友方的武器暂时附着炽天神侍的怒火。持续期间，每次武器攻击命中时额外造成 4d6 光耀伤害；近战与远程武器攻击均适用。
+                        </p>
+                    </section>
+                </div>
+            </div>
+            <div class="empty-state" id="mythal-no-access" style="display:none;">
+                <h2>迷锁</h2>
+                <p>当前身份暂无可查看的迷锁档案。</p>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-divine">
+            <div class="empty-state">
+                <h2>神性工程</h2>
+                <p>暂无公开档案。</p>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-high">
+            <div class="empty-state">
+                <h2>高等魔法</h2>
+                <p>暂无公开档案。</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const ALMOREL_MYTHAL_OWNER_EMAIL = 'master@almorel.com';
+
+        function goBack() {
+            const uid = new URLSearchParams(window.location.search).get('uid');
+            window.location.href = uid ? `index.html?uid=${encodeURIComponent(uid)}` : 'index.html';
+        }
+
+        function switchArchive(panelName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.panel === panelName);
+            });
+
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.toggle('active', panel.id === `panel-${panelName}`);
+            });
+        }
+
+        async function checkAccess() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const userEmail = (user.email || '').toLowerCase();
+            const canViewAlmorelMythal = userEmail === ALMOREL_MYTHAL_OWNER_EMAIL;
+
+            document.getElementById('almorel-mythal-record').style.display = canViewAlmorelMythal ? 'grid' : 'none';
+            document.getElementById('mythal-no-access').style.display = canViewAlmorelMythal ? 'none' : 'block';
+            document.getElementById('page-content').style.display = 'block';
+        }
+
+        checkAccess();
+    </script>
+</body>
+</html>
