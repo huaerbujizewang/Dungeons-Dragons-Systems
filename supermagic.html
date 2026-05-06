@@ -512,7 +512,8 @@
         </section>
 
         <section class="panel" id="panel-divine">
-            <div class="empty-state" id="divine-empty"></div>
+            <div class="record" id="almorel-divine-record"></div>
+            <div class="empty-state" id="divine-empty" style="display:none;"></div>
         </section>
 
         <section class="panel" id="panel-high">
@@ -613,6 +614,48 @@
           { "label": "适用对象", "value": "范围内友方" }
         ],
         "desc": "启动后，迷锁范围内所有友方的武器暂时附着炽天神侍的怒火。持续期间，每次武器攻击命中时额外造成 4d6 光耀伤害；近战与远程武器攻击均适用。"
+      }
+    }
+  },
+  "divineWorks": {
+    "almorel": {
+      "ownerEmail": "master@almorel.com",
+      "profile": {
+        "label": "神迹",
+        "title": "铂金龙的赐福",
+        "desc": "巴哈姆特垂目于艾尔莫瑞尔，使昔日干裂的荒地被金色树冠、清河、长桥与新生林带重新书写。",
+        "items": [
+          { "label": "所属城市", "value": "艾尔莫瑞尔" },
+          { "label": "类型", "value": "神迹" },
+          { "label": "状态", "value": "已显现", "status": true },
+          { "label": "赐予者", "value": "巴哈姆特" }
+        ]
+      },
+      "manifestation": {
+        "title": "显化内容",
+        "count": "5 项地貌改写",
+        "items": [
+          {
+            "title": "黄金树",
+            "desc": "一株巨大的黄金树在艾尔莫瑞尔的西南方扎根，树冠如铂金与晨光交织。"
+          },
+          {
+            "title": "新生之河",
+            "desc": "巴哈姆特的祝福在荒地上生造出一条河流，使水脉穿城而过，为聚落、林地与农田带来稳定水源。"
+          },
+          {
+            "title": "赐福之桥",
+            "desc": "一座桥横跨新生河道，将两岸道路重新接合，也让这场神迹从景观变成城市生活的一部分。"
+          },
+          {
+            "title": "林带扩张",
+            "desc": "成片树林在艾尔莫瑞尔东部生长，遏止沙尘侵袭，并为艾尔莫瑞尔建立天然的绿色边界。"
+          },
+          {
+            "title": "降水改变",
+            "desc": "赐福改变了周边降水格局，让雨云不再绕开这片土地，荒地因此逐渐转化为可居住、可耕作的绿洲。"
+          }
+        ]
       }
     }
   },
@@ -754,6 +797,53 @@
             `;
         }
 
+        function renderDivineWork(recordId, divineWork) {
+            const profileItems = divineWork.profile.items.map(item => `
+                <div class="profile-item">
+                    <span>${escapeHTML(item.label)}</span>
+                    ${item.status
+                        ? `<strong class="status-pill"><i class="status-dot"></i>${escapeHTML(item.value)}</strong>`
+                        : `<strong>${escapeHTML(item.value)}</strong>`}
+                </div>
+            `).join('');
+
+            const manifestationItems = divineWork.manifestation.items.map(item => `
+                <article class="function-card">
+                    <h3>${escapeHTML(item.title)}</h3>
+                    <p>${escapeHTML(item.desc)}</p>
+                </article>
+            `).join('');
+
+            document.getElementById(recordId).innerHTML = `
+                <aside class="profile">
+                    <div class="profile-head">
+                        <div class="label">${escapeHTML(divineWork.profile.label)}</div>
+                        <h2>${escapeHTML(divineWork.profile.title)}</h2>
+                        <p>${escapeHTML(divineWork.profile.desc)}</p>
+                    </div>
+                    <div class="profile-grid">${profileItems}</div>
+                </aside>
+
+                <div class="record-main">
+                    <section class="function-board">
+                        <div class="board-title">
+                            <h2>${escapeHTML(divineWork.manifestation.title)}</h2>
+                            <span class="count-mark">${escapeHTML(divineWork.manifestation.count)}</span>
+                        </div>
+                        <div class="function-list">${manifestationItems}</div>
+                    </section>
+
+                    <section class="active-power">
+                        <div class="active-title">
+                            <h2>${escapeHTML(divineWork.note.title)}</h2>
+                            <span class="count-mark">${escapeHTML(divineWork.note.mark)}</span>
+                        </div>
+                        <p class="active-desc">${escapeHTML(divineWork.note.desc)}</p>
+                    </section>
+                </div>
+            `;
+        }
+
         async function getTargetUserEmail(sessionUser, targetUid) {
             if (!targetUid || targetUid === sessionUser.id) {
                 return sessionUser.email || '';
@@ -784,14 +874,18 @@
             const targetUid = urlParams.get('uid') || session.user.id;
             const targetEmail = (await getTargetUserEmail(session.user, targetUid)).toLowerCase();
             const canViewAlmorelMythal = targetEmail === archiveData.mythals.almorel.ownerEmail;
+            const canViewAlmorelDivine = targetEmail === archiveData.divineWorks.almorel.ownerEmail;
 
             document.getElementById('almorel-mythal-record').style.display = canViewAlmorelMythal ? 'grid' : 'none';
             document.getElementById('mythal-no-access').style.display = canViewAlmorelMythal ? 'none' : 'block';
+            document.getElementById('almorel-divine-record').style.display = canViewAlmorelDivine ? 'grid' : 'none';
+            document.getElementById('divine-empty').style.display = canViewAlmorelDivine ? 'none' : 'block';
             document.getElementById('page-content').style.display = 'block';
         }
 
         renderStaticContent();
         renderMythal('almorel-mythal-record', archiveData.mythals.almorel);
+        renderDivineWork('almorel-divine-record', archiveData.divineWorks.almorel);
         checkAccess();
     </script>
 </body>
