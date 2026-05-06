@@ -814,6 +814,16 @@
                 </article>
             `).join('');
 
+            const noteHtml = divineWork.note ? `
+                    <section class="active-power">
+                        <div class="active-title">
+                            <h2>${escapeHTML(divineWork.note.title)}</h2>
+                            <span class="count-mark">${escapeHTML(divineWork.note.mark)}</span>
+                        </div>
+                        <p class="active-desc">${escapeHTML(divineWork.note.desc)}</p>
+                    </section>
+            ` : '';
+
             document.getElementById(recordId).innerHTML = `
                 <aside class="profile">
                     <div class="profile-head">
@@ -833,13 +843,7 @@
                         <div class="function-list">${manifestationItems}</div>
                     </section>
 
-                    <section class="active-power">
-                        <div class="active-title">
-                            <h2>${escapeHTML(divineWork.note.title)}</h2>
-                            <span class="count-mark">${escapeHTML(divineWork.note.mark)}</span>
-                        </div>
-                        <p class="active-desc">${escapeHTML(divineWork.note.desc)}</p>
-                    </section>
+                    ${noteHtml}
                 </div>
             `;
         }
