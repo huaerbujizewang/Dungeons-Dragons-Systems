@@ -246,7 +246,7 @@
             display: grid;
             grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
             gap: 22px;
-            align-items: start;
+            align-items: stretch;
         }
 
         .profile,
@@ -259,7 +259,15 @@
             box-shadow: 0 8px 26px rgba(24, 40, 50, 0.07);
         }
 
-        .profile { overflow: hidden; }
+        .profile {
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .record-main {
+            display: flex;
+            flex-direction: column;
+        }
 
         .profile-head {
             padding: 22px;
@@ -469,165 +477,177 @@
 <body>
     <main class="page" id="page-content" style="display:none;">
         <div class="topbar">
-            <button class="back-btn" onclick="goBack()">← 返回主界面</button>
-            <div class="archive-code">超位法术档案 / Supernal Arcana</div>
+            <button class="back-btn" id="back-button" onclick="goBack()"></button>
+            <div class="archive-code" id="archive-code"></div>
         </div>
 
         <section class="hero">
             <div class="hero-copy">
-                <div class="eyebrow">Archive XII</div>
-                <h1>超位法术</h1>
-                <p class="lead">
-                    记录凡常法术位之外的宏观奇迹：隔绝天地的广域迷锁、以信仰铸就的神迹，以及足以重塑世界底层法则的高等魔法。
-                </p>
+                <div class="eyebrow" id="hero-eyebrow"></div>
+                <h1 id="hero-title"></h1>
+                <p class="lead" id="hero-lead"></p>
             </div>
 
-            <div class="mythal-diagram" aria-label="超位法术示意图">
-                <div class="sigil tree">⌘<small>权柄</small></div>
-                <div class="sigil water">≈<small>逆熵</small></div>
-                <div class="sigil light">✦<small>塑源</small></div>
-                <div class="sigil ward">◇<small>永恒</small></div>
+            <div class="mythal-diagram" id="hero-diagram">
+                <div class="sigil tree"><span id="sigil-tree-symbol"></span><small id="sigil-tree-label"></small></div>
+                <div class="sigil water"><span id="sigil-water-symbol"></span><small id="sigil-water-label"></small></div>
+                <div class="sigil light"><span id="sigil-light-symbol"></span><small id="sigil-light-label"></small></div>
+                <div class="sigil ward"><span id="sigil-ward-symbol"></span><small id="sigil-ward-label"></small></div>
                 <div class="diagram-core">
                     <div>
-                        <strong>᚛ ᚫᚢᚦᚩᚱ ᛉᛖᛞ ᚜</strong>
-                        <span>ᛋᚢᛈᛖᚱᚾᚪᛚ ᛫ ᚪᚱᚳᚪᚾᚪ</span>
+                        <strong id="diagram-core-title"></strong>
+                        <span id="diagram-core-subtitle"></span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <nav class="tabs" aria-label="超位法术分类">
-            <button class="tab active" data-panel="mythal" onclick="switchArchive('mythal')">
-                <strong>迷锁</strong>
-                <span>编织地脉，重塑一方天地的至高结界</span>
-            </button>
-            <button class="tab" data-panel="divine" onclick="switchArchive('divine')">
-                <strong>神迹</strong>
-                <span>神力、信仰与具现的奇迹和伟力</span>
-            </button>
-            <button class="tab" data-panel="high" onclick="switchArchive('high')">
-                <strong>高等魔法</strong>
-                <span>超越常规施法框架的仪式</span>
-            </button>
-        </nav>
+        <nav class="tabs" id="archive-tabs"></nav>
 
         <section class="panel active" id="panel-mythal">
             <div class="record" id="almorel-mythal-record">
-                <aside class="profile">
-                    <div class="profile-head">
-                        <div class="label">城市级迷锁</div>
-                        <h2>穹光圣域</h2>
-                        <p>以世界树枝丫、海神河水性与天界律令编织而成的艾尔莫瑞尔守护领域。</p>
-                    </div>
-                    <div class="profile-grid">
-                        <div class="profile-item">
-                            <span>所属城市</span>
-                            <strong>艾尔莫瑞尔</strong>
-                        </div>
-                        <div class="profile-item">
-                            <span>类型</span>
-                            <strong>城市级迷锁</strong>
-                        </div>
-                        <div class="profile-item">
-                            <span>状态</span>
-                            <strong class="status-pill"><i class="status-dot"></i>已激活</strong>
-                        </div>
-                        <div class="profile-item">
-                            <span>掌控者</span>
-                            <strong>艾尔莫瑞尔城主府</strong>
-                        </div>
-                    </div>
-                </aside>
-
-                <div>
-                    <section class="function-board">
-                        <div class="board-title">
-                            <h2>被动功能</h2>
-                            <span class="count-mark">6 项常驻效应</span>
-                        </div>
-                        <div class="function-list">
-                            <article class="function-card">
-                                <h3>禁制传送</h3>
-                                <p>迷锁范围内免疫一切未经掌控者授权的跨位面旅行与传送法术，包括区域内的短距传送。</p>
-                            </article>
-                            <article class="function-card">
-                                <h3>四季如春</h3>
-                                <p>世界树的枝丫散发无尽生机。范围内免疫一切极端天气，植物类魔宠或生物每天获得 20 点临时生命值。</p>
-                            </article>
-                            <article class="function-card">
-                                <h3>破邪结界</h3>
-                                <p>未经注册或不带有神性的邪魔和不死生物无法进入迷锁内。</p>
-                            </article>
-                            <article class="function-card">
-                                <h3>永昼之境</h3>
-                                <p>范围内光线可随掌控者心意调节，且绝不会被非神器来源的魔法黑暗所笼罩。</p>
-                            </article>
-                            <article class="function-card">
-                                <h3>极乐之水</h3>
-                                <p>范围内所有天然水源带有微弱海神河水特性。友方生物在迷锁内完成长休后，额外消除 1 级力竭，并在接下来 24 小时内免疫魅惑和恐惧。</p>
-                            </article>
-                            <article class="function-card">
-                                <h3>净化律动</h3>
-                                <p>任何携带疾病、毒素或普通诅咒的生物，只要在迷锁内连续停留满 24 小时，相关负面状态便会被自动净化。</p>
-                            </article>
-                        </div>
-                    </section>
-
-                    <section class="active-power">
-                        <div class="active-title">
-                            <h2>主动功能：天界武装</h2>
-                            <span class="count-mark">战时权限</span>
-                        </div>
-                        <div class="active-rule">
-                            <div class="rule-chip">
-                                <span>启动者</span>
-                                <strong>迷锁掌控者</strong>
-                            </div>
-                            <div class="rule-chip">
-                                <span>持续时间</span>
-                                <strong>1 小时</strong>
-                            </div>
-                            <div class="rule-chip">
-                                <span>使用次数</span>
-                                <strong>每日 1 次</strong>
-                            </div>
-                            <div class="rule-chip">
-                                <span>适用对象</span>
-                                <strong>范围内友方</strong>
-                            </div>
-                        </div>
-                        <p class="active-desc">
-                            启动后，迷锁范围内所有友方的武器暂时附着炽天神侍的怒火。持续期间，每次武器攻击命中时额外造成 4d6 光耀伤害；近战与远程武器攻击均适用。
-                        </p>
-                    </section>
-                </div>
             </div>
             <div class="empty-state" id="mythal-no-access" style="display:none;">
-                <h2>迷锁</h2>
-                <p>当前身份暂无可查看的迷锁档案。</p>
             </div>
         </section>
 
         <section class="panel" id="panel-divine">
-            <div class="empty-state">
-                <h2>神迹</h2>
-                <p>暂无公开档案。</p>
-            </div>
+            <div class="empty-state" id="divine-empty"></div>
         </section>
 
         <section class="panel" id="panel-high">
-            <div class="empty-state">
-                <h2>高等魔法</h2>
-                <p>暂无公开档案。</p>
-            </div>
+            <div class="empty-state" id="high-empty"></div>
         </section>
     </main>
+
+    <script type="application/json" id="supermagic-data">
+{
+  "ui": {
+    "backButton": "← 返回主界面",
+    "archiveCode": "超位法术档案 / Supernal Arcana"
+  },
+  "hero": {
+    "eyebrow": "Archive XII",
+    "title": "超位法术",
+    "lead": "记录凡常法术位之外的宏观奇迹：隔绝天地的广域迷锁、以信仰铸就的神迹，以及足以重塑世界底层法则的高等魔法。",
+    "diagramLabel": "超位法术示意图",
+    "sigils": {
+      "tree": { "symbol": "⌘", "label": "权柄" },
+      "water": { "symbol": "≈", "label": "逆熵" },
+      "light": { "symbol": "✦", "label": "塑源" },
+      "ward": { "symbol": "◇", "label": "永恒" }
+    },
+    "core": {
+      "title": "᚛ ᚫᚢᚦᚩᚱ ᛉᛖᛞ ᚜",
+      "subtitle": "ᛋᚢᛈᛖᚱᚾᚪᛚ ᛫ ᚪᚱᚳᚪᚾᚪ"
+    }
+  },
+  "tabs": [
+    {
+      "id": "mythal",
+      "title": "迷锁",
+      "desc": "编织地脉，重塑一方天地的至高结界"
+    },
+    {
+      "id": "divine",
+      "title": "神迹",
+      "desc": "神力、信仰与具现的奇迹和伟力"
+    },
+    {
+      "id": "high",
+      "title": "高等魔法",
+      "desc": "超越常规施法框架的仪式"
+    }
+  ],
+  "mythals": {
+    "almorel": {
+      "ownerEmail": "master@almorel.com",
+      "profile": {
+        "label": "城市级迷锁",
+        "title": "穹光圣域",
+        "desc": "以世界树枝丫、海神河水性与天界律令编织而成的艾尔莫瑞尔守护领域。",
+        "items": [
+          { "label": "所属城市", "value": "艾尔莫瑞尔" },
+          { "label": "类型", "value": "城市级迷锁" },
+          { "label": "状态", "value": "已激活", "status": true },
+          { "label": "掌控者", "value": "艾尔莫瑞尔城主府" }
+        ]
+      },
+      "passive": {
+        "title": "被动功能",
+        "count": "6 项常驻效应",
+        "items": [
+          {
+            "title": "禁制传送",
+            "desc": "迷锁范围内免疫一切未经掌控者授权的跨位面旅行与传送法术，包括区域内的短距传送。"
+          },
+          {
+            "title": "四季如春",
+            "desc": "世界树的枝丫散发无尽生机。范围内免疫一切极端天气，植物类魔宠或生物每天获得 20 点临时生命值。"
+          },
+          {
+            "title": "破邪结界",
+            "desc": "未经注册或不带有神性的邪魔和不死生物无法进入迷锁内。"
+          },
+          {
+            "title": "永昼之境",
+            "desc": "范围内光线可随掌控者心意调节，且绝不会被非神器来源的魔法黑暗所笼罩。"
+          },
+          {
+            "title": "极乐之水",
+            "desc": "范围内所有天然水源带有微弱海神河水特性。友方生物在迷锁内完成长休后，额外消除 1 级力竭，并在接下来 24 小时内免疫魅惑和恐惧。"
+          },
+          {
+            "title": "净化律动",
+            "desc": "任何携带疾病、毒素或普通诅咒的生物，只要在迷锁内连续停留满 24 小时，相关负面状态便会被自动净化。"
+          }
+        ]
+      },
+      "active": {
+        "title": "主动功能：天界武装",
+        "mark": "战时权限",
+        "rules": [
+          { "label": "启动者", "value": "迷锁掌控者" },
+          { "label": "持续时间", "value": "1 小时" },
+          { "label": "使用次数", "value": "每日 1 次" },
+          { "label": "适用对象", "value": "范围内友方" }
+        ],
+        "desc": "启动后，迷锁范围内所有友方的武器暂时附着炽天神侍的怒火。持续期间，每次武器攻击命中时额外造成 4d6 光耀伤害；近战与远程武器攻击均适用。"
+      }
+    }
+  },
+  "emptyStates": {
+    "mythalNoAccess": {
+      "title": "迷锁",
+      "desc": "当前身份暂无可查看的迷锁档案。"
+    },
+    "divine": {
+      "title": "神迹",
+      "desc": "暂无公开档案。"
+    },
+    "high": {
+      "title": "高等魔法",
+      "desc": "暂无公开档案。"
+    }
+  }
+}
+    </script>
 
     <script>
         const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const ALMOREL_MYTHAL_OWNER_EMAIL = 'master@almorel.com';
+        const archiveData = JSON.parse(document.getElementById('supermagic-data').textContent);
+
+        function escapeHTML(str) {
+            return String(str ?? '').replace(/[&<>'"]/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[char]));
+        }
 
         function goBack() {
             const uid = new URLSearchParams(window.location.search).get('uid');
@@ -642,6 +662,96 @@
             document.querySelectorAll('.panel').forEach(panel => {
                 panel.classList.toggle('active', panel.id === `panel-${panelName}`);
             });
+        }
+
+        function renderEmptyState(elementId, state) {
+            document.getElementById(elementId).innerHTML = `
+                <h2>${escapeHTML(state.title)}</h2>
+                <p>${escapeHTML(state.desc)}</p>
+            `;
+        }
+
+        function renderStaticContent() {
+            document.getElementById('back-button').textContent = archiveData.ui.backButton;
+            document.getElementById('archive-code').textContent = archiveData.ui.archiveCode;
+            document.getElementById('hero-eyebrow').textContent = archiveData.hero.eyebrow;
+            document.getElementById('hero-title').textContent = archiveData.hero.title;
+            document.getElementById('hero-lead').textContent = archiveData.hero.lead;
+            document.getElementById('hero-diagram').setAttribute('aria-label', archiveData.hero.diagramLabel);
+
+            Object.entries(archiveData.hero.sigils).forEach(([key, sigil]) => {
+                document.getElementById(`sigil-${key}-symbol`).textContent = sigil.symbol;
+                document.getElementById(`sigil-${key}-label`).textContent = sigil.label;
+            });
+
+            document.getElementById('diagram-core-title').textContent = archiveData.hero.core.title;
+            document.getElementById('diagram-core-subtitle').textContent = archiveData.hero.core.subtitle;
+
+            document.getElementById('archive-tabs').innerHTML = archiveData.tabs.map((tab, index) => `
+                <button class="tab ${index === 0 ? 'active' : ''}" data-panel="${escapeHTML(tab.id)}" onclick="switchArchive('${escapeHTML(tab.id)}')">
+                    <strong>${escapeHTML(tab.title)}</strong>
+                    <span>${escapeHTML(tab.desc)}</span>
+                </button>
+            `).join('');
+
+            renderEmptyState('mythal-no-access', archiveData.emptyStates.mythalNoAccess);
+            renderEmptyState('divine-empty', archiveData.emptyStates.divine);
+            renderEmptyState('high-empty', archiveData.emptyStates.high);
+        }
+
+        function renderMythal(recordId, mythal) {
+            const profileItems = mythal.profile.items.map(item => `
+                <div class="profile-item">
+                    <span>${escapeHTML(item.label)}</span>
+                    ${item.status
+                        ? `<strong class="status-pill"><i class="status-dot"></i>${escapeHTML(item.value)}</strong>`
+                        : `<strong>${escapeHTML(item.value)}</strong>`}
+                </div>
+            `).join('');
+
+            const passiveItems = mythal.passive.items.map(item => `
+                <article class="function-card">
+                    <h3>${escapeHTML(item.title)}</h3>
+                    <p>${escapeHTML(item.desc)}</p>
+                </article>
+            `).join('');
+
+            const activeRules = mythal.active.rules.map(rule => `
+                <div class="rule-chip">
+                    <span>${escapeHTML(rule.label)}</span>
+                    <strong>${escapeHTML(rule.value)}</strong>
+                </div>
+            `).join('');
+
+            document.getElementById(recordId).innerHTML = `
+                <aside class="profile">
+                    <div class="profile-head">
+                        <div class="label">${escapeHTML(mythal.profile.label)}</div>
+                        <h2>${escapeHTML(mythal.profile.title)}</h2>
+                        <p>${escapeHTML(mythal.profile.desc)}</p>
+                    </div>
+                    <div class="profile-grid">${profileItems}</div>
+                </aside>
+
+                <div class="record-main">
+                    <section class="function-board">
+                        <div class="board-title">
+                            <h2>${escapeHTML(mythal.passive.title)}</h2>
+                            <span class="count-mark">${escapeHTML(mythal.passive.count)}</span>
+                        </div>
+                        <div class="function-list">${passiveItems}</div>
+                    </section>
+
+                    <section class="active-power">
+                        <div class="active-title">
+                            <h2>${escapeHTML(mythal.active.title)}</h2>
+                            <span class="count-mark">${escapeHTML(mythal.active.mark)}</span>
+                        </div>
+                        <div class="active-rule">${activeRules}</div>
+                        <p class="active-desc">${escapeHTML(mythal.active.desc)}</p>
+                    </section>
+                </div>
+            `;
         }
 
         async function getTargetUserEmail(sessionUser, targetUid) {
@@ -673,13 +783,15 @@
             const urlParams = new URLSearchParams(window.location.search);
             const targetUid = urlParams.get('uid') || session.user.id;
             const targetEmail = (await getTargetUserEmail(session.user, targetUid)).toLowerCase();
-            const canViewAlmorelMythal = targetEmail === ALMOREL_MYTHAL_OWNER_EMAIL;
+            const canViewAlmorelMythal = targetEmail === archiveData.mythals.almorel.ownerEmail;
 
             document.getElementById('almorel-mythal-record').style.display = canViewAlmorelMythal ? 'grid' : 'none';
             document.getElementById('mythal-no-access').style.display = canViewAlmorelMythal ? 'none' : 'block';
             document.getElementById('page-content').style.display = 'block';
         }
 
+        renderStaticContent();
+        renderMythal('almorel-mythal-record', archiveData.mythals.almorel);
         checkAccess();
     </script>
 </body>
