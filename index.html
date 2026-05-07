@@ -349,6 +349,16 @@
         /* DM 管理面板 */
         #admin-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; background: #fff; border: 2px solid #333; z-index: 3000; padding: 25px; overflow-y: auto; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); box-sizing: border-box; }
         .admin-box { margin-bottom: 0; } 
+        .grant-panel { margin-bottom: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; }
+        .grant-search-row { display: flex; gap: 6px; margin-bottom: 8px; }
+        .grant-search-row input { flex: 1; padding: 7px; border: 1px solid #ccc; border-radius: 4px; }
+        .grant-results { max-height: 110px; overflow-y: auto; border: 1px solid #eee; background: #fafafa; margin-bottom: 8px; }
+        .grant-result-item { display: flex; justify-content: space-between; gap: 8px; padding: 7px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.85em; }
+        .grant-result-item:hover { background: #f0f8ff; }
+        .grant-queue { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+        .grant-row { display: grid; grid-template-columns: minmax(0, 1fr) 86px 58px 28px; gap: 6px; align-items: center; }
+        .grant-row input, .grant-row select { min-width: 0; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85em; }
+        .grant-row button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px; cursor: pointer; }
 
         /* --- D&D 属性面板样式 (Stat Block) --- */
         .stat-block-container {
@@ -1812,10 +1822,16 @@
                     <div id="root-assign-dm" style="display:none; margin-bottom:10px; padding:10px; border:1px dashed #3498db;">
                         🔗 指派负责 DM: <select id="adm-assign-dm-list"></select> <button onclick="assignDM()">保存</button>
                     </div>
-                    <div style="margin-bottom:10px;">
-                        🎁 发放: <input type="text" id="adm-new-item" style="width:100px"> 
-                        <select id="adm-new-item-cat"><option>魔法物品</option><option>装备</option><option>卷轴</option><option>药水</option></select>
-                        <button onclick="admAddInv()">发放</button>
+                    <div class="grant-panel">
+                        <div style="font-size:0.85em; font-weight:bold; margin-bottom:6px;">🎁 批量发放物品</div>
+                        <div class="grant-search-row">
+                            <input type="text" id="adm-grant-search" placeholder="搜索图鉴物品，或手动输入后加入清单" oninput="searchGrantItems()">
+                            <button onclick="searchGrantItems()">搜索</button>
+                            <button onclick="addGrantQueueManual()">手动加入</button>
+                        </div>
+                        <div id="adm-grant-results" class="grant-results" style="display:none;"></div>
+                        <div id="adm-grant-queue" class="grant-queue"></div>
+                        <button onclick="admAddInv()" style="width:100%; background:#2ecc71; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">确认发放清单</button>
                     </div>
                     <div style="font-size:0.8em; color:#666;">背包预览:</div>
                     <div id="adm-user-inv" style="max-height:150px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd; margin-top:5px;"></div>
@@ -3422,12 +3438,16 @@ async function buy(id, p, n, c) {
         if (!selectedUserId) {
             detailBox.style.display = 'none';
             viewingUserId = myId;
+            grantQueue = [];
+            renderGrantQueue();
             refreshAllData();
             document.getElementById('adm-emp-list').innerHTML = '';
             return;
         }
 
         detailBox.style.display = 'block';
+        grantQueue = [];
+        renderGrantQueue();
         viewingUserId = selectedUserId;
         await refreshAllData();
         setupMainRealtime(viewingUserId); // 切换视角后，重新挂载对应的实时监听
@@ -3637,46 +3657,213 @@ async function updateUserGold() {
         hideLoading(); alert('金币已修改');
     }
 
-    // 4. 上帝发装备
+    const GRANT_CATEGORIES = ['魔法物品', '装备', '卷轴', '药水', '材料', '凭证', '杂项'];
+    let grantSearchResults = [];
+    let grantSearchTimer = null;
+    let grantQueue = [];
+
+    function normalizeGrantCategory(category) {
+        return GRANT_CATEGORIES.includes(category) ? category : '杂项';
+    }
+
+    function renderGrantCategoryOptions(selected) {
+        const safeSelected = normalizeGrantCategory(selected);
+        return GRANT_CATEGORIES.map(cat => `<option value="${cat}" ${cat === safeSelected ? 'selected' : ''}>${cat}</option>`).join('');
+    }
+
+    function renderGrantQueue() {
+        const box = document.getElementById('adm-grant-queue');
+        if (!box) return;
+
+        if (grantQueue.length === 0) {
+            box.innerHTML = '<div style="font-size:0.8em; color:#999; text-align:center; padding:6px;">清单为空。搜索图鉴或手动加入物品。</div>';
+            return;
+        }
+
+        box.innerHTML = grantQueue.map((item, index) => `
+            <div class="grant-row">
+                <input value="${escapeHTML(item.name)}" placeholder="物品名" oninput="updateGrantQueueItem(${index}, 'name', this.value)">
+                <select onchange="updateGrantQueueItem(${index}, 'category', this.value)">${renderGrantCategoryOptions(item.category)}</select>
+                <input type="number" min="1" step="1" value="${item.quantity}" title="数量" oninput="updateGrantQueueItem(${index}, 'quantity', this.value)">
+                <button onclick="removeGrantQueueItem(${index})" title="移除">×</button>
+            </div>
+        `).join('');
+    }
+
+    function updateGrantQueueItem(index, field, value) {
+        if (!grantQueue[index]) return;
+        if (field === 'quantity') {
+            grantQueue[index].quantity = Math.max(1, parseInt(value, 10) || 1);
+        } else if (field === 'category') {
+            grantQueue[index].category = normalizeGrantCategory(value);
+        } else {
+            grantQueue[index].name = value;
+        }
+    }
+
+    function removeGrantQueueItem(index) {
+        grantQueue.splice(index, 1);
+        renderGrantQueue();
+    }
+
+    function addGrantQueueItem(name, category = '杂项', quantity = 1) {
+        const cleanName = String(name || '').trim();
+        if (!cleanName) return alert('请输入物品名');
+
+        const cleanCategory = normalizeGrantCategory(category);
+        const cleanQuantity = Math.max(1, parseInt(quantity, 10) || 1);
+        const existing = grantQueue.find(item => item.name === cleanName && item.category === cleanCategory);
+        if (existing) {
+            existing.quantity += cleanQuantity;
+        } else {
+            grantQueue.push({ name: cleanName, category: cleanCategory, quantity: cleanQuantity });
+        }
+
+        renderGrantQueue();
+    }
+
+    function addGrantQueueManual() {
+        const input = document.getElementById('adm-grant-search');
+        addGrantQueueItem(input.value, '杂项', 1);
+        input.value = '';
+        const resultsBox = document.getElementById('adm-grant-results');
+        if (resultsBox) resultsBox.style.display = 'none';
+    }
+
+    function addGrantQueueFromResult(index) {
+        const item = grantSearchResults[index];
+        if (!item) return;
+        addGrantQueueItem(item.name, item.category || '杂项', 1);
+    }
+
+    function searchGrantItems() {
+        clearTimeout(grantSearchTimer);
+        grantSearchTimer = setTimeout(runGrantItemSearch, 250);
+    }
+
+    async function runGrantItemSearch() {
+        if (!await requireAdminRole()) return;
+
+        const input = document.getElementById('adm-grant-search');
+        const resultBox = document.getElementById('adm-grant-results');
+        const query = input.value.trim();
+        if (!query) {
+            resultBox.style.display = 'none';
+            resultBox.innerHTML = '';
+            return;
+        }
+
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '<div style="padding:7px; color:#999; font-size:0.85em;">搜索中...</div>';
+
+        const { data, error } = await supabaseClient
+            .from('compendium_items')
+            .select('name, category, price, rarity')
+            .ilike('name', `%${query}%`)
+            .limit(12);
+
+        if (error) {
+            resultBox.innerHTML = '<div style="padding:7px; color:#e74c3c; font-size:0.85em;">搜索失败</div>';
+            return;
+        }
+
+        grantSearchResults = data || [];
+        if (grantSearchResults.length === 0) {
+            resultBox.innerHTML = `<div style="padding:7px; color:#999; font-size:0.85em;">未找到，可点击“手动加入”发放 [${escapeHTML(query)}]</div>`;
+            return;
+        }
+
+        resultBox.innerHTML = grantSearchResults.map((item, index) => `
+            <div class="grant-result-item" onclick="addGrantQueueFromResult(${index})">
+                <span>${escapeHTML(item.name)}</span>
+                <span style="color:#777; white-space:nowrap;">${escapeHTML(item.category || '杂项')} · ${item.price ?? 0} GP</span>
+            </div>
+        `).join('');
+    }
+
+    // 4. 上帝批量发装备/物品
     async function admAddInv() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择一个玩家');
-        
-        const itemName = document.getElementById('adm-new-item').value;
-        const itemCat = document.getElementById('adm-new-item-cat').value; // 获取选中的分类
-        
-        if (!itemName) return alert('请输入物品名');
+
+        const normalized = new Map();
+        grantQueue.forEach(item => {
+            const name = String(item.name || '').trim();
+            const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+            if (!name) return;
+
+            if (normalized.has(name)) {
+                normalized.get(name).quantity += quantity;
+            } else {
+                normalized.set(name, {
+                    item_name: name,
+                    quantity,
+                    category: normalizeGrantCategory(item.category)
+                });
+            }
+        });
+
+        const itemsToGrant = [...normalized.values()];
+        if (itemsToGrant.length === 0) return alert('发放清单为空');
 
         showLoading();
         try {
-            // 检查玩家背包是否已有 (同名且同类)
-            const { data: exist } = await supabaseClient
+            const itemNames = itemsToGrant.map(item => item.item_name);
+            const { data: existingItems, error: fetchErr } = await supabaseClient
                 .from('user_inventory')
-                .select('*')
+                .select('id, item_name, quantity')
                 .eq('user_id', selectedUserId)
-                .eq('item_name', itemName)
-                .maybeSingle();
+                .in('item_name', itemNames);
 
-            if (exist) {
-                // 已有则数量+1
-                await supabaseClient.from('user_inventory').update({ quantity: exist.quantity + 1 }).eq('id', exist.id);
-            } else {
-                // 没有则
-                await supabaseClient.from('user_inventory').insert([{ 
-                    user_id: selectedUserId, 
-                    item_name: itemName, 
-                    quantity: 1, 
-                    category: itemCat 
-                }]);
+            if (fetchErr) throw fetchErr;
+
+            const existingMap = new Map((existingItems || []).map(item => [item.item_name, item]));
+            const inserts = [];
+            const updateTasks = [];
+
+            itemsToGrant.forEach(item => {
+                const existing = existingMap.get(item.item_name);
+                if (existing) {
+                    updateTasks.push(
+                        supabaseClient
+                            .from('user_inventory')
+                            .update({ quantity: (existing.quantity || 0) + item.quantity })
+                            .eq('id', existing.id)
+                    );
+                } else {
+                    inserts.push({
+                        user_id: selectedUserId,
+                        item_name: item.item_name,
+                        quantity: item.quantity,
+                        category: item.category
+                    });
+                }
+            });
+
+            const updateResults = await Promise.all(updateTasks);
+            const updateError = updateResults.find(res => res.error)?.error;
+            if (updateError) throw updateError;
+
+            if (inserts.length > 0) {
+                const { error: insertErr } = await supabaseClient.from('user_inventory').insert(inserts);
+                if (insertErr) throw insertErr;
             }
 
-            // 记录日志
-            await logAction('DM操作', `给玩家(ID:${selectedUserId}) 发放了 [${itemName}] (${itemCat})`);
+            const logText = itemsToGrant.map(item => `[${item.item_name}] x${item.quantity} (${item.category})`).join('、');
+            await logAction('DM操作', `给玩家(ID:${selectedUserId}) 发放了 ${logText}`);
 
             hideLoading();
-            alert(`[${itemName}] 已成功塞入背包`);
-            document.getElementById('adm-new-item').value = ''; // 清空输入框
-            loadUserDetail(); // 刷新详情
+            alert(`发放完成：${itemsToGrant.length} 种物品已写入背包`);
+            grantQueue = [];
+            renderGrantQueue();
+            const searchBox = document.getElementById('adm-grant-search');
+            const resultsBox = document.getElementById('adm-grant-results');
+            if (searchBox) searchBox.value = '';
+            if (resultsBox) {
+                resultsBox.innerHTML = '';
+                resultsBox.style.display = 'none';
+            }
+            loadUserDetail();
         } catch (e) {
             console.error(e);
             hideLoading();
