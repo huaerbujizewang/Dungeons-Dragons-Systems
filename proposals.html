@@ -206,12 +206,12 @@
 
         const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         if (emps) { 
-            renderLoginScreen(targetId);
             voterEmployees = emps.filter(emp => authorizedVoters.includes(emp.name));
             totalVotersCount = voterEmployees.length;
             const majorityCount = Math.floor(totalVotersCount / 2) + 1;
             document.getElementById('majority-req').innerText = majorityCount;
             emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
+            renderLoginScreen(targetId);
             
         }
 
@@ -221,11 +221,18 @@
     function renderLoginScreen(targetId) {
         const grid = document.getElementById('login-grid');
         grid.innerHTML = '';
+        if (voterEmployees.length === 0) {
+            grid.innerHTML = '<div style="color:#999; padding:20px;">当前领地没有可参与政务厅投票的授权角色。</div>';
+            return;
+        }
         voterEmployees.forEach(emp => {
+            const safeName = escapeHTML(emp.name);
+            const voterNameArg = JSON.stringify(emp.name);
+            const targetIdArg = JSON.stringify(targetId);
             grid.innerHTML += `
-                <div class="login-card" onclick="selectVoter('${emp.name}', '${targetId}')">
+                <div class="login-card" onclick='selectVoter(${voterNameArg}, ${targetIdArg})'>
                     <img src="${emp.avatar_url || 'https://via.placeholder.com/80'}">
-                    <div class="name">${emp.name}</div>
+                    <div class="name">${safeName}</div>
                 </div>`;
         });
     }
