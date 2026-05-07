@@ -49,6 +49,9 @@
         .btn-choice { background: #8e44ad; color: white; }
         .btn-choice:hover { background: #732d91; }
         .btn-voted { background: #bdc3c7; color: #fff; cursor: not-allowed; }
+        .btn-revote { background: #f39c12; color: white; }
+        .btn-admin { background: #34495e; color: white; }
+        .dm-actions { width: 100%; display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #dcd6cc; }
         
         .history-card { opacity: 0.8; background: #fcfcfc; border-left: 4px solid transparent; }
         .history-card.approved { border-left-color: #27ae60; }
@@ -141,9 +144,12 @@
     let voterEmployees = []; 
     let totalVotersCount = 0;
     let currentVoter = null; 
+    let currentUserId = null;
+    let currentUserRole = 'player';
 
     const EXPIRE_DAYS = 5;
     const EXPIRE_MS = EXPIRE_DAYS * 24 * 60 * 60 * 1000;
+    const ADMIN_ROLES = ['dm', 'root'];
 
     const authorizedVoters = ['伊凡·乾', '凋命', '伯勒斯', '薇艾拉', '格拉西斯'];
 
@@ -152,9 +158,42 @@
         return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
     }
 
+    async function refreshCurrentRole() {
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        if (error || !user) {
+            currentUserId = null;
+            currentUserRole = 'player';
+            return currentUserRole;
+        }
+
+        currentUserId = user.id;
+        const { data: adminData } = await supabaseClient
+            .from('admin_users')
+            .select('role_level')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        currentUserRole = adminData?.role_level || 'player';
+        return currentUserRole;
+    }
+
+    function isCurrentDM() {
+        return ADMIN_ROLES.includes(currentUserRole);
+    }
+
+    async function requireDM() {
+        await refreshCurrentRole();
+        if (!isCurrentDM()) {
+            alert('权限不足：该操作需要 DM 权限。');
+            return false;
+        }
+        return true;
+    }
+
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert('请先登录主账号'); window.location.href = 'index.html'; return; }
+        await refreshCurrentRole();
 
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('uid') || user.id;
@@ -167,13 +206,13 @@
 
         const { data: emps } = await supabaseClient.from('employees').select('name, avatar_url').eq('user_id', targetId);
         if (emps) { 
+            renderLoginScreen(targetId);
             voterEmployees = emps.filter(emp => authorizedVoters.includes(emp.name));
             totalVotersCount = voterEmployees.length;
             const majorityCount = Math.floor(totalVotersCount / 2) + 1;
             document.getElementById('majority-req').innerText = majorityCount;
-
             emps.forEach(e => employeeMap[e.name] = e.avatar_url); 
-            renderLoginScreen(targetId);
+            
         }
 
         setupRealtime(targetId);
@@ -426,7 +465,10 @@ async function loadProposals(userId) {
 
             if (myVote) {
                 const selectedOpt = item.options.find(o => o.id === myVote.vote_type);
-                actionButtons = `<button class="btn-voted">本轮已投: ${escapeHTML(selectedOpt ? selectedOpt.text : '已投')}</button>`;
+                actionButtons = `
+                    <button class="btn-voted">本轮已投: ${escapeHTML(selectedOpt ? selectedOpt.text : '已投')}</button>
+                    <button class="btn-revote" onclick="revokeVote(${item.id}, 1, ${item.current_round})">撤回重投</button>
+                `;
             } else {
                 (item.options || []).forEach(opt => {
         actionButtons += `<button class="btn-choice" style="margin-bottom:5px;" onclick="castVoteV2(${item.id}, '${opt.id}', '${escapeHTML(opt.text)}')">
@@ -446,7 +488,10 @@ async function loadProposals(userId) {
             voteStatsHtml = `<span class="vote-count approve">${approves} 赞成</span> | <span class="vote-count reject">${rejects} 反对</span>`;
 
             if (myVote) {
-                actionButtons = `<button class="btn-voted">本轮已投: ${myVote.vote_type === 'approve' ? '✅' : '❌'}</button>`;
+                actionButtons = `
+                    <button class="btn-voted">本轮已投: ${myVote.vote_type === 'approve' ? '✅' : '❌'}</button>
+                    <button class="btn-revote" onclick="revokeVote(${item.id}, ${isV2 ? 1 : 0}, ${isV2 ? item.current_round : 0})">撤回重投</button>
+                `;
             } else {
                 const voteFunc = isV2 ? 'castVoteV2' : 'castVoteV1'; // 根据存储表决定投票目标
                 actionButtons = `
@@ -460,6 +505,11 @@ async function loadProposals(userId) {
         if (item.status === 'pending') {
             const expireDateStr = new Date(new Date(item.created_at).getTime() + EXPIRE_MS).toLocaleString();
             let roundNote = item.decision_reason ? `<div class="decision-note">${escapeHTML(item.decision_reason)}</div>` : '';
+            const dmActions = isCurrentDM() ? `
+                <div class="dm-actions">
+                    <button class="btn-admin" onclick="extendProposalDeadline(${item.id}, ${isV2 ? 1 : 0})">⏳ 延期</button>
+                </div>
+            ` : '';
             return `<div class="proposal-card">
                 <div class="avatar-box"><img src="${avatarUrl}" class="avatar"><div class="proposer-name">${item.proposer_name}</div></div>
                 <div class="content-box">
@@ -476,6 +526,7 @@ async function loadProposals(userId) {
                                 <div style="font-size: 0.8em; color: #e67e22; margin-top: 4px;">⏳ 截止: ${expireDateStr}</div>
                             </div>
                             ${actionButtons}
+                            ${dmActions}
                         </div>
                     </div>
                 </div>
@@ -508,6 +559,95 @@ async function loadProposals(userId) {
     document.getElementById('pending-section').style.display = pendingBox.innerHTML ? 'block' : 'none';
     document.getElementById('history-section').style.display = historyBox.innerHTML ? 'block' : 'none';
     if (!pendingBox.innerHTML && !historyBox.innerHTML) document.getElementById('loading').innerText = "暂无任何议案。";
+}
+
+
+async function extendProposalDeadline(proposalId, isV2) {
+    if (!await requireDM()) return;
+
+    const daysText = prompt('请输入要延期的天数：', '1');
+    if (daysText === null) return;
+
+    const days = Number(daysText);
+    if (!Number.isFinite(days) || days <= 0) {
+        alert('延期天数必须是大于 0 的数字。');
+        return;
+    }
+
+    const table = isV2 ? 'city_proposals_v2' : 'city_proposals';
+    const { data: proposal, error: fetchErr } = await supabaseClient
+        .from(table)
+        .select('id, title, status, created_at, decision_reason')
+        .eq('id', proposalId)
+        .single();
+
+    if (fetchErr || !proposal) {
+        alert('未能读取议案。');
+        return;
+    }
+    if (proposal.status !== 'pending') {
+        alert('该议案已经归档，不能延期。');
+        return;
+    }
+
+    const oldCreatedAt = new Date(proposal.created_at);
+    const newCreatedAt = new Date(oldCreatedAt.getTime() + days * 24 * 60 * 60 * 1000);
+    const newDeadline = new Date(newCreatedAt.getTime() + EXPIRE_MS);
+    const oldNote = proposal.decision_reason || '';
+    const appendNote = `\n⏳ DM 延期 ${days} 天，新截止时间：${newDeadline.toLocaleString()}。`;
+
+    const { error: updateErr } = await supabaseClient
+        .from(table)
+        .update({
+            created_at: newCreatedAt.toISOString(),
+            decision_reason: oldNote + appendNote
+        })
+        .eq('id', proposalId);
+
+    if (updateErr) {
+        alert('延期失败：' + updateErr.message);
+        return;
+    }
+
+    alert(`议案《${proposal.title || proposalId}》已延期至 ${newDeadline.toLocaleString()}。`);
+    loadProposals(userProfile.id);
+}
+
+async function revokeVote(proposalId, isV2, roundNum = 0) {
+    if (!currentVoter) return;
+    if (!confirm('确定撤回当前投票并重新选择吗？原批注也会一并删除。')) return;
+
+    const proposalTable = isV2 ? 'city_proposals_v2' : 'city_proposals';
+    const voteTable = isV2 ? 'proposal_votes_v2' : 'proposal_votes';
+    const { data: proposal } = await supabaseClient
+        .from(proposalTable)
+        .select(isV2 ? 'status, current_round' : 'status')
+        .eq('id', proposalId)
+        .single();
+
+    if (!proposal || proposal.status !== 'pending') {
+        alert('该议案状态已变更，不能撤回投票。');
+        loadProposals(userProfile.id);
+        return;
+    }
+
+    let query = supabaseClient
+        .from(voteTable)
+        .delete()
+        .eq('proposal_id', proposalId)
+        .eq('voter_name', currentVoter.name);
+
+    if (isV2) {
+        query = query.eq('round_num', proposal.current_round || roundNum);
+    }
+
+    const { error } = await query;
+    if (error) {
+        alert('撤回失败：' + error.message);
+        return;
+    }
+
+    loadProposals(userProfile.id);
 }
 
 
