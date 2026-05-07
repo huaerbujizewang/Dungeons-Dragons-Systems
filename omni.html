@@ -27,6 +27,8 @@
             display: flex; justify-content: center; align-items: center; overflow: hidden;
             perspective: 1500px; /* 拉远透视点，让运动显得更广阔平缓 */
             transform-style: preserve-3d;
+            isolation: isolate;
+            contain: layout paint style;
         }
 
         /* 巨型几何体基础属性：加入高斯模糊，打造全息柔和感 */
@@ -35,6 +37,10 @@
             width: 150vw; height: 150vh;
             top: -25vh; left: -25vw;
             transform-style: preserve-3d;
+            backface-visibility: hidden;
+            will-change: transform;
+            pointer-events: none;
+            contain: paint;
             opacity: 0.7; /* 降低一点透明度，避免色彩过于浓烈 */
             filter: blur(40px); /* 核心护眼科技：让锋利的几何体变成柔和的光块 */
         }
@@ -64,11 +70,14 @@
         .login-card {
             background: rgba(30, 41, 59, 0.9);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             padding: 60px 40px; 
             width: 280px; 
             border: 1px solid rgba(74, 222, 128, 0.4);
             position: relative;
             transform: translateZ(500px); 
+            will-change: transform, opacity;
+            backface-visibility: hidden;
             box-shadow: 0 20px 50px rgba(0,0,0,0.25);
             /* 为焦点反馈添加平滑过渡 */
             transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.4s;
@@ -932,6 +941,29 @@
 
         let currentAccount = null;
         let dmSessionAccount = null;
+        let omniBootDataPromise = null;
+        let omniBootDataReady = false;
+
+        function scheduleIdleTask(task) {
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(task, { timeout: 1200 });
+            } else {
+                setTimeout(task, 0);
+            }
+        }
+
+        function warmOmniBootData() {
+            if (!omniBootDataPromise) {
+                omniBootDataPromise = Promise.allSettled([
+                    syncImperialDate(),
+                    loadOmniData()
+                ]).then((results) => {
+                    omniBootDataReady = true;
+                    return results;
+                });
+            }
+            return omniBootDataPromise;
+        }
 
         function getSessionAccount() {
             const raw = sessionStorage.getItem('omni_session');
@@ -997,16 +1029,12 @@
         let BESTIARY_DATA = [];
         // --- 初始化与登录 ---
         async function init() {
-            await syncImperialDate(); // 先同步全局日期
-    
-            // 在系统初始阶段，从本地 JSON 加载外部世界观档案
-            await loadOmniData(); 
-    
-            const saved = getSessionAccount();
-            if(saved) {
-                currentAccount = saved;
+            const cachedSession = getSessionAccount();
+            if(cachedSession) {
+                currentAccount = cachedSession;
                 if (currentAccount.is_dm) dmSessionAccount = currentAccount;
                 enterApp();
+                return;
             }
         }
 
@@ -1049,6 +1077,7 @@
             }
             
             // 启动核心功能
+            scheduleIdleTask(warmOmniBootData);
             openPublicChat(); 
             if (!currentRealtimeChannel) subscribe(); 
             await processEmploymentRewards(); // 结算工资
@@ -4362,6 +4391,10 @@ async function loadOmniData() {
 function renderArchiveMenu() {
     const list = document.getElementById('archive-menu-list');
     if (!list) return;
+    if (!LORE_DATA.archives && !omniBootDataReady) {
+        warmOmniBootData().then(renderArchiveMenu);
+        return;
+    }
     list.innerHTML = '';
     
     // 【核心修复】：加上安全保底 || []，即使找不到 archives 也不会报 forEach 错误
