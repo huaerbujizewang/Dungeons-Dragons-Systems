@@ -1974,14 +1974,23 @@
                 <button onclick="bulkAddWanted()" style="width:100%; margin-top:5px; border:1px solid #c0392b; color:#c0392b; background:none; padding:5px;">批量签发 / 更新</button>
 
                 <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #ddd;">
-                    <h4 style="margin:0 0 5px 0;">批量改状态</h4>
-                    <select id="adm-wanted-bulk-status" style="width:100%; padding:5px; margin-bottom:5px;">
-                        <option value="CAPTURED">CAPTURED (已捕获)</option>
-                        <option value="DEAD OR ALIVE">DEAD OR ALIVE (通缉中)</option>
-                        <option value="REVOKED">REVOKED (已撤销)</option>
-                    </select>
-                    <textarea id="adm-wanted-status-names" placeholder="每行一个名字，或用逗号分隔" style="width:100%; height:50px; font-size:0.8em;"></textarea>
-                    <button onclick="bulkUpdateWantedStatus()" style="width:100%; margin-top:5px; background:#34495e; color:white; border:none; padding:6px; border-radius:4px;">批量应用状态</button>
+                    <h4 style="margin:0 0 5px 0;">通缉令批量管理</h4>
+                    <div style="display:flex; gap:5px; margin-bottom:6px;">
+                        <input type="text" id="adm-wanted-search" placeholder="搜索当前玩家通缉令..." style="flex:1; padding:5px;">
+                        <button onclick="searchWantedPosters()" style="padding:5px 8px;">搜索</button>
+                    </div>
+                    <div id="adm-wanted-search-summary" style="font-size:0.8em; color:#666; margin-bottom:5px;">先选择玩家，再搜索通缉令。</div>
+                    <div id="adm-wanted-search-results" style="max-height:130px; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.82em;"></div>
+                    <div style="display:grid; grid-template-columns: 1fr 95px; gap:5px; margin-top:8px;">
+                        <select id="adm-wanted-bulk-status" style="padding:5px;">
+                            <option value="">不改状态</option>
+                            <option value="CAPTURED">CAPTURED (已捕获)</option>
+                            <option value="DEAD OR ALIVE">DEAD OR ALIVE (通缉中)</option>
+                            <option value="REVOKED">REVOKED (已撤销)</option>
+                        </select>
+                        <input type="number" id="adm-wanted-bulk-amount" placeholder="新赏金" style="padding:5px;">
+                    </div>
+                    <button onclick="bulkUpdateWantedPosters()" style="width:100%; margin-top:5px; background:#34495e; color:white; border:none; padding:6px; border-radius:4px;">批量应用修改</button>
                 </div>
            </div>
         </div>
@@ -3465,6 +3474,7 @@ async function buy(id, p, n, c) {
             viewingUserId = myId;
             grantQueue = [];
             renderGrantQueue();
+            renderWantedPosterSearchResults([]);
             refreshAllData();
             document.getElementById('adm-emp-list').innerHTML = '';
             return;
@@ -3473,6 +3483,7 @@ async function buy(id, p, n, c) {
         detailBox.style.display = 'block';
         grantQueue = [];
         renderGrantQueue();
+        renderWantedPosterSearchResults([]);
         viewingUserId = selectedUserId;
         await refreshAllData();
         setupMainRealtime(viewingUserId); // 切换视角后，重新挂载对应的实时监听
@@ -4579,12 +4590,7 @@ async function loadLoginLogs() {
         return WANTED_STATUSES.includes(normalized) ? normalized : 'DEAD OR ALIVE';
     }
 
-    function parseWantedNames(text) {
-        return [...new Set(String(text || '')
-            .split(/[\n,，]+/)
-            .map(name => name.trim())
-            .filter(Boolean))];
-    }
+    let wantedPosterSearchResults = [];
 
     async function upsertWantedPoster(payload) {
         const { data: existingRows, error: findError } = await supabaseClient
@@ -4644,30 +4650,118 @@ async function loadLoginLogs() {
         }
     }
 
-    async function bulkUpdateWantedStatus() {
+    function getCheckedWantedPosterIds() {
+        return Array.from(document.querySelectorAll('.adm-wanted-check:checked'))
+            .map(input => parseInt(input.value, 10))
+            .filter(id => !Number.isNaN(id));
+    }
+
+    function toggleWantedPosterChecks(checked) {
+        document.querySelectorAll('.adm-wanted-check').forEach(input => {
+            input.checked = checked;
+        });
+    }
+
+    function renderWantedPosterSearchResults(posters) {
+        const box = document.getElementById('adm-wanted-search-results');
+        const summary = document.getElementById('adm-wanted-search-summary');
+        if (!box || !summary) return;
+
+        wantedPosterSearchResults = posters || [];
+        summary.innerText = `当前筛选到 ${wantedPosterSearchResults.length} 份通缉令。`;
+
+        if (wantedPosterSearchResults.length === 0) {
+            box.innerHTML = '<div style="color:#999; text-align:center; padding:8px;">没有匹配的通缉令</div>';
+            return;
+        }
+
+        box.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#666;">
+                <button onclick="toggleWantedPosterChecks(true)" style="font-size:0.85em;">全选</button>
+                <button onclick="toggleWantedPosterChecks(false)" style="font-size:0.85em;">清空</button>
+            </div>
+            ${wantedPosterSearchResults.map(p => `
+                <label style="display:grid; grid-template-columns:20px 1fr auto; gap:5px; align-items:center; padding:5px 2px; border-bottom:1px dashed #eee; cursor:pointer;">
+                    <input class="adm-wanted-check" type="checkbox" value="${p.id}">
+                    <span>
+                        <strong>${escapeHTML(p.target_name)}</strong>
+                        <span style="color:#999;">${escapeHTML(normalizeWantedStatus(p.status_text))}</span>
+                    </span>
+                    <span style="font-weight:bold; color:#c0392b;">${Number(p.bounty_amount || 0).toLocaleString()} GP</span>
+                </label>
+            `).join('')}
+        `;
+    }
+
+    async function searchWantedPosters() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择目标玩家的位面');
 
-        const names = parseWantedNames(document.getElementById('adm-wanted-status-names').value);
-        const status = normalizeWantedStatus(document.getElementById('adm-wanted-bulk-status').value);
-        if (names.length === 0) return alert('请输入要改状态的通缉对象姓名');
-        if (!confirm(`确定将 ${names.length} 份通缉令批量设为 [${status}] 吗？`)) return;
+        const query = document.getElementById('adm-wanted-search').value.trim();
+        const summary = document.getElementById('adm-wanted-search-summary');
+        const box = document.getElementById('adm-wanted-search-results');
+        if (summary) summary.innerText = '搜索中...';
+        if (box) box.innerHTML = '';
+
+        let request = supabaseClient
+            .from('wanted_posters')
+            .select('id, target_name, bounty_amount, status_text, source_org')
+            .eq('user_id', selectedUserId)
+            .order('bounty_amount', { ascending: false });
+
+        if (query) request = request.ilike('target_name', `%${query}%`);
+
+        const { data, error } = await request;
+        if (error) {
+            if (summary) summary.innerText = '搜索失败';
+            alert('搜索失败: ' + error.message);
+            return;
+        }
+
+        renderWantedPosterSearchResults(data || []);
+    }
+
+    async function bulkUpdateWantedPosters() {
+        if (!await requireAdminRole()) return;
+        if (!selectedUserId) return alert('请先选择目标玩家的位面');
+
+        const ids = getCheckedWantedPosterIds();
+        const statusRaw = document.getElementById('adm-wanted-bulk-status').value;
+        const amountRaw = document.getElementById('adm-wanted-bulk-amount').value;
+        const patch = {};
+
+        if (statusRaw) patch.status_text = normalizeWantedStatus(statusRaw);
+        if (amountRaw !== '') {
+            const amount = parseInt(amountRaw, 10);
+            if (Number.isNaN(amount) || amount < 0) return alert('赏金必须是非负整数');
+            patch.bounty_amount = amount;
+        }
+
+        if (ids.length === 0) return alert('请先勾选要修改的通缉令');
+        if (Object.keys(patch).length === 0) return alert('请选择新状态，或填写新赏金');
+
+        const changes = [];
+        if (patch.status_text) changes.push(`状态=${patch.status_text}`);
+        if (patch.bounty_amount !== undefined) changes.push(`赏金=${patch.bounty_amount} GP`);
+        if (!confirm(`确定修改 ${ids.length} 份通缉令？\n${changes.join('，')}`)) return;
 
         showLoading();
         try {
             const { error } = await supabaseClient
                 .from('wanted_posters')
-                .update({ status_text: status })
+                .update(patch)
                 .eq('user_id', selectedUserId)
-                .in('target_name', names);
+                .in('id', ids);
 
             if (error) throw error;
 
-            await logAction('DM通缉令', `批量将 ${names.join('、')} 设为 ${status} (User:${selectedUserId})`);
-            alert('批量状态更新完成');
-            document.getElementById('adm-wanted-status-names').value = '';
+            await logAction('DM通缉令', `批量修改 ${ids.length} 份通缉令：${changes.join('，')} (User:${selectedUserId})`);
+            alert('批量修改完成');
+            document.getElementById('adm-wanted-bulk-status').value = '';
+            document.getElementById('adm-wanted-bulk-amount').value = '';
+            await searchWantedPosters();
         } catch (error) {
-            alert('批量状态更新失败: ' + error.message);
+            alert('批量修改失败: ' + error.message);
         } finally {
             hideLoading();
         }
