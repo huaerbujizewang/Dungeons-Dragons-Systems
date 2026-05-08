@@ -1960,17 +1960,29 @@
                     <select id="adm-wanted-status">
                         <option value="DEAD OR ALIVE">DEAD OR ALIVE</option>
                         <option value="CAPTURED">CAPTURED (已捕获)</option>
+                        <option value="REVOKED">REVOKED (已撤销)</option>
                     </select>
                     <input type="text" id="adm-wanted-source" placeholder="悬赏组织">
                 </div>
-                <button onclick="addWantedPoster()" style="width:100%; background:#c0392b; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">单份签发</button>
+                <button onclick="addWantedPoster()" style="width:100%; background:#c0392b; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">签发 / 更新</button>
     
                 <hr style="margin:15px 0;">
 
                 <!-- 批量导入 -->
-                <h4 style="margin:0 0 5px 0;">批量导入 (每行一个：名字,金额,组织)</h4>
-                <textarea id="adm-wanted-bulk" placeholder="玛尔佐拉,34500,龙巫教&#10;路人甲,500,领主联盟" style="width:100%; height:60px; font-size:0.8em;"></textarea>
-                <button onclick="bulkAddWanted()" style="width:100%; margin-top:5px; border:1px solid #c0392b; color:#c0392b; background:none; padding:5px;">开始批量签发 (无头像)</button>
+                <h4 style="margin:0 0 5px 0;">批量导入 / 更新 (名字,金额,组织,状态可选)</h4>
+                <textarea id="adm-wanted-bulk" placeholder="玛尔佐拉,34500,龙巫教&#10;路人甲,500,领主联盟,CAPTURED" style="width:100%; height:60px; font-size:0.8em;"></textarea>
+                <button onclick="bulkAddWanted()" style="width:100%; margin-top:5px; border:1px solid #c0392b; color:#c0392b; background:none; padding:5px;">批量签发 / 更新</button>
+
+                <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #ddd;">
+                    <h4 style="margin:0 0 5px 0;">批量改状态</h4>
+                    <select id="adm-wanted-bulk-status" style="width:100%; padding:5px; margin-bottom:5px;">
+                        <option value="CAPTURED">CAPTURED (已捕获)</option>
+                        <option value="DEAD OR ALIVE">DEAD OR ALIVE (通缉中)</option>
+                        <option value="REVOKED">REVOKED (已撤销)</option>
+                    </select>
+                    <textarea id="adm-wanted-status-names" placeholder="每行一个名字，或用逗号分隔" style="width:100%; height:50px; font-size:0.8em;"></textarea>
+                    <button onclick="bulkUpdateWantedStatus()" style="width:100%; margin-top:5px; background:#34495e; color:white; border:none; padding:6px; border-radius:4px;">批量应用状态</button>
+                </div>
            </div>
         </div>
     </div>
@@ -4557,62 +4569,146 @@ async function loadLoginLogs() {
         return 0.6 + (random * 0.3);
     }
 
+    const WANTED_STATUSES = ['DEAD OR ALIVE', 'CAPTURED', 'REVOKED'];
+
+    function normalizeWantedStatus(status) {
+        const normalized = String(status || '').trim().toUpperCase();
+        if (normalized === '已捕获') return 'CAPTURED';
+        if (normalized === '已撤销' || normalized === '撤销' || normalized === '撤回') return 'REVOKED';
+        if (normalized === '通缉中' || normalized === '通缉') return 'DEAD OR ALIVE';
+        return WANTED_STATUSES.includes(normalized) ? normalized : 'DEAD OR ALIVE';
+    }
+
+    function parseWantedNames(text) {
+        return [...new Set(String(text || '')
+            .split(/[\n,，]+/)
+            .map(name => name.trim())
+            .filter(Boolean))];
+    }
+
+    async function upsertWantedPoster(payload) {
+        const { data: existingRows, error: findError } = await supabaseClient
+            .from('wanted_posters')
+            .select('id')
+            .eq('user_id', payload.user_id)
+            .eq('target_name', payload.target_name)
+            .limit(1);
+
+        if (findError) throw findError;
+
+        const existing = existingRows && existingRows[0];
+        if (existing) {
+            return supabaseClient
+                .from('wanted_posters')
+                .update(payload)
+                .eq('id', existing.id);
+        }
+
+        return supabaseClient.from('wanted_posters').insert([payload]);
+    }
+
     async function bulkAddWanted() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择目标玩家的位面');
         const text = document.getElementById('adm-wanted-bulk').value;
-        if (!text) return;
-
-        const lines = text.split('\n');
-        const posters = lines.map(line => {
-            const [name, amount, source] = line.split(',');
-            return {
-                user_id: selectedUserId,
-                target_name: name.trim(),
-                bounty_amount: parseInt(amount) || 0,
-                source_org: source ? source.trim() : 'UNKNOWN',
-                status_text: 'DEAD OR ALIVE'
-            };
-        });
+        const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+        if (lines.length === 0) return;
 
         showLoading();
-        const { error } = await supabaseClient.from('wanted_posters').insert(posters);
-        if (error) alert(error.message);
-        else {
-            alert(`成功签发 ${posters.length} 份悬赏令！`);
+        try {
+            let changed = 0;
+            for (const line of lines) {
+                const [name, amount, source, status] = line.split(',').map(part => part.trim());
+                if (!name) continue;
+
+                const payload = {
+                    user_id: selectedUserId,
+                    target_name: name,
+                    bounty_amount: parseInt(amount, 10) || 0,
+                    source_org: source || 'UNKNOWN',
+                    status_text: normalizeWantedStatus(status)
+                };
+
+                const { error } = await upsertWantedPoster(payload);
+                if (error) throw error;
+                changed++;
+            }
+
+            await logAction('DM通缉令', `批量签发/更新 ${changed} 份通缉令 (User:${selectedUserId})`);
+            alert(`成功签发 / 更新 ${changed} 份悬赏令！`);
             document.getElementById('adm-wanted-bulk').value = '';
+        } catch (error) {
+            alert('批量导入失败: ' + error.message);
+        } finally {
+            hideLoading();
         }
-        hideLoading();
+    }
+
+    async function bulkUpdateWantedStatus() {
+        if (!await requireAdminRole()) return;
+        if (!selectedUserId) return alert('请先选择目标玩家的位面');
+
+        const names = parseWantedNames(document.getElementById('adm-wanted-status-names').value);
+        const status = normalizeWantedStatus(document.getElementById('adm-wanted-bulk-status').value);
+        if (names.length === 0) return alert('请输入要改状态的通缉对象姓名');
+        if (!confirm(`确定将 ${names.length} 份通缉令批量设为 [${status}] 吗？`)) return;
+
+        showLoading();
+        try {
+            const { error } = await supabaseClient
+                .from('wanted_posters')
+                .update({ status_text: status })
+                .eq('user_id', selectedUserId)
+                .in('target_name', names);
+
+            if (error) throw error;
+
+            await logAction('DM通缉令', `批量将 ${names.join('、')} 设为 ${status} (User:${selectedUserId})`);
+            alert('批量状态更新完成');
+            document.getElementById('adm-wanted-status-names').value = '';
+        } catch (error) {
+            alert('批量状态更新失败: ' + error.message);
+        } finally {
+            hideLoading();
+        }
     }
 
     async function addWantedPoster() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择玩家');
-        const name = document.getElementById('adm-wanted-name').value;
-        const amount = document.getElementById('adm-wanted-amount').value;
-        const status = document.getElementById('adm-wanted-status').value || 'DEAD OR ALIVE';
-        const source = document.getElementById('adm-wanted-source').value;
-        const avatar = document.getElementById('adm-wanted-avatar').value;
+        const name = document.getElementById('adm-wanted-name').value.trim();
+        const amount = parseInt(document.getElementById('adm-wanted-amount').value, 10);
+        const status = normalizeWantedStatus(document.getElementById('adm-wanted-status').value);
+        const source = document.getElementById('adm-wanted-source').value.trim();
+        const avatarEl = document.getElementById('adm-wanted-avatar');
+        const avatar = avatarEl ? avatarEl.value.trim() : '';
 
-        if(!name || !amount) return alert('姓名和金额必填');
+        if(!name || Number.isNaN(amount)) return alert('姓名和金额必填');
 
-        showLoading();
-        const { error } = await supabaseClient.from('wanted_posters').insert([{
+        const payload = {
             user_id: selectedUserId,
             target_name: name,
             bounty_amount: amount,
             status_text: status,
-            source_org: source,
-            avatar_url: avatar
-        }]);
+            source_org: source || '艾尔莫瑞尔政务厅'
+        };
+        if (avatar) payload.avatar_url = avatar;
 
-        if (error) alert(error.message);
-        else {
-            alert('悬赏令已签发');
-            // 清空
+        showLoading();
+        try {
+            const { error } = await upsertWantedPoster(payload);
+            if (error) throw error;
+
+            await logAction('DM通缉令', `签发/更新通缉令 [${name}] ${amount} GP，状态 ${status} (User:${selectedUserId})`);
+            alert('悬赏令已签发 / 更新');
             document.getElementById('adm-wanted-name').value = '';
+            document.getElementById('adm-wanted-amount').value = '';
+            document.getElementById('adm-wanted-source').value = '';
+        } catch (error) {
+            alert('签发失败: ' + error.message);
+        } finally {
+            hideLoading();
         }
-        hideLoading();
     }
 
     function toggleShopMode() {
