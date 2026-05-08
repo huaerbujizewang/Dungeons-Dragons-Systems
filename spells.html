@@ -48,25 +48,21 @@
             font: inherit;
         }
 
-        .layout {
-            display: grid;
-            grid-template-columns: 240px minmax(0, 1fr);
-            gap: 22px;
-            align-items: start;
-        }
+        .layout { display: block; }
 
         .level-list {
-            position: sticky;
-            top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
             background: rgba(255,255,255,0.6);
             border: 1px solid var(--line);
             border-radius: 8px;
             padding: 10px;
+            margin-bottom: 18px;
         }
 
         .level-btn {
-            width: 100%;
-            text-align: left;
+            text-align: center;
             padding: 9px 10px;
             border: none;
             border-radius: 4px;
@@ -74,7 +70,7 @@
             cursor: pointer;
             color: var(--muted);
             font-weight: bold;
-            margin-bottom: 2px;
+            white-space: nowrap;
         }
 
         .level-btn.active, .level-btn:hover {
@@ -82,36 +78,36 @@
             color: var(--accent);
         }
 
-        .spell-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-            gap: 18px;
-        }
+        .spell-list { display: flex; flex-direction: column; gap: 12px; }
 
         .spell-card {
             background: var(--paper);
             border: 1px solid var(--line);
-            border-top: 5px solid var(--accent);
+            border-left: 5px solid var(--accent);
             border-radius: 8px;
-            padding: 18px;
+            padding: 14px 16px;
             box-shadow: 0 8px 24px rgba(44, 36, 24, 0.08);
+            display: grid;
+            grid-template-columns: 220px minmax(220px, 300px) minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
         }
 
         .spell-name { font-size: 1.35em; font-weight: 900; margin-bottom: 4px; color: var(--ink); }
         .spell-meta { color: var(--accent); font-style: italic; font-weight: bold; margin-bottom: 14px; }
-        .stat-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(216,199,170,0.7); font-size: 0.92em; }
+        .stat-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(216,199,170,0.7); font-size: 0.88em; }
         .stat-key { color: var(--muted); font-weight: bold; }
-        .spell-body { line-height: 1.75; margin-top: 14px; white-space: pre-wrap; }
-        .effect { margin-top: 10px; padding-left: 12px; border-left: 3px solid var(--line); }
+        .spell-body { line-height: 1.6; white-space: pre-wrap; font-size: 0.94em; }
+        .spell-body p { margin: 0 0 8px; }
+        .effect { margin-top: 7px; padding-left: 10px; border-left: 3px solid var(--line); }
         .effect-title { font-weight: bold; color: var(--accent); }
-        .empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: 40px; border: 1px dashed var(--line); border-radius: 8px; background: rgba(255,255,255,0.45); }
+        .empty { color: var(--muted); text-align: center; padding: 40px; border: 1px dashed var(--line); border-radius: 8px; background: rgba(255,255,255,0.45); }
 
-        @media (max-width: 760px) {
+        @media (max-width: 960px) {
             body { padding: 18px; }
             .topbar { flex-direction: column; align-items: flex-start; }
             .controls { grid-template-columns: 1fr; }
-            .layout { grid-template-columns: 1fr; }
-            .level-list { position: static; display: grid; grid-template-columns: repeat(3, 1fr); }
+            .spell-card { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -120,7 +116,7 @@
         <div class="topbar">
             <div>
                 <h1>✦ 法术图鉴</h1>
-                <div style="color:var(--muted); margin-top:6px;">自设法术档案 / 1环至12环</div>
+                <div style="color:var(--muted); margin-top:6px;">法术档案 / 1环至12环</div>
             </div>
             <a href="index.html" class="back-btn">⬅ 返回主界面</a>
         </div>
@@ -139,7 +135,7 @@
 
         <div class="layout">
             <aside class="level-list" id="level-list"></aside>
-            <main class="spell-grid" id="spell-grid">
+            <main class="spell-list" id="spell-grid">
                 <div class="empty">正在读取法术档案...</div>
             </main>
         </div>
@@ -246,12 +242,16 @@
 
             return `
                 <article class="spell-card">
-                    <div class="spell-name">${escapeHTML(spell.name)}</div>
-                    <div class="spell-meta">${levelLabel(spell.level)} ${escapeHTML(spell.school)}</div>
-                    <div class="stat-row"><div class="stat-key">施法时间</div><div>${escapeHTML(spell.casting_time)}</div></div>
-                    <div class="stat-row"><div class="stat-key">施法距离</div><div>${escapeHTML(spell.range)}</div></div>
-                    <div class="stat-row"><div class="stat-key">法术成分</div><div>${escapeHTML(spell.components)}</div></div>
-                    <div class="stat-row"><div class="stat-key">持续时间</div><div>${escapeHTML(spell.duration)}</div></div>
+                    <section>
+                        <div class="spell-name">${escapeHTML(spell.name)}</div>
+                        <div class="spell-meta">${levelLabel(spell.level)} ${escapeHTML(spell.school)}</div>
+                    </section>
+                    <section>
+                        <div class="stat-row"><div class="stat-key">施法时间</div><div>${escapeHTML(spell.casting_time)}</div></div>
+                        <div class="stat-row"><div class="stat-key">施法距离</div><div>${escapeHTML(spell.range)}</div></div>
+                        <div class="stat-row"><div class="stat-key">法术成分</div><div>${escapeHTML(spell.components)}</div></div>
+                        <div class="stat-row"><div class="stat-key">持续时间</div><div>${escapeHTML(spell.duration)}</div></div>
+                    </section>
                     <div class="spell-body">${description}${effects}</div>
                 </article>
             `;
