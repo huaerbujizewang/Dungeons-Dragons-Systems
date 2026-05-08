@@ -194,10 +194,15 @@
             select.innerHTML = '<option value="">全部学派</option>' + schools.map(school => `<option value="${escapeHTML(school)}">${escapeHTML(school)}</option>`).join('');
         }
 
+        function spellClassText(spell) {
+            return (spell.classes || []).join('、');
+        }
+
         function spellSearchText(spell) {
             return [
                 spell.name,
                 spell.school,
+                spellClassText(spell),
                 spell.casting_time,
                 spell.range,
                 spell.components,
@@ -246,7 +251,7 @@
                 <article class="spell-card">
                     <section>
                         <div class="spell-name">${escapeHTML(spell.name)}</div>
-                        <div class="spell-meta">${levelLabel(spell.level)} ${escapeHTML(spell.school)}</div>
+                        <div class="spell-meta">${levelLabel(spell.level)} ${escapeHTML(spell.school)}${spell.classes?.length ? `（${escapeHTML(spellClassText(spell))}）` : ''}</div>
                     </section>
                     <section>
                         <div class="stat-row"><div class="stat-key">施法时间</div><div>${escapeHTML(spell.casting_time)}</div></div>
