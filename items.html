@@ -253,7 +253,7 @@
                     <div class="effect"><span class="effect-title">${escapeHTML(effect.title)}：</span>${escapeHTML(effect.text)}</div>
                 `).join('')}</div>`
                 : '';
-            const weaponRows = item.damage || item.properties || item.mastery ? `
+            const gearRows = item.damage || item.properties || item.mastery ? `
                 ${item.damage ? `<div class="stat-row"><div class="stat-key">伤害</div><div>${escapeHTML(item.damage)}</div></div>` : ''}
                 ${item.properties ? `<div class="stat-row"><div class="stat-key">属性</div><div>${escapeHTML(item.properties)}</div></div>` : ''}
                 ${item.mastery ? `<div class="stat-row"><div class="stat-key">精通</div><div>${escapeHTML(item.mastery)}</div></div>` : ''}
@@ -270,7 +270,7 @@
                         <div class="stat-row"><div class="stat-key">类型</div><div>${escapeHTML(item.type)}</div></div>
                         <div class="stat-row"><div class="stat-key">${isNonmagical ? '分类' : '稀有度'}</div><div>${escapeHTML(rarityText)}</div></div>
                         ${isNonmagical ? '' : `<div class="stat-row"><div class="stat-key">同调</div><div>${item.requires_attunement ? '需要' : '不需要'}</div></div>`}
-                        ${weaponRows}
+                        ${gearRows}
                     </section>
                     <div class="item-body">${description}${effects}</div>
                 </article>
