@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物品图鉴 - 魔法物品档案</title>
+    <style>
+        :root {
+            --ink: #2c2418;
+            --muted: #776a58;
+            --paper: #fffaf0;
+            --line: #d8c7aa;
+            --accent: #9a5a1f;
+            --accent-soft: #f6eee2;
+        }
+
+        body {
+            margin: 0;
+            padding: 32px;
+            font-family: "PingFang SC", "Microsoft YaHei", serif;
+            color: var(--ink);
+            background: #f4f1ea;
+        }
+
+        .container { max-width: 1180px; margin: 0 auto; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 16px; margin-bottom: 24px; }
+        .back-btn { padding: 8px 15px; border: 1px solid var(--ink); text-decoration: none; color: var(--ink); border-radius: 4px; background: rgba(255,255,255,0.45); }
+        .back-btn:hover { background: var(--ink); color: white; }
+        h1 { margin: 0; font-size: 2em; letter-spacing: 2px; }
+
+        .controls {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) 150px 160px 150px;
+            gap: 10px;
+            background: rgba(255,255,255,0.55);
+            border: 1px solid var(--line);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 18px;
+        }
+
+        .controls input, .controls select {
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: white;
+            color: var(--ink);
+            font: inherit;
+        }
+
+        .rarity-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: rgba(255,255,255,0.6);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 18px;
+        }
+
+        .rarity-btn {
+            padding: 9px 10px;
+            border: none;
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+            color: var(--muted);
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .rarity-btn.active, .rarity-btn:hover {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .item-list { display: flex; flex-direction: column; gap: 10px; }
+        .item-card {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-left: 5px solid var(--accent);
+            border-radius: 8px;
+            padding: 12px 14px;
+            box-shadow: 0 5px 16px rgba(44, 36, 24, 0.06);
+            display: grid;
+            grid-template-columns: 260px 210px minmax(0, 1fr);
+            gap: 14px;
+            align-items: start;
+        }
+
+        .item-name { font-size: 1.28em; font-weight: 900; margin-bottom: 4px; line-height: 1.2; }
+        .item-meta { color: var(--accent); font-style: italic; font-weight: bold; }
+        .attune { margin-top: 8px; display: inline-block; font-size: 0.82em; color: #7a3419; background: #f8e9df; border: 1px solid #e5c4b3; border-radius: 999px; padding: 2px 8px; }
+        .stat-row { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(216,199,170,0.7); font-size: 0.88em; }
+        .stat-key { color: var(--muted); font-weight: bold; }
+        .item-body { line-height: 1.55; font-size: 0.93em; }
+        .item-body p { margin: 0 0 7px; }
+        .effect-list { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 7px 12px; margin-top: 8px; }
+        .effect { padding: 6px 8px 6px 10px; border-left: 3px solid var(--line); background: rgba(154, 90, 31, 0.045); border-radius: 0 4px 4px 0; }
+        .effect-title { font-weight: bold; color: var(--accent); }
+        .empty { color: var(--muted); text-align: center; padding: 40px; border: 1px dashed var(--line); border-radius: 8px; background: rgba(255,255,255,0.45); }
+
+        @media (max-width: 960px) {
+            body { padding: 18px; }
+            .topbar { flex-direction: column; align-items: flex-start; }
+            .controls { grid-template-columns: 1fr; }
+            .item-card { grid-template-columns: 1fr; }
+            .effect-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="topbar">
+            <div>
+                <h1>◈ 物品图鉴</h1>
+                <div style="color:var(--muted); margin-top:6px;">魔法物品档案 / 普通至神器</div>
+            </div>
+            <a href="index.html" class="back-btn">⬅ 返回主界面</a>
+        </div>
+
+        <div class="controls">
+            <input id="item-search" type="text" placeholder="搜索物品名称、类型或正文..." oninput="renderItems()">
+            <select id="type-filter" onchange="renderItems()">
+                <option value="">全部类型</option>
+            </select>
+            <select id="attune-filter" onchange="renderItems()">
+                <option value="">同调不限</option>
+                <option value="yes">需同调</option>
+                <option value="no">无需同调</option>
+            </select>
+            <select id="sort-filter" onchange="renderItems()">
+                <option value="rarity-desc">稀有度降序</option>
+                <option value="rarity-asc">稀有度升序</option>
+                <option value="name">名称排序</option>
+            </select>
+        </div>
+
+        <div class="rarity-list" id="rarity-list"></div>
+        <main class="item-list" id="item-list">
+            <div class="empty">正在读取物品档案...</div>
+        </main>
+    </div>
+
+    <script>
+        const RARITY_ORDER = ['普通', '非普通', '珍稀', '极珍稀', '传说', '神器'];
+        let ITEMS = [];
+        let currentRarity = '';
+
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[ch]));
+        }
+
+        async function init() {
+            try {
+                const response = await fetch('items.json?v=' + Date.now());
+                if (!response.ok) throw new Error('物品数据读取失败');
+                ITEMS = await response.json();
+                renderRarityButtons();
+                renderTypeOptions();
+                renderItems();
+            } catch (error) {
+                document.getElementById('item-list').innerHTML = `<div class="empty">${escapeHTML(error.message)}</div>`;
+            }
+        }
+
+        function renderRarityButtons() {
+            const list = document.getElementById('rarity-list');
+            const buttons = [{ value: '', label: '全部稀有度' }, ...RARITY_ORDER.map(r => ({ value: r, label: r }))];
+            list.innerHTML = buttons.map(btn => `
+                <button class="rarity-btn ${currentRarity === btn.value ? 'active' : ''}" onclick="setRarityFilter('${btn.value}')">
+                    ${btn.label}
+                </button>
+            `).join('');
+        }
+
+        function setRarityFilter(rarity) {
+            currentRarity = rarity;
+            renderRarityButtons();
+            renderItems();
+        }
+
+        function renderTypeOptions() {
+            const select = document.getElementById('type-filter');
+            const types = [...new Set(ITEMS.map(item => item.type).filter(Boolean))].sort();
+            select.innerHTML = '<option value="">全部类型</option>' + types.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
+        }
+
+        function itemSearchText(item) {
+            return [
+                item.name,
+                item.type,
+                item.rarity,
+                ...(item.description || []),
+                ...(item.effects || []).flatMap(effect => [effect.title, effect.text])
+            ].join(' ').toLowerCase();
+        }
+
+        function rarityWeight(rarity) {
+            const index = RARITY_ORDER.indexOf(rarity);
+            return index === -1 ? -1 : index;
+        }
+
+        function renderItems() {
+            const list = document.getElementById('item-list');
+            const query = document.getElementById('item-search').value.trim().toLowerCase();
+            const type = document.getElementById('type-filter').value;
+            const attune = document.getElementById('attune-filter').value;
+            const sortMode = document.getElementById('sort-filter').value;
+
+            let visible = ITEMS.filter(item => {
+                if (currentRarity && item.rarity !== currentRarity) return false;
+                if (type && item.type !== type) return false;
+                if (attune === 'yes' && !item.requires_attunement) return false;
+                if (attune === 'no' && item.requires_attunement) return false;
+                if (query && !itemSearchText(item).includes(query)) return false;
+                return true;
+            });
+
+            visible = visible.sort((a, b) => {
+                if (sortMode === 'rarity-asc') return rarityWeight(a.rarity) - rarityWeight(b.rarity) || a.name.localeCompare(b.name, 'zh-Hans-CN');
+                if (sortMode === 'name') return a.name.localeCompare(b.name, 'zh-Hans-CN');
+                return rarityWeight(b.rarity) - rarityWeight(a.rarity) || a.name.localeCompare(b.name, 'zh-Hans-CN');
+            });
+
+            if (visible.length === 0) {
+                list.innerHTML = '<div class="empty">没有匹配的物品。</div>';
+                return;
+            }
+
+            list.innerHTML = visible.map(renderItemCard).join('');
+        }
+
+        function renderItemCard(item) {
+            const description = (item.description || []).map(text => `<p>${escapeHTML(text)}</p>`).join('');
+            const effects = (item.effects || []).length
+                ? `<div class="effect-list">${item.effects.map(effect => `
+                    <div class="effect"><span class="effect-title">${escapeHTML(effect.title)}：</span>${escapeHTML(effect.text)}</div>
+                `).join('')}</div>`
+                : '';
+
+            return `
+                <article class="item-card">
+                    <section>
+                        <div class="item-name">${escapeHTML(item.name)}</div>
+                        <div class="item-meta">${escapeHTML(item.type)}，${escapeHTML(item.rarity)}${item.requires_attunement ? '（需同调）' : ''}</div>
+                        ${item.requires_attunement ? '<span class="attune">需同调</span>' : ''}
+                    </section>
+                    <section>
+                        <div class="stat-row"><div class="stat-key">类型</div><div>${escapeHTML(item.type)}</div></div>
+                        <div class="stat-row"><div class="stat-key">稀有度</div><div>${escapeHTML(item.rarity)}</div></div>
+                        <div class="stat-row"><div class="stat-key">同调</div><div>${item.requires_attunement ? '需要' : '不需要'}</div></div>
+                    </section>
+                    <div class="item-body">${description}${effects}</div>
+                </article>
+            `;
+        }
+
+        init();
+    </script>
+</body>
+</html>
