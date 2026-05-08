@@ -359,6 +359,9 @@
         .grant-row { display: grid; grid-template-columns: minmax(0, 1fr) 86px 58px 28px; gap: 6px; align-items: center; }
         .grant-row input, .grant-row select { min-width: 0; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85em; }
         .grant-row button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px; cursor: pointer; }
+        .restock-grid { display: grid; grid-template-columns: 1fr 70px 70px; gap: 6px; align-items: center; margin-top: 10px; font-size: 0.85em; }
+        .restock-grid input { width: 100%; box-sizing: border-box; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        .restock-grid .restock-head { color: #777; font-weight: bold; font-size: 0.85em; }
 
         /* --- D&D 属性面板样式 (Stat Block) --- */
         .stat-block-container {
@@ -1722,9 +1725,19 @@
                     <textarea id="adm-shop-desc" placeholder="描述..." style="grid-column: 1/3; height:50px;"></textarea>
                 </div>
                 <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:10px;">确认上架</button>
-                <!-- 随机进货按钮 -->
-                <button onclick="randomRestock()" style="width:100%; margin-top:10px; background:#8e44ad; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">🎲 随机进货 (标准包)</button>
-                <div style="font-size:0.8em; color:#666; text-align:center; margin-top:5px;">包含: 2传说, 12极珍稀, 20珍稀, 30非普通, 20普通</div>
+                <div style="margin-top:12px; padding:10px; background:#faf5ff; border:1px dashed #8e44ad; border-radius:6px;">
+                    <div style="font-weight:bold; color:#8e44ad; margin-bottom:6px;">🎲 随机进货配方</div>
+                    <div class="restock-grid">
+                        <div class="restock-head">稀有度</div><div class="restock-head">种类数</div><div class="restock-head">每件库存</div>
+                        <label>传说</label><input id="restock-count-legendary" type="number" min="0" step="1" value="2"><input id="restock-stock-legendary" type="number" min="1" step="1" value="1">
+                        <label>极珍稀</label><input id="restock-count-veryrare" type="number" min="0" step="1" value="12"><input id="restock-stock-veryrare" type="number" min="1" step="1" value="1">
+                        <label>珍稀</label><input id="restock-count-rare" type="number" min="0" step="1" value="20"><input id="restock-stock-rare" type="number" min="1" step="1" value="1">
+                        <label>非普通</label><input id="restock-count-uncommon" type="number" min="0" step="1" value="30"><input id="restock-stock-uncommon" type="number" min="1" step="1" value="1">
+                        <label>普通</label><input id="restock-count-common" type="number" min="0" step="1" value="20"><input id="restock-stock-common" type="number" min="1" step="1" value="1">
+                    </div>
+                    <button onclick="randomRestock()" style="width:100%; margin-top:10px; background:#8e44ad; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">执行随机进货</button>
+                    <div style="font-size:0.78em; color:#666; text-align:center; margin-top:5px;">目标仍跟随“全服公共 / 当前玩家特供”的选择逻辑。</div>
+                </div>
             </div>
             
 
@@ -4381,6 +4394,43 @@ async function loadLoginLogs() {
             }
         }
     }
+    const RESTOCK_RARITIES = [
+        { rarity: '传说', countId: 'restock-count-legendary', stockId: 'restock-stock-legendary' },
+        { rarity: '极珍稀', countId: 'restock-count-veryrare', stockId: 'restock-stock-veryrare' },
+        { rarity: '珍稀', countId: 'restock-count-rare', stockId: 'restock-stock-rare' },
+        { rarity: '非普通', countId: 'restock-count-uncommon', stockId: 'restock-stock-uncommon' },
+        { rarity: '普通', countId: 'restock-count-common', stockId: 'restock-stock-common' }
+    ];
+
+    function readRestockNumber(id, fallback, min = 0) {
+        const el = document.getElementById(id);
+        const value = parseInt(el?.value, 10);
+        if (Number.isNaN(value)) return fallback;
+        return Math.max(min, value);
+    }
+
+    function shuffleItems(items) {
+        const copy = [...items];
+        for (let i = copy.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+    }
+
+    function getRestockPlan() {
+        return RESTOCK_RARITIES.map(cfg => ({
+            rarity: cfg.rarity,
+            count: readRestockNumber(cfg.countId, 0, 0),
+            stock: readRestockNumber(cfg.stockId, 1, 1)
+        })).filter(row => row.count > 0);
+    }
+
+    function describeRestockPlan(plan) {
+        if (plan.length === 0) return '无';
+        return plan.map(row => `${row.rarity} ${row.count}种 × 库存${row.stock}`).join('；');
+    }
+
     // --- 随机进货功能 ---
     async function randomRestock() {
         if (!await requireAdminRole()) return;
@@ -4389,22 +4439,53 @@ async function loadLoginLogs() {
         // 如果没值 (null)，说明是公共进货
         let targetId = selectedUserId || null;
         let targetName = targetId ? '指定玩家特供' : '全服公共';
+        const plan = getRestockPlan();
 
-        if (!confirm(`确定要执行 [标准随机包] 进货吗？\n\n目标: ${targetName}\n内容: 2传说 + 12极珍稀 + 20珍稀 + 30非普通 + 20普通\n\n(注意：这会直接添加到集市，不会覆盖已有商品)`)) return;
+        if (plan.length === 0) return alert('请至少设置一种稀有度的进货数量。');
+        if (!confirm(`确定要执行随机进货吗？\n\n目标: ${targetName}\n内容: ${describeRestockPlan(plan)}\n\n(注意：这会直接添加到集市，不会覆盖已有商品)`)) return;
 
         showLoading();
         try {
-            // 2. 调用数据库函数
-            const { error } = await supabaseClient.rpc('admin_random_restock', { 
-                target_user_id: targetId 
-            });
+            const rowsToInsert = [];
+            const shortageNotes = [];
 
-            if (error) throw error;
+            for (const row of plan) {
+                const { data, error } = await supabaseClient
+                    .from('compendium_items')
+                    .select('name, rarity, category, price, description')
+                    .eq('rarity', row.rarity);
+
+                if (error) throw error;
+
+                const pool = data || [];
+                const picked = shuffleItems(pool).slice(0, row.count);
+                if (picked.length < row.count) {
+                    shortageNotes.push(`${row.rarity} 仅找到 ${picked.length}/${row.count} 种`);
+                }
+
+                picked.forEach(item => {
+                    rowsToInsert.push({
+                        name: item.name,
+                        rarity: item.rarity,
+                        category: item.category,
+                        price: item.price,
+                        description: item.description,
+                        stock: row.stock,
+                        user_id: targetId
+                    });
+                });
+            }
+
+            if (rowsToInsert.length === 0) throw new Error('没有从图鉴库中抽到任何可上架物品。');
+
+            const { error: insertError } = await supabaseClient.from('shop_items').insert(rowsToInsert);
+            if (insertError) throw insertError;
 
             // 3. 记录日志
-            await logAction('DM随机进货', `执行了标准随机包进货 (目标: ${targetName})`);
+            await logAction('DM随机进货', `执行了自定义随机进货 (目标: ${targetName})：${describeRestockPlan(plan)}；实际上架 ${rowsToInsert.length} 种`);
 
-            alert('进货完成！共计上架 37 件物品。');
+            const warning = shortageNotes.length ? `\n\n库存池不足：${shortageNotes.join('；')}` : '';
+            alert(`进货完成！共计上架 ${rowsToInsert.length} 种物品。${warning}`);
             loadShop(); // 刷新集市显示
         } catch (e) {
             console.error(e);
