@@ -78,28 +78,29 @@
             color: var(--accent);
         }
 
-        .spell-list { display: flex; flex-direction: column; gap: 12px; }
+        .spell-list { display: flex; flex-direction: column; gap: 10px; }
 
         .spell-card {
             background: var(--paper);
             border: 1px solid var(--line);
             border-left: 5px solid var(--accent);
             border-radius: 8px;
-            padding: 14px 16px;
-            box-shadow: 0 8px 24px rgba(44, 36, 24, 0.08);
+            padding: 12px 14px;
+            box-shadow: 0 5px 16px rgba(44, 36, 24, 0.06);
             display: grid;
-            grid-template-columns: 220px minmax(220px, 300px) minmax(0, 1fr);
-            gap: 16px;
+            grid-template-columns: 230px 300px minmax(0, 1fr);
+            gap: 14px;
             align-items: start;
         }
 
-        .spell-name { font-size: 1.35em; font-weight: 900; margin-bottom: 4px; color: var(--ink); }
-        .spell-meta { color: var(--accent); font-style: italic; font-weight: bold; margin-bottom: 14px; }
-        .stat-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(216,199,170,0.7); font-size: 0.88em; }
+        .spell-name { font-size: 1.28em; font-weight: 900; margin-bottom: 4px; color: var(--ink); line-height: 1.2; }
+        .spell-meta { color: var(--accent); font-style: italic; font-weight: bold; margin-bottom: 0; }
+        .stat-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(216,199,170,0.7); font-size: 0.86em; }
         .stat-key { color: var(--muted); font-weight: bold; }
-        .spell-body { line-height: 1.6; white-space: pre-wrap; font-size: 0.94em; }
-        .spell-body p { margin: 0 0 8px; }
-        .effect { margin-top: 7px; padding-left: 10px; border-left: 3px solid var(--line); }
+        .spell-body { line-height: 1.55; font-size: 0.93em; }
+        .spell-body p { margin: 0 0 7px; }
+        .effect-list { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 7px 12px; margin-top: 8px; }
+        .effect { padding: 6px 8px 6px 10px; border-left: 3px solid var(--line); background: rgba(109, 63, 141, 0.045); border-radius: 0 4px 4px 0; }
         .effect-title { font-weight: bold; color: var(--accent); }
         .empty { color: var(--muted); text-align: center; padding: 40px; border: 1px dashed var(--line); border-radius: 8px; background: rgba(255,255,255,0.45); }
 
@@ -108,6 +109,7 @@
             .topbar { flex-direction: column; align-items: flex-start; }
             .controls { grid-template-columns: 1fr; }
             .spell-card { grid-template-columns: 1fr; }
+            .effect-list { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -234,11 +236,11 @@
 
         function renderSpellCard(spell) {
             const description = (spell.description || []).map(text => `<p>${escapeHTML(text)}</p>`).join('');
-            const effects = (spell.effects || []).map(effect => `
-                <div class="effect">
-                    <span class="effect-title">${escapeHTML(effect.title)}：</span>${escapeHTML(effect.text)}
-                </div>
-            `).join('');
+            const effects = (spell.effects || []).length
+                ? `<div class="effect-list">${(spell.effects || []).map(effect => `
+                    <div class="effect"><span class="effect-title">${escapeHTML(effect.title)}：</span>${escapeHTML(effect.text)}</div>
+                `).join('')}</div>`
+                : '';
 
             return `
                 <article class="spell-card">
