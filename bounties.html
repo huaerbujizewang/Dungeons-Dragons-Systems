@@ -65,6 +65,26 @@
             background: rgba(244, 241, 234, 0.2); 
             box-shadow: 0 0 5px rgba(192, 57, 43, 0.3);
         }
+        .revoked-stamp {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            border: 8px solid #555;
+            color: #555;
+            font-family: 'Wanted', 'Impact', sans-serif;
+            font-size: 3.2em;
+            padding: 10px 20px;
+            text-transform: uppercase;
+            opacity: 0.75;
+            z-index: 5;
+            pointer-events: none;
+            font-weight: bold;
+            letter-spacing: 5px;
+            background: rgba(244, 241, 234, 0.35);
+            box-shadow: 0 0 5px rgba(0,0,0,0.25);
+        }
+        .wanted-poster.revoked { filter: grayscale(0.85); opacity: 0.72; }
         /* 调整管理员按钮颜色 */
         .btn-capture { background: #27ae60; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
 
@@ -74,6 +94,7 @@
         .upload-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: 0.3s; }
         .wanted-photo-frame:hover .upload-overlay { opacity: 1; }
         .btn-del { background: #c0392b; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-active { background: #8e44ad; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -127,23 +148,26 @@
     }
 
     posters.forEach(p => {
-        // 判断状态：如果是 CAPTURED 或 已捕获，则显示红色印章
-        const isCaptured = (p.status_text === 'CAPTURED' || p.status_text === '已捕获');
-        const stampHtml = isCaptured ? `<div class="captured-stamp">CAPTURED</div>` : '';
+        const statusText = normalizeWantedStatus(p.status_text);
+        const isCaptured = statusText === 'CAPTURED';
+        const isRevoked = statusText === 'REVOKED';
+        const stampHtml = isCaptured
+            ? `<div class="captured-stamp">CAPTURED</div>`
+            : (isRevoked ? `<div class="revoked-stamp">REVOKED</div>` : '');
         
         const uploadOverlay = isAdmin ? `<div class="upload-overlay" onclick="triggerUpload(${p.id})">点击上传头像</div>` : '';
-        const delBtn = isAdmin ? `<button class="btn-del" onclick="deletePoster(${p.id})">撤销通缉</button>` : '';
+        const revokeBtn = isAdmin ? `<button class="btn-del" onclick="setPosterStatus(${p.id}, 'REVOKED')">设为已撤销</button>` : '';
         
-        // 管理员专属：快速切换状态按钮
-        const captureBtn = isAdmin ? 
-            `<button class="btn-capture" onclick="toggleCaptured(${p.id}, '${p.status_text}')" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">
-                ${isCaptured ? '设为通缉中' : '设为已捕获'}
-            </button>` : '';
+        const statusBtns = isAdmin ? `
+            <button class="btn-active" onclick="setPosterStatus(${p.id}, 'DEAD OR ALIVE')">通缉中</button>
+            <button class="btn-capture" onclick="setPosterStatus(${p.id}, 'CAPTURED')">已捕获</button>
+            ${revokeBtn}
+        ` : '';
 
         grid.innerHTML += `
-            <div class="wanted-poster">
+            <div class="wanted-poster ${isRevoked ? 'revoked' : ''}">
                 ${stampHtml}
-                <div class="wanted-status">${p.status_text}</div>
+                <div class="wanted-status">${statusText}</div>
                 
                 <div class="wanted-photo-frame">
                     <img src="${p.avatar_url || 'https://via.placeholder.com/400?text=NO+IMAGE'}" class="wanted-photo">
@@ -169,8 +193,7 @@
                 </div>
 
                 <div class="admin-controls">
-                    ${captureBtn}
-                    ${delBtn}
+                    ${statusBtns}
                 </div>
             </div>`;
     });
@@ -200,18 +223,16 @@
         }
     };
 
-    async function deletePoster(id) {
-        if (!confirm('确定撤销此通缉令？（数据将永久消失）')) return;
-        await supabaseClient.from('wanted_posters').delete().eq('id', id);
-        loadPosters();
+    function normalizeWantedStatus(status) {
+        const normalized = String(status || '').trim().toUpperCase();
+        if (normalized === '已捕获') return 'CAPTURED';
+        if (normalized === '已撤销' || normalized === '撤销' || normalized === '撤回') return 'REVOKED';
+        if (normalized === '通缉中' || normalized === '通缉') return 'DEAD OR ALIVE';
+        return ['DEAD OR ALIVE', 'CAPTURED', 'REVOKED'].includes(normalized) ? normalized : 'DEAD OR ALIVE';
     }
 
-    // --- 管理员操作：切换捕获状态 ---
-    async function toggleCaptured(id, currentStatus) {
-        const newStatus = (currentStatus === 'CAPTURED' || currentStatus === '已捕获') 
-            ? 'DEAD OR ALIVE' 
-            : 'CAPTURED';
-    
+    async function setPosterStatus(id, status) {
+        const newStatus = normalizeWantedStatus(status);
         const { error } = await supabaseClient
             .from('wanted_posters')
             .update({ status_text: newStatus })
@@ -220,7 +241,7 @@
         if (error) {
             alert('状态更新失败：' + error.message);
         } else {
-            loadPosters(); // 重新加载
+            loadPosters();
         }
     }
 
