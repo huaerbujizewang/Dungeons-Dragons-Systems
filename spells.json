@@ -72,7 +72,7 @@
     "school": "塑能系",
     "classes": ["法师"],
     "casting_time": "1 动作",
-    "range": "自身（半径 120 尺）",
+    "range": "自身",
     "components": "V",
     "duration": "瞬间",
     "description": [
