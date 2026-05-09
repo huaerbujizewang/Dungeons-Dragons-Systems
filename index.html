@@ -2495,11 +2495,12 @@ function isPhandalinPlayer(email) {
         const getSortWeight = (e) => {
             const sWeight = statusWeight[e.status] || 99;
             const isPlayer = e.salary === -1;
+            const salary = Number(e.salary) || 0;
             return {
                 status: sWeight,
                 isPlayer: isPlayer,
                 rarity: e.rarity || 3,
-                salary: Math.max(0, e.salary)
+                salary
             };
         };
 
@@ -2521,8 +2522,8 @@ function isPhandalinPlayer(email) {
 
         // 计算总薪资 
         const totalSalary = data
-            .filter(e => (e.status === '在职' || e.status === '科研中' || e.status === '出差') && e.salary > 0)
-            .reduce((sum, e) => sum + e.salary, 0);
+            .filter(e => (e.status === '在职' || e.status === '科研中' || e.status === '出差') && e.salary !== -1)
+            .reduce((sum, e) => sum + (Number(e.salary) || 0), 0);
         // 分组并排序
         const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
         const hirelings = data.filter(e => e.role !== '核心队友').sort(sortLogic);
@@ -3697,7 +3698,8 @@ async function buy(id, p, n, c) {
 async function updateUserGold() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return;
-        const newGold = document.getElementById('adm-user-gold').value;
+        const newGold = Number(document.getElementById('adm-user-gold').value);
+        if (Number.isNaN(newGold)) return alert('金币必须是数字，可以为负数');
         showLoading();
         await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', selectedUserId);
         
@@ -4061,8 +4063,8 @@ async function calculateCityNetIncome(targetUserId) {
         const taxIncome = city.population * (city.tax_rate ?? 1.2);
         
         const tradeIncome = incomes.reduce((sum, item) => {
-            const count = item.count || 1;
-            const price = parseFloat(item.unit_price || item.amount || 0); // 确保读取为小数
+            const count = Number(item.count ?? 1) || 1;
+            const price = parseFloat(item.unit_price ?? item.amount ?? 0); // 确保读取为小数，并保留 0/负数
             return sum + (count * price);
         }, 0);
         
@@ -4070,8 +4072,11 @@ async function calculateCityNetIncome(targetUserId) {
 
         // --- 支出计算 (支持小数) ---
         let cityTotalExpense = 0;
-        expenses.forEach(e => cityTotalExpense += (e.count * parseFloat(e.unit_cost)));
-        cityTotalExpense += employees.reduce((sum, e) => sum + parseFloat(e.salary), 0);
+        expenses.forEach(e => cityTotalExpense += ((Number(e.count) || 0) * parseFloat(e.unit_cost || 0)));
+        cityTotalExpense += employees.reduce((sum, e) => {
+            if (e.salary === -1) return sum;
+            return sum + (parseFloat(e.salary) || 0);
+        }, 0);
 
         // 计算净利并处理 JS 浮点数 Bug (四舍五入保留两位小数)
         const cityNet = Math.round((cityTotalIncome - cityTotalExpense) * 100) / 100;
