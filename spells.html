@@ -94,6 +94,8 @@
         }
 
         .spell-name { font-size: 1.28em; font-weight: 900; margin-bottom: 4px; color: var(--ink); line-height: 1.2; }
+        .spell-title-row { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+        .source-tag { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; background: rgba(255,255,255,0.68); color: var(--muted); font-size: 0.72em; font-weight: bold; line-height: 1.4; white-space: nowrap; }
         .spell-meta { color: var(--accent); font-style: italic; font-weight: bold; margin-bottom: 0; }
         .stat-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(216,199,170,0.7); font-size: 0.86em; }
         .stat-key { color: var(--muted); font-weight: bold; }
@@ -201,6 +203,7 @@
         function spellSearchText(spell) {
             return [
                 spell.name,
+                spell.source,
                 spell.school,
                 spellClassText(spell),
                 spell.casting_time,
@@ -241,6 +244,7 @@
 
         function renderSpellCard(spell) {
             const description = (spell.description || []).map(text => `<p>${escapeHTML(text)}</p>`).join('');
+            const sourceTag = spell.source ? `<span class="source-tag">${escapeHTML(spell.source)}</span>` : '';
             const effects = (spell.effects || []).length
                 ? `<div class="effect-list">${(spell.effects || []).map(effect => `
                     <div class="effect"><span class="effect-title">${escapeHTML(effect.title)}：</span>${escapeHTML(effect.text)}</div>
@@ -250,7 +254,10 @@
             return `
                 <article class="spell-card">
                     <section>
-                        <div class="spell-name">${escapeHTML(spell.name)}</div>
+                        <div class="spell-title-row">
+                            <div class="spell-name">${escapeHTML(spell.name)}</div>
+                            ${sourceTag}
+                        </div>
                         <div class="spell-meta">${levelLabel(spell.level)} ${escapeHTML(spell.school)}${spell.classes?.length ? `（${escapeHTML(spellClassText(spell))}）` : ''}</div>
                     </section>
                     <section>
