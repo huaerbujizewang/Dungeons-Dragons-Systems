@@ -30,7 +30,7 @@
 
         .controls {
             display: grid;
-            grid-template-columns: minmax(220px, 1fr) 150px 160px;
+            grid-template-columns: minmax(220px, 1fr) 150px 150px 160px;
             gap: 10px;
             background: rgba(255,255,255,0.55);
             border: 1px solid var(--line);
@@ -130,9 +130,13 @@
             <select id="school-filter" onchange="renderSpells()">
                 <option value="">全部学派</option>
             </select>
+            <select id="source-filter" onchange="renderSpells()">
+                <option value="">全部标签</option>
+            </select>
             <select id="sort-filter" onchange="renderSpells()">
                 <option value="level-asc">环位升序</option>
                 <option value="level-desc">环位降序</option>
+                <option value="source">标签排序</option>
                 <option value="name">名称排序</option>
             </select>
         </div>
@@ -166,6 +170,7 @@
                 SPELLS = await response.json();
                 renderLevelButtons();
                 renderSchoolOptions();
+                renderSourceOptions();
                 renderSpells();
             } catch (error) {
                 document.getElementById('spell-grid').innerHTML = `<div class="empty">${escapeHTML(error.message)}</div>`;
@@ -196,6 +201,12 @@
             select.innerHTML = '<option value="">全部学派</option>' + schools.map(school => `<option value="${escapeHTML(school)}">${escapeHTML(school)}</option>`).join('');
         }
 
+        function renderSourceOptions() {
+            const select = document.getElementById('source-filter');
+            const sources = [...new Set(SPELLS.map(spell => spell.source).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+            select.innerHTML = '<option value="">全部标签</option>' + sources.map(source => `<option value="${escapeHTML(source)}">${escapeHTML(source)}</option>`).join('');
+        }
+
         function spellClassText(spell) {
             return (spell.classes || []).join('、');
         }
@@ -219,17 +230,20 @@
             const grid = document.getElementById('spell-grid');
             const query = document.getElementById('spell-search').value.trim().toLowerCase();
             const school = document.getElementById('school-filter').value;
+            const source = document.getElementById('source-filter').value;
             const sortMode = document.getElementById('sort-filter').value;
 
             let visible = SPELLS.filter(spell => {
                 if (currentLevel && String(spell.level) !== currentLevel) return false;
                 if (school && spell.school !== school) return false;
+                if (source && spell.source !== source) return false;
                 if (query && !spellSearchText(spell).includes(query)) return false;
                 return true;
             });
 
             visible = visible.sort((a, b) => {
                 if (sortMode === 'level-desc') return Number(b.level) - Number(a.level) || a.name.localeCompare(b.name, 'zh-Hans-CN');
+                if (sortMode === 'source') return (a.source || '').localeCompare(b.source || '', 'zh-Hans-CN') || Number(a.level) - Number(b.level) || a.name.localeCompare(b.name, 'zh-Hans-CN');
                 if (sortMode === 'name') return a.name.localeCompare(b.name, 'zh-Hans-CN');
                 return Number(a.level) - Number(b.level) || a.name.localeCompare(b.name, 'zh-Hans-CN');
             });
