@@ -1,4 +1,4 @@
-﻿[
+[
     {
         "id":  "awaken-undead",
         "name":  "启蒙不死生物",
@@ -693,5 +693,323 @@
                         }
                     ],
         "source":  "赫里奥斯"
+    },
+    {
+        "id":  "entropy-light-shield",
+        "name":  "熵光护盾",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "自身",
+        "components":  "V, S",
+        "duration":  "专注，至多 1 分钟",
+        "description":  [
+                            "你周围出现闪烁着多种混乱色调的魔法力场。",
+                            "在法术持续时间内，任何针对你发动的远程攻击检定均具有劣势。此法术仅影响远程武器攻击与远程法术攻击，对任何形式的近战攻击（即使攻击者的触及范围大于 5 尺）均没有影响。若攻击者能通过盲视或真实视觉观测你，则其免疫于此法术的效应。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-fiends",
+        "name":  "防护邪魔",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "你触碰一个自愿的生物，在其周围制造出一道无形的魔法屏障。在法术持续时间内，目标获得以下针对邪魔的防护效果："
+                        ],
+        "effects":  [
+                        {
+                            "title":  "偏斜防御",
+                            "text":  "邪魔对目标发动的任何攻击检定均具有劣势。"
+                        },
+                        {
+                            "title":  "心智防护",
+                            "text":  "目标无法被邪魔魅惑、恐慌或附身。如果目标在受到此法术影响前已经被邪魔附身或处于上述状态，这些效应在法术持续时间内被压制。当法术结束时，如果原效应的持续时间尚未结束，其控制与状态将立刻恢复。"
+                        },
+                        {
+                            "title":  "召唤物阻挡",
+                            "text":  "任何被魔法召唤而来的邪魔无法与目标进行直接的肢体接触，其需要接触的攻击会自动失败并被屏障弹开。如果受保护的目标对被阻挡的邪魔发动攻击，或试图主动穿过屏障逼近该邪魔，此召唤物阻挡效果对该邪魔立即终止。"
+                        }
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-celestials",
+        "name":  "防护天族",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对天族起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-humanoids",
+        "name":  "防护类人",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "吟游诗人",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对类人起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-aberrations",
+        "name":  "防护异怪",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "邪术师",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对异怪起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-undead",
+        "name":  "防护亡灵",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对亡灵起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-constructs",
+        "name":  "防护构装",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对构装起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-dragons",
+        "name":  "防护龙类",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对龙类起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-elementals",
+        "name":  "防护元素",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对元素起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-fey",
+        "name":  "防护妖精",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对妖精起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-giants",
+        "name":  "防护巨人",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对巨人起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-monstrosities",
+        "name":  "防护怪兽",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对怪兽起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-oozes",
+        "name":  "防护泥怪",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对泥怪起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
+    },
+    {
+        "id":  "protection-from-plants",
+        "name":  "防护植物",
+        "level":  1,
+        "school":  "防护系",
+        "classes":  [
+                        "牧师",
+                        "圣武士",
+                        "法师"
+                    ],
+        "casting_time":  "1 动作",
+        "range":  "触及",
+        "components":  "V, S, M（一点银粉，施法时撒在地板上形成圆环）",
+        "duration":  "专注，至多 10 分钟",
+        "description":  [
+                            "此法术作用类似防护邪魔，只是它的偏斜防御、心智防护以及召唤物阻挡效果仅对植物起效。"
+                        ],
+        "effects":  [
+
+                    ],
+        "source":  "3R转"
     }
 ]
