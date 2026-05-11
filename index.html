@@ -336,7 +336,6 @@
         
         .danger-btn { color: #e74c3c; border-color: #e74c3c; margin-top: 8px; width: 100%; padding: 5px; background: none; border: 1px solid; border-radius: 4px; font-size: 0.85em; transition: 0.2s; }
         .danger-btn:hover { background: #e74c3c; color: white; }
-        
         .add-member-card { border: 2px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; cursor: pointer; min-height: 200px; background: #fafafa; }
         .add-member-card:hover { border-color: #333; color: #333; background: #fff; }
 
@@ -1882,6 +1881,16 @@
                 <button onclick="updateEmpRarity()" style="width:100%; margin-top:5px; background:#f1c40f; border:none; color:#fff; padding:5px; font-weight:bold;">更新星级</button>
             </div>
 
+            <div class="admin-box" style="border:1px solid #2ecc71; padding:15px; border-radius:8px; background:#f0fff4;">
+                <h3 style="margin-top:0; color:#27ae60;">📌 雇员状态调整</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选雇员</div>
+                <div style="display:flex; gap:5px;">
+                    <select id="adm-status-emp-list" onchange="syncAdminStatusValue()" style="flex:1;"></select>
+                    <select id="adm-status-val" style="width:110px;"></select>
+                </div>
+                <button onclick="updateEmpStatusFromAdmin()" style="width:100%; margin-top:5px; background:#2ecc71; border:none; color:#fff; padding:5px; font-weight:bold;">更新状态</button>
+            </div>
+
             <div class="admin-box" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#faf0ff;">
                 <h3 style="margin-top:0; color:#8e44ad;">🎲 卡池头像上传</h3>
                 <div style="margin-bottom:5px;">
@@ -2041,6 +2050,7 @@
     const DM_EMAIL = '739477825@qq.com';
     const ADMIN_ROLES = ['dm', 'root'];
     const WAR_CONTROLLER_EMAILS = [DM_EMAIL, 'master@almorel.com'];
+    const EMPLOYEE_STATUSES = ['在职', '科研中', '出差', '休假', '特殊状态', '申请解雇', '离职', '违规'];
 
     function escapeHTML(value) {
         return String(value ?? '').replace(/[&<>'"]/g, ch => ({
@@ -2050,6 +2060,13 @@
 
     function jsStringAttr(value) {
         return escapeHTML(JSON.stringify(String(value ?? '')));
+    }
+
+    function renderEmployeeStatusOptions(selectedStatus = '') {
+        return EMPLOYEE_STATUSES.map(status => {
+            const selected = status === selectedStatus ? 'selected' : '';
+            return `<option value="${escapeHTML(status)}" ${selected}>${escapeHTML(status)}</option>`;
+        }).join('');
     }
 
     let authVerifyDepth = 0;
@@ -3492,6 +3509,8 @@ async function buy(id, p, n, c) {
             renderWantedPosterSearchResults([]);
             refreshAllData();
             document.getElementById('adm-emp-list').innerHTML = '';
+            document.getElementById('adm-status-emp-list').innerHTML = '';
+            document.getElementById('adm-status-val').innerHTML = '';
             return;
         }
 
@@ -3561,6 +3580,7 @@ async function buy(id, p, n, c) {
 
         updateStatBlockSelect(selectedUserId); // 原有的调用保持不变
         loadEmpForRarity(selectedUserId);
+        loadEmpForStatus(selectedUserId);
         loadAdminResearch();
     }
 
@@ -5782,13 +5802,7 @@ async function getRobustIP() {
         }
     }
 
-    // --- DM功能：修改现有雇员星级 ---
-    // 1. 当 DM 在“玩家资产”里选中玩家时，自动填充这里的下拉框
-    // 需要修改现有的 loadUserDetail 函数，在最后加上：
-    /* // 在 loadUserDetail 函数末尾添加这一行：
-       loadEmpForRarity(selectedUserId); 
-    */
-
+    // --- DM功能：修改现有雇员星级与状态 ---
     async function loadEmpForRarity(uid) {
         if (!await requireAdminRole()) return;
         const select = document.getElementById('adm-rarity-emp-list');
@@ -5800,6 +5814,47 @@ async function getRobustIP() {
                 select.innerHTML += `<option value="${e.id}">${e.name} (${e.rarity||3}★)</option>`;
             });
         }
+    }
+
+    async function loadEmpForStatus(uid) {
+        if (!await requireAdminRole()) return;
+        const empSelect = document.getElementById('adm-status-emp-list');
+        const statusSelect = document.getElementById('adm-status-val');
+        if (!empSelect || !statusSelect) return;
+
+        empSelect.innerHTML = '<option value="">加载中...</option>';
+        statusSelect.innerHTML = renderEmployeeStatusOptions('在职');
+
+        const { data, error } = await supabaseClient
+            .from('employees')
+            .select('id, name, status')
+            .eq('user_id', uid)
+            .order('id');
+
+        if (error) {
+            empSelect.innerHTML = '<option value="">读取失败</option>';
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
+            return;
+        }
+
+        empSelect.innerHTML = data.map(e => {
+            const status = EMPLOYEE_STATUSES.includes(e.status) ? e.status : '在职';
+            return `<option value="${e.id}" data-status="${escapeHTML(status)}">${escapeHTML(e.name)} (${escapeHTML(status)})</option>`;
+        }).join('');
+        syncAdminStatusValue();
+    }
+
+    function syncAdminStatusValue() {
+        const empSelect = document.getElementById('adm-status-emp-list');
+        const statusSelect = document.getElementById('adm-status-val');
+        if (!empSelect || !statusSelect) return;
+
+        const currentStatus = empSelect.selectedOptions[0]?.dataset.status || '在职';
+        statusSelect.innerHTML = renderEmployeeStatusOptions(currentStatus);
     }
 
     async function updateEmpRarity() {
@@ -5815,6 +5870,41 @@ async function getRobustIP() {
         // 刷新列表
         loadEmpForRarity(selectedUserId);
         loadEmployees(); // 刷新主界面
+    }
+
+    async function updateEmpStatusFromAdmin() {
+        if (!await requireAdminRole()) return;
+
+        const empSelect = document.getElementById('adm-status-emp-list');
+        const statusSelect = document.getElementById('adm-status-val');
+        const empId = empSelect.value;
+        const newStatus = statusSelect.value;
+        const empName = empSelect.selectedOptions[0]?.textContent.replace(/\s*\([^)]*\)\s*$/, '') || `ID:${empId}`;
+
+        if (!selectedUserId) return alert('请先选择玩家');
+        if (!empId) return alert('请先选择雇员');
+        if (!EMPLOYEE_STATUSES.includes(newStatus)) return alert('状态值无效');
+
+        showLoading();
+        const { error } = await supabaseClient
+            .from('employees')
+            .update({ status: newStatus })
+            .eq('id', empId)
+            .eq('user_id', selectedUserId);
+        hideLoading();
+
+        if (error) {
+            alert('状态更新失败：' + error.message);
+            return;
+        }
+
+        await logAction('DM操作', `将雇员 [${empName}] 的状态改为 [${newStatus}] (User:${selectedUserId})`);
+        await Promise.all([
+            loadEmpForStatus(selectedUserId),
+            loadEmployees(),
+            loadTeam()
+        ]);
+        alert('雇员状态已更新');
     }
 
     // --- DM功能：卡池头像上传 ---
