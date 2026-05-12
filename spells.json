@@ -2386,7 +2386,7 @@
                         "圣武士"
                     ],
         "casting_time":  "1 动作",
-        "range":  "自身（半径 30 尺）",
+        "range":  "自身（半径 40 尺）",
         "components":  "V, S, M（圣徽）",
         "duration":  "专注，至多 1 分钟",
         "description":  [
