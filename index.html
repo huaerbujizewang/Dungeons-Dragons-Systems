@@ -331,6 +331,14 @@
         .sheet-editor-stats { display:grid; grid-template-columns: repeat(6, minmax(68px, 1fr)); gap:8px; margin-top:10px; }
         .sheet-editor-stats label { font-size:0.75em; color:#666; font-weight:bold; }
         .sheet-editor-stats input { width:100%; box-sizing:border-box; text-align:center; }
+        .sheet-stat-mod { margin-top:3px; color:#822000; font-size:1.05em; text-align:center; font-weight:bold; }
+        .sheet-dynamic-section { border:1px solid #eee; border-radius:6px; padding:10px; background:#fafafa; }
+        .sheet-dynamic-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; color:#666; font-size:0.85em; font-weight:bold; }
+        .sheet-dynamic-head button { border:1px solid #16a085; color:#16a085; background:#f0fffb; border-radius:4px; padding:4px 8px; font-size:0.85em; }
+        .sheet-dynamic-row { display:grid; grid-template-columns: minmax(110px, 0.32fr) minmax(0, 1fr) 34px; gap:6px; align-items:start; margin-bottom:6px; }
+        .sheet-dynamic-row input, .sheet-dynamic-row textarea { width:100%; box-sizing:border-box; }
+        .sheet-dynamic-row textarea { min-height:54px; resize:vertical; line-height:1.5; }
+        .sheet-dynamic-row button { border:1px solid #e74c3c; color:#e74c3c; background:#fff5f5; border-radius:4px; padding:6px; }
         .sheet-editor-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
         .sheet-editor-actions button { padding:8px 12px; border-radius:4px; border:1px solid #ddd; background:#fff; }
         .sheet-editor-actions .primary { background:#822000; color:#fff; border-color:#822000; font-weight:bold; }
@@ -1626,7 +1634,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
             <div>
                 <h3 id="core-sheet-editor-title" style="margin:0;">核心队友档案编辑</h3>
-                <div style="font-size:0.8em; color:#7f8c8d; margin-top:4px;">表单会自动生成角色卡 JSON；列表项格式为“名称 | 描述”，每行一条。</div>
+                <div style="font-size:0.8em; color:#7f8c8d; margin-top:4px;">表单会自动生成角色卡 JSON；每个条目都可以单独添加或删除。</div>
             </div>
             <button onclick="closeModal('core-sheet-editor-modal')" style="background:none; border:none; color:#999; font-size:1.2em; cursor:pointer;">✕</button>
         </div>
@@ -1646,21 +1654,44 @@
         </div>
 
         <div class="sheet-editor-stats">
-            <label>力量 STR<input id="core-stat-str" type="number"></label>
-            <label>敏捷 DEX<input id="core-stat-dex" type="number"></label>
-            <label>体质 CON<input id="core-stat-con" type="number"></label>
-            <label>智力 INT<input id="core-stat-int" type="number"></label>
-            <label>感知 WIS<input id="core-stat-wis" type="number"></label>
-            <label>魅力 CHA<input id="core-stat-cha" type="number"></label>
+            <label>力量 STR<input id="core-stat-str" type="number" oninput="updateCoreStatMods()"><div id="core-stat-str-mod" class="sheet-stat-mod">+0</div></label>
+            <label>敏捷 DEX<input id="core-stat-dex" type="number" oninput="updateCoreStatMods()"><div id="core-stat-dex-mod" class="sheet-stat-mod">+0</div></label>
+            <label>体质 CON<input id="core-stat-con" type="number" oninput="updateCoreStatMods()"><div id="core-stat-con-mod" class="sheet-stat-mod">+0</div></label>
+            <label>智力 INT<input id="core-stat-int" type="number" oninput="updateCoreStatMods()"><div id="core-stat-int-mod" class="sheet-stat-mod">+0</div></label>
+            <label>感知 WIS<input id="core-stat-wis" type="number" oninput="updateCoreStatMods()"><div id="core-stat-wis-mod" class="sheet-stat-mod">+0</div></label>
+            <label>魅力 CHA<input id="core-stat-cha" type="number" oninput="updateCoreStatMods()"><div id="core-stat-cha-mod" class="sheet-stat-mod">+0</div></label>
         </div>
 
         <div class="sheet-editor-wide">
-            <label>属性行：豁免/技能/抗性等，每行“标签 | 内容”<textarea id="core-sheet-props" rows="5"></textarea></label>
-            <label>特性，每行“名称 | 描述”<textarea id="core-sheet-traits" rows="5"></textarea></label>
-            <label>动作，每行“名称 | 描述”<textarea id="core-sheet-actions" rows="5"></textarea></label>
-            <label>附赠动作，每行“名称 | 描述”<textarea id="core-sheet-bonus-actions" rows="3"></textarea></label>
-            <label>反应，每行“名称 | 描述”<textarea id="core-sheet-reactions" rows="3"></textarea></label>
-            <label>传奇动作，每行“名称 | 描述”<textarea id="core-sheet-legendary-actions" rows="3"></textarea></label>
+            <div class="sheet-dynamic-section">
+                <div class="sheet-dynamic-head"><span>属性行：豁免 / 技能 / 抗性等</span><button onclick="addCoreEditorRow('core-sheet-props')">添加</button></div>
+                <div id="core-sheet-props"></div>
+            </div>
+            <div class="sheet-dynamic-section">
+                <div class="sheet-dynamic-head"><span>特性</span><button onclick="addCoreEditorRow('core-sheet-traits')">添加</button></div>
+                <div id="core-sheet-traits"></div>
+            </div>
+            <div class="sheet-dynamic-section">
+                <div class="sheet-dynamic-head"><span>动作</span><button onclick="addCoreEditorRow('core-sheet-actions')">添加</button></div>
+                <div id="core-sheet-actions"></div>
+            </div>
+            <div class="sheet-dynamic-section">
+                <div class="sheet-dynamic-head"><span>附赠动作</span><button onclick="addCoreEditorRow('core-sheet-bonus-actions')">添加</button></div>
+                <div id="core-sheet-bonus-actions"></div>
+            </div>
+            <div class="sheet-dynamic-section">
+                <div class="sheet-dynamic-head"><span>反应</span><button onclick="addCoreEditorRow('core-sheet-reactions')">添加</button></div>
+                <div id="core-sheet-reactions"></div>
+            </div>
+            <div class="sheet-dynamic-section">
+                <div class="sheet-dynamic-head"><span>传奇动作</span><button onclick="addCoreEditorRow('core-sheet-legendary-actions')">添加</button></div>
+                <div id="core-sheet-legendary-actions"></div>
+            </div>
+            <label>施法说明<input id="core-spells-header" type="text" placeholder="例如：米沙是一位16级施法者……"></label>
+            <div class="sheet-dynamic-section">
+                <div class="sheet-dynamic-head"><span>法术列表</span><button onclick="addCoreEditorRow('core-sheet-spells')">添加</button></div>
+                <div id="core-sheet-spells"></div>
+            </div>
             <label>履历 / 档案文本<textarea id="core-sheet-resume" rows="7"></textarea></label>
         </div>
 
@@ -3030,6 +3061,10 @@ async function openEquipModal(empId, slotIdx) {
             bonus_actions: Array.isArray(raw.bonus_actions) ? raw.bonus_actions : [],
             reactions: Array.isArray(raw.reactions) ? raw.reactions : [],
             legendary_actions: Array.isArray(raw.legendary_actions) ? raw.legendary_actions : [],
+            spells: {
+                header: raw.spells?.header || '',
+                list: Array.isArray(raw.spells?.list) ? raw.spells.list : []
+            },
             basic_info: {
                 size: raw.basic_info?.size || raw.size || '中型',
                 tags: Array.isArray(raw.basic_info?.tags) ? raw.basic_info.tags : [],
@@ -3057,6 +3092,81 @@ async function openEquipModal(empId, slotIdx) {
         }).filter(Boolean);
     }
 
+    const CORE_EDITOR_SECTIONS = {
+        'core-sheet-props': { leftKey: 'label', rightKey: 'value', leftPlaceholder: '豁免 / 技能 / 抗性', rightPlaceholder: '力量 +5, 感知 +3', multiline: false, defaultLeft: '属性' },
+        'core-sheet-traits': { leftKey: 'name', rightKey: 'desc', leftPlaceholder: '特性名称', rightPlaceholder: '特性描述', multiline: true, defaultLeft: '未命名特性' },
+        'core-sheet-actions': { leftKey: 'name', rightKey: 'desc', leftPlaceholder: '动作名称', rightPlaceholder: '动作描述', multiline: true, defaultLeft: '未命名动作' },
+        'core-sheet-bonus-actions': { leftKey: 'name', rightKey: 'desc', leftPlaceholder: '附赠动作名称', rightPlaceholder: '附赠动作描述', multiline: true, defaultLeft: '未命名附赠动作' },
+        'core-sheet-reactions': { leftKey: 'name', rightKey: 'desc', leftPlaceholder: '反应名称', rightPlaceholder: '反应描述', multiline: true, defaultLeft: '未命名反应' },
+        'core-sheet-legendary-actions': { leftKey: 'name', rightKey: 'desc', leftPlaceholder: '传奇动作名称', rightPlaceholder: '传奇动作描述', multiline: true, defaultLeft: '未命名传奇动作' },
+        'core-sheet-spells': { leftKey: 'level', rightKey: 'spells', leftPlaceholder: '戏法 / 1环 (4)', rightPlaceholder: '法术1，法术2，法术3', multiline: false, defaultLeft: '法术等级' }
+    };
+
+    function addCoreEditorRow(sectionId, values = {}) {
+        const cfg = CORE_EDITOR_SECTIONS[sectionId];
+        const container = document.getElementById(sectionId);
+        if (!cfg || !container) return;
+
+        const row = document.createElement('div');
+        row.className = 'sheet-dynamic-row';
+
+        const left = document.createElement('input');
+        left.dataset.field = cfg.leftKey;
+        left.placeholder = cfg.leftPlaceholder;
+        left.value = values[cfg.leftKey] || '';
+
+        const right = document.createElement(cfg.multiline ? 'textarea' : 'input');
+        right.dataset.field = cfg.rightKey;
+        right.placeholder = cfg.rightPlaceholder;
+        right.value = values[cfg.rightKey] || '';
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.textContent = '×';
+        del.title = '删除此行';
+        del.onclick = () => row.remove();
+
+        row.appendChild(left);
+        row.appendChild(right);
+        row.appendChild(del);
+        container.appendChild(row);
+    }
+
+    function setCoreEditorRows(sectionId, rows = []) {
+        const container = document.getElementById(sectionId);
+        if (!container) return;
+        container.innerHTML = '';
+        if (rows && rows.length) {
+            rows.forEach(row => addCoreEditorRow(sectionId, row));
+        } else {
+            addCoreEditorRow(sectionId);
+        }
+    }
+
+    function collectCoreEditorRows(sectionId) {
+        const cfg = CORE_EDITOR_SECTIONS[sectionId];
+        const container = document.getElementById(sectionId);
+        if (!cfg || !container) return [];
+
+        return [...container.querySelectorAll('.sheet-dynamic-row')].map(row => {
+            const left = row.querySelector(`[data-field="${cfg.leftKey}"]`)?.value.trim() || '';
+            const right = row.querySelector(`[data-field="${cfg.rightKey}"]`)?.value.trim() || '';
+            if (!left && !right) return null;
+            return {
+                [cfg.leftKey]: left || cfg.defaultLeft,
+                [cfg.rightKey]: right
+            };
+        }).filter(Boolean);
+    }
+
+    function updateCoreStatMods() {
+        CORE_STAT_KEYS.forEach(key => {
+            const score = Number(document.getElementById(`core-stat-${key}`)?.value || 10);
+            const modEl = document.getElementById(`core-stat-${key}-mod`);
+            if (modEl) modEl.innerText = calcAbilityMod(score);
+        });
+    }
+
     function splitStandUrls(standUrl) {
         return String(standUrl || '').split(',').map(url => url.trim()).filter(Boolean);
     }
@@ -3080,12 +3190,12 @@ async function openEquipModal(empId, slotIdx) {
             meta: document.getElementById('core-sheet-meta').value.trim() || '未知实体',
             name: document.getElementById('core-sheet-name').value.trim() || currentCoreSheetTarget.name,
             size,
-            props: parseNamedRows(document.getElementById('core-sheet-props').value, 'label', 'value'),
+            props: collectCoreEditorRows('core-sheet-props'),
             speed: document.getElementById('core-sheet-speed').value.trim(),
             stats,
             resume: document.getElementById('core-sheet-resume').value.trim(),
-            traits: parseNamedRows(document.getElementById('core-sheet-traits').value),
-            actions: parseNamedRows(document.getElementById('core-sheet-actions').value),
+            traits: collectCoreEditorRows('core-sheet-traits'),
+            actions: collectCoreEditorRows('core-sheet-actions'),
             basic_info: {
                 size,
                 tags,
@@ -3096,12 +3206,20 @@ async function openEquipModal(empId, slotIdx) {
             }
         };
 
-        const bonus = parseNamedRows(document.getElementById('core-sheet-bonus-actions').value);
-        const reactions = parseNamedRows(document.getElementById('core-sheet-reactions').value);
-        const legendary = parseNamedRows(document.getElementById('core-sheet-legendary-actions').value);
+        const bonus = collectCoreEditorRows('core-sheet-bonus-actions');
+        const reactions = collectCoreEditorRows('core-sheet-reactions');
+        const legendary = collectCoreEditorRows('core-sheet-legendary-actions');
+        const spellList = collectCoreEditorRows('core-sheet-spells');
+        const spellHeader = document.getElementById('core-spells-header').value.trim();
         if (bonus.length) block.bonus_actions = bonus;
         if (reactions.length) block.reactions = reactions;
         if (legendary.length) block.legendary_actions = legendary;
+        if (spellHeader || spellList.length) {
+            block.spells = {
+                header: spellHeader,
+                list: spellList
+            };
+        }
         return block;
     }
 
@@ -3120,12 +3238,15 @@ async function openEquipModal(empId, slotIdx) {
         CORE_STAT_KEYS.forEach(key => {
             document.getElementById(`core-stat-${key}`).value = block.stats?.[key]?.score || 10;
         });
-        document.getElementById('core-sheet-props').value = formatNamedRows(block.props, 'label', 'value');
-        document.getElementById('core-sheet-traits').value = formatNamedRows(block.traits);
-        document.getElementById('core-sheet-actions').value = formatNamedRows(block.actions);
-        document.getElementById('core-sheet-bonus-actions').value = formatNamedRows(block.bonus_actions);
-        document.getElementById('core-sheet-reactions').value = formatNamedRows(block.reactions);
-        document.getElementById('core-sheet-legendary-actions').value = formatNamedRows(block.legendary_actions);
+        updateCoreStatMods();
+        setCoreEditorRows('core-sheet-props', block.props);
+        setCoreEditorRows('core-sheet-traits', block.traits);
+        setCoreEditorRows('core-sheet-actions', block.actions);
+        setCoreEditorRows('core-sheet-bonus-actions', block.bonus_actions);
+        setCoreEditorRows('core-sheet-reactions', block.reactions);
+        setCoreEditorRows('core-sheet-legendary-actions', block.legendary_actions);
+        document.getElementById('core-spells-header').value = block.spells?.header || '';
+        setCoreEditorRows('core-sheet-spells', block.spells?.list || []);
         document.getElementById('core-sheet-resume').value = block.resume || '';
     }
 
