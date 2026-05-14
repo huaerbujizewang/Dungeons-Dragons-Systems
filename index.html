@@ -2446,6 +2446,7 @@ function isPhandalinPlayer(email) {
     let currentCoreSheetTarget = { employeeId: null, ownerId: null, name: '', standUrls: [] };
     let currentStandUrls = []; 
     let currentStandIndex = 0; 
+    const CORE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 
     function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
     function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
@@ -2489,6 +2490,10 @@ function isPhandalinPlayer(email) {
             // 6. 监听立绘删除审批
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_stand_delete_requests', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
                 console.log('立绘删除审批有更新');
+                if (isCurrentAdmin()) loadPendingRequests();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_profile_change_requests', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
+                console.log('核心队友档案审批有更新');
                 if (isCurrentAdmin()) loadPendingRequests();
             })
             // 7. 监听装备栏变动 (Equipped 表)
@@ -3185,17 +3190,11 @@ async function openEquipModal(empId, slotIdx) {
         try {
             await ensureCoreSheetPermission();
             const statBlock = getCoreSheetFromForm();
-            const { error } = await supabaseClient
-                .from('employees')
-                .update({ stat_block: statBlock, name: statBlock.name })
-                .eq('id', currentCoreSheetTarget.employeeId);
-            if (error) throw error;
-            currentCoreSheetTarget.name = statBlock.name;
-            await logAction('核心队友档案', `更新了 [${currentCoreSheetTarget.name}] 的角色卡`);
-            alert('角色卡已保存');
-            await loadEmployees();
+            await createProfileChangeRequest('sheet', { stat_block: statBlock, new_name: statBlock.name });
+            await logAction('核心队友档案申请', `提交了 [${currentCoreSheetTarget.name}] 的角色卡修改申请`);
+            alert('角色卡修改申请已提交，等待 DM 审批');
         } catch (e) {
-            alert(e.message || '保存失败');
+            alert(e.message || '提交失败');
         } finally {
             hideLoading();
         }
@@ -3207,18 +3206,13 @@ async function openEquipModal(empId, slotIdx) {
         showLoading();
         try {
             await ensureCoreSheetPermission();
-            const fileName = `core_avatar_${currentCoreSheetTarget.employeeId}_${Date.now()}`;
-            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
-            if (error) throw error;
-            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
-            const { error: dbError } = await supabaseClient.from('employees').update({ avatar_url: urlData.publicUrl }).eq('id', currentCoreSheetTarget.employeeId);
-            if (dbError) throw dbError;
-            await logAction('核心队友头像', `更新了 [${currentCoreSheetTarget.name}] 的头像`);
+            const avatarUrl = await uploadPendingCoreImage(file, 'avatar');
+            await createProfileChangeRequest('avatar', { avatar_url: avatarUrl, file_name: file.name, file_size: file.size });
+            await logAction('核心队友头像申请', `提交了 [${currentCoreSheetTarget.name}] 的头像修改申请`);
             document.getElementById('core-avatar-file').value = '';
-            alert('头像已更新');
-            await loadEmployees();
+            alert('头像修改申请已提交，等待 DM 审批');
         } catch (e) {
-            alert('头像上传失败：' + (e.message || '网络错误'));
+            alert('头像申请失败：' + (e.message || '网络错误'));
         } finally {
             hideLoading();
         }
@@ -3230,24 +3224,40 @@ async function openEquipModal(empId, slotIdx) {
         showLoading();
         try {
             await ensureCoreSheetPermission();
-            const fileName = `core_stand_${currentCoreSheetTarget.employeeId}_${Date.now()}`;
-            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
-            if (error) throw error;
-            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
-            const urls = [...currentCoreSheetTarget.standUrls, urlData.publicUrl];
-            const { error: dbError } = await supabaseClient.from('employees').update({ stand_url: urls.join(',') }).eq('id', currentCoreSheetTarget.employeeId);
-            if (dbError) throw dbError;
-            currentCoreSheetTarget.standUrls = urls;
+            const standUrl = await uploadPendingCoreImage(file, 'stand');
+            await createProfileChangeRequest('stand_add', { stand_url: standUrl, file_name: file.name, file_size: file.size });
             document.getElementById('core-stand-file').value = '';
-            renderCoreStandList();
-            await logAction('核心队友立绘', `追加了 [${currentCoreSheetTarget.name}] 的立绘`);
-            alert('立绘已追加');
-            await loadEmployees();
+            await logAction('核心队友立绘申请', `提交了 [${currentCoreSheetTarget.name}] 的立绘追加申请`);
+            alert('立绘追加申请已提交，等待 DM 审批');
         } catch (e) {
-            alert('立绘上传失败：' + (e.message || '网络错误'));
+            alert('立绘申请失败：' + (e.message || '网络错误'));
         } finally {
             hideLoading();
         }
+    }
+
+    async function uploadPendingCoreImage(file, kind) {
+        if (!file.type || !file.type.startsWith('image/')) throw new Error('只能上传图片文件');
+        if (file.size > CORE_IMAGE_MAX_BYTES) throw new Error('图片不能超过 8MB');
+        const safeKind = kind === 'avatar' ? 'avatar' : 'stand';
+        const ext = (file.name.split('.').pop() || 'png').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'png';
+        const fileName = `pending_core_${safeKind}_${currentCoreSheetTarget.employeeId}_${Date.now()}.${ext}`;
+        const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+        if (error) throw error;
+        const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
+        return urlData.publicUrl;
+    }
+
+    async function createProfileChangeRequest(requestType, payload) {
+        const { error } = await supabaseClient.from('employee_profile_change_requests').insert([{
+            employee_id: currentCoreSheetTarget.employeeId,
+            employee_owner_id: currentCoreSheetTarget.ownerId,
+            employee_name: currentCoreSheetTarget.name,
+            request_type: requestType,
+            payload,
+            requester_email: currentUserEmail || null
+        }]);
+        if (error) throw error;
     }
 
     async function createStandDeleteRequest(requestType, targetUrl = '') {
@@ -3862,6 +3872,42 @@ async function loadGold() {
             `;
         });
 
+        const { data: profileData, error: profileError } = await supabaseClient
+            .from('employee_profile_change_requests')
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true });
+
+        if (profileError) {
+            html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">档案审批表未就绪：${escapeHTML(profileError.message)}</div>`;
+        } else {
+            (profileData || []).forEach(req => {
+                const labels = { sheet: '角色卡修改', avatar: '头像修改', stand_add: '追加立绘' };
+                const label = labels[req.request_type] || req.request_type;
+                const imageUrl = req.payload?.avatar_url || req.payload?.stand_url || '';
+                const preview = imageUrl ? `<img src="${escapeHTML(imageUrl)}" style="width:48px; height:64px; object-fit:cover; border-radius:4px; border:1px solid #eee;">` : '';
+                const note = req.request_type === 'sheet'
+                    ? `新名称: ${escapeHTML(req.payload?.new_name || req.employee_name || '')}`
+                    : `${escapeHTML(req.payload?.file_name || '图片')} · ${Math.round((Number(req.payload?.file_size) || 0) / 1024)}KB`;
+                html += `
+                    <div style="background:#fff; padding:10px; border:1px solid #eee; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <div style="display:flex; gap:10px; align-items:center; min-width:0;">
+                            ${preview}
+                            <div>
+                                <div style="font-weight:bold;">档案申请：${escapeHTML(label)} / ${escapeHTML(req.employee_name || `ID:${req.employee_id}`)}</div>
+                                <div style="font-size:0.75em; color:#888;">${note}</div>
+                                <div style="font-size:0.75em; color:#888;">申请人: ${escapeHTML(req.requester_email || '未知')} · ${escapeHTML(new Date(req.created_at).toLocaleString('zh-CN', { hour12:false }))}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:5px; flex:none;">
+                            <button onclick="handleProfileChangeRequest(${req.id}, true)" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">批准</button>
+                            <button onclick="handleProfileChangeRequest(${req.id}, false)" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
         const { data: standData, error: standError } = await supabaseClient
             .from('employee_stand_delete_requests')
             .select('*')
@@ -3899,6 +3945,71 @@ async function loadGold() {
 
     function handleFireRequest(empId, action) {
         approveFire(empId, action === 'approve');
+    }
+
+    async function handleProfileChangeRequest(requestId, approved) {
+        if (!await requireAdminRole()) return;
+        showLoading();
+        try {
+            const { data: req, error: reqError } = await supabaseClient
+                .from('employee_profile_change_requests')
+                .select('*')
+                .eq('id', requestId)
+                .single();
+            if (reqError || !req) throw reqError || new Error('申请不存在');
+
+            if (approved) {
+                const payload = req.payload || {};
+                let updatePayload = {};
+
+                if (req.request_type === 'sheet') {
+                    updatePayload = {
+                        stat_block: payload.stat_block || {},
+                        name: payload.new_name || req.employee_name
+                    };
+                } else if (req.request_type === 'avatar') {
+                    if (!payload.avatar_url) throw new Error('头像链接缺失');
+                    updatePayload = { avatar_url: payload.avatar_url };
+                } else if (req.request_type === 'stand_add') {
+                    if (!payload.stand_url) throw new Error('立绘链接缺失');
+                    const { data: emp, error: empError } = await supabaseClient
+                        .from('employees')
+                        .select('stand_url')
+                        .eq('id', req.employee_id)
+                        .single();
+                    if (empError) throw empError;
+                    const urls = splitStandUrls(emp?.stand_url);
+                    urls.push(payload.stand_url);
+                    updatePayload = { stand_url: urls.join(',') };
+                } else {
+                    throw new Error('未知申请类型');
+                }
+
+                const { error: updateEmpError } = await supabaseClient
+                    .from('employees')
+                    .update(updatePayload)
+                    .eq('id', req.employee_id);
+                if (updateEmpError) throw updateEmpError;
+            }
+
+            const { error: updateReqError } = await supabaseClient
+                .from('employee_profile_change_requests')
+                .update({
+                    status: approved ? 'approved' : 'rejected',
+                    reviewed_at: new Date().toISOString(),
+                    reviewer_email: currentUserEmail || null
+                })
+                .eq('id', requestId);
+            if (updateReqError) throw updateReqError;
+
+            await logAction('核心队友档案审批', `${approved ? '批准' : '驳回'}了 [${req.employee_name || req.employee_id}] 的 ${req.request_type} 申请`);
+            await Promise.all([loadPendingRequests(), loadEmployees()]);
+            renderAdminStandManager();
+        } catch (e) {
+            alert('处理失败：' + (e.message || '网络错误'));
+        } finally {
+            hideLoading();
+        }
     }
 
     async function handleStandDeleteRequest(requestId, approved) {
