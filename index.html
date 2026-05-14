@@ -3842,22 +3842,36 @@ async function loadGold() {
         const listDiv = document.getElementById('approval-list');
         const box = document.getElementById('approval-box');
         if (!listDiv) return;
+        let html = '';
 
         const { data: fireData, error } = await supabaseClient
             .from('employees')
-            .select('*, profiles:user_id(email)') 
+            .select('id, name, user_id, status') 
             .eq('status', '申请解雇');
 
         if (error) {
             console.error("加载申请失败 (400错误通常源于此处):", error);
-            listDiv.innerHTML = `<div style="color:red; font-size:0.8em;">加载失败: ${error.message}</div>`;
-            if (box) box.style.display = 'block';
-            return;
+            html += `<div style="color:red; font-size:0.8em; padding:8px;">解雇申请加载失败: ${escapeHTML(error.message)}</div>`;
         }
 
-        let html = '';
+        const fireUserIds = [...new Set((fireData || []).map(item => item.user_id).filter(Boolean))];
+        const profileEmailMap = {};
+        if (fireUserIds.length > 0) {
+            const { data: profiles, error: profileError } = await supabaseClient
+                .from('profiles')
+                .select('id, email')
+                .in('id', fireUserIds);
+            if (profileError) {
+                html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">玩家邮箱加载失败: ${escapeHTML(profileError.message)}</div>`;
+            } else {
+                (profiles || []).forEach(profile => {
+                    profileEmailMap[profile.id] = profile.email;
+                });
+            }
+        }
+
         (fireData || []).forEach(item => {
-            const playerEmail = item.profiles ? item.profiles.email : '未知玩家';
+            const playerEmail = profileEmailMap[item.user_id] || item.user_id || '未知玩家';
             html += `
                 <div style="background:#fff; padding:10px; border:1px solid #eee; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
