@@ -313,6 +313,17 @@
         /* 雇员中心卡片 */
         .emp-card-content { text-align: center; }
         .emp-card-content img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 1px solid #eee; }
+        .review-btn { font-size:0.8em; padding:4px 8px; border:1px solid #3498db; background:#f0f9ff; color:#2980b9; border-radius:4px; cursor:pointer; }
+        .review-btn:hover { background:#3498db; color:#fff; }
+        .review-form-row { display:flex; gap:8px; margin-bottom:10px; }
+        .review-form-row input { flex:1; min-width:0; }
+        .review-textarea { width:100%; min-height:92px; resize:vertical; box-sizing:border-box; line-height:1.6; }
+        .review-submit-btn { width:100%; margin-top:10px; padding:10px; background:#2c3e50; color:#fff; border:none; border-radius:4px; font-weight:bold; }
+        .review-submit-btn:disabled { background:#bdc3c7; cursor:not-allowed; }
+        .review-list { margin-top:18px; display:flex; flex-direction:column; gap:10px; }
+        .review-item { background:#f8f9fa; border:1px solid #eee; border-radius:6px; padding:10px; text-align:left; }
+        .review-meta { display:flex; justify-content:space-between; gap:10px; color:#7f8c8d; font-size:0.78em; margin-bottom:6px; }
+        .review-content { color:#333; line-height:1.6; white-space:normal; word-break:break-word; }
         
         /* 弹窗 & Loading */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -1571,6 +1582,29 @@
     </div>
 </div>
 
+<!-- 弹窗：角色评价 -->
+<div id="employee-review-modal" class="modal" onclick="if(event.target === this) closeModal('employee-review-modal')">
+    <div class="modal-box" style="width:560px; max-width:95%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+            <div>
+                <h3 id="review-modal-title" style="margin:0;">角色评价</h3>
+                <div style="font-size:0.8em; color:#7f8c8d; margin-top:4px;">填写名字与评价内容后保存，其他人可长期查看。</div>
+            </div>
+            <button onclick="closeModal('employee-review-modal')" style="background:none; border:none; color:#999; font-size:1.2em; cursor:pointer;">✕</button>
+        </div>
+
+        <div class="review-form-row">
+            <input id="reviewer-name-input" type="text" maxlength="60" placeholder="你的名字">
+        </div>
+        <textarea id="review-content-input" class="review-textarea" maxlength="2000" placeholder="写下你的评价、印象、合作记录或吐槽..."></textarea>
+        <button id="review-submit-btn" class="review-submit-btn" onclick="submitEmployeeReview()">提交评价</button>
+
+        <div id="employee-review-list" class="review-list">
+            <div style="color:#999; text-align:center; padding:12px;">正在读取评价...</div>
+        </div>
+    </div>
+</div>
+
 <div id="sheet-modal" class="modal">
     <div class="modal-box" style="width: 600px; max-width: 95%; height: 80vh; padding: 0; background: transparent; box-shadow: none; display: flex; flex-direction: column; overflow: hidden;">
         
@@ -2332,6 +2366,7 @@ function isPhandalinPlayer(email) {
     };
     let userProfile = null;
     let currentEquipTarget = { empId: null, slotIdx: null };
+    let currentReviewTarget = { employeeId: null, name: '' };
     let currentStandUrls = []; 
     let currentStandIndex = 0; 
 
@@ -2369,12 +2404,17 @@ function isPhandalinPlayer(email) {
                 loadTeam();
                 loadEmployees();
             })
-            // 5. 监听装备栏变动 (Equipped 表)
+            // 5. 监听角色评价变动
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_reviews', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
+                console.log('角色评价有更新');
+                if (currentReviewTarget.employeeId) loadEmployeeReviews(currentReviewTarget.employeeId);
+            })
+            // 6. 监听装备栏变动 (Equipped 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'equipped_items' }, (payload) => {
                 console.log('装备穿戴有更新');
                 loadTeam();
             })
-            // 6. 科研进度条变动 (Research 表)
+            // 7. 科研进度条变动 (Research 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'research_projects', filter: `user_id=eq.${targetId}` }, (payload) => {
             console.log('科研进度有变动');
             if (isCurrentAdmin()) loadAdminResearch(); 
@@ -2593,6 +2633,7 @@ function isPhandalinPlayer(email) {
 
                     <div style="margin-top:5px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
                         ${hasSheet ? `<button onclick="openDossierModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 档案</button>` : ''}
+                        <button class="review-btn" onclick="openEmployeeReviewModal(${e.id}, ${jsStringAttr(e.name)})">评价</button>
                         ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id})" style="width:auto; margin-top:0; display:none;">解雇</button>` : ''}
                     </div>
                 </div>`;
@@ -2782,6 +2823,93 @@ async function openEquipModal(empId, slotIdx) {
         // 关闭弹窗时，恢复背景的滚动
         document.body.style.overflow = ''; 
     }
+
+    async function openEmployeeReviewModal(employeeId, employeeName) {
+        currentReviewTarget = { employeeId, name: employeeName || '未知角色' };
+        document.getElementById('review-modal-title').innerText = `评价：${currentReviewTarget.name}`;
+        document.getElementById('review-content-input').value = '';
+        document.getElementById('reviewer-name-input').value = localStorage.getItem('dnd_review_name') || '';
+        document.getElementById('employee-review-list').innerHTML = '<div style="color:#999; text-align:center; padding:12px;">正在读取评价...</div>';
+        document.getElementById('employee-review-modal').style.display = 'flex';
+        await loadEmployeeReviews(employeeId);
+    }
+
+    async function loadEmployeeReviews(employeeId) {
+        const list = document.getElementById('employee-review-list');
+        if (!list) return;
+
+        const { data, error } = await supabaseClient
+            .from('employee_reviews')
+            .select('id, reviewer_name, content, created_at')
+            .eq('employee_id', employeeId)
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (error) {
+            console.error('读取角色评价失败:', error);
+            list.innerHTML = `<div style="color:#e74c3c; text-align:center; padding:12px;">评价读取失败：${escapeHTML(error.message)}</div>`;
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            list.innerHTML = '<div style="color:#999; text-align:center; padding:12px;">还没有评价。</div>';
+            return;
+        }
+
+        list.innerHTML = data.map(review => {
+            const createdAt = review.created_at
+                ? new Date(review.created_at).toLocaleString('zh-CN', { hour12: false })
+                : '';
+            const content = escapeHTML(review.content).replace(/\n/g, '<br>');
+            return `
+                <div class="review-item">
+                    <div class="review-meta">
+                        <strong>${escapeHTML(review.reviewer_name || '匿名')}</strong>
+                        <span>${escapeHTML(createdAt)}</span>
+                    </div>
+                    <div class="review-content">${content}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function submitEmployeeReview() {
+        if (!currentReviewTarget.employeeId) return alert('请先选择要评价的角色');
+
+        const nameInput = document.getElementById('reviewer-name-input');
+        const contentInput = document.getElementById('review-content-input');
+        const submitBtn = document.getElementById('review-submit-btn');
+        const reviewerName = nameInput.value.trim();
+        const content = contentInput.value.trim();
+
+        if (!reviewerName) return alert('请填写你的名字');
+        if (!content) return alert('请填写评价内容');
+        if (reviewerName.length > 60) return alert('名字不能超过 60 个字符');
+        if (content.length > 2000) return alert('评价内容不能超过 2000 个字符');
+
+        submitBtn.disabled = true;
+        try {
+            const { error } = await supabaseClient.from('employee_reviews').insert([{
+                employee_id: currentReviewTarget.employeeId,
+                employee_owner_id: viewingUserId,
+                target_name: currentReviewTarget.name,
+                reviewer_name: reviewerName,
+                content
+            }]);
+
+            if (error) throw error;
+
+            localStorage.setItem('dnd_review_name', reviewerName);
+            contentInput.value = '';
+            await loadEmployeeReviews(currentReviewTarget.employeeId);
+        } catch (e) {
+            console.error('提交角色评价失败:', e);
+            alert(`评价提交失败：${e.message || '请确认 employee_reviews 表已创建'}`);
+        } finally {
+            submitBtn.disabled = false;
+        }
+    }
+
     //队员弹窗
     async function openMemberModal() {
         const list = document.getElementById('member-select-list');
