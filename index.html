@@ -324,6 +324,21 @@
         .review-item { background:#f8f9fa; border:1px solid #eee; border-radius:6px; padding:10px; text-align:left; }
         .review-meta { display:flex; justify-content:space-between; gap:10px; color:#7f8c8d; font-size:0.78em; margin-bottom:6px; }
         .review-content { color:#333; line-height:1.6; white-space:normal; word-break:break-word; }
+        .sheet-editor-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; }
+        .sheet-editor-grid label, .sheet-editor-wide label { display:flex; flex-direction:column; gap:4px; font-size:0.78em; color:#666; font-weight:bold; }
+        .sheet-editor-grid input, .sheet-editor-wide input, .sheet-editor-wide textarea { box-sizing:border-box; width:100%; }
+        .sheet-editor-wide { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+        .sheet-editor-stats { display:grid; grid-template-columns: repeat(6, minmax(68px, 1fr)); gap:8px; margin-top:10px; }
+        .sheet-editor-stats label { font-size:0.75em; color:#666; font-weight:bold; }
+        .sheet-editor-stats input { width:100%; box-sizing:border-box; text-align:center; }
+        .sheet-editor-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+        .sheet-editor-actions button { padding:8px 12px; border-radius:4px; border:1px solid #ddd; background:#fff; }
+        .sheet-editor-actions .primary { background:#822000; color:#fff; border-color:#822000; font-weight:bold; }
+        .sheet-editor-actions .upload { background:#2c3e50; color:#fff; border-color:#2c3e50; }
+        .stand-thumb-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap:10px; }
+        .stand-thumb-card { border:1px solid #eee; border-radius:6px; padding:6px; background:#fff; text-align:center; }
+        .stand-thumb-card img { width:100%; height:120px; object-fit:cover; border-radius:4px; background:#f3f3f3; }
+        .stand-thumb-card button { width:100%; margin-top:5px; font-size:0.75em; padding:5px; border-radius:4px; border:1px solid #e67e22; color:#e67e22; background:#fffaf2; }
         
         /* 弹窗 & Loading */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -1605,6 +1620,66 @@
     </div>
 </div>
 
+<!-- 弹窗：核心队友简易填卡 -->
+<div id="core-sheet-editor-modal" class="modal" onclick="if(event.target === this) closeModal('core-sheet-editor-modal')">
+    <div class="modal-box" style="width:900px; max-width:96%; max-height:88vh;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+            <div>
+                <h3 id="core-sheet-editor-title" style="margin:0;">核心队友档案编辑</h3>
+                <div style="font-size:0.8em; color:#7f8c8d; margin-top:4px;">表单会自动生成角色卡 JSON；列表项格式为“名称 | 描述”，每行一条。</div>
+            </div>
+            <button onclick="closeModal('core-sheet-editor-modal')" style="background:none; border:none; color:#999; font-size:1.2em; cursor:pointer;">✕</button>
+        </div>
+
+        <div class="sheet-editor-grid">
+            <label>姓名<input id="core-sheet-name" type="text"></label>
+            <label>类型 / 种族<input id="core-sheet-meta" type="text" placeholder="元素生物 (泰坦)"></label>
+            <label>体型<input id="core-sheet-size" type="text" placeholder="中型"></label>
+            <label>性别<input id="core-sheet-gender" type="text" placeholder="未知"></label>
+            <label>身高<input id="core-sheet-height" type="text" placeholder="175cm"></label>
+            <label>生日<input id="core-sheet-birthday" type="text" placeholder="未知"></label>
+            <label>出身<input id="core-sheet-origin" type="text" placeholder="未知"></label>
+            <label>标签<input id="core-sheet-tags" type="text" placeholder="标签1，标签2"></label>
+            <label>护甲等级<input id="core-sheet-ac" type="text" placeholder="15"></label>
+            <label>生命值<input id="core-sheet-hp" type="text" placeholder="100"></label>
+            <label style="grid-column:1/-1;">速度<input id="core-sheet-speed" type="text" placeholder="30尺"></label>
+        </div>
+
+        <div class="sheet-editor-stats">
+            <label>力量 STR<input id="core-stat-str" type="number"></label>
+            <label>敏捷 DEX<input id="core-stat-dex" type="number"></label>
+            <label>体质 CON<input id="core-stat-con" type="number"></label>
+            <label>智力 INT<input id="core-stat-int" type="number"></label>
+            <label>感知 WIS<input id="core-stat-wis" type="number"></label>
+            <label>魅力 CHA<input id="core-stat-cha" type="number"></label>
+        </div>
+
+        <div class="sheet-editor-wide">
+            <label>属性行：豁免/技能/抗性等，每行“标签 | 内容”<textarea id="core-sheet-props" rows="5"></textarea></label>
+            <label>特性，每行“名称 | 描述”<textarea id="core-sheet-traits" rows="5"></textarea></label>
+            <label>动作，每行“名称 | 描述”<textarea id="core-sheet-actions" rows="5"></textarea></label>
+            <label>附赠动作，每行“名称 | 描述”<textarea id="core-sheet-bonus-actions" rows="3"></textarea></label>
+            <label>反应，每行“名称 | 描述”<textarea id="core-sheet-reactions" rows="3"></textarea></label>
+            <label>传奇动作，每行“名称 | 描述”<textarea id="core-sheet-legendary-actions" rows="3"></textarea></label>
+            <label>履历 / 档案文本<textarea id="core-sheet-resume" rows="7"></textarea></label>
+        </div>
+
+        <div class="sheet-editor-actions">
+            <button class="primary" onclick="saveCoreSheetFromForm()">保存角色卡</button>
+            <input id="core-avatar-file" type="file" accept="image/*">
+            <button class="upload" onclick="uploadCoreAvatar()">上传头像</button>
+            <input id="core-stand-file" type="file" accept="image/*">
+            <button class="upload" onclick="uploadCoreStand()">追加立绘</button>
+            <button onclick="requestCoreStandClear()">申请清空全部立绘</button>
+        </div>
+
+        <div style="margin-top:18px;">
+            <div style="font-size:0.85em; color:#666; font-weight:bold; margin-bottom:8px;">当前立绘</div>
+            <div id="core-stand-list" class="stand-thumb-grid"></div>
+        </div>
+    </div>
+</div>
+
 <div id="sheet-modal" class="modal">
     <div class="modal-box" style="width: 600px; max-width: 95%; height: 80vh; padding: 0; background: transparent; box-shadow: none; display: flex; flex-direction: column; overflow: hidden;">
         
@@ -1945,7 +2020,7 @@
                     先在上方 [玩家资产操控] 选择玩家，再在此处选择雇员
                 </div>
                 
-                <select id="adm-emp-list" style="width:100%; margin-bottom:15px; padding:8px; border:2px solid #8e44ad; border-radius:4px; font-weight:bold;"></select>
+                <select id="adm-emp-list" onchange="renderAdminStandManager()" style="width:100%; margin-bottom:15px; padding:8px; border:2px solid #8e44ad; border-radius:4px; font-weight:bold;"></select>
                 
                 <div style="margin-bottom:15px; border-bottom:1px dashed #cca; padding-bottom:10px;">
                     <div style="font-size:0.85em; font-weight:bold; margin-bottom:5px; display:flex; align-items:center;">
@@ -1959,20 +2034,21 @@
                 </div>
 
                 <div>
-                    <div>
-    <div style="font-size:0.85em; font-weight:bold; margin-bottom:5px; color:#8e44ad; display:flex; align-items:center;">
-        <span style="font-size:1.2em; margin-right:5px;">🟣</span> 
-        档案立绘 (多图追加模式)
-    </div>
-    <div style="display:flex; gap:5px;">
-        <input type="file" id="adm-emp-stand" style="flex:1; font-size:0.8em;">
-        <button onclick="uploadExistingStand()" style="background:#8e44ad; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">追加</button>
-        <button onclick="clearExistingStand()" style="background:#e74c3c; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;" title="清空该角色所有立绘">清空</button>
-    </div>
-</div>
+                    <div style="font-size:0.85em; font-weight:bold; margin-bottom:5px; color:#8e44ad; display:flex; align-items:center;">
+                        <span style="font-size:1.2em; margin-right:5px;">🟣</span> 
+                        档案立绘 (多图追加模式)
+                    </div>
                     <div style="display:flex; gap:5px;">
                         <input type="file" id="adm-emp-stand" style="flex:1; font-size:0.8em;">
-                        <button onclick="uploadExistingStand()" style="background:#8e44ad; color:#fff; border:none; padding:5px 10px; border-radius:4px;">更新立绘</button>
+                        <button onclick="uploadExistingStand()" style="background:#8e44ad; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">追加</button>
+                        <button onclick="clearExistingStand()" style="background:#e74c3c; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;" title="清空该角色所有立绘">清空</button>
+                    </div>
+                </div>
+
+                <div style="margin-top:12px; border-top:1px dashed #d7bde2; padding-top:10px;">
+                    <div style="font-size:0.85em; font-weight:bold; margin-bottom:6px; color:#8e44ad;">单张立绘管理</div>
+                    <div id="adm-stand-manager" class="stand-thumb-grid">
+                        <div style="color:#999; font-size:0.8em;">选择雇员后显示已有立绘。</div>
                     </div>
                 </div>
             </div>
@@ -2367,6 +2443,7 @@ function isPhandalinPlayer(email) {
     let userProfile = null;
     let currentEquipTarget = { empId: null, slotIdx: null };
     let currentReviewTarget = { employeeId: null, name: '' };
+    let currentCoreSheetTarget = { employeeId: null, ownerId: null, name: '', standUrls: [] };
     let currentStandUrls = []; 
     let currentStandIndex = 0; 
 
@@ -2409,12 +2486,17 @@ function isPhandalinPlayer(email) {
                 console.log('角色评价有更新');
                 if (currentReviewTarget.employeeId) loadEmployeeReviews(currentReviewTarget.employeeId);
             })
-            // 6. 监听装备栏变动 (Equipped 表)
+            // 6. 监听立绘删除审批
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_stand_delete_requests', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
+                console.log('立绘删除审批有更新');
+                if (isCurrentAdmin()) loadPendingRequests();
+            })
+            // 7. 监听装备栏变动 (Equipped 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'equipped_items' }, (payload) => {
                 console.log('装备穿戴有更新');
                 loadTeam();
             })
-            // 7. 科研进度条变动 (Research 表)
+            // 8. 科研进度条变动 (Research 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'research_projects', filter: `user_id=eq.${targetId}` }, (payload) => {
             console.log('科研进度有变动');
             if (isCurrentAdmin()) loadAdminResearch(); 
@@ -2607,6 +2689,7 @@ function isPhandalinPlayer(email) {
                     ? `<div>${e.role || '队友'}</div>`
                     : `<div>${e.role || '雇员'} | ${e.salary} GP</div>`;
                 const canFire = !isCore && !isPlayer && e.status === '在职';
+                const canEditCoreSheet = isCore && (viewingUserId === myId || isCurrentAdmin());
 
                 const rarity = e.rarity || 3;
                 const stars = '★'.repeat(rarity);
@@ -2633,6 +2716,7 @@ function isPhandalinPlayer(email) {
 
                     <div style="margin-top:5px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
                         ${hasSheet ? `<button onclick="openDossierModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 档案</button>` : ''}
+                        ${canEditCoreSheet ? `<button onclick="openCoreSheetEditor(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #16a085; background:#f0fffb; color:#16a085; border-radius:4px; cursor:pointer;">填卡</button>` : ''}
                         <button class="review-btn" onclick="openEmployeeReviewModal(${e.id}, ${jsStringAttr(e.name)})">评价</button>
                         ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id})" style="width:auto; margin-top:0; display:none;">解雇</button>` : ''}
                     </div>
@@ -2908,6 +2992,292 @@ async function openEquipModal(empId, slotIdx) {
         } finally {
             submitBtn.disabled = false;
         }
+    }
+
+    const CORE_STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
+    function calcAbilityMod(score) {
+        const n = Number(score);
+        const mod = Math.floor(((Number.isFinite(n) ? n : 10) - 10) / 2);
+        return mod >= 0 ? `+${mod}` : `${mod}`;
+    }
+
+    function normalizeSheetBlock(raw = {}, fallbackName = '') {
+        const stats = {};
+        CORE_STAT_KEYS.forEach(key => {
+            const source = raw.stats?.[key] || {};
+            const score = Number(source.score || 10);
+            stats[key] = { score, mod: source.mod || calcAbilityMod(score) };
+        });
+
+        return {
+            name: raw.name || fallbackName || '姓名',
+            meta: raw.meta || '未知实体',
+            size: raw.size || raw.basic_info?.size || '中型',
+            ac: raw.ac || '',
+            hp: raw.hp || '',
+            speed: raw.speed || '',
+            props: Array.isArray(raw.props) ? raw.props : [],
+            stats,
+            resume: raw.resume || '',
+            traits: Array.isArray(raw.traits) ? raw.traits : [],
+            actions: Array.isArray(raw.actions) ? raw.actions : [],
+            bonus_actions: Array.isArray(raw.bonus_actions) ? raw.bonus_actions : [],
+            reactions: Array.isArray(raw.reactions) ? raw.reactions : [],
+            legendary_actions: Array.isArray(raw.legendary_actions) ? raw.legendary_actions : [],
+            basic_info: {
+                size: raw.basic_info?.size || raw.size || '中型',
+                tags: Array.isArray(raw.basic_info?.tags) ? raw.basic_info.tags : [],
+                gender: raw.basic_info?.gender || '未知',
+                height: raw.basic_info?.height || '',
+                origin: raw.basic_info?.origin || '未知',
+                birthday: raw.basic_info?.birthday || '未知'
+            }
+        };
+    }
+
+    function formatNamedRows(rows, leftKey = 'name', rightKey = 'desc') {
+        return (rows || []).map(row => `${row[leftKey] || ''} | ${row[rightKey] || ''}`).join('\n');
+    }
+
+    function parseNamedRows(text, leftKey = 'name', rightKey = 'desc') {
+        return String(text || '').split('\n').map(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return null;
+            const parts = trimmed.split('|');
+            const left = (parts.shift() || '').trim();
+            const right = parts.join('|').trim();
+            if (!left && !right) return null;
+            return { [leftKey]: left || '未命名', [rightKey]: right };
+        }).filter(Boolean);
+    }
+
+    function splitStandUrls(standUrl) {
+        return String(standUrl || '').split(',').map(url => url.trim()).filter(Boolean);
+    }
+
+    function getCoreSheetFromForm() {
+        const stats = {};
+        CORE_STAT_KEYS.forEach(key => {
+            const score = Number(document.getElementById(`core-stat-${key}`).value || 10);
+            stats[key] = { score, mod: calcAbilityMod(score) };
+        });
+
+        const tags = document.getElementById('core-sheet-tags').value
+            .split(/[,，]/)
+            .map(tag => tag.trim())
+            .filter(Boolean);
+        const size = document.getElementById('core-sheet-size').value.trim() || '中型';
+
+        const block = {
+            ac: document.getElementById('core-sheet-ac').value.trim(),
+            hp: document.getElementById('core-sheet-hp').value.trim(),
+            meta: document.getElementById('core-sheet-meta').value.trim() || '未知实体',
+            name: document.getElementById('core-sheet-name').value.trim() || currentCoreSheetTarget.name,
+            size,
+            props: parseNamedRows(document.getElementById('core-sheet-props').value, 'label', 'value'),
+            speed: document.getElementById('core-sheet-speed').value.trim(),
+            stats,
+            resume: document.getElementById('core-sheet-resume').value.trim(),
+            traits: parseNamedRows(document.getElementById('core-sheet-traits').value),
+            actions: parseNamedRows(document.getElementById('core-sheet-actions').value),
+            basic_info: {
+                size,
+                tags,
+                gender: document.getElementById('core-sheet-gender').value.trim() || '未知',
+                height: document.getElementById('core-sheet-height').value.trim(),
+                origin: document.getElementById('core-sheet-origin').value.trim() || '未知',
+                birthday: document.getElementById('core-sheet-birthday').value.trim() || '未知'
+            }
+        };
+
+        const bonus = parseNamedRows(document.getElementById('core-sheet-bonus-actions').value);
+        const reactions = parseNamedRows(document.getElementById('core-sheet-reactions').value);
+        const legendary = parseNamedRows(document.getElementById('core-sheet-legendary-actions').value);
+        if (bonus.length) block.bonus_actions = bonus;
+        if (reactions.length) block.reactions = reactions;
+        if (legendary.length) block.legendary_actions = legendary;
+        return block;
+    }
+
+    function fillCoreSheetForm(block) {
+        document.getElementById('core-sheet-name').value = block.name || '';
+        document.getElementById('core-sheet-meta').value = block.meta || '';
+        document.getElementById('core-sheet-size').value = block.basic_info?.size || block.size || '';
+        document.getElementById('core-sheet-gender').value = block.basic_info?.gender || '';
+        document.getElementById('core-sheet-height').value = block.basic_info?.height || '';
+        document.getElementById('core-sheet-birthday').value = block.basic_info?.birthday || '';
+        document.getElementById('core-sheet-origin').value = block.basic_info?.origin || '';
+        document.getElementById('core-sheet-tags').value = (block.basic_info?.tags || []).join('，');
+        document.getElementById('core-sheet-ac').value = block.ac || '';
+        document.getElementById('core-sheet-hp').value = block.hp || '';
+        document.getElementById('core-sheet-speed').value = block.speed || '';
+        CORE_STAT_KEYS.forEach(key => {
+            document.getElementById(`core-stat-${key}`).value = block.stats?.[key]?.score || 10;
+        });
+        document.getElementById('core-sheet-props').value = formatNamedRows(block.props, 'label', 'value');
+        document.getElementById('core-sheet-traits').value = formatNamedRows(block.traits);
+        document.getElementById('core-sheet-actions').value = formatNamedRows(block.actions);
+        document.getElementById('core-sheet-bonus-actions').value = formatNamedRows(block.bonus_actions);
+        document.getElementById('core-sheet-reactions').value = formatNamedRows(block.reactions);
+        document.getElementById('core-sheet-legendary-actions').value = formatNamedRows(block.legendary_actions);
+        document.getElementById('core-sheet-resume').value = block.resume || '';
+    }
+
+    function renderCoreStandList() {
+        const box = document.getElementById('core-stand-list');
+        if (!box) return;
+        const urls = currentCoreSheetTarget.standUrls || [];
+        if (urls.length === 0) {
+            box.innerHTML = '<div style="color:#999; font-size:0.85em;">暂无立绘。</div>';
+            return;
+        }
+        box.innerHTML = urls.map((url, index) => `
+            <div class="stand-thumb-card">
+                <img src="${escapeHTML(url)}" alt="立绘 ${index + 1}">
+                <button onclick="requestCoreStandDelete(${jsStringAttr(url)})">申请删除此图</button>
+            </div>
+        `).join('');
+    }
+
+    async function openCoreSheetEditor(empId) {
+        const { data: emp, error } = await supabaseClient
+            .from('employees')
+            .select('id, user_id, name, role, avatar_url, stand_url, stat_block')
+            .eq('id', empId)
+            .single();
+        if (error || !emp) return alert('无法读取该角色数据');
+        if (emp.role !== '核心队友') return alert('只有核心队友可以由玩家编辑档案');
+        if (emp.user_id !== myId && !isCurrentAdmin()) return alert('只能编辑自己的核心队友');
+
+        currentCoreSheetTarget = {
+            employeeId: emp.id,
+            ownerId: emp.user_id,
+            name: emp.name,
+            standUrls: splitStandUrls(emp.stand_url)
+        };
+        document.getElementById('core-sheet-editor-title').innerText = `核心队友档案：${emp.name}`;
+        fillCoreSheetForm(normalizeSheetBlock(emp.stat_block || {}, emp.name));
+        document.getElementById('core-avatar-file').value = '';
+        document.getElementById('core-stand-file').value = '';
+        renderCoreStandList();
+        document.getElementById('core-sheet-editor-modal').style.display = 'flex';
+    }
+
+    async function ensureCoreSheetPermission() {
+        if (!currentCoreSheetTarget.employeeId) throw new Error('请先选择核心队友');
+        const { data: emp, error } = await supabaseClient
+            .from('employees')
+            .select('id, user_id, role, name, stand_url')
+            .eq('id', currentCoreSheetTarget.employeeId)
+            .single();
+        if (error || !emp) throw new Error('角色不存在');
+        if (emp.role !== '核心队友') throw new Error('只能操作核心队友');
+        if (emp.user_id !== myId && !isCurrentAdmin()) throw new Error('只能操作自己的核心队友');
+        currentCoreSheetTarget.ownerId = emp.user_id;
+        currentCoreSheetTarget.name = emp.name;
+        currentCoreSheetTarget.standUrls = splitStandUrls(emp.stand_url);
+        return emp;
+    }
+
+    async function saveCoreSheetFromForm() {
+        showLoading();
+        try {
+            await ensureCoreSheetPermission();
+            const statBlock = getCoreSheetFromForm();
+            const { error } = await supabaseClient
+                .from('employees')
+                .update({ stat_block: statBlock, name: statBlock.name })
+                .eq('id', currentCoreSheetTarget.employeeId);
+            if (error) throw error;
+            currentCoreSheetTarget.name = statBlock.name;
+            await logAction('核心队友档案', `更新了 [${currentCoreSheetTarget.name}] 的角色卡`);
+            alert('角色卡已保存');
+            await loadEmployees();
+        } catch (e) {
+            alert(e.message || '保存失败');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function uploadCoreAvatar() {
+        const file = document.getElementById('core-avatar-file').files[0];
+        if (!file) return alert('请选择头像图片');
+        showLoading();
+        try {
+            await ensureCoreSheetPermission();
+            const fileName = `core_avatar_${currentCoreSheetTarget.employeeId}_${Date.now()}`;
+            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+            if (error) throw error;
+            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
+            const { error: dbError } = await supabaseClient.from('employees').update({ avatar_url: urlData.publicUrl }).eq('id', currentCoreSheetTarget.employeeId);
+            if (dbError) throw dbError;
+            await logAction('核心队友头像', `更新了 [${currentCoreSheetTarget.name}] 的头像`);
+            document.getElementById('core-avatar-file').value = '';
+            alert('头像已更新');
+            await loadEmployees();
+        } catch (e) {
+            alert('头像上传失败：' + (e.message || '网络错误'));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function uploadCoreStand() {
+        const file = document.getElementById('core-stand-file').files[0];
+        if (!file) return alert('请选择立绘图片');
+        showLoading();
+        try {
+            await ensureCoreSheetPermission();
+            const fileName = `core_stand_${currentCoreSheetTarget.employeeId}_${Date.now()}`;
+            const { data, error } = await supabaseClient.storage.from('avatars').upload(fileName, file);
+            if (error) throw error;
+            const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
+            const urls = [...currentCoreSheetTarget.standUrls, urlData.publicUrl];
+            const { error: dbError } = await supabaseClient.from('employees').update({ stand_url: urls.join(',') }).eq('id', currentCoreSheetTarget.employeeId);
+            if (dbError) throw dbError;
+            currentCoreSheetTarget.standUrls = urls;
+            document.getElementById('core-stand-file').value = '';
+            renderCoreStandList();
+            await logAction('核心队友立绘', `追加了 [${currentCoreSheetTarget.name}] 的立绘`);
+            alert('立绘已追加');
+            await loadEmployees();
+        } catch (e) {
+            alert('立绘上传失败：' + (e.message || '网络错误'));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function createStandDeleteRequest(requestType, targetUrl = '') {
+        try {
+            await ensureCoreSheetPermission();
+            const { error } = await supabaseClient.from('employee_stand_delete_requests').insert([{
+                employee_id: currentCoreSheetTarget.employeeId,
+                employee_owner_id: currentCoreSheetTarget.ownerId,
+                employee_name: currentCoreSheetTarget.name,
+                request_type: requestType,
+                target_url: targetUrl || null,
+                requester_email: currentUserEmail || null
+            }]);
+            if (error) throw error;
+            await logAction('立绘删除申请', `申请${requestType === 'clear_all' ? '清空' : '删除'} [${currentCoreSheetTarget.name}] 的立绘`);
+            alert('删除申请已提交，等待 DM 审批');
+        } catch (e) {
+            alert('提交失败：' + (e.message || '请确认 employee_stand_delete_requests 表已创建'));
+        }
+    }
+
+    function requestCoreStandDelete(url) {
+        if (!url) return;
+        if (!confirm('确定申请删除这张立绘吗？提交后需要 DM 审批。')) return;
+        createStandDeleteRequest('single', url);
+    }
+
+    function requestCoreStandClear() {
+        if (!confirm('确定申请清空该角色全部立绘吗？提交后需要 DM 审批。')) return;
+        createStandDeleteRequest('clear_all');
     }
 
     //队员弹窗
@@ -3459,10 +3829,11 @@ async function loadGold() {
     // --- 加载待审批请求 ---
     async function loadPendingRequests() {
         if (!await requireAdminRole()) return;
-        const listDiv = document.getElementById('pending-requests-list');
+        const listDiv = document.getElementById('approval-list');
+        const box = document.getElementById('approval-box');
         if (!listDiv) return;
 
-        const { data, error } = await supabaseClient
+        const { data: fireData, error } = await supabaseClient
             .from('employees')
             .select('*, profiles:user_id(email)') 
             .eq('status', '申请解雇');
@@ -3470,23 +3841,18 @@ async function loadGold() {
         if (error) {
             console.error("加载申请失败 (400错误通常源于此处):", error);
             listDiv.innerHTML = `<div style="color:red; font-size:0.8em;">加载失败: ${error.message}</div>`;
+            if (box) box.style.display = 'block';
             return;
         }
 
-        if (!data || data.length === 0) {
-            listDiv.innerHTML = '<div style="color:#999; font-size:0.85em; padding:10px;">暂无待处理的解雇申请。</div>';
-            return;
-        }
-
-        // 渲染列表
         let html = '';
-        data.forEach(item => {
+        (fireData || []).forEach(item => {
             const playerEmail = item.profiles ? item.profiles.email : '未知玩家';
             html += `
                 <div style="background:#fff; padding:10px; border:1px solid #eee; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <div style="font-weight:bold;">${item.name}</div>
-                        <div style="font-size:0.75em; color:#888;">所属玩家: ${playerEmail}</div>
+                        <div style="font-weight:bold;">解雇申请：${escapeHTML(item.name)}</div>
+                        <div style="font-size:0.75em; color:#888;">所属玩家: ${escapeHTML(playerEmail)}</div>
                     </div>
                     <div style="display:flex; gap:5px;">
                         <button onclick="handleFireRequest(${item.id}, 'approve')" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">准许</button>
@@ -3495,7 +3861,97 @@ async function loadGold() {
                 </div>
             `;
         });
+
+        const { data: standData, error: standError } = await supabaseClient
+            .from('employee_stand_delete_requests')
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true });
+
+        if (standError) {
+            html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">立绘审批表未就绪：${escapeHTML(standError.message)}</div>`;
+        } else {
+            (standData || []).forEach(req => {
+                const label = req.request_type === 'clear_all' ? '清空全部立绘' : '删除单张立绘';
+                const preview = req.target_url ? `<img src="${escapeHTML(req.target_url)}" style="width:48px; height:64px; object-fit:cover; border-radius:4px; border:1px solid #eee;">` : '';
+                html += `
+                    <div style="background:#fff; padding:10px; border:1px solid #eee; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <div style="display:flex; gap:10px; align-items:center; min-width:0;">
+                            ${preview}
+                            <div>
+                                <div style="font-weight:bold;">立绘申请：${escapeHTML(label)} / ${escapeHTML(req.employee_name || `ID:${req.employee_id}`)}</div>
+                                <div style="font-size:0.75em; color:#888;">申请人: ${escapeHTML(req.requester_email || '未知')} · ${escapeHTML(new Date(req.created_at).toLocaleString('zh-CN', { hour12:false }))}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:5px; flex:none;">
+                            <button onclick="handleStandDeleteRequest(${req.id}, true)" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">批准</button>
+                            <button onclick="handleStandDeleteRequest(${req.id}, false)" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        if (!html) html = '<div style="color:#999; font-size:0.85em; padding:10px;">暂无待处理审批。</div>';
         listDiv.innerHTML = html;
+        if (box) box.style.display = 'block';
+    }
+
+    function handleFireRequest(empId, action) {
+        approveFire(empId, action === 'approve');
+    }
+
+    async function handleStandDeleteRequest(requestId, approved) {
+        if (!await requireAdminRole()) return;
+        showLoading();
+        try {
+            const { data: req, error: reqError } = await supabaseClient
+                .from('employee_stand_delete_requests')
+                .select('*')
+                .eq('id', requestId)
+                .single();
+            if (reqError || !req) throw reqError || new Error('申请不存在');
+
+            if (approved) {
+                const { data: emp, error: empError } = await supabaseClient
+                    .from('employees')
+                    .select('stand_url')
+                    .eq('id', req.employee_id)
+                    .single();
+                if (empError) throw empError;
+
+                let urls = splitStandUrls(emp?.stand_url);
+                if (req.request_type === 'clear_all') {
+                    urls = [];
+                } else {
+                    urls = urls.filter(url => url !== req.target_url);
+                }
+
+                const { error: updateEmpError } = await supabaseClient
+                    .from('employees')
+                    .update({ stand_url: urls.length ? urls.join(',') : null })
+                    .eq('id', req.employee_id);
+                if (updateEmpError) throw updateEmpError;
+            }
+
+            const { error: updateReqError } = await supabaseClient
+                .from('employee_stand_delete_requests')
+                .update({
+                    status: approved ? 'approved' : 'rejected',
+                    reviewed_at: new Date().toISOString(),
+                    reviewer_email: currentUserEmail || null
+                })
+                .eq('id', requestId);
+            if (updateReqError) throw updateReqError;
+
+            await logAction('立绘删除审批', `${approved ? '批准' : '驳回'}了 [${req.employee_name || req.employee_id}] 的立绘删除申请`);
+            await Promise.all([loadPendingRequests(), loadEmployees()]);
+            renderAdminStandManager();
+        } catch (e) {
+            alert('处理失败：' + (e.message || '网络错误'));
+        } finally {
+            hideLoading();
+        }
     }
 
     // --- 处理审批 ---
@@ -3707,6 +4163,7 @@ async function buy(id, p, n, c) {
         }
 
         updateStatBlockSelect(selectedUserId); // 原有的调用保持不变
+        renderAdminStandManager();
         loadEmpForRarity(selectedUserId);
         loadEmpForStatus(selectedUserId);
         loadAdminResearch();
@@ -6612,6 +7069,70 @@ function goToStandImg(index) {
         document.getElementById(`dossier-pane-${tabName}`).classList.add('active');
     }
 
+    async function renderAdminStandManager() {
+        const box = document.getElementById('adm-stand-manager');
+        const empId = document.getElementById('adm-emp-list')?.value;
+        if (!box) return;
+        if (!empId) {
+            box.innerHTML = '<div style="color:#999; font-size:0.8em;">选择雇员后显示已有立绘。</div>';
+            return;
+        }
+
+        const { data: emp, error } = await supabaseClient
+            .from('employees')
+            .select('id, name, stand_url')
+            .eq('id', empId)
+            .single();
+
+        if (error || !emp) {
+            box.innerHTML = '<div style="color:#e74c3c; font-size:0.8em;">读取立绘失败。</div>';
+            return;
+        }
+
+        const urls = splitStandUrls(emp.stand_url);
+        if (urls.length === 0) {
+            box.innerHTML = '<div style="color:#999; font-size:0.8em;">该角色暂无立绘。</div>';
+            return;
+        }
+
+        box.innerHTML = urls.map((url, index) => `
+            <div class="stand-thumb-card">
+                <img src="${escapeHTML(url)}" alt="${escapeHTML(emp.name)} 立绘 ${index + 1}">
+                <button onclick="adminDeleteSingleStand(${emp.id}, ${jsStringAttr(url)})" style="border-color:#e74c3c; color:#e74c3c; background:#fff5f5;">删除此图</button>
+            </div>
+        `).join('');
+    }
+
+    async function adminDeleteSingleStand(empId, targetUrl) {
+        if (!await requireAdminRole()) return;
+        if (!confirm('确定删除这张立绘吗？')) return;
+
+        showLoading();
+        try {
+            const { data: emp, error } = await supabaseClient
+                .from('employees')
+                .select('name, stand_url')
+                .eq('id', empId)
+                .single();
+            if (error || !emp) throw error || new Error('角色不存在');
+
+            const urls = splitStandUrls(emp.stand_url).filter(url => url !== targetUrl);
+            const { error: dbError } = await supabaseClient
+                .from('employees')
+                .update({ stand_url: urls.length ? urls.join(',') : null })
+                .eq('id', empId);
+            if (dbError) throw dbError;
+
+            await logAction('DM操作', `删除了 [${emp.name}] 的单张立绘`);
+            await Promise.all([renderAdminStandManager(), loadEmployees()]);
+            alert('立绘已删除');
+        } catch (e) {
+            alert('删除失败：' + (e.message || '网络错误'));
+        } finally {
+            hideLoading();
+        }
+    }
+
     // --- 为现有雇员上传立绘 ---
     async function uploadExistingStand() {
         if (!await requireAdminRole()) return;
@@ -6658,6 +7179,7 @@ function goToStandImg(index) {
             
             // 清空文件框
             document.getElementById('adm-emp-stand').value = '';
+            renderAdminStandManager();
 
         } catch (e) {
             console.error(e);
@@ -6688,6 +7210,7 @@ async function clearExistingStand() {
         
         // 顺便清空一下文件选择框
         document.getElementById('adm-emp-stand').value = '';
+        renderAdminStandManager();
 
     } catch (e) {
         console.error(e);
