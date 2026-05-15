@@ -190,6 +190,104 @@
         return true;
     }
 
+    function formatBudgetDelta(amount) {
+        const value = Number(amount) || 0;
+        if (value > 0) return `支出 ${value.toLocaleString()} GP`;
+        if (value < 0) return `收入 ${Math.abs(value).toLocaleString()} GP`;
+        return '无预算变动';
+    }
+
+    async function writeProposalAudit(actionType, details) {
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            await supabaseClient.from('audit_logs').insert([{
+                user_email: user?.email || currentVoter?.name || 'proposals-system',
+                action_type: actionType,
+                details
+            }]);
+        } catch (e) {
+            console.warn('议案审计日志写入失败:', e);
+        }
+    }
+
+    async function settleProposalBudget({ proposal, tableName, finalDecision, finalCost, finalReason, selectedOptionText = '' }) {
+        const cost = Number(finalCost) || 0;
+        if (finalDecision !== 'approved') {
+            return { finalDecision, finalReason, budgetNote: '💰 财务结算：未通过，无预算变动。' };
+        }
+
+        if (cost === 0) {
+            const budgetNote = '💰 财务结算：0 GP，无预算变动。';
+            await writeProposalAudit('政务厅结算', `议案《${proposal.title}》通过；${budgetNote}`);
+            return { finalDecision, finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
+        }
+
+        const { data: rpcResult, error: rpcErr } = await supabaseClient.rpc('rpc_settle_proposal_budget', {
+            p_user_id: userProfile.id,
+            p_cost: cost
+        });
+
+        if (!rpcErr && rpcResult) {
+            const result = typeof rpcResult === 'string' ? JSON.parse(rpcResult) : rpcResult;
+            if (!result.ok) {
+                const budgetNote = `💰 财务结算失败：${result.error || '国库结算未通过'}。`;
+                await writeProposalAudit('政务厅结算失败', `议案《${proposal.title}》预算 ${formatBudgetDelta(cost)}，${budgetNote}`);
+                return { finalDecision: 'rejected', finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
+            }
+
+            const oldGold = Number(result.old_gold) || 0;
+            const newGold = Number(result.new_gold) || 0;
+            const optionText = selectedOptionText ? `；方案：${selectedOptionText}` : '';
+            const budgetNote = `💰 财务结算：${formatBudgetDelta(cost)}，国库 ${oldGold.toLocaleString()} → ${newGold.toLocaleString()} GP${optionText}。`;
+            await writeProposalAudit('政务厅结算', `议案《${proposal.title}》通过；${budgetNote}`);
+            userProfile.gold_gp = newGold;
+            const goldEl = document.getElementById('current-gold');
+            if (goldEl) goldEl.innerText = newGold.toLocaleString();
+            return { finalDecision, finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
+        }
+
+        console.warn('预算 RPC 不可用，回退直接更新 profiles:', rpcErr);
+
+        const { data: currentProf, error: fetchGoldErr } = await supabaseClient
+            .from('profiles')
+            .select('gold_gp')
+            .eq('id', userProfile.id)
+            .single();
+
+        if (fetchGoldErr || !currentProf) {
+            const budgetNote = `💰 财务结算失败：无法读取国库余额（${fetchGoldErr?.message || '无数据'}）。`;
+            await writeProposalAudit('政务厅结算失败', `议案《${proposal.title}》预算 ${formatBudgetDelta(cost)}，读取国库失败。`);
+            return { finalDecision: 'rejected', finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
+        }
+
+        const oldGold = Number(currentProf.gold_gp) || 0;
+        if (cost > 0 && oldGold < cost) {
+            const budgetNote = `💰 财务结算失败：国库余额 ${oldGold.toLocaleString()} GP，不足以支付 ${cost.toLocaleString()} GP。`;
+            await writeProposalAudit('政务厅结算失败', `议案《${proposal.title}》预算 ${formatBudgetDelta(cost)}，余额不足。`);
+            return { finalDecision: 'rejected', finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
+        }
+
+        const newGold = Math.round((oldGold - cost) * 100) / 100;
+        const { error: updateGoldErr } = await supabaseClient
+            .from('profiles')
+            .update({ gold_gp: newGold })
+            .eq('id', userProfile.id);
+
+        if (updateGoldErr) {
+            const budgetNote = `💰 财务结算失败：国库更新被拒绝（${updateGoldErr.message}）。`;
+            await writeProposalAudit('政务厅结算失败', `议案《${proposal.title}》预算 ${formatBudgetDelta(cost)}，更新 profiles.gold_gp 失败：${updateGoldErr.message}`);
+            return { finalDecision: 'rejected', finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
+        }
+
+        const optionText = selectedOptionText ? `；方案：${selectedOptionText}` : '';
+        const budgetNote = `💰 财务结算：${formatBudgetDelta(cost)}，国库 ${oldGold.toLocaleString()} → ${newGold.toLocaleString()} GP${optionText}。`;
+        await writeProposalAudit('政务厅结算', `议案《${proposal.title}》${finalDecision === 'approved' ? '通过' : '未通过'}；${budgetNote}`);
+        userProfile.gold_gp = newGold;
+        const goldEl = document.getElementById('current-gold');
+        if (goldEl) goldEl.innerText = newGold.toLocaleString();
+        return { finalDecision, finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
+    }
+
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) { alert('请先登录主账号'); window.location.href = 'index.html'; return; }
@@ -272,6 +370,7 @@ async function calculateWinnerAndSettleV2(proposal, roundVotes, isExpired = fals
     let finalDecision = null;
     let finalReason = '';
     let finalCost = 0;
+    let selectedOptionText = '';
     const timePrefix = isExpired ? `⏳ 议案已逾期。` : '✅ 全员投票完毕。';
 
     if (maxVotes === 0) {
@@ -299,6 +398,7 @@ async function calculateWinnerAndSettleV2(proposal, roundVotes, isExpired = fals
             const winOpt = proposal.options.find(o => o.id === winners[0][0]);
             finalDecision = 'approved';
             finalCost = winOpt.cost || 0;
+            selectedOptionText = winOpt.text || '';
             finalReason = `${timePrefix}方案【${winOpt.text}】以相对多数 (${maxVotes}票) 胜出。`;
         } else if (totalVotesInRound >= totalVotersCount || isExpired) {
             // 平票且投满或过期 -> 剔除末位，开启下一轮决胜
@@ -316,19 +416,24 @@ async function calculateWinnerAndSettleV2(proposal, roundVotes, isExpired = fals
 
     // 最终扣款与归档
     if (finalDecision) {
-        if (finalDecision === 'approved' && finalCost !== 0) {
-            const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
-            if (finalCost > 0 && currentProf.gold_gp < finalCost) {
-                finalDecision = 'rejected';
-                finalReason = `${finalReason}\n⚠️ 但由于国库资金不足以支付 ${finalCost} GP，被财务官强制驳回！`;
-            } else {
-                const newGold = currentProf.gold_gp - finalCost;
-                await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
-            }
-        }
-        await supabaseClient.from('city_proposals_v2').update({
+        const settlement = await settleProposalBudget({
+            proposal,
+            tableName: 'city_proposals_v2',
+            finalDecision,
+            finalCost,
+            finalReason,
+            selectedOptionText
+        });
+        finalDecision = settlement.finalDecision;
+        finalReason = settlement.finalReason;
+
+        const { error: proposalUpdateErr } = await supabaseClient.from('city_proposals_v2').update({
             status: finalDecision, decision_reason: finalReason, decided_at: new Date().toISOString()
         }).eq('id', proposal.id);
+        if (proposalUpdateErr) {
+            await writeProposalAudit('政务厅归档失败', `议案《${proposal.title}》结算后归档失败：${proposalUpdateErr.message}`);
+            alert('议案结算完成，但归档失败：' + proposalUpdateErr.message);
+        }
     }
 }
 
@@ -348,19 +453,23 @@ async function autoSettleExpiredProposalV1(proposal, allVotes) {
         finalReason = `⏳ 议案已逾期 (5天)。最终票数战平，法案自动打回。`;
     }
 
-    if (finalDecision === 'approved' && proposal.cost !== 0) {
-        const { data: currentProf } = await supabaseClient.from('profiles').select('gold_gp').eq('id', userProfile.id).single();
-        if (proposal.cost > 0 && currentProf.gold_gp < proposal.cost) {
-            finalDecision = 'rejected';
-            finalReason += `\n⚠️ 国库资金不足，强制驳回。`;
-        } else {
-            const newGold = currentProf.gold_gp - proposal.cost;
-            await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', userProfile.id);
-        }
-    }
-    await supabaseClient.from('city_proposals').update({
+    const settlement = await settleProposalBudget({
+        proposal,
+        tableName: 'city_proposals',
+        finalDecision,
+        finalCost: proposal.cost || 0,
+        finalReason
+    });
+    finalDecision = settlement.finalDecision;
+    finalReason = settlement.finalReason;
+
+    const { error: proposalUpdateErr } = await supabaseClient.from('city_proposals').update({
         status: finalDecision, decision_reason: finalReason, decided_at: new Date().toISOString()
     }).eq('id', proposal.id);
+    if (proposalUpdateErr) {
+        await writeProposalAudit('政务厅归档失败', `议案《${proposal.title}》结算后归档失败：${proposalUpdateErr.message}`);
+        alert('议案结算完成，但归档失败：' + proposalUpdateErr.message);
+    }
 }
 
 // ==========================================
