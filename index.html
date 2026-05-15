@@ -3171,6 +3171,25 @@ async function openEquipModal(empId, slotIdx) {
         return String(standUrl || '').split(',').map(url => url.trim()).filter(Boolean);
     }
 
+    function getAvatarStoragePath(publicUrl) {
+        if (!publicUrl) return null;
+        const marker = '/storage/v1/object/public/avatars/';
+        const index = String(publicUrl).indexOf(marker);
+        if (index === -1) return null;
+        return decodeURIComponent(String(publicUrl).slice(index + marker.length).split('?')[0]);
+    }
+
+    async function removeAvatarStorageUrls(urls) {
+        const paths = [...new Set((urls || []).map(getAvatarStoragePath).filter(Boolean))];
+        if (paths.length === 0) return;
+
+        const { error } = await supabaseClient.storage.from('avatars').remove(paths);
+        if (error) {
+            console.warn('Storage 图片删除失败:', error.message, paths);
+            await logAction('图片清理失败', `删除 Storage 文件失败：${paths.join(', ')}；${error.message}`).catch(() => {});
+        }
+    }
+
     function getCoreSheetFromForm() {
         const stats = {};
         CORE_STAT_KEYS.forEach(key => {
@@ -4096,6 +4115,7 @@ async function loadGold() {
             if (approved) {
                 const payload = req.payload || {};
                 let updatePayload = {};
+                let urlsToRemove = [];
 
                 if (req.request_type === 'sheet') {
                     updatePayload = {
@@ -4104,6 +4124,13 @@ async function loadGold() {
                     };
                 } else if (req.request_type === 'avatar') {
                     if (!payload.avatar_url) throw new Error('头像链接缺失');
+                    const { data: emp, error: empError } = await supabaseClient
+                        .from('employees')
+                        .select('avatar_url')
+                        .eq('id', req.employee_id)
+                        .single();
+                    if (empError) throw empError;
+                    urlsToRemove = emp?.avatar_url ? [emp.avatar_url] : [];
                     updatePayload = { avatar_url: payload.avatar_url };
                 } else if (req.request_type === 'stand_add') {
                     if (!payload.stand_url) throw new Error('立绘链接缺失');
@@ -4125,6 +4152,13 @@ async function loadGold() {
                     .update(updatePayload)
                     .eq('id', req.employee_id);
                 if (updateEmpError) throw updateEmpError;
+
+                if (urlsToRemove.length > 0) {
+                    await removeAvatarStorageUrls(urlsToRemove);
+                }
+            } else if (req.request_type === 'avatar' || req.request_type === 'stand_add') {
+                const payload = req.payload || {};
+                await removeAvatarStorageUrls([payload.avatar_url, payload.stand_url]);
             }
 
             const { error: updateReqError } = await supabaseClient
@@ -4167,9 +4201,12 @@ async function loadGold() {
                 if (empError) throw empError;
 
                 let urls = splitStandUrls(emp?.stand_url);
+                let urlsToRemove = [];
                 if (req.request_type === 'clear_all') {
+                    urlsToRemove = urls;
                     urls = [];
                 } else {
+                    urlsToRemove = urls.filter(url => url === req.target_url);
                     urls = urls.filter(url => url !== req.target_url);
                 }
 
@@ -4178,6 +4215,8 @@ async function loadGold() {
                     .update({ stand_url: urls.length ? urls.join(',') : null })
                     .eq('id', req.employee_id);
                 if (updateEmpError) throw updateEmpError;
+
+                await removeAvatarStorageUrls(urlsToRemove);
             }
 
             const { error: updateReqError } = await supabaseClient
@@ -4778,11 +4817,23 @@ async function updateUserGold() {
         if (!await requireAdminRole()) return;
         const f = document.getElementById('adm-emp-avatar').files[0];
         const id = document.getElementById('adm-emp-list').value;
+        if (!id) return alert('请先选择一名雇员');
+        if (!f) return alert('请选择头像图片');
         showLoading();
-        const { data } = await supabaseClient.storage.from('avatars').upload(`ava_${Date.now()}`, f);
-        if(data) {
+        const { data: oldEmp } = await supabaseClient.from('employees').select('avatar_url').eq('id', id).single();
+        const { data, error } = await supabaseClient.storage.from('avatars').upload(`ava_${Date.now()}`, f);
+        if(error) {
+            alert('上传失败：' + error.message);
+        } else if(data) {
             const { data: u } = supabaseClient.storage.from('avatars').getPublicUrl(data.path);
-            await supabaseClient.from('employees').update({avatar_url: u.publicUrl}).eq('id', id);
+            const { error: updError } = await supabaseClient.from('employees').update({avatar_url: u.publicUrl}).eq('id', id);
+            if (updError) {
+                await removeAvatarStorageUrls([u.publicUrl]);
+                alert('头像写入失败：' + updError.message);
+            } else {
+                await removeAvatarStorageUrls([oldEmp?.avatar_url]);
+                await logAction('DM操作', `更新了雇员(ID:${id}) 的头像，并清理旧头像`);
+            }
             alert('OK');
         }
         hideLoading();
@@ -7362,12 +7413,14 @@ function goToStandImg(index) {
                 .single();
             if (error || !emp) throw error || new Error('角色不存在');
 
-            const urls = splitStandUrls(emp.stand_url).filter(url => url !== targetUrl);
+            const originalUrls = splitStandUrls(emp.stand_url);
+            const urls = originalUrls.filter(url => url !== targetUrl);
             const { error: dbError } = await supabaseClient
                 .from('employees')
                 .update({ stand_url: urls.length ? urls.join(',') : null })
                 .eq('id', empId);
             if (dbError) throw dbError;
+            await removeAvatarStorageUrls(originalUrls.filter(url => url === targetUrl));
 
             await logAction('DM操作', `删除了 [${emp.name}] 的单张立绘`);
             await Promise.all([renderAdminStandManager(), loadEmployees()]);
@@ -7444,6 +7497,13 @@ async function clearExistingStand() {
 
     showLoading();
     try {
+        const { data: currentEmp } = await supabaseClient
+            .from('employees')
+            .select('stand_url')
+            .eq('id', empId)
+            .single();
+        const urlsToRemove = splitStandUrls(currentEmp?.stand_url);
+
         // 将数据库中的 stand_url 字段更新为 null
         const { error: dbError } = await supabaseClient
             .from('employees')
@@ -7451,6 +7511,7 @@ async function clearExistingStand() {
             .eq('id', empId);
 
         if (dbError) throw dbError;
+        await removeAvatarStorageUrls(urlsToRemove);
         
         alert('🗑️ 该角色的立绘已全部清空！');
         
