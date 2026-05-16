@@ -12,7 +12,6 @@
     object-src 'none';
     base-uri 'self';
     form-action 'self';
-    frame-ancestors 'none';
 ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D 小队管理系统</title>
@@ -3654,7 +3653,7 @@ if (isPhandalin) {
         if (loadingMask) loadingMask.style.display = 'none';
 
         // 如果是已登录状态，检查并弹出公告
-        if (session) {
+        if (user) {
             checkAnnouncements();
         }
     }
@@ -5236,7 +5235,9 @@ async function loadLoginLogs() {
     function initPresenceSystem() {
     // 防止重复连接
     if (presenceChannel) {
-        supabaseClient.removeChannel(presenceChannel);
+        const oldChannel = presenceChannel;
+        presenceChannel = null;
+        supabaseClient.removeChannel(oldChannel);
     }
 
     console.log("初始化在线频道:", currentUserEmail);
@@ -5283,6 +5284,12 @@ async function loadLoginLogs() {
                 renderOnlineList(state); 
             }
         } else {
+            if (status === 'CLOSED') {
+                console.debug("Presence channel closed");
+                return;
+            }
+            if (status !== 'CHANNEL_ERROR' && status !== 'TIMED_OUT') return;
+
             console.error("在线频道订阅失败，状态:", status);
             document.getElementById('online-users-container').innerHTML = 
                 '<div style="color:red">连接断开 (CSP或网络拦截)</div>';
@@ -8590,7 +8597,7 @@ window.endWarTurn = async function() {
 
     // 强制踢人
     supabaseClient.auth.onAuthStateChange((event, session) => {
-        console.log("Auth Event:", event);
+        console.debug("Auth Event:", event);
         if (event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
             clearAuthzCache();
         }
