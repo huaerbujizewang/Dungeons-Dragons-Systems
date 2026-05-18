@@ -225,6 +225,25 @@
             display: block;
         }
 
+        .war-poster-strip.loading {
+            display: block;
+            min-height: 180px;
+        }
+
+        .war-poster-strip.loading::after {
+            content: "正在同步外宣海报...";
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 7, 10, 0.78);
+            color: #f1c40f;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
         .war-poster-frame {
             aspect-ratio: 16 / 9;
             width: min(100%, 960px);
@@ -2270,6 +2289,7 @@
     let warPosterImages = [];
     let warPosterIndex = 0;
     let warPosterPointerStartX = 0;
+    let warPosterLoadSeq = 0;
 
     function escapeHTML(value) {
         return String(value ?? '').replace(/[&<>'"]/g, ch => ({
@@ -7972,8 +7992,12 @@ async function getViewingProfileEmail() {
 async function loadWarPosterStrip() {
     const strip = document.getElementById('war-poster-strip');
     if (!strip) return;
+    const requestId = ++warPosterLoadSeq;
+    strip.classList.add('loading');
+    strip.classList.remove('has-multiple');
     if (!viewingUserId) {
         console.log('[战局海报] 未加载：当前没有 viewingUserId');
+        hideWarPosterStrip();
         return;
     }
 
@@ -7984,6 +8008,7 @@ async function loadWarPosterStrip() {
             .eq('key', OMNI_POSTER_CONFIG_KEY)
             .maybeSingle();
         if (error) throw new Error(error.message);
+        if (requestId !== warPosterLoadSeq) return;
 
         const config = parseOmniPosterConfig(data?.value);
         if (!config || config.active === false) {
@@ -7993,6 +8018,7 @@ async function loadWarPosterStrip() {
         }
 
         const targetEmail = await getViewingProfileEmail();
+        if (requestId !== warPosterLoadSeq) return;
         warPosterImages = (config.images || [])
             .map(item => typeof item === 'string' ? { image_url: item } : item)
             .filter(item => {
@@ -8024,7 +8050,7 @@ function hideWarPosterStrip() {
     warPosterIndex = 0;
     const strip = document.getElementById('war-poster-strip');
     if (strip) {
-        strip.classList.remove('show', 'has-multiple');
+        strip.classList.remove('show', 'has-multiple', 'loading');
     }
 }
 
@@ -8037,6 +8063,9 @@ function showWarPoster(index) {
     const counter = document.getElementById('war-poster-counter');
     if (!strip || !img) return;
 
+    strip.classList.add('loading');
+    img.onload = () => strip.classList.remove('loading');
+    img.onerror = () => strip.classList.remove('loading');
     img.src = warPosterImages[warPosterIndex].image_url;
     strip.classList.toggle('has-multiple', warPosterImages.length > 1);
     if (counter) counter.textContent = `${warPosterIndex + 1} / ${warPosterImages.length}`;
