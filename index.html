@@ -2290,6 +2290,7 @@
     let warPosterIndex = 0;
     let warPosterPointerStartX = 0;
     let warPosterLoadSeq = 0;
+    let warPosterCacheKey = '';
 
     function escapeHTML(value) {
         return String(value ?? '').replace(/[&<>'"]/g, ch => ({
@@ -7993,8 +7994,6 @@ async function loadWarPosterStrip() {
     const strip = document.getElementById('war-poster-strip');
     if (!strip) return;
     const requestId = ++warPosterLoadSeq;
-    strip.classList.add('loading');
-    strip.classList.remove('has-multiple');
     if (!viewingUserId) {
         console.log('[战局海报] 未加载：当前没有 viewingUserId');
         hideWarPosterStrip();
@@ -8002,6 +8001,9 @@ async function loadWarPosterStrip() {
     }
 
     try {
+        const targetEmail = await getViewingProfileEmail();
+        if (requestId !== warPosterLoadSeq) return;
+
         const { data, error } = await supabaseClient
             .from('omni_config')
             .select('value')
@@ -8011,14 +8013,23 @@ async function loadWarPosterStrip() {
         if (requestId !== warPosterLoadSeq) return;
 
         const config = parseOmniPosterConfig(data?.value);
+        const configVersion = config?.updated_at || data?.value || '';
+        const nextCacheKey = `${viewingUserId}|${targetEmail}|${configVersion}`;
+        if (warPosterCacheKey === nextCacheKey) {
+            console.log('[战局海报] 使用缓存', { count: warPosterImages.length, viewingUserId, targetEmail });
+            return;
+        }
+
+        strip.classList.add('loading');
+        strip.classList.remove('has-multiple');
+
         if (!config || config.active === false) {
             console.log('[战局海报] 未加载：没有启用的海报配置');
+            warPosterCacheKey = nextCacheKey;
             hideWarPosterStrip();
             return;
         }
 
-        const targetEmail = await getViewingProfileEmail();
-        if (requestId !== warPosterLoadSeq) return;
         warPosterImages = (config.images || [])
             .map(item => typeof item === 'string' ? { image_url: item } : item)
             .filter(item => {
@@ -8032,11 +8043,13 @@ async function loadWarPosterStrip() {
 
         if (warPosterImages.length === 0) {
             console.log('[战局海报] 未匹配到当前视角玩家', { viewingUserId, targetEmail });
+            warPosterCacheKey = nextCacheKey;
             hideWarPosterStrip();
             return;
         }
 
         strip.classList.add('show');
+        warPosterCacheKey = nextCacheKey;
         console.log('[战局海报] 已加载', { count: warPosterImages.length, viewingUserId, targetEmail });
         showWarPoster(0);
     } catch (error) {
@@ -8048,6 +8061,7 @@ async function loadWarPosterStrip() {
 function hideWarPosterStrip() {
     warPosterImages = [];
     warPosterIndex = 0;
+    warPosterCacheKey = '';
     const strip = document.getElementById('war-poster-strip');
     if (strip) {
         strip.classList.remove('show', 'has-multiple', 'loading');
@@ -8063,10 +8077,15 @@ function showWarPoster(index) {
     const counter = document.getElementById('war-poster-counter');
     if (!strip || !img) return;
 
-    strip.classList.add('loading');
-    img.onload = () => strip.classList.remove('loading');
-    img.onerror = () => strip.classList.remove('loading');
-    img.src = warPosterImages[warPosterIndex].image_url;
+    const nextSrc = warPosterImages[warPosterIndex].image_url;
+    if (img.src !== nextSrc) {
+        strip.classList.add('loading');
+        img.onload = () => strip.classList.remove('loading');
+        img.onerror = () => strip.classList.remove('loading');
+        img.src = nextSrc;
+    } else {
+        strip.classList.remove('loading');
+    }
     strip.classList.toggle('has-multiple', warPosterImages.length > 1);
     if (counter) counter.textContent = `${warPosterIndex + 1} / ${warPosterImages.length}`;
 }
