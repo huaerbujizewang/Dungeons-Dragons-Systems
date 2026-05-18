@@ -505,6 +505,23 @@
             justify-content: center;
             color: #64748b;
             overflow: hidden;
+            position: relative;
+        }
+
+        .poster-admin-preview.is-loading::after {
+            content: attr(data-loading);
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2, 6, 23, 0.82);
+            color: var(--omni-green-bright);
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-align: center;
+            padding: 20px;
         }
 
         .poster-admin-preview img {
@@ -1308,20 +1325,36 @@
             return `<option value="${escapeHTML(profile.id)}|${escapeHTML(profile.email)}" ${selected}>${escapeHTML(profile.email || profile.id)}</option>`;
         }
 
+        function setPosterAdminBusy(isBusy, message = '正在处理海报...') {
+            posterAdminBusy = isBusy;
+            const preview = document.getElementById('poster-admin-preview');
+            if (preview) {
+                preview.classList.toggle('is-loading', isBusy);
+                preview.dataset.loading = message;
+            }
+            document
+                .querySelectorAll('#dm-sec-poster button, #dm-sec-poster input, #dm-sec-poster select')
+                .forEach(el => {
+                    el.disabled = isBusy;
+                });
+        }
+
         async function renderPosterAdmin() {
             if (!await verifyDmAccess(true)) return;
-
-            await loadPosterIndexTargets();
-
-            const preview = document.getElementById('poster-admin-preview');
-            const status = document.getElementById('poster-admin-status');
-            if (!preview || !status) return;
-
-            preview.classList.remove('poster-grid');
-            preview.innerHTML = '<span>正在读取海报配置...</span>';
-            status.textContent = '';
+            if (posterAdminBusy) return;
+            setPosterAdminBusy(true, '正在刷新海报...');
 
             try {
+                await loadPosterIndexTargets();
+
+                const preview = document.getElementById('poster-admin-preview');
+                const status = document.getElementById('poster-admin-status');
+                if (!preview || !status) return;
+
+                preview.classList.remove('poster-grid');
+                preview.innerHTML = '<span>正在读取海报配置...</span>';
+                status.textContent = '';
+
                 const config = await getPosterConfig();
                 const allImages = getAllPosterImages(config);
                 const images = getPosterImages(config, 'omni');
@@ -1361,9 +1394,15 @@
                     status.textContent = '状态：未启用。上传图片后，玩家登录 OMNI 时会看到 16:9 图片弹窗。';
                 }
             } catch (error) {
-                preview.classList.remove('poster-grid');
-                preview.innerHTML = '<span>读取失败</span>';
-                status.textContent = '读取失败：' + (error.message || error);
+                const preview = document.getElementById('poster-admin-preview');
+                const status = document.getElementById('poster-admin-status');
+                if (preview) {
+                    preview.classList.remove('poster-grid');
+                    preview.innerHTML = '<span>读取失败</span>';
+                }
+                if (status) status.textContent = '读取失败：' + (error.message || error);
+            } finally {
+                setPosterAdminBusy(false);
             }
         }
 
@@ -1398,6 +1437,8 @@
 
         async function updateSinglePoster(index) {
             if (!await verifyDmAccess()) return;
+            if (posterAdminBusy) return;
+            setPosterAdminBusy(true, '正在保存海报设置...');
 
             try {
                 const config = await getPosterConfig();
@@ -1416,16 +1457,20 @@
                     image_url: images[0]?.image_url || '',
                     updated_at: new Date().toISOString()
                 });
-                await renderPosterAdmin();
                 alert('单张海报投放设置已更新。');
             } catch (error) {
                 alert('更新失败：' + (error.message || error));
+            } finally {
+                setPosterAdminBusy(false);
+                await renderPosterAdmin();
             }
         }
 
         async function deleteSinglePoster(index) {
             if (!await verifyDmAccess()) return;
             if (!confirm('确定卸载这张海报吗？配置记录和 Storage 文件都会被删除。')) return;
+            if (posterAdminBusy) return;
+            setPosterAdminBusy(true, '正在卸载海报...');
 
             try {
                 const config = await getPosterConfig();
@@ -1448,15 +1493,18 @@
                     image_url: images[0]?.image_url || '',
                     updated_at: new Date().toISOString()
                 });
-                await renderPosterAdmin();
                 alert('海报已卸载，Storage 文件也已删除。');
             } catch (error) {
                 alert('卸载失败：' + (error.message || error));
+            } finally {
+                setPosterAdminBusy(false);
+                await renderPosterAdmin();
             }
         }
 
         async function uploadOmniPoster() {
             if (!await verifyDmAccess()) return;
+            if (posterAdminBusy) return;
 
             const input = document.getElementById('poster-file');
             const files = Array.from(input?.files || []);
@@ -1479,6 +1527,7 @@
 
             const status = document.getElementById('poster-admin-status');
             if (status) status.textContent = `正在上传 ${files.length} 张海报...`;
+            setPosterAdminBusy(true, `正在上传 ${files.length} 张海报...`);
 
             try {
                 const existing = await getPosterConfig();
@@ -1488,6 +1537,7 @@
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     if (status) status.textContent = `正在上传 ${i + 1} / ${files.length}：${file.name}`;
+                    setPosterAdminBusy(true, `正在上传 ${i + 1} / ${files.length}：${file.name}`);
 
                     const fileExt = (file.name.split('.').pop() || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
                     const fileName = `omni-posters/poster_${Date.now()}_${i}.${fileExt}`;
@@ -1523,17 +1573,21 @@
 
                 await savePosterConfig(config);
                 input.value = '';
-                await renderPosterAdmin();
                 alert(`已追加 ${uploadedImages.length} 张海报并启用。OMNI 内宣会弹窗显示，index 外宣会显示在战局页顶部。`);
             } catch (error) {
                 if (status) status.textContent = '上传失败：' + (error.message || error);
                 alert('海报上传失败：' + (error.message || error));
+            } finally {
+                setPosterAdminBusy(false);
+                await renderPosterAdmin();
             }
         }
 
         async function disableOmniPoster() {
             if (!await verifyDmAccess()) return;
             if (!confirm('确定停用当前登录海报弹窗吗？')) return;
+            if (posterAdminBusy) return;
+            setPosterAdminBusy(true, '正在停用海报...');
 
             try {
                 const existing = await getPosterConfig();
@@ -1542,10 +1596,12 @@
                     active: false,
                     updated_at: new Date().toISOString()
                 });
-                await renderPosterAdmin();
                 alert('登录海报弹窗已停用。');
             } catch (error) {
                 alert('停用失败：' + (error.message || error));
+            } finally {
+                setPosterAdminBusy(false);
+                await renderPosterAdmin();
             }
         }
 
@@ -1560,6 +1616,7 @@
         let currentPosterIndex = 0;
         let posterPointerStartX = 0;
         let posterIndexTargetOptions = [];
+        let posterAdminBusy = false;
 
         function scheduleIdleTask(task) {
             if ('requestIdleCallback' in window) {
