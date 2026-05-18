@@ -209,6 +209,73 @@
         #war-section {
             max-width: 1400px;
         }
+
+        .war-poster-strip {
+            display: none;
+            position: relative;
+            margin: 0 0 18px 0;
+            background: #05070a;
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+        }
+
+        .war-poster-strip.show {
+            display: block;
+        }
+
+        .war-poster-frame {
+            aspect-ratio: 16 / 9;
+            width: min(100%, 960px);
+            margin: 0 auto;
+            background: #05070a;
+        }
+
+        .war-poster-frame img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .war-poster-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 38px;
+            height: 52px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(0,0,0,0.48);
+            color: white;
+            cursor: pointer;
+            font-size: 28px;
+            display: none;
+        }
+
+        .war-poster-strip.has-multiple .war-poster-nav {
+            display: block;
+        }
+
+        .war-poster-nav.prev { left: 10px; }
+        .war-poster-nav.next { right: 10px; }
+
+        .war-poster-counter {
+            position: absolute;
+            left: 50%;
+            bottom: 10px;
+            transform: translateX(-50%);
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.55);
+            color: white;
+            font-size: 0.8em;
+            display: none;
+        }
+
+        .war-poster-strip.has-multiple .war-poster-counter {
+            display: block;
+        }
         
         /* 导航 */
         .nav { display: flex; gap: 15px; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 30px; align-items: center; }
@@ -1131,6 +1198,14 @@
 
     <!-- 战局 -->
     <div id="war-section" class="section">
+    <div id="war-poster-strip" class="war-poster-strip" onpointerdown="handleWarPosterPointerDown(event)" onpointerup="handleWarPosterPointerUp(event)">
+        <div class="war-poster-frame">
+            <img id="war-poster-img" alt="">
+        </div>
+        <button class="war-poster-nav prev" onclick="changeWarPoster(-1); event.stopPropagation();" aria-label="上一张">&lsaquo;</button>
+        <button class="war-poster-nav next" onclick="changeWarPoster(1); event.stopPropagation();" aria-label="下一张">&rsaquo;</button>
+        <div class="war-poster-counter" id="war-poster-counter"></div>
+    </div>
     <div id="war-room-panel" style="margin-bottom: 30px; background: #f4f6f8; border: 2px solid #bdc3c7; border-radius: 8px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden; height: 1200px;">
     <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px); pointer-events: none;"></div>
 
@@ -2191,6 +2266,10 @@
     const ADMIN_ROLES = ['dm', 'root'];
     const WAR_CONTROLLER_EMAILS = [DM_EMAIL, 'master@almorel.com'];
     const EMPLOYEE_STATUSES = ['在职', '科研中', '出差', '休假', '特殊状态', '申请解雇', '离职', '违规'];
+    const OMNI_POSTER_CONFIG_KEY = 'login_poster';
+    let warPosterImages = [];
+    let warPosterIndex = 0;
+    let warPosterPointerStartX = 0;
 
     function escapeHTML(value) {
         return String(value ?? '').replace(/[&<>'"]/g, ch => ({
@@ -3592,6 +3671,7 @@ if (isPhandalin) {
     if (gachaBtn) gachaBtn.style.display = 'inline-block';
     if (omniCard) omniCard.style.display = 'block';
 }
+            if (!viewingUserId) viewingUserId = user.id;
             loadWarSituation();
             
             // 检查管理员权限
@@ -3814,6 +3894,9 @@ async function loadGold() {
             loadAllAccounts();
             loadLogs();
             loadLoginLogs();
+        }
+        if (tab === 'war') {
+            loadWarPosterStrip();
         }
     }
 
@@ -4376,6 +4459,7 @@ async function buy(id, p, n, c) {
             renderGrantQueue();
             renderWantedPosterSearchResults([]);
             refreshAllData();
+            loadWarPosterStrip();
             document.getElementById('adm-emp-list').innerHTML = '';
             document.getElementById('adm-status-emp-list').innerHTML = '';
             document.getElementById('adm-status-val').innerHTML = '';
@@ -4451,6 +4535,7 @@ async function buy(id, p, n, c) {
         loadEmpForRarity(selectedUserId);
         loadEmpForStatus(selectedUserId);
         loadAdminResearch();
+        loadWarPosterStrip();
     }
 
     async function assignDM() {
@@ -7860,6 +7945,120 @@ async function clearExistingStand() {
     }
 
 // --- 1. 战局主函数 ---
+function parseOmniPosterConfig(rawValue) {
+    if (!rawValue) return null;
+    try {
+        const config = JSON.parse(rawValue);
+        if (!config || typeof config !== 'object') return null;
+        if (!Array.isArray(config.images)) {
+            config.images = config.image_url ? [{ image_url: config.image_url }] : [];
+        }
+        return config;
+    } catch (error) {
+        return { active: true, images: [{ image_url: rawValue }] };
+    }
+}
+
+async function getViewingProfileEmail() {
+    if (!viewingUserId) return '';
+    const { data } = await supabaseClient
+        .from('profiles')
+        .select('email')
+        .eq('id', viewingUserId)
+        .maybeSingle();
+    return data?.email || '';
+}
+
+async function loadWarPosterStrip() {
+    const strip = document.getElementById('war-poster-strip');
+    if (!strip) return;
+    if (!viewingUserId) {
+        console.log('[战局海报] 未加载：当前没有 viewingUserId');
+        return;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('omni_config')
+            .select('value')
+            .eq('key', OMNI_POSTER_CONFIG_KEY)
+            .maybeSingle();
+        if (error) throw new Error(error.message);
+
+        const config = parseOmniPosterConfig(data?.value);
+        if (!config || config.active === false) {
+            console.log('[战局海报] 未加载：没有启用的海报配置');
+            hideWarPosterStrip();
+            return;
+        }
+
+        const targetEmail = await getViewingProfileEmail();
+        warPosterImages = (config.images || [])
+            .map(item => typeof item === 'string' ? { image_url: item } : item)
+            .filter(item => {
+                if (!item || !item.image_url) return false;
+                const audience = item.audience;
+                if (!audience || audience.index !== true) return false;
+                const targetIds = audience.index_target_ids || [];
+                const targetEmails = audience.index_target_emails || [];
+                return targetIds.includes(viewingUserId) || (targetEmail && targetEmails.includes(targetEmail));
+            });
+
+        if (warPosterImages.length === 0) {
+            console.log('[战局海报] 未匹配到当前视角玩家', { viewingUserId, targetEmail });
+            hideWarPosterStrip();
+            return;
+        }
+
+        strip.classList.add('show');
+        console.log('[战局海报] 已加载', { count: warPosterImages.length, viewingUserId, targetEmail });
+        showWarPoster(0);
+    } catch (error) {
+        console.warn('战局海报加载失败:', error.message || error);
+        hideWarPosterStrip();
+    }
+}
+
+function hideWarPosterStrip() {
+    warPosterImages = [];
+    warPosterIndex = 0;
+    const strip = document.getElementById('war-poster-strip');
+    if (strip) {
+        strip.classList.remove('show', 'has-multiple');
+    }
+}
+
+function showWarPoster(index) {
+    if (warPosterImages.length === 0) return;
+    warPosterIndex = (index + warPosterImages.length) % warPosterImages.length;
+
+    const strip = document.getElementById('war-poster-strip');
+    const img = document.getElementById('war-poster-img');
+    const counter = document.getElementById('war-poster-counter');
+    if (!strip || !img) return;
+
+    img.src = warPosterImages[warPosterIndex].image_url;
+    strip.classList.toggle('has-multiple', warPosterImages.length > 1);
+    if (counter) counter.textContent = `${warPosterIndex + 1} / ${warPosterImages.length}`;
+}
+
+function changeWarPoster(direction) {
+    if (warPosterImages.length <= 1) return;
+    showWarPoster(warPosterIndex + direction);
+}
+
+function handleWarPosterPointerDown(event) {
+    warPosterPointerStartX = event.clientX;
+}
+
+function handleWarPosterPointerUp(event) {
+    if (!warPosterPointerStartX || warPosterImages.length <= 1) return;
+    const deltaX = event.clientX - warPosterPointerStartX;
+    warPosterPointerStartX = 0;
+    if (Math.abs(deltaX) < 45) return;
+    changeWarPoster(deltaX < 0 ? 1 : -1);
+}
+
 async function loadWarSituation() {
     const warPanel = document.getElementById('war-room-panel');
     const warTabBtn = document.getElementById('war-tab-btn');
@@ -7870,6 +8069,7 @@ async function loadWarSituation() {
         return;
     }
     if (warTabBtn) { warTabBtn.style.display = 'inline-block'; }
+    loadWarPosterStrip();
 
     // 【第一步】：先去拉取只存在于 JSON 里的静态视觉数据
     try {
