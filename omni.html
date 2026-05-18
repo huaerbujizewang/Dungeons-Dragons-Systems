@@ -527,6 +527,46 @@
             aspect-ratio: 16 / 9;
             border: 1px solid #334155;
         }
+
+        .poster-admin-card {
+            background: #020617;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 10px;
+            color: #e2e8f0;
+        }
+
+        .poster-admin-card label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82em;
+        }
+
+        .poster-admin-card select {
+            width: 100%;
+            min-height: 88px;
+            margin-top: 8px;
+            padding: 6px;
+            background: #0f172a;
+            color: white;
+            border: 1px solid #334155;
+        }
+
+        .poster-admin-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .poster-admin-actions button {
+            flex: 1;
+            border: none;
+            border-radius: 4px;
+            padding: 7px 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
 .section-block {
     margin-bottom: 35px;
 }
@@ -1235,9 +1275,10 @@
             if (enabled) loadPosterIndexTargets();
         }
 
-        async function loadPosterIndexTargets() {
+        async function loadPosterIndexTargets(force = false) {
             const select = document.getElementById('poster-index-targets');
-            if (!select || select.dataset.loaded === '1') return;
+            if (!select) return posterIndexTargetOptions;
+            if (!force && select.dataset.loaded === '1' && posterIndexTargetOptions.length > 0) return posterIndexTargetOptions;
 
             select.innerHTML = '<option>正在加载玩家...</option>';
             try {
@@ -1247,21 +1288,30 @@
                     .order('email');
                 if (error) throw new Error(error.message);
 
-                select.innerHTML = (data || []).map(profile =>
-                    `<option value="${escapeHTML(profile.id)}|${escapeHTML(profile.email || '')}">${escapeHTML(profile.email || profile.id)}</option>`
-                ).join('');
+                posterIndexTargetOptions = (data || []).map(profile => ({
+                    id: profile.id,
+                    email: profile.email || ''
+                }));
+                select.innerHTML = posterIndexTargetOptions.map(profile => renderPosterTargetOption(profile)).join('');
                 select.dataset.loaded = '1';
+                return posterIndexTargetOptions;
             } catch (error) {
                 select.innerHTML = '';
                 const status = document.getElementById('poster-admin-status');
                 if (status) status.textContent = '玩家列表加载失败：' + (error.message || error);
+                return posterIndexTargetOptions;
             }
+        }
+
+        function renderPosterTargetOption(profile, selectedIds = [], selectedEmails = []) {
+            const selected = selectedIds.includes(profile.id) || (profile.email && selectedEmails.includes(profile.email)) ? 'selected' : '';
+            return `<option value="${escapeHTML(profile.id)}|${escapeHTML(profile.email)}" ${selected}>${escapeHTML(profile.email || profile.id)}</option>`;
         }
 
         async function renderPosterAdmin() {
             if (!await verifyDmAccess(true)) return;
 
-            loadPosterIndexTargets();
+            await loadPosterIndexTargets();
 
             const preview = document.getElementById('poster-admin-preview');
             const status = document.getElementById('poster-admin-status');
@@ -1273,34 +1323,38 @@
 
             try {
                 const config = await getPosterConfig();
+                const allImages = getAllPosterImages(config);
                 const images = getPosterImages(config, 'omni');
                 const indexImages = getPosterImages(config, 'index');
-                if (images.length > 0) {
+                if (allImages.length > 0) {
                     preview.classList.add('poster-grid');
-                    preview.innerHTML = images.map((item, index) => `
-                        <div>
+                    preview.innerHTML = allImages.map((item, index) => {
+                        const audience = item.audience || { omni: true, index: false, index_target_ids: [], index_target_emails: [] };
+                        const targetIds = audience.index_target_ids || [];
+                        const targetEmails = audience.index_target_emails || [];
+                        return `
+                        <div class="poster-admin-card">
                             <img src="${escapeHTML(item.image_url)}" alt="">
                             <div style="margin-top:4px; font-size:0.75em; color:#94a3b8;">#${index + 1} ${escapeHTML(item.file_name || '')}</div>
+                            <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
+                                <label><input type="checkbox" id="poster-edit-omni-${index}" ${audience.omni !== false ? 'checked' : ''}> OMNI</label>
+                                <label><input type="checkbox" id="poster-edit-index-${index}" ${audience.index === true ? 'checked' : ''} onchange="togglePosterEditTargets(${index})"> index</label>
+                            </div>
+                            <select id="poster-edit-targets-${index}" multiple size="4" style="${audience.index === true ? '' : 'display:none;'}">
+                                ${posterIndexTargetOptions.map(profile => renderPosterTargetOption(profile, targetIds, targetEmails)).join('')}
+                            </select>
+                            <div class="poster-admin-actions">
+                                <button onclick="updateSinglePoster(${index})" style="background:#2ecc71; color:white;">保存</button>
+                                <button onclick="deleteSinglePoster(${index})" style="background:#ef4444; color:white;">删除</button>
+                            </div>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                     status.innerHTML = [
-                        `状态：已启用，OMNI ${images.length} 张，index ${indexImages.length} 张`,
+                        `状态：已启用，共 ${allImages.length} 张；OMNI ${images.length} 张，index ${indexImages.length} 张`,
                         `更新时间：${escapeHTML(config.updated_at || '未知')}`,
-                        '再次上传会追加到当前公告组。'
+                        '可在每张卡片上单独修改投放范围或删除。'
                     ].filter(Boolean).join('<br>');
-                } else if (indexImages.length > 0) {
-                    preview.classList.add('poster-grid');
-                    preview.innerHTML = indexImages.map((item, index) => `
-                        <div>
-                            <img src="${escapeHTML(item.image_url)}" alt="">
-                            <div style="margin-top:4px; font-size:0.75em; color:#94a3b8;">index #${index + 1} ${escapeHTML(item.file_name || '')}</div>
-                        </div>
-                    `).join('');
-                    status.innerHTML = [
-                        `状态：已启用，OMNI 0 张，index ${indexImages.length} 张`,
-                        `更新时间：${escapeHTML(config.updated_at || '未知')}`,
-                        '这些海报只会显示在 index 战局页顶部。'
-                    ].join('<br>');
                 } else {
                     preview.classList.remove('poster-grid');
                     preview.innerHTML = '<span>暂无启用海报</span>';
@@ -1310,6 +1364,94 @@
                 preview.classList.remove('poster-grid');
                 preview.innerHTML = '<span>读取失败</span>';
                 status.textContent = '读取失败：' + (error.message || error);
+            }
+        }
+
+        function togglePosterEditTargets(index) {
+            const select = document.getElementById(`poster-edit-targets-${index}`);
+            const enabled = document.getElementById(`poster-edit-index-${index}`)?.checked === true;
+            if (select) select.style.display = enabled ? 'block' : 'none';
+        }
+
+        function collectPosterAudience(index) {
+            const sendToOmni = document.getElementById(`poster-edit-omni-${index}`)?.checked === true;
+            const sendToIndex = document.getElementById(`poster-edit-index-${index}`)?.checked === true;
+            const selectedIndexTargets = Array.from(document.getElementById(`poster-edit-targets-${index}`)?.selectedOptions || []).map(option => {
+                const [id, email] = option.value.split('|');
+                return { id, email };
+            }).filter(item => item.id || item.email);
+
+            if (!sendToOmni && !sendToIndex) {
+                throw new Error('请至少保留一个投放位置。');
+            }
+            if (sendToIndex && selectedIndexTargets.length === 0) {
+                throw new Error('投放到 index 时必须选择目标玩家。');
+            }
+
+            return {
+                omni: sendToOmni,
+                index: sendToIndex,
+                index_target_ids: selectedIndexTargets.map(item => item.id).filter(Boolean),
+                index_target_emails: selectedIndexTargets.map(item => item.email).filter(Boolean)
+            };
+        }
+
+        async function updateSinglePoster(index) {
+            if (!await verifyDmAccess()) return;
+
+            try {
+                const config = await getPosterConfig();
+                const images = getAllPosterImages(config);
+                if (!images[index]) throw new Error('找不到这张海报，可能已经被更新。');
+
+                images[index] = {
+                    ...images[index],
+                    audience: collectPosterAudience(index)
+                };
+
+                await savePosterConfig({
+                    ...(config || {}),
+                    active: images.length > 0,
+                    images,
+                    image_url: images[0]?.image_url || '',
+                    updated_at: new Date().toISOString()
+                });
+                await renderPosterAdmin();
+                alert('单张海报投放设置已更新。');
+            } catch (error) {
+                alert('更新失败：' + (error.message || error));
+            }
+        }
+
+        async function deleteSinglePoster(index) {
+            if (!await verifyDmAccess()) return;
+            if (!confirm('确定卸载这张海报吗？配置记录和 Storage 文件都会被删除。')) return;
+
+            try {
+                const config = await getPosterConfig();
+                const images = getAllPosterImages(config);
+                const removed = images[index];
+                if (!removed) throw new Error('找不到这张海报，可能已经被更新。');
+
+                if (removed.storage_path) {
+                    const { error: removeError } = await supabaseClient.storage
+                        .from(OMNI_POSTER_BUCKET)
+                        .remove([removed.storage_path]);
+                    if (removeError) throw new Error('Storage 删除失败：' + removeError.message);
+                }
+
+                images.splice(index, 1);
+                await savePosterConfig({
+                    ...(config || {}),
+                    active: images.length > 0,
+                    images,
+                    image_url: images[0]?.image_url || '',
+                    updated_at: new Date().toISOString()
+                });
+                await renderPosterAdmin();
+                alert('海报已卸载，Storage 文件也已删除。');
+            } catch (error) {
+                alert('卸载失败：' + (error.message || error));
             }
         }
 
@@ -1417,6 +1559,7 @@
         let currentPosterImages = [];
         let currentPosterIndex = 0;
         let posterPointerStartX = 0;
+        let posterIndexTargetOptions = [];
 
         function scheduleIdleTask(task) {
             if ('requestIdleCallback' in window) {
