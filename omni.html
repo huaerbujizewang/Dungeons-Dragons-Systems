@@ -404,11 +404,129 @@
 }
 
 /* 档案正文区 */
-.bestiary-body {
-    line-height: 1.8;
-    color: #1e293b;
-    font-size: 1.05em;
-}
+        .bestiary-body {
+            line-height: 1.8;
+            color: #1e293b;
+            font-size: 1.05em;
+        }
+
+        .poster-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .poster-modal-overlay.show {
+            display: flex;
+        }
+
+        .poster-modal {
+            position: relative;
+            width: min(92vw, 960px);
+            aspect-ratio: 16 / 9;
+            background: #020617;
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 30px 90px rgba(0,0,0,0.45);
+        }
+
+        .poster-modal img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .poster-close-btn {
+            position: absolute;
+            top: -14px;
+            right: -14px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.35);
+            background: #0f172a;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+
+        .poster-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 56px;
+            border: 1px solid rgba(255,255,255,0.28);
+            background: rgba(15, 23, 42, 0.72);
+            color: white;
+            cursor: pointer;
+            font-size: 32px;
+            line-height: 1;
+            display: none;
+        }
+
+        .poster-nav-btn.prev { left: 12px; }
+        .poster-nav-btn.next { right: 12px; }
+        .poster-modal.has-multiple .poster-nav-btn { display: block; }
+
+        .poster-counter {
+            position: absolute;
+            left: 50%;
+            bottom: 12px;
+            transform: translateX(-50%);
+            min-width: 52px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.72);
+            color: white;
+            font-size: 0.8em;
+            text-align: center;
+            display: none;
+        }
+
+        .poster-modal.has-multiple .poster-counter { display: block; }
+
+        .poster-admin-preview {
+            width: min(100%, 520px);
+            aspect-ratio: 16 / 9;
+            background: #0f172a;
+            border: 1px dashed #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            overflow: hidden;
+        }
+
+        .poster-admin-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .poster-admin-preview.poster-grid {
+            aspect-ratio: auto;
+            min-height: 180px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .poster-admin-preview.poster-grid img {
+            aspect-ratio: 16 / 9;
+            border: 1px solid #334155;
+        }
 .section-block {
     margin-bottom: 35px;
 }
@@ -449,6 +567,16 @@
 
     <div id="intercept-msg">⚠️ <strong>安全拦截：</strong> 检测到敏感词汇，消息已阻断。</div>
 
+    <div class="poster-modal-overlay" id="omni-poster-modal" onclick="if(event.target === this) closeOmniPosterModal()">
+        <div class="poster-modal" id="omni-poster-box" onpointerdown="handlePosterPointerDown(event)" onpointerup="handlePosterPointerUp(event)">
+            <button class="poster-close-btn" onclick="closeOmniPosterModal()" aria-label="关闭海报">&times;</button>
+            <button class="poster-nav-btn prev" onclick="changePosterSlide(-1); event.stopPropagation();" aria-label="上一张">&lsaquo;</button>
+            <img id="omni-poster-img" alt="">
+            <button class="poster-nav-btn next" onclick="changePosterSlide(1); event.stopPropagation();" aria-label="下一张">&rsaquo;</button>
+            <div class="poster-counter" id="omni-poster-counter"></div>
+        </div>
+    </div>
+
     <div class="app-container">
         <nav class="sidebar">
             <div class="sidebar-header">🌐 OMNI</div>
@@ -487,6 +615,7 @@
                             <div class="dm-tab active" onclick="switchDmTab('create', this)">注册新实体</div>
                             <div class="dm-tab" onclick="switchDmTab('manage', this)">数据库干预</div>
                             <div class="dm-tab" onclick="switchDmTab('approve', this)">人力审批队列</div>
+                            <div class="dm-tab" onclick="switchDmTab('poster', this)">海报弹窗</div>
                             <div class="dm-tab" onclick="switchDmTab('logs', this)">行为报告</div>
                         </div>
                     </div>
@@ -558,6 +687,26 @@
                             <h3 style="color:var(--omni-green-bright); margin-top:0; border-bottom:1px solid #334155; padding-bottom:10px;">待处理劳动力调配申请 (全局队列)</h3>
                             <div id="dm-approval-list" style="display:flex; flex-direction:column; gap:15px; margin-top: 20px;">
                                 </div>
+                        </div>
+                        <div id="dm-sec-poster" class="dm-section">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid #334155; padding-bottom:10px; margin-bottom:20px;">
+                                <h3 style="color:var(--omni-green-bright); margin:0; letter-spacing:2px;">登录海报弹窗</h3>
+                                <button onclick="renderPosterAdmin()" style="background:transparent; border:1px solid #64748b; color:#94a3b8; padding:4px 8px; border-radius:4px; cursor:pointer;">刷新</button>
+                            </div>
+                            <div style="display:grid; grid-template-columns:minmax(260px, 520px) 1fr; gap:24px; align-items:start;">
+                                <div class="poster-admin-preview" id="poster-admin-preview">
+                                    <span>暂无启用海报</span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:14px;">
+                                    <div class="dm-form-group">
+                                        <label>上传 16:9 海报图片（可多选，追加到当前公告）</label>
+                                        <input type="file" id="poster-file" accept="image/*" multiple>
+                                    </div>
+                                    <button class="dm-btn-submit" onclick="uploadOmniPoster()">上传并启用</button>
+                                    <button class="action-btn" onclick="disableOmniPoster()" style="background:#ef4444; color:white; border:none; width:fit-content; padding:8px 14px;">停用当前海报</button>
+                                    <div id="poster-admin-status" style="color:#94a3b8; font-size:0.85em; line-height:1.7;"></div>
+                                </div>
+                            </div>
                         </div>
                         <div id="dm-sec-logs" class="dm-section">
                             <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid #334155; padding-bottom:10px; margin-bottom: 20px;">
@@ -939,10 +1088,245 @@
             return AVATAR_BASE + filename;
         }
 
+        function parsePosterConfig(rawValue) {
+            if (!rawValue) return null;
+            try {
+                const config = JSON.parse(rawValue);
+                if (!config || typeof config !== 'object') return null;
+                if (!Array.isArray(config.images) || config.images.length === 0) {
+                    if (config.image_url) {
+                        config.images = [{
+                            image_url: config.image_url,
+                            file_name: config.file_name || '',
+                            storage_path: config.storage_path || ''
+                        }];
+                    } else {
+                        config.images = [];
+                    }
+                }
+                return config;
+            } catch (error) {
+                return { active: true, image_url: rawValue, images: [{ image_url: rawValue }] };
+            }
+        }
+
+        function getPosterImages(config) {
+            if (!config || config.active === false) return [];
+            if (Array.isArray(config.images)) {
+                return config.images
+                    .map(item => typeof item === 'string' ? { image_url: item } : item)
+                    .filter(item => item && item.image_url);
+            }
+            return config.image_url ? [{ image_url: config.image_url }] : [];
+        }
+
+        async function getPosterConfig() {
+            const { data, error } = await supabaseClient
+                .from('omni_config')
+                .select('value')
+                .eq('key', OMNI_POSTER_CONFIG_KEY)
+                .maybeSingle();
+
+            if (error) throw new Error(error.message);
+            return parsePosterConfig(data?.value);
+        }
+
+        async function savePosterConfig(config) {
+            const { error } = await supabaseClient
+                .from('omni_config')
+                .upsert({ key: OMNI_POSTER_CONFIG_KEY, value: JSON.stringify(config) });
+
+            if (error) throw new Error(error.message);
+            return config;
+        }
+
+        async function maybeShowLoginPoster() {
+            if (!currentAccount || currentAccount.is_dm) return;
+
+            try {
+                const config = await getPosterConfig();
+                const images = getPosterImages(config);
+                if (images.length === 0) return;
+
+                const version = config.updated_at || images.map(item => item.image_url).join('|');
+                currentPosterSeenKey = `omni_poster_seen_${currentAccount.id}_${version}`;
+                if (sessionStorage.getItem(currentPosterSeenKey)) return;
+
+                const modal = document.getElementById('omni-poster-modal');
+                if (!modal) return;
+
+                currentPosterImages = images;
+                currentPosterIndex = 0;
+                showPosterSlide(0);
+                modal.classList.add('show');
+            } catch (error) {
+                console.warn('OMNI poster skipped:', error.message || error);
+            }
+        }
+
+        function showPosterSlide(index) {
+            if (!currentPosterImages.length) return;
+            currentPosterIndex = (index + currentPosterImages.length) % currentPosterImages.length;
+
+            const img = document.getElementById('omni-poster-img');
+            const counter = document.getElementById('omni-poster-counter');
+            const box = document.getElementById('omni-poster-box');
+            if (!img || !box) return;
+
+            img.src = currentPosterImages[currentPosterIndex].image_url;
+            box.classList.toggle('has-multiple', currentPosterImages.length > 1);
+            if (counter) counter.textContent = `${currentPosterIndex + 1} / ${currentPosterImages.length}`;
+        }
+
+        function changePosterSlide(direction) {
+            if (currentPosterImages.length <= 1) return;
+            showPosterSlide(currentPosterIndex + direction);
+        }
+
+        function handlePosterPointerDown(event) {
+            posterPointerStartX = event.clientX;
+        }
+
+        function handlePosterPointerUp(event) {
+            if (!posterPointerStartX || currentPosterImages.length <= 1) return;
+            const deltaX = event.clientX - posterPointerStartX;
+            posterPointerStartX = 0;
+            if (Math.abs(deltaX) < 45) return;
+            changePosterSlide(deltaX < 0 ? 1 : -1);
+        }
+
+        function closeOmniPosterModal() {
+            const modal = document.getElementById('omni-poster-modal');
+            if (modal) modal.classList.remove('show');
+            if (currentPosterSeenKey) {
+                sessionStorage.setItem(currentPosterSeenKey, '1');
+            }
+        }
+
+        async function renderPosterAdmin() {
+            if (!await verifyDmAccess(true)) return;
+
+            const preview = document.getElementById('poster-admin-preview');
+            const status = document.getElementById('poster-admin-status');
+            if (!preview || !status) return;
+
+            preview.classList.remove('poster-grid');
+            preview.innerHTML = '<span>正在读取海报配置...</span>';
+            status.textContent = '';
+
+            try {
+                const config = await getPosterConfig();
+                const images = getPosterImages(config);
+                if (images.length > 0) {
+                    preview.classList.add('poster-grid');
+                    preview.innerHTML = images.map((item, index) => `
+                        <div>
+                            <img src="${escapeHTML(item.image_url)}" alt="">
+                            <div style="margin-top:4px; font-size:0.75em; color:#94a3b8;">#${index + 1} ${escapeHTML(item.file_name || '')}</div>
+                        </div>
+                    `).join('');
+                    status.innerHTML = [
+                        `状态：已启用，共 ${images.length} 张`,
+                        `更新时间：${escapeHTML(config.updated_at || '未知')}`,
+                        '再次上传会追加到当前公告组。'
+                    ].filter(Boolean).join('<br>');
+                } else {
+                    preview.classList.remove('poster-grid');
+                    preview.innerHTML = '<span>暂无启用海报</span>';
+                    status.textContent = '状态：未启用。上传图片后，玩家登录 OMNI 时会看到 16:9 图片弹窗。';
+                }
+            } catch (error) {
+                preview.classList.remove('poster-grid');
+                preview.innerHTML = '<span>读取失败</span>';
+                status.textContent = '读取失败：' + (error.message || error);
+            }
+        }
+
+        async function uploadOmniPoster() {
+            if (!await verifyDmAccess()) return;
+
+            const input = document.getElementById('poster-file');
+            const files = Array.from(input?.files || []);
+            if (files.length === 0) return alert('请选择至少一张海报图片。');
+            if (files.some(file => !file.type || !file.type.startsWith('image/'))) return alert('只能上传图片文件。');
+            if (files.some(file => file.size > 12 * 1024 * 1024)) return alert('单张图片不能超过 12MB。');
+
+            const status = document.getElementById('poster-admin-status');
+            if (status) status.textContent = `正在上传 ${files.length} 张海报...`;
+
+            try {
+                const existing = await getPosterConfig();
+                const existingImages = getPosterImages(existing);
+                const uploadedImages = [];
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (status) status.textContent = `正在上传 ${i + 1} / ${files.length}：${file.name}`;
+
+                    const fileExt = (file.name.split('.').pop() || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
+                    const fileName = `omni-posters/poster_${Date.now()}_${i}.${fileExt}`;
+                    const { data, error } = await supabaseClient.storage
+                        .from(OMNI_POSTER_BUCKET)
+                        .upload(fileName, file, { upsert: false });
+                    if (error) throw new Error(error.message);
+
+                    const { data: urlData } = supabaseClient.storage
+                        .from(OMNI_POSTER_BUCKET)
+                        .getPublicUrl(data.path);
+
+                    uploadedImages.push({
+                        image_url: urlData.publicUrl + '?t=' + Date.now(),
+                        file_name: file.name,
+                        storage_path: data.path
+                    });
+                }
+
+                const config = {
+                    ...(existing || {}),
+                    active: true,
+                    images: existingImages.concat(uploadedImages),
+                    updated_at: new Date().toISOString()
+                };
+                config.image_url = config.images[0]?.image_url || '';
+
+                await savePosterConfig(config);
+                input.value = '';
+                await renderPosterAdmin();
+                alert(`已追加 ${uploadedImages.length} 张海报并启用。玩家进入 OMNI 会看到可左右切换的弹窗。`);
+            } catch (error) {
+                if (status) status.textContent = '上传失败：' + (error.message || error);
+                alert('海报上传失败：' + (error.message || error));
+            }
+        }
+
+        async function disableOmniPoster() {
+            if (!await verifyDmAccess()) return;
+            if (!confirm('确定停用当前登录海报弹窗吗？')) return;
+
+            try {
+                const existing = await getPosterConfig();
+                await savePosterConfig({
+                    ...(existing || {}),
+                    active: false,
+                    updated_at: new Date().toISOString()
+                });
+                await renderPosterAdmin();
+                alert('登录海报弹窗已停用。');
+            } catch (error) {
+                alert('停用失败：' + (error.message || error));
+            }
+        }
+
         let currentAccount = null;
         let dmSessionAccount = null;
         let omniBootDataPromise = null;
         let omniBootDataReady = false;
+        const OMNI_POSTER_CONFIG_KEY = 'login_poster';
+        const OMNI_POSTER_BUCKET = 'avatars';
+        let currentPosterSeenKey = '';
+        let currentPosterImages = [];
+        let currentPosterIndex = 0;
+        let posterPointerStartX = 0;
 
         function scheduleIdleTask(task) {
             if ('requestIdleCallback' in window) {
@@ -1092,6 +1476,7 @@
             if(await verifyDmAccess(true)) {
                 document.getElementById('dm-admin-trigger').style.display = 'flex';
             }
+            maybeShowLoginPoster();
             setInterval(() => {
                 autoProcessBureaucracy();
                 processEmploymentRewards();
@@ -1839,6 +2224,7 @@ function renderMsg(m) {
             
             if(tabId === 'manage') renderDmTable();
             if(tabId === 'approve') renderApprovalQueue(); 
+            if(tabId === 'poster') renderPosterAdmin();
             if(tabId === 'logs') renderLogs(); 
         }
 
