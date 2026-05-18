@@ -615,7 +615,7 @@
                             <div class="dm-tab active" onclick="switchDmTab('create', this)">注册新实体</div>
                             <div class="dm-tab" onclick="switchDmTab('manage', this)">数据库干预</div>
                             <div class="dm-tab" onclick="switchDmTab('approve', this)">人力审批队列</div>
-                            <div class="dm-tab" onclick="switchDmTab('poster', this)">海报弹窗</div>
+                            <div class="dm-tab" onclick="switchDmTab('poster', this)">海报投放</div>
                             <div class="dm-tab" onclick="switchDmTab('logs', this)">行为报告</div>
                         </div>
                     </div>
@@ -690,7 +690,7 @@
                         </div>
                         <div id="dm-sec-poster" class="dm-section">
                             <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid #334155; padding-bottom:10px; margin-bottom:20px;">
-                                <h3 style="color:var(--omni-green-bright); margin:0; letter-spacing:2px;">登录海报弹窗</h3>
+                                <h3 style="color:var(--omni-green-bright); margin:0; letter-spacing:2px;">海报投放</h3>
                                 <button onclick="renderPosterAdmin()" style="background:transparent; border:1px solid #64748b; color:#94a3b8; padding:4px 8px; border-radius:4px; cursor:pointer;">刷新</button>
                             </div>
                             <div style="display:grid; grid-template-columns:minmax(260px, 520px) 1fr; gap:24px; align-items:start;">
@@ -701,6 +701,20 @@
                                     <div class="dm-form-group">
                                         <label>上传 16:9 海报图片（可多选，追加到当前公告）</label>
                                         <input type="file" id="poster-file" accept="image/*" multiple>
+                                    </div>
+                                    <div style="border:1px solid #334155; padding:12px; border-radius:6px; background:#0f172a;">
+                                        <div style="color:#94a3b8; font-size:0.85em; margin-bottom:8px;">投放位置</div>
+                                        <label style="display:flex; align-items:center; gap:8px; color:white; margin-bottom:8px;">
+                                            <input type="checkbox" id="poster-target-omni" checked> OMNI 内宣
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; color:white;">
+                                            <input type="checkbox" id="poster-target-index" onchange="togglePosterIndexTargets()"> index 战局顶部
+                                        </label>
+                                    </div>
+                                    <div id="poster-index-target-box" style="display:none; border:1px solid #334155; padding:12px; border-radius:6px; background:#0f172a;">
+                                        <div style="color:#94a3b8; font-size:0.85em; margin-bottom:8px;">index 目标玩家（可多选）</div>
+                                        <select id="poster-index-targets" multiple size="8" style="width:100%; padding:8px; background:#020617; color:white; border:1px solid #334155;"></select>
+                                        <div style="color:#64748b; font-size:0.78em; margin-top:8px;">外宣会显示在 index 战局页顶部，必须指定玩家，避免不同时间线误投。</div>
                                     </div>
                                     <button class="dm-btn-submit" onclick="uploadOmniPoster()">上传并启用</button>
                                     <button class="action-btn" onclick="disableOmniPoster()" style="background:#ef4444; color:white; border:none; width:fit-content; padding:8px 14px;">停用当前海报</button>
@@ -1110,14 +1124,25 @@
             }
         }
 
-        function getPosterImages(config) {
+        function getPosterImages(config, surface = 'omni') {
             if (!config || config.active === false) return [];
             if (Array.isArray(config.images)) {
-                return config.images
-                    .map(item => typeof item === 'string' ? { image_url: item } : item)
-                    .filter(item => item && item.image_url);
+                return getAllPosterImages(config)
+                    .filter(item => {
+                        if (!item || !item.image_url) return false;
+                        const audience = item.audience;
+                        if (!audience) return surface === 'omni';
+                        return audience[surface] === true;
+                    });
             }
-            return config.image_url ? [{ image_url: config.image_url }] : [];
+            return surface === 'omni' && config.image_url ? [{ image_url: config.image_url }] : [];
+        }
+
+        function getAllPosterImages(config) {
+            if (!config || !Array.isArray(config.images)) return [];
+            return config.images
+                .map(item => typeof item === 'string' ? { image_url: item } : item)
+                .filter(item => item && item.image_url);
         }
 
         async function getPosterConfig() {
@@ -1203,8 +1228,40 @@
             }
         }
 
+        function togglePosterIndexTargets() {
+            const box = document.getElementById('poster-index-target-box');
+            const enabled = document.getElementById('poster-target-index')?.checked === true;
+            if (box) box.style.display = enabled ? 'block' : 'none';
+            if (enabled) loadPosterIndexTargets();
+        }
+
+        async function loadPosterIndexTargets() {
+            const select = document.getElementById('poster-index-targets');
+            if (!select || select.dataset.loaded === '1') return;
+
+            select.innerHTML = '<option>正在加载玩家...</option>';
+            try {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('id, email')
+                    .order('email');
+                if (error) throw new Error(error.message);
+
+                select.innerHTML = (data || []).map(profile =>
+                    `<option value="${escapeHTML(profile.id)}|${escapeHTML(profile.email || '')}">${escapeHTML(profile.email || profile.id)}</option>`
+                ).join('');
+                select.dataset.loaded = '1';
+            } catch (error) {
+                select.innerHTML = '';
+                const status = document.getElementById('poster-admin-status');
+                if (status) status.textContent = '玩家列表加载失败：' + (error.message || error);
+            }
+        }
+
         async function renderPosterAdmin() {
             if (!await verifyDmAccess(true)) return;
+
+            loadPosterIndexTargets();
 
             const preview = document.getElementById('poster-admin-preview');
             const status = document.getElementById('poster-admin-status');
@@ -1216,7 +1273,8 @@
 
             try {
                 const config = await getPosterConfig();
-                const images = getPosterImages(config);
+                const images = getPosterImages(config, 'omni');
+                const indexImages = getPosterImages(config, 'index');
                 if (images.length > 0) {
                     preview.classList.add('poster-grid');
                     preview.innerHTML = images.map((item, index) => `
@@ -1226,10 +1284,23 @@
                         </div>
                     `).join('');
                     status.innerHTML = [
-                        `状态：已启用，共 ${images.length} 张`,
+                        `状态：已启用，OMNI ${images.length} 张，index ${indexImages.length} 张`,
                         `更新时间：${escapeHTML(config.updated_at || '未知')}`,
                         '再次上传会追加到当前公告组。'
                     ].filter(Boolean).join('<br>');
+                } else if (indexImages.length > 0) {
+                    preview.classList.add('poster-grid');
+                    preview.innerHTML = indexImages.map((item, index) => `
+                        <div>
+                            <img src="${escapeHTML(item.image_url)}" alt="">
+                            <div style="margin-top:4px; font-size:0.75em; color:#94a3b8;">index #${index + 1} ${escapeHTML(item.file_name || '')}</div>
+                        </div>
+                    `).join('');
+                    status.innerHTML = [
+                        `状态：已启用，OMNI 0 张，index ${indexImages.length} 张`,
+                        `更新时间：${escapeHTML(config.updated_at || '未知')}`,
+                        '这些海报只会显示在 index 战局页顶部。'
+                    ].join('<br>');
                 } else {
                     preview.classList.remove('poster-grid');
                     preview.innerHTML = '<span>暂无启用海报</span>';
@@ -1251,12 +1322,25 @@
             if (files.some(file => !file.type || !file.type.startsWith('image/'))) return alert('只能上传图片文件。');
             if (files.some(file => file.size > 12 * 1024 * 1024)) return alert('单张图片不能超过 12MB。');
 
+            const sendToOmni = document.getElementById('poster-target-omni')?.checked === true;
+            const sendToIndex = document.getElementById('poster-target-index')?.checked === true;
+            if (!sendToOmni && !sendToIndex) return alert('请至少选择一个投放位置。');
+
+            const selectedIndexTargets = Array.from(document.getElementById('poster-index-targets')?.selectedOptions || []).map(option => {
+                const [id, email] = option.value.split('|');
+                return { id, email };
+            }).filter(item => item.id || item.email);
+
+            if (sendToIndex && selectedIndexTargets.length === 0) {
+                return alert('投放到 index 时必须选择目标玩家。');
+            }
+
             const status = document.getElementById('poster-admin-status');
             if (status) status.textContent = `正在上传 ${files.length} 张海报...`;
 
             try {
                 const existing = await getPosterConfig();
-                const existingImages = getPosterImages(existing);
+                const existingImages = getAllPosterImages(existing);
                 const uploadedImages = [];
 
                 for (let i = 0; i < files.length; i++) {
@@ -1277,7 +1361,13 @@
                     uploadedImages.push({
                         image_url: urlData.publicUrl + '?t=' + Date.now(),
                         file_name: file.name,
-                        storage_path: data.path
+                        storage_path: data.path,
+                        audience: {
+                            omni: sendToOmni,
+                            index: sendToIndex,
+                            index_target_ids: selectedIndexTargets.map(item => item.id).filter(Boolean),
+                            index_target_emails: selectedIndexTargets.map(item => item.email).filter(Boolean)
+                        }
                     });
                 }
 
@@ -1292,7 +1382,7 @@
                 await savePosterConfig(config);
                 input.value = '';
                 await renderPosterAdmin();
-                alert(`已追加 ${uploadedImages.length} 张海报并启用。玩家进入 OMNI 会看到可左右切换的弹窗。`);
+                alert(`已追加 ${uploadedImages.length} 张海报并启用。OMNI 内宣会弹窗显示，index 外宣会显示在战局页顶部。`);
             } catch (error) {
                 if (status) status.textContent = '上传失败：' + (error.message || error);
                 alert('海报上传失败：' + (error.message || error));
