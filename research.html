@@ -2,187 +2,1002 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>工程研发中心</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>硬核科技树</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --border: #333; --bg: #0a0a0c; --accent: #3498db; }
-        body { font-family: "Consolas", "PingFang SC", sans-serif; background: var(--bg); color: #ecf0f1; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        
-        .header { display: flex; justify-content: space-between; border-bottom: 2px solid var(--accent); padding-bottom: 15px; margin-bottom: 30px; align-items: flex-end; }
-        .title { font-size: 2em; color: var(--accent); font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
-        .btn-back { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: 0.2s; }
-        .btn-back:hover { background: var(--accent); color: #fff; }
-
-        .proj-card { background: #111; border: 1px solid #333; border-left: 4px solid var(--accent); padding: 20px; margin-bottom: 20px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .proj-card.finished { border-left-color: #2ecc71; }
-        .proj-card.paused { border-left-color: #e67e22; }
-
-        .proj-title { font-size: 1.4em; font-weight: bold; color: #fff; margin-bottom: 5px; }
-        .proj-desc { font-size: 0.9em; color: #aaa; line-height: 1.5; margin-bottom: 15px; }
-        
-       /* ================= 进度条动画 ================= */
-        /* 定义条纹滚动的关键帧 */
-        @keyframes stripe-scroll {
-            from { background-position: 40px 0; }
-            to { background-position: 0 0; }
+        :root {
+            --bg: #101318;
+            --panel: #171c24;
+            --panel-soft: #202734;
+            --line: #3d4a5c;
+            --line-bright: #77b7ff;
+            --text: #e8edf5;
+            --muted: #8d98aa;
+            --paper: #d4c39d;
+            --paper-dark: #2a241c;
+            --blue: #58a6ff;
+            --green: #55d17d;
+            --gold: #d9a441;
+            --red: #df6a6a;
+            --violet: #aa8bff;
         }
 
-        .progress-box { background: #000; border: 1px solid #444; height: 24px; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; }
-        
-        /* 研发中：蓝色滚动条纹 */
-        .progress-bar { 
-            height: 100%; 
-            transition: width 0.5s ease-out; 
-            width: 0%; 
-            /* 使用 background-image 和 background-size 配合实现无缝衔接的条纹 */
-            background-color: var(--accent); /* 底色：亮蓝色 */
-            background-image: linear-gradient(45deg, #2980b9 25%, transparent 25%, transparent 50%, #2980b9 50%, #2980b9 75%, transparent 75%, transparent);
-            background-size: 40px 40px; /* 设定一个纹理块的大小 */
-            /* 激活滚动动画：2秒走完一个周期，匀速(linear)，无限循环(infinite) */
-            animation: stripe-scroll 1.5s linear infinite; 
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+                radial-gradient(circle at top left, rgba(88,166,255,0.16), transparent 34rem),
+                var(--bg);
+            background-size: 28px 28px, 28px 28px, auto, auto;
+            color: var(--text);
+            font-family: Consolas, "PingFang SC", "Microsoft YaHei", monospace;
         }
 
-        /* 已完成：纯绿色，停止动画 */
-        .progress-bar.finished { 
-            background: #2ecc71; 
-            animation: none;
+        button, input, select, textarea { font-family: inherit; }
+        button { cursor: pointer; }
+
+        .app {
+            height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr;
         }
 
-        /* 已暂停：让进度条变灰且停止运转 */
-        .proj-card.paused .progress-bar {
-            background-color: #555; /* 灰色底 */
-            background-image: linear-gradient(45deg, #444 25%, transparent 25%, transparent 50%, #444 50%, #444 75%, transparent 75%, transparent);
-            animation: none; 
+        .topbar {
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(119,183,255,0.35);
+            background: rgba(16,19,24,0.94);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
         }
 
-        .progress-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; line-height: 24px; font-size: 0.85em; font-weight: bold; color: #fff; text-shadow: 0 1px 2px #000; }
-        /* ================================================== */
-        
-        .meta-info { display: flex; justify-content: space-between; font-size: 0.85em; color: #888; margin-top: 10px; }
-        
-        .staff-area { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #333; }
-        .staff-title { font-size: 0.8em; color: #777; margin-bottom: 8px; text-transform: uppercase; }
-        .avatar-group { display: flex; gap: 10px; }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #555; object-fit: cover; }
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .brand h1 {
+            margin: 0;
+            color: var(--blue);
+            font-size: 1.25rem;
+            letter-spacing: 0;
+        }
+
+        .brand .sub {
+            color: var(--muted);
+            font-size: 0.78rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+        .btn {
+            border: 1px solid rgba(119,183,255,0.55);
+            background: rgba(88,166,255,0.08);
+            color: var(--text);
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+        }
+
+        .btn:hover { background: rgba(88,166,255,0.18); border-color: var(--blue); }
+        .btn.danger { border-color: rgba(223,106,106,0.7); color: #ffd4d4; background: rgba(223,106,106,0.08); }
+        .btn.good { border-color: rgba(85,209,125,0.7); color: #d8ffe1; background: rgba(85,209,125,0.08); }
+        .btn.gold { border-color: rgba(217,164,65,0.75); color: #ffe7b4; background: rgba(217,164,65,0.08); }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .layout {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 250px minmax(0, 1fr) 340px;
+        }
+
+        .sidebar, .control-panel {
+            min-height: 0;
+            overflow-y: auto;
+            background: rgba(18,22,29,0.9);
+            border-right: 1px solid rgba(119,183,255,0.18);
+            padding: 12px;
+        }
+
+        .control-panel {
+            border-right: none;
+            border-left: 1px solid rgba(119,183,255,0.18);
+        }
+
+        .panel-title {
+            color: #dcecff;
+            font-weight: bold;
+            font-size: 0.86rem;
+            margin: 4px 0 10px;
+        }
+
+        .category-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 9px 10px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(255,255,255,0.09);
+            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            text-align: left;
+            border-radius: 4px;
+        }
+
+        .category-btn.active {
+            border-color: rgba(88,166,255,0.85);
+            background: rgba(88,166,255,0.15);
+            box-shadow: inset 3px 0 0 var(--blue);
+        }
+
+        .category-count {
+            color: var(--muted);
+            font-size: 0.75rem;
+        }
+
+        .main {
+            min-width: 0;
+            min-height: 0;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            overflow: hidden;
+        }
+
+        .category-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(23,28,36,0.78);
+        }
+
+        .category-header h2 {
+            margin: 0 0 6px;
+            font-size: 1.2rem;
+            color: #f1f6ff;
+        }
+
+        .legend {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .legend span {
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 999px;
+            padding: 3px 8px;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .slot-strip {
+            padding: 10px 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(12,15,20,0.78);
+        }
+
+        .slot-card {
+            border: 1px solid rgba(119,183,255,0.22);
+            background: rgba(255,255,255,0.035);
+            border-radius: 4px;
+            padding: 9px;
+            min-height: 86px;
+        }
+
+        .slot-card.busy { border-color: rgba(217,164,65,0.6); box-shadow: inset 0 0 0 1px rgba(217,164,65,0.12); }
+        .slot-name { display:flex; justify-content:space-between; gap:8px; font-weight:bold; color:#f1f6ff; font-size:0.86rem; }
+        .slot-cats { color: var(--muted); font-size:0.72rem; margin-top:4px; line-height:1.4; }
+        .slot-work { margin-top:8px; font-size:0.78rem; color:#c8d8ea; }
+        .slot-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+        .slot-actions .btn { padding:5px 7px; font-size:0.72rem; }
+
+        .tree-scroll {
+            position: relative;
+            min-height: 0;
+            overflow: auto;
+            padding: 22px;
+        }
+
+        .tree-board {
+            position: relative;
+            min-width: max-content;
+            min-height: 640px;
+            padding: 12px 18px 28px;
+        }
+
+        #link-layer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            pointer-events: none;
+            overflow: visible;
+            z-index: 0;
+        }
+
+        .tech-columns {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 36px;
+            align-items: start;
+        }
+
+        .depth-col {
+            width: 230px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .depth-label {
+            color: var(--muted);
+            border-bottom: 1px dashed rgba(255,255,255,0.15);
+            padding-bottom: 6px;
+            font-size: 0.78rem;
+        }
+
+        .tech-node {
+            position: relative;
+            min-height: 118px;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.16);
+            background: rgba(19,24,32,0.94);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.24);
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .tech-node.available {
+            border-color: rgba(88,166,255,0.8);
+            box-shadow: 0 0 0 1px rgba(88,166,255,0.14), 0 12px 24px rgba(0,0,0,0.28);
+        }
+
+        .tech-node.available:hover { transform: translateY(-2px); background: rgba(25,36,51,0.97); }
+        .tech-node.researching {
+            border-color: rgba(217,164,65,0.9);
+            background: linear-gradient(135deg, rgba(217,164,65,0.13), rgba(19,24,32,0.96));
+            box-shadow: 0 0 0 1px rgba(217,164,65,0.18), inset 0 0 24px rgba(217,164,65,0.08);
+        }
+        .tech-node.researched {
+            border-color: rgba(85,209,125,0.85);
+            background: linear-gradient(135deg, rgba(85,209,125,0.12), rgba(19,24,32,0.95));
+        }
+        .tech-node.locked {
+            opacity: 0.54;
+            border-style: dashed;
+            background: rgba(15,18,24,0.86);
+            filter: grayscale(0.35);
+        }
+
+        .tech-name { font-weight: bold; color: #f5f8ff; margin-bottom: 6px; line-height: 1.3; }
+        .tech-meta { display:flex; gap:6px; flex-wrap:wrap; color: var(--muted); font-size:0.72rem; margin-bottom:8px; }
+        .tech-chip { border:1px solid rgba(255,255,255,0.12); border-radius:999px; padding:2px 7px; background:rgba(0,0,0,0.16); }
+        .tech-state { font-size:0.75rem; color:#dcecff; margin-bottom:8px; }
+        .tech-prereq { color: var(--muted); font-size:0.72rem; line-height:1.45; }
+        .node-action { margin-top:10px; width:100%; padding:7px 8px; font-size:0.78rem; }
+
+        .link-path {
+            fill: none;
+            stroke: rgba(141,152,170,0.45);
+            stroke-width: 2;
+            stroke-dasharray: 7 6;
+        }
+
+        .link-path.active {
+            stroke: rgba(119,183,255,0.9);
+            stroke-dasharray: none;
+            filter: drop-shadow(0 0 4px rgba(119,183,255,0.45));
+        }
+
+        .control-section {
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .control-section h3 {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            color: #f2f7ff;
+        }
+
+        .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+        .form-row label { color: var(--muted); font-size:0.76rem; }
+        input[type="text"], select {
+            width: 100%;
+            color: var(--text);
+            background: rgba(0,0,0,0.24);
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .check-grid {
+            display:grid;
+            grid-template-columns: 1fr;
+            gap: 5px;
+            max-height: 220px;
+            overflow:auto;
+            padding-right: 4px;
+        }
+
+        .check-row {
+            display:flex;
+            align-items:center;
+            gap:7px;
+            color:#c9d4e4;
+            font-size:0.78rem;
+        }
+
+        .warning {
+            color: #ffd89c;
+            border: 1px solid rgba(217,164,65,0.38);
+            background: rgba(217,164,65,0.09);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            line-height: 1.45;
+            margin-bottom: 10px;
+            display:none;
+        }
+
+        .hidden { display:none !important; }
+
+        @media (max-width: 1100px) {
+            .layout { grid-template-columns: 220px minmax(0,1fr); }
+            .control-panel { grid-column: 1 / -1; max-height: 360px; border-left:none; border-top:1px solid rgba(119,183,255,0.18); }
+        }
+
+        @media (max-width: 760px) {
+            .app { height:auto; min-height:100vh; }
+            .layout { grid-template-columns: 1fr; }
+            .sidebar, .control-panel { max-height:none; border-right:none; border-bottom:1px solid rgba(119,183,255,0.18); }
+            .main { min-height: 760px; }
+            .topbar { align-items:flex-start; flex-direction:column; }
+            .tree-scroll { padding: 12px; }
+        }
     </style>
 </head>
 <body>
+<div class="app">
+    <header class="topbar">
+        <div class="brand">
+            <h1>硬核策略科技树 · 蓝图终端</h1>
+            <div class="sub" id="state-line">正在连接科研档案...</div>
+        </div>
+        <div class="top-actions">
+            <button class="btn" onclick="window.location.href='index.html'">返回终端</button>
+            <button class="btn" onclick="saveState()">保存状态</button>
+        </div>
+    </header>
 
-<div class="container">
-    <div class="header">
-        <div class="title">科研与工程中心</div>
-        <button class="btn-back" onclick="window.location.href='index.html'">返回终端</button>
-    </div>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="panel-title">科技领域</div>
+            <div id="category-menu"></div>
+        </aside>
 
-    <div id="projects-container">
-        <div style="text-align:center; color:#666; padding: 50px;">正在连接工程节点...</div>
+        <main class="main">
+            <section class="category-header">
+                <h2 id="category-title">科技树</h2>
+                <div class="legend">
+                    <span>暗色虚线：Locked</span>
+                    <span>蓝框：Available</span>
+                    <span>金框：Researching</span>
+                    <span>绿框：Researched</span>
+                </div>
+            </section>
+
+            <section id="slot-strip" class="slot-strip"></section>
+
+            <section class="tree-scroll" id="tree-scroll">
+                <div class="tree-board" id="tree-board">
+                    <svg id="link-layer"></svg>
+                    <div id="tech-columns" class="tech-columns"></div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="control-panel" id="dm-panel">
+            <div class="panel-title">DM 控制面板</div>
+            <div class="warning" id="storage-warning"></div>
+
+            <div class="control-section">
+                <h3>科研槽管理</h3>
+                <div class="form-row">
+                    <label>槽位名称</label>
+                    <input type="text" id="new-slot-name" placeholder="例如：炼金专修槽">
+                </div>
+                <label class="check-row"><input type="checkbox" id="new-slot-all" onchange="toggleAllCategoryChecks()">允许全部领域（ALL）</label>
+                <div class="form-row" style="margin-top:8px;">
+                    <label>允许领域</label>
+                    <div id="slot-category-checks" class="check-grid"></div>
+                </div>
+                <button class="btn good" style="width:100%;" onclick="addSlot()">新增槽位</button>
+            </div>
+
+            <div class="control-section">
+                <h3>槽位列表</h3>
+                <div id="slot-admin-list"></div>
+            </div>
+
+            <div class="control-section">
+                <h3>科技强制控制</h3>
+                <div class="form-row">
+                    <label>科技节点</label>
+                    <select id="force-tech-select"></select>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn good" style="flex:1;" onclick="forceUnlockSelected()">强制解锁</button>
+                    <button class="btn danger" style="flex:1;" onclick="forceUnresearchSelected()">强制取消</button>
+                </div>
+            </div>
+        </aside>
     </div>
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    async function initResearch() {
-        // 1. 确保 session 存在
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) {
-            alert('未检测到终端权限，请先登录');
-            window.location.href = 'index.html';
-            return;
-        }
+const CATEGORY_ICONS = {
+    '农业': '🌾', '纺织与民用加工': '🧵', '采矿与冶金': '⛏️', '机械与精密制造': '⚙️',
+    '建筑与土木': '🏗️', '交通与航海': '⛵', '测绘与观测': '🧭', '印刷与通信': '📡',
+    '医疗与炼金': '⚗️', '武器与防具': '⚔️', '攻城、火器与爆破': '💥', '符文与附魔': '🔷',
+    '元素工程与魔导动力': '🔥', '构装与自动机': '🤖', '民用魔法': '💡', '军队理念': '🎖️'
+};
 
-        // 2. 智能判定：默认看自己的 ID。如果传了别人的 uid，才去看别人的。
-        const urlParams = new URLSearchParams(window.location.search);
-        let targetUid = urlParams.get('uid');
-        
-        if (!targetUid || targetUid === 'undefined' || targetUid === 'null') {
-            targetUid = session.user.id; 
-        }
+const RAW_TECH = {
+    '农业': [
+        ['铁制农具', [], 60], ['畜力挽具', [], 60], ['水磨', [], 90],
+        ['重犁', ['铁制农具','畜力挽具'], 120], ['轮作', ['铁制农具'], 120], ['灌溉渠', ['铁制农具'], 120],
+        ['排水农田', ['灌溉渠'], 150], ['畜种选育', ['畜力挽具','轮作'], 150], ['果木嫁接', ['轮作'], 150],
+        ['炼金肥料', ['轮作','炼金溶剂'], 210], ['温室', ['排水农田','果木嫁接'], 240], ['魔法农艺', ['炼金肥料','净水符','法阵几何'], 330]
+    ],
+    '纺织与民用加工': [
+        ['纺轮', [], 60], ['毛纺', [], 60], ['木材干燥', [], 60], ['脚踏织机', ['纺轮','毛纺'], 120],
+        ['染料固色', ['纺轮'], 90], ['皮革鞣制', [], 90], ['精纺', ['脚踏织机'], 150], ['漂洗', ['染料固色'], 120],
+        ['纸浆', ['木材干燥','水磨'], 150], ['防水布', ['漂洗','炼金溶剂'], 210], ['复合皮革', ['皮革鞣制','炼金溶剂'], 210],
+        ['魔纹织物', ['精纺','基础符文','材料亲和'], 330]
+    ],
+    '采矿与冶金': [
+        ['露天采矿', [], 60], ['炭炉炼铁', [], 90], ['青铜铸造', [], 90], ['井下支护', ['露天采矿','木梁架构'], 120],
+        ['鼓风炉', ['炭炉炼铁'], 150], ['锻钢', ['鼓风炉'], 180], ['高炉', ['鼓风炉','井下支护'], 210], ['铸铁', ['高炉'], 210],
+        ['坩埚钢', ['锻钢','高炉'], 240], ['耐热陶材', ['青铜铸造','炼金溶剂'], 180], ['精炼秘银', ['坩埚钢','材料亲和'], 330],
+        ['魔导合金', ['精炼秘银','魔晶导流','耐热陶材'], 390]
+    ],
+    '机械与精密制造': [
+        ['滑轮组', [], 60], ['螺旋压榨', [], 90], ['水轮', ['水磨'], 120], ['齿轮传动', ['滑轮组','水轮'], 150],
+        ['曲柄连杆', ['齿轮传动'], 180], ['风车', ['水轮','木梁架构'], 150], ['车床', ['曲柄连杆','锻钢'], 210],
+        ['钻床', ['车床','锻钢'], 240], ['活塞泵', ['曲柄连杆','高炉'], 240], ['精密齿轮', ['车床','坩埚钢'], 270],
+        ['标准机件', ['钻床','精密齿轮'], 330], ['魔导机芯', ['标准机件','储法阵'], 390]
+    ],
+    '建筑与土木': [
+        ['石灰砂浆', [], 60], ['石拱', ['石灰砂浆'], 90], ['木梁架构', [], 60], ['拱桥', ['石拱','木梁架构'], 120],
+        ['城防塔楼', ['石拱','木梁架构'], 120], ['地下排水', ['石灰砂浆','拱桥'], 150], ['运河闸门', ['地下排水','活塞泵'], 240],
+        ['铺装道路', ['石灰砂浆'], 120], ['港口防波', ['石拱','多桅帆船'], 180], ['大跨桥梁', ['拱桥','铸铁'], 270],
+        ['城市管线', ['地下排水','活塞泵'], 300], ['结界建筑', ['城市管线','模块化符文'], 390]
+    ],
+    '交通与航海': [
+        ['鞍具', [], 60], ['辐条车轮', [], 60], ['横帆船', [], 90], ['多桅帆船', ['横帆船'], 120], ['艉舵', ['多桅帆船'], 120],
+        ['罗盘', ['星盘'], 150], ['远洋导航', ['罗盘','航海图'], 210], ['船坞龙骨', ['多桅帆船','锻钢'], 180],
+        ['驿车', ['鞍具','辐条车轮','铺装道路'], 180], ['元素帆船', ['船坞龙骨','元素炉','束缚法阵'], 360],
+        ['闪电轨道', ['导轨石','标准机件','铺装道路'], 420], ['浮空艇', ['船坞龙骨','浮空环','元素引擎'], 420]
+    ],
+    '测绘与观测': [
+        ['羊皮纸', [], 60], ['日晷', [], 60], ['地方地图', ['羊皮纸'], 90], ['纸张', ['纸浆'], 120],
+        ['星盘', ['日晷','青铜铸造'], 120], ['航海图', ['地方地图','星盘'], 150], ['铜版地图', ['纸张','青铜铸造'], 180],
+        ['光学镜片', ['耐热陶材','炼金溶剂'], 210], ['精密钟表', ['齿轮传动','坩埚钢'], 270], ['水晶记录', ['基础符文','魔晶导流'], 270],
+        ['魔法测距', ['光学镜片','水晶记录','触发符文'], 330], ['地脉勘察', ['航海图','魔法测距','材料亲和'], 390]
+    ],
+    '印刷与通信': [
+        ['抄本', ['羊皮纸'], 60], ['印章', [], 60], ['信鸽', [], 60], ['木版印刷', ['纸张','木材干燥'], 120],
+        ['活字印刷', ['木版印刷','青铜铸造'], 180], ['旗语', ['城防塔楼'], 90], ['报刊', ['活字印刷'], 210],
+        ['信号塔', ['旗语','城防塔楼'], 150], ['编码术', ['抄本','旗语'], 150], ['传讯石', ['水晶记录','触发符文'], 300],
+        ['远距传讯', ['传讯石','魔力蓄积'], 360], ['水晶显像', ['远距传讯','水晶记录','嵌套符文'], 420]
+    ],
+    '医疗与炼金': [
+        ['草药学', [], 60], ['蒸馏', [], 90], ['膏剂', ['草药学'], 90], ['炼金溶剂', ['蒸馏'], 120], ['火油', ['炼金溶剂'], 120],
+        ['止血绷带', ['草药学','纺轮'], 90], ['麻醉剂', ['炼金溶剂','草药学'], 180], ['防腐剂', ['炼金溶剂','蒸馏'], 180],
+        ['标准药剂', ['炼金溶剂','防腐剂'], 210], ['治愈药剂', ['标准药剂','基础符文'], 300], ['净化术式', ['治愈药剂','恒定刻录'], 330],
+        ['恢复术式', ['净化术式','储法阵'], 420]
+    ],
+    '武器与防具': [
+        ['链甲', [], 60], ['长弓', [], 60], ['铁盔', ['炭炉炼铁'], 60], ['强弩', ['滑轮组','炭炉炼铁'], 120],
+        ['复合弓', ['长弓','皮革鞣制'], 120], ['板甲', ['链甲','锻钢'], 150], ['弹簧钢刃', ['锻钢'], 180],
+        ['机括弩', ['强弩','精密齿轮'], 270], ['军用工兵具', ['铸铁'], 180], ['抗冲击甲', ['板甲','复合皮革'], 270],
+        ['轻型复合甲', ['抗冲击甲','坩埚钢'], 330], ['符文武器', ['弹簧钢刃','恒定刻录','材料亲和'], 390]
+    ],
+    '攻城、火器与爆破': [
+        ['投石机', [], 60], ['攻城槌', [], 60], ['扭力弩炮', ['投石机','强弩'], 120], ['配重投石机', ['投石机','齿轮传动'], 150],
+        ['爆裂火罐', ['火油','炼金溶剂'], 150], ['烟粉', ['爆裂火罐','炼金溶剂'], 240], ['火门枪', ['烟粉','铸铁'], 270],
+        ['青铜炮', ['烟粉','青铜铸造'], 270], ['炮架', ['青铜炮','标准机件'], 330], ['火绳枪', ['火门枪','标准机件'], 330],
+        ['燧发机', ['火绳枪','精密齿轮'], 390], ['野战炮', ['青铜炮','炮架','驿车'], 420]
+    ],
+    '符文与附魔': [
+        ['基础符文', [], 60], ['召唤刻印', ['基础符文'], 90], ['护符', ['基础符文'], 90], ['法阵几何', ['基础符文'], 120],
+        ['材料亲和', ['基础符文','炼金溶剂'], 150], ['恒定刻录', ['护符','法阵几何'], 180], ['嵌套符文', ['法阵几何','材料亲和'], 240],
+        ['触发符文', ['嵌套符文'], 270], ['储法阵', ['恒定刻录','触发符文'], 300], ['模块化符文', ['储法阵','标准机件'], 360],
+        ['批量刻录', ['模块化符文','活字印刷'], 420], ['城市结界', ['批量刻录','结界建筑'], 450]
+    ],
+    '元素工程与魔导动力': [
+        ['元素瓶', ['基础符文','炼金溶剂'], 120], ['魔晶导流', ['材料亲和'], 150], ['驱动咒式', ['法阵几何','元素瓶'], 180],
+        ['元素契约', ['召唤刻印','驱动咒式'], 210], ['束缚法阵', ['元素契约','嵌套符文'], 270], ['魔力蓄积', ['魔晶导流','恒定刻录'], 270],
+        ['元素炉', ['束缚法阵','魔力蓄积'], 330], ['魔导泵', ['元素炉','活塞泵'], 360], ['动力晶核', ['元素炉','储法阵'], 360],
+        ['元素引擎', ['动力晶核','标准机件'], 390], ['导轨石', ['元素引擎','魔导合金'], 420], ['浮空环', ['元素引擎','精炼秘银','嵌套符文'], 420]
+    ],
+    '构装与自动机': [
+        ['机关玩偶', ['齿轮传动','木材干燥'], 120], ['炼金仆役', ['机关玩偶','炼金溶剂'], 150], ['咒动锁', ['护符','机关玩偶'], 150],
+        ['机械侍从', ['机关玩偶','精密齿轮'], 240], ['半自律傀儡', ['机械侍从','触发符文'], 270], ['魔导臂', ['机械侍从','魔导机芯'], 330],
+        ['劳动构装体', ['半自律傀儡','魔导臂'], 360], ['巡逻构装体', ['半自律傀儡','传讯石'], 360],
+        ['战斗构装体', ['巡逻构装体','符文武器','抗冲击甲'], 390], ['标准化构装体', ['劳动构装体','标准机件','批量刻录'], 420],
+        ['大型魔导机', ['标准化构装体','元素引擎'], 450], ['战争造物', ['战斗构装体','大型魔导机','魔导合金'], 450]
+    ],
+    '民用魔法': [
+        ['光亮符', ['基础符文'], 60], ['净水符', ['基础符文','草药学'], 90], ['保鲜符', ['净水符','炼金溶剂'], 120],
+        ['魔灯', ['光亮符','恒定刻录'], 150], ['冷藏匣', ['保鲜符','元素瓶'], 180], ['自洁器具', ['净水符','护符'], 150],
+        ['城市照明', ['魔灯','城市管线'], 270], ['公共净水', ['净水符','魔导泵'], 300], ['魔法炉灶', ['元素炉','恒定刻录'], 300],
+        ['家用魔导器', ['魔灯','冷藏匣','自洁器具'], 360], ['批量修复', ['储法阵','材料亲和','标准机件'], 360],
+        ['卫生结界', ['公共净水','净化术式','模块化符文'], 420]
+    ],
+    '军队理念': [
+        ['领主征召', [], 60], ['亲兵战团', ['领主征召'], 90], ['骑士冲击', ['亲兵战团','鞍具'], 90], ['城堡防御', ['城防塔楼'], 90],
+        ['冒险者雇佣', ['领主征召'], 60], ['战地祭司', ['草药学','基础符文'], 90], ['常备军雏形', ['亲兵战团','驿车'], 150],
+        ['长枪密集阵', ['领主征召','铁盔'], 120], ['弩兵协同', ['强弩','长枪密集阵'], 150], ['法师随军', ['冒险者雇佣','法阵几何'], 180],
+        ['怪物战兽', ['冒险者雇佣','畜种选育'], 180], ['战场传令', ['常备军雏形','旗语'], 150], ['步骑炮协同', ['常备军雏形','弩兵协同','青铜炮'], 300],
+        ['工兵攻城', ['常备军雏形','配重投石机','军用工兵具'], 240], ['炮兵阵地', ['工兵攻城','炮架'], 300], ['法术支援连', ['法师随军','恒定刻录'], 300],
+        ['反施法散兵', ['法师随军','机括弩'], 270], ['结界营地', ['城堡防御','常备军雏形','触发符文'], 300],
+        ['魔法火力准备', ['法术支援连','炮兵阵地'], 360], ['分散阵列', ['反施法散兵','火绳枪'], 360], ['空中侦察', ['浮空艇','战场传令'], 390],
+        ['构装突击队', ['战斗构装体','常备军雏形'], 390], ['元素机动兵团', ['闪电轨道','元素引擎','常备军雏形'], 420],
+        ['战区通讯网', ['远距传讯','战场传令'], 420]
+    ]
+};
 
-        const container = document.getElementById('projects-container');
+const stateLabels = {
+    Locked: 'Locked / 前置未满足',
+    Available: 'Available / 可研发',
+    Researching: 'Researching / 研发中',
+    Researched: 'Researched / 已解锁'
+};
 
-        // 3. 拿取项目数据
-        const { data: projects, error } = await supabaseClient
-            .from('research_projects')
-            .select('*')
-            .eq('user_id', targetUid);
+let categories = Object.keys(RAW_TECH);
+let techNodes = [];
+let techById = new Map();
+let idByName = new Map();
+let selectedCategory = categories[0];
+let targetUid = null;
+let currentUserRole = 'player';
+let persistenceMode = 'supabase';
+let appState = { researched_ids: [], slots: [] };
 
-        // 双重排序：未完成的在上面，并且总进度(max_progress)越大的越靠前
-        if (projects) {
-            projects.sort((a, b) => {
-                const aIsDone = a.status === '已完成';
-                const bIsDone = b.status === '已完成';
-                if (aIsDone && !bIsDone) return 1;  
-                if (!aIsDone && bIsDone) return -1; 
-                return b.max_progress - a.max_progress; 
-            });
-        }
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[ch]));
+}
 
-        if (error) {
-            console.error(error);
-            return container.innerHTML = '<div style="color:red">读取数据失败</div>';
-        }
-        
-        if (!projects || projects.length === 0) {
-            return container.innerHTML = '<div style="text-align:center; color:#666; margin-top: 50px;">当前领地尚未开启任何研发项目。</div>';
-        }
-
-        // 4. 拿取雇员数据
-        const { data: emps } = await supabaseClient.from('employees').select('id, name, avatar_url').eq('user_id', targetUid);
-
-        // --- 下面这段是你原有的 HTML 渲染逻辑，原封不动保留 ---
-        let html = '';
-        projects.forEach(p => {
-            const pct = Math.min(100, Math.floor((p.current_progress / p.max_progress) * 100));
-            const isFinished = p.status === '已完成';
-            const isPaused = p.speed_per_day === 0 && !isFinished;
-            
-            let cardClass = isFinished ? 'finished' : (isPaused ? 'paused' : '');
-            let barClass = isFinished ? 'finished' : '';
-            
-            let speedText = isFinished ? '已封存' : (isPaused ? '进程已暂停' : `预计每日推进 +${p.speed_per_day}`);
-
-            // 拼装参与的雇员头像
-            let staffHtml = '<span style="color:#555; font-size:0.9em;">系统自动化演算中 / 无需专员接入</span>';
-            if (p.assigned_employees && p.assigned_employees.length > 0 && emps) {
-                staffHtml = p.assigned_employees.map(eid => {
-                    const e = emps.find(x => x.id === eid);
-                    return e ? `<img src="${e.avatar_url || 'https://via.placeholder.com/40'}" class="avatar" title="${e.name}">` : '';
-                }).join('');
-            }
-
-            html += `
-            <div class="proj-card ${cardClass}">
-                <div class="proj-title">${p.name} <span style="font-size:0.5em; padding:2px 8px; background:#333; border-radius:10px; vertical-align:middle; color:#aaa;">${p.status}</span></div>
-                <div class="proj-desc">${p.description || '无详细资料。'}</div>
-                
-                <div class="progress-box">
-                    <div class="progress-bar ${barClass}" style="width: ${pct}%"></div>
-                    <div class="progress-text">${p.current_progress} / ${p.max_progress} (${pct}%)</div>
-                </div>
-
-                <div class="meta-info">
-                    <span>${speedText}</span>
-                </div>
-                
-
-                <div class="staff-area">
-                    <div class="staff-title">研究专员</div>
-                    <div class="avatar-group">${staffHtml}</div>
-                </div>
-            </div>`;
+function buildTechData() {
+    let seq = 1;
+    categories.forEach(category => {
+        RAW_TECH[category].forEach(([name, prereqNames, days]) => {
+            const id = `tech_${String(seq++).padStart(3, '0')}`;
+            idByName.set(name, id);
+            techNodes.push({ id, name, category, prereqNames, prerequisites: [], base_days: days, depth: 0 });
         });
+    });
 
-        container.innerHTML = html;
+    techNodes.forEach(node => {
+        node.prerequisites = node.prereqNames.map(name => idByName.get(name)).filter(Boolean);
+        node.missingPrerequisites = node.prereqNames.filter(name => !idByName.has(name));
+        techById.set(node.id, node);
+    });
+
+    const memo = new Map();
+    const visiting = new Set();
+    const calcDepth = (node) => {
+        if (memo.has(node.id)) return memo.get(node.id);
+        if (visiting.has(node.id)) return 0;
+        visiting.add(node.id);
+        const depth = node.prerequisites.length
+            ? Math.max(...node.prerequisites.map(id => calcDepth(techById.get(id)))) + 1
+            : 0;
+        visiting.delete(node.id);
+        memo.set(node.id, depth);
+        return depth;
+    };
+    techNodes.forEach(node => node.depth = calcDepth(node));
+}
+
+function defaultSlots() {
+    return [
+        { id: 'slot_1', name: '通用槽', allowed_categories: ['ALL'], current_research: null },
+        { id: 'slot_2', name: '军工专修槽', allowed_categories: ['武器与防具', '攻城、火器与爆破'], current_research: idByName.get('链甲') || null }
+    ];
+}
+
+function researchedSet() {
+    return new Set(appState.researched_ids || []);
+}
+
+function isSlotAllowed(slot, category) {
+    return (slot.allowed_categories || []).includes('ALL') || (slot.allowed_categories || []).includes(category);
+}
+
+function isResearching(id) {
+    return (appState.slots || []).some(slot => slot.current_research === id);
+}
+
+function prereqsMet(node, set = researchedSet()) {
+    return node.prerequisites.every(id => set.has(id));
+}
+
+function getTechState(node) {
+    const set = researchedSet();
+    if (set.has(node.id)) return 'Researched';
+    if (isResearching(node.id)) return 'Researching';
+    if (prereqsMet(node, set)) return 'Available';
+    return 'Locked';
+}
+
+async function init() {
+    buildTechData();
+    renderCategoryMenu();
+    renderSlotCategoryChecks();
+    renderForceSelect();
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+        alert('未检测到终端权限，请先登录');
+        window.location.href = 'index.html';
+        return;
     }
 
-    window.onload = initResearch;
-    setInterval(initResearch, 30000);
-</script>
+    const params = new URLSearchParams(window.location.search);
+    targetUid = params.get('uid') || session.user.id;
 
+    const { data: roleData } = await supabaseClient
+        .from('admin_users')
+        .select('role_level')
+        .eq('id', session.user.id)
+        .maybeSingle();
+    currentUserRole = roleData?.role_level || 'player';
+
+    if (!['dm', 'root'].includes(currentUserRole)) {
+        document.getElementById('dm-panel').classList.add('hidden');
+    }
+
+    await loadState();
+    renderAll();
+    window.addEventListener('resize', drawLinks);
+    document.getElementById('tree-scroll').addEventListener('scroll', drawLinks);
+}
+
+async function loadState() {
+    const localKey = `tech_tree_state_${targetUid}`;
+    try {
+        const { data, error } = await supabaseClient
+            .from('tech_tree_state')
+            .select('researched_ids, slots')
+            .eq('user_id', targetUid)
+            .maybeSingle();
+        if (error) throw error;
+        appState = data || { researched_ids: [], slots: defaultSlots() };
+        if (!appState.slots || appState.slots.length === 0) appState.slots = defaultSlots();
+        persistenceMode = 'supabase';
+        setStateLine('Supabase 档案已连接');
+    } catch (e) {
+        persistenceMode = 'local';
+        const cached = localStorage.getItem(localKey);
+        appState = cached ? JSON.parse(cached) : { researched_ids: [], slots: defaultSlots() };
+        showWarning(`科技树状态表未就绪，当前使用本机缓存。请执行 tech_tree_state.sql。错误：${e.message || e}`);
+        setStateLine('本机缓存模式');
+    }
+}
+
+async function saveState() {
+    normalizeState();
+    const payload = {
+        user_id: targetUid,
+        researched_ids: appState.researched_ids || [],
+        slots: appState.slots || [],
+        updated_at: new Date().toISOString()
+    };
+
+    if (persistenceMode === 'local') {
+        localStorage.setItem(`tech_tree_state_${targetUid}`, JSON.stringify(payload));
+        setStateLine('已保存到本机缓存');
+        return;
+    }
+
+    const { error } = await supabaseClient.from('tech_tree_state').upsert(payload, { onConflict: 'user_id' });
+    if (error) {
+        persistenceMode = 'local';
+        localStorage.setItem(`tech_tree_state_${targetUid}`, JSON.stringify(payload));
+        showWarning(`保存到 Supabase 失败，已回退本机缓存。请确认 tech_tree_state.sql 已执行。错误：${error.message}`);
+    } else {
+        setStateLine(`已保存 · ${new Date().toLocaleTimeString('zh-CN', { hour12:false })}`);
+    }
+}
+
+function setStateLine(text) {
+    document.getElementById('state-line').innerText = `${text} · 已解锁 ${appState.researched_ids?.length || 0}/${techNodes.length}`;
+}
+
+function showWarning(text) {
+    const box = document.getElementById('storage-warning');
+    box.style.display = 'block';
+    box.innerText = text;
+}
+
+function renderAll() {
+    renderCategoryMenu();
+    renderSlots();
+    renderTechTree();
+    renderSlotAdminList();
+    setStateLine(persistenceMode === 'supabase' ? 'Supabase 档案已连接' : '本机缓存模式');
+}
+
+function renderCategoryMenu() {
+    const menu = document.getElementById('category-menu');
+    menu.innerHTML = categories.map(category => {
+        const count = techNodes.filter(t => t.category === category).length;
+        return `<button class="category-btn ${category === selectedCategory ? 'active' : ''}" onclick="selectCategory('${category}')">
+            <span>${CATEGORY_ICONS[category] || '◇'} ${escapeHTML(category)}</span>
+            <span class="category-count">${count}</span>
+        </button>`;
+    }).join('');
+}
+
+function selectCategory(category) {
+    selectedCategory = category;
+    renderAll();
+}
+
+function renderSlots() {
+    const strip = document.getElementById('slot-strip');
+    strip.innerHTML = (appState.slots || []).map(slot => {
+        const tech = slot.current_research ? techById.get(slot.current_research) : null;
+        const cats = (slot.allowed_categories || []).includes('ALL') ? 'ALL / 全领域' : slot.allowed_categories.join('、');
+        const work = tech
+            ? `<div class="slot-work">研发中：<b>${escapeHTML(tech.name)}</b> · ${tech.base_days} 天</div>
+               <div class="slot-actions">
+                   <button class="btn good" onclick="completeResearch('${slot.id}')">完成研究</button>
+                   <button class="btn danger" onclick="cancelSlotResearch('${slot.id}')">撤销挂载</button>
+               </div>`
+            : '<div class="slot-work" style="color:#7f8da0;">空闲，可接入匹配领域科技。</div>';
+        return `<div class="slot-card ${tech ? 'busy' : ''}">
+            <div class="slot-name"><span>${escapeHTML(slot.name)}</span><span>${tech ? '●' : '○'}</span></div>
+            <div class="slot-cats">${escapeHTML(cats)}</div>
+            ${work}
+        </div>`;
+    }).join('');
+}
+
+function renderTechTree() {
+    document.getElementById('category-title').innerText = `${CATEGORY_ICONS[selectedCategory] || '◇'} ${selectedCategory}`;
+    const nodes = techNodes.filter(t => t.category === selectedCategory);
+    const maxDepth = Math.max(...nodes.map(n => n.depth), 0);
+    const columns = document.getElementById('tech-columns');
+    columns.style.gridTemplateColumns = `repeat(${maxDepth + 1}, 230px)`;
+
+    let html = '';
+    for (let depth = 0; depth <= maxDepth; depth++) {
+        const inDepth = nodes.filter(n => n.depth === depth);
+        html += `<div class="depth-col"><div class="depth-label">Depth ${depth}</div>${inDepth.map(renderNode).join('')}</div>`;
+    }
+    columns.innerHTML = html;
+    requestAnimationFrame(drawLinks);
+}
+
+function renderNode(node) {
+    const state = getTechState(node);
+    const prereqText = node.prereqNames.length ? node.prereqNames.join('、') : '无';
+    const action = state === 'Available'
+        ? `<button class="btn node-action" onclick="startResearch('${node.id}')">挂载研发</button>`
+        : state === 'Locked'
+            ? `<button class="btn node-action" disabled>前置未满足</button>`
+            : state === 'Researching'
+                ? `<button class="btn gold node-action" disabled>槽位研发中</button>`
+                : `<button class="btn good node-action" disabled>已解锁</button>`;
+
+    return `<article class="tech-node ${state.toLowerCase()}" id="node-${node.id}" data-tech-id="${node.id}">
+        <div class="tech-name">${escapeHTML(node.name)}</div>
+        <div class="tech-meta">
+            <span class="tech-chip">${node.base_days} 天</span>
+            <span class="tech-chip">${escapeHTML(node.category)}</span>
+        </div>
+        <div class="tech-state">${stateLabels[state]}</div>
+        <div class="tech-prereq">前置：${escapeHTML(prereqText)}</div>
+        ${action}
+    </article>`;
+}
+
+function drawLinks() {
+    const board = document.getElementById('tree-board');
+    const svg = document.getElementById('link-layer');
+    const nodes = techNodes.filter(t => t.category === selectedCategory);
+    const visibleIds = new Set(nodes.map(n => n.id));
+    svg.setAttribute('width', board.scrollWidth);
+    svg.setAttribute('height', board.scrollHeight);
+    svg.style.width = `${board.scrollWidth}px`;
+    svg.style.height = `${board.scrollHeight}px`;
+    svg.innerHTML = '';
+
+    const set = researchedSet();
+    nodes.forEach(node => {
+        node.prerequisites.forEach(preId => {
+            if (!visibleIds.has(preId)) return;
+            const from = document.getElementById(`node-${preId}`);
+            const to = document.getElementById(`node-${node.id}`);
+            if (!from || !to) return;
+            const x1 = from.offsetLeft + from.offsetWidth;
+            const y1 = from.offsetTop + from.offsetHeight / 2;
+            const x2 = to.offsetLeft;
+            const y2 = to.offsetTop + to.offsetHeight / 2;
+            const mid = x1 + Math.max(44, (x2 - x1) / 2);
+            const active = set.has(preId) && getTechState(node) !== 'Locked';
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
+            path.setAttribute('class', `link-path ${active ? 'active' : ''}`);
+            svg.appendChild(path);
+        });
+    });
+}
+
+async function startResearch(techId) {
+    const node = techById.get(techId);
+    if (!node || getTechState(node) !== 'Available') return;
+    const slot = (appState.slots || []).find(s => !s.current_research && isSlotAllowed(s, node.category));
+    if (!slot) {
+        alert('无对应领域的可用科研槽');
+        return;
+    }
+    slot.current_research = techId;
+    await saveState();
+    renderAll();
+}
+
+async function completeResearch(slotId) {
+    const slot = appState.slots.find(s => s.id === slotId);
+    if (!slot?.current_research) return;
+    const techId = slot.current_research;
+    if (!appState.researched_ids.includes(techId)) appState.researched_ids.push(techId);
+    slot.current_research = null;
+    await saveState();
+    renderAll();
+}
+
+async function cancelSlotResearch(slotId) {
+    const slot = appState.slots.find(s => s.id === slotId);
+    if (!slot?.current_research) return;
+    if (!confirm('确定撤销该槽位当前研发？')) return;
+    slot.current_research = null;
+    await saveState();
+    renderAll();
+}
+
+function renderSlotCategoryChecks() {
+    const box = document.getElementById('slot-category-checks');
+    box.innerHTML = categories.map(cat => `<label class="check-row"><input type="checkbox" value="${escapeHTML(cat)}"> ${CATEGORY_ICONS[cat] || '◇'} ${escapeHTML(cat)}</label>`).join('');
+}
+
+function toggleAllCategoryChecks() {
+    const all = document.getElementById('new-slot-all').checked;
+    document.querySelectorAll('#slot-category-checks input').forEach(input => input.disabled = all);
+}
+
+async function addSlot() {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const name = document.getElementById('new-slot-name').value.trim() || `科研槽 ${appState.slots.length + 1}`;
+    const all = document.getElementById('new-slot-all').checked;
+    const selected = Array.from(document.querySelectorAll('#slot-category-checks input:checked')).map(i => i.value);
+    const allowed = all ? ['ALL'] : selected;
+    if (allowed.length === 0) return alert('请选择至少一个允许领域，或勾选 ALL');
+    appState.slots.push({ id: `slot_${Date.now()}`, name, allowed_categories: allowed, current_research: null });
+    document.getElementById('new-slot-name').value = '';
+    document.getElementById('new-slot-all').checked = false;
+    document.querySelectorAll('#slot-category-checks input').forEach(i => { i.checked = false; i.disabled = false; });
+    await saveState();
+    renderAll();
+}
+
+function renderSlotAdminList() {
+    const list = document.getElementById('slot-admin-list');
+    if (!list) return;
+    list.innerHTML = (appState.slots || []).map(slot => {
+        const cats = (slot.allowed_categories || []).includes('ALL') ? 'ALL / 全领域' : slot.allowed_categories.join('、');
+        const tech = slot.current_research ? techById.get(slot.current_research)?.name || slot.current_research : '空闲';
+        return `<div class="slot-card" style="margin-bottom:8px;">
+            <div class="slot-name"><span>${escapeHTML(slot.name)}</span><button class="btn danger" style="padding:3px 6px;" onclick="deleteSlot('${slot.id}')">删除</button></div>
+            <div class="slot-cats">${escapeHTML(cats)}</div>
+            <div class="slot-work">${escapeHTML(tech)}</div>
+        </div>`;
+    }).join('');
+}
+
+async function deleteSlot(slotId) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const slot = appState.slots.find(s => s.id === slotId);
+    if (!slot) return;
+    if (!confirm(`确定删除槽位「${slot.name}」？当前研发也会被撤销。`)) return;
+    appState.slots = appState.slots.filter(s => s.id !== slotId);
+    await saveState();
+    renderAll();
+}
+
+function renderForceSelect() {
+    const sel = document.getElementById('force-tech-select');
+    sel.innerHTML = techNodes.map(node => `<option value="${node.id}">${escapeHTML(node.category)} / ${escapeHTML(node.name)}</option>`).join('');
+}
+
+async function forceUnlockSelected() {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const id = document.getElementById('force-tech-select').value;
+    if (!id) return;
+    if (!appState.researched_ids.includes(id)) appState.researched_ids.push(id);
+    appState.slots.forEach(slot => {
+        if (slot.current_research === id) slot.current_research = null;
+    });
+    await saveState();
+    renderAll();
+}
+
+async function forceUnresearchSelected() {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const id = document.getElementById('force-tech-select').value;
+    if (!id) return;
+    const node = techById.get(id);
+    if (!confirm(`确定取消「${node?.name || id}」的解锁？依赖它且前置不再满足的后续科技也会失效。`)) return;
+    const set = researchedSet();
+    set.delete(id);
+    let changed = true;
+    while (changed) {
+        changed = false;
+        techNodes.forEach(tech => {
+            if (set.has(tech.id) && !prereqsMet(tech, set)) {
+                set.delete(tech.id);
+                changed = true;
+            }
+        });
+    }
+    appState.researched_ids = Array.from(set);
+    appState.slots.forEach(slot => {
+        const tech = techById.get(slot.current_research);
+        if (tech && !prereqsMet(tech, set)) slot.current_research = null;
+    });
+    await saveState();
+    renderAll();
+}
+
+function normalizeState() {
+    appState.researched_ids = Array.from(new Set((appState.researched_ids || []).filter(id => techById.has(id))));
+    appState.slots = (appState.slots || []).map(slot => ({
+        id: slot.id || `slot_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        name: slot.name || '未命名科研槽',
+        allowed_categories: slot.allowed_categories?.length ? slot.allowed_categories : ['ALL'],
+        current_research: techById.has(slot.current_research) ? slot.current_research : null
+    }));
+}
+
+window.onload = init;
+</script>
 </body>
 </html>
-
