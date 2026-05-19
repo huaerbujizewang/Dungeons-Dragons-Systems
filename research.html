@@ -463,6 +463,14 @@
                     <button class="btn good" style="flex:1;" onclick="forceUnlockSelected()">强制解锁</button>
                     <button class="btn danger" style="flex:1;" onclick="forceUnresearchSelected()">强制取消</button>
                 </div>
+                <div class="form-row" style="margin-top:12px;">
+                    <label>层级快捷解锁</label>
+                    <select id="force-depth-select"></select>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn good" style="flex:1;" onclick="forceUnlockDepthExact()">解锁该层级</button>
+                    <button class="btn gold" style="flex:1;" onclick="forceUnlockThroughDepth()">推进到层级 X</button>
+                </div>
             </div>
         </aside>
     </div>
@@ -1082,6 +1090,7 @@ async function init() {
     renderCategoryMenu();
     renderSlotCategoryChecks();
     renderForceSelect();
+    renderDepthForceSelect();
 
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) {
@@ -1277,12 +1286,12 @@ function renderSlots() {
 function renderTechTree() {
     document.getElementById('category-title').innerText = `${CATEGORY_ICONS[selectedCategory] || '◇'} ${selectedCategory}`;
     const nodes = techNodes.filter(t => t.category === selectedCategory);
-    const maxDepth = Math.max(...nodes.map(n => n.depth), 0);
+    const depths = Array.from(new Set(nodes.map(n => n.depth))).sort((a, b) => a - b);
     const columns = document.getElementById('tech-columns');
-    columns.style.gridTemplateColumns = `repeat(${maxDepth + 1}, 230px)`;
+    columns.style.gridTemplateColumns = `repeat(${depths.length || 1}, 230px)`;
 
     let html = '';
-    for (let depth = 0; depth <= maxDepth; depth++) {
+    for (const depth of depths) {
         const inDepth = nodes.filter(n => n.depth === depth);
         html += `<div class="depth-col"><div class="depth-label">Depth ${depth}</div>${inDepth.map(renderNode).join('')}</div>`;
     }
@@ -1470,6 +1479,18 @@ function renderForceSelect() {
     sel.innerHTML = techNodes.map(node => `<option value="${node.id}">${escapeHTML(node.category)} / ${escapeHTML(node.name)}</option>`).join('');
 }
 
+function renderDepthForceSelect() {
+    const sel = document.getElementById('force-depth-select');
+    const maxDepth = Math.max(...techNodes.map(node => node.depth), 0);
+    let html = '';
+    for (let depth = 0; depth <= maxDepth; depth++) {
+        const exactCount = techNodes.filter(node => node.depth === depth).length;
+        const throughCount = techNodes.filter(node => node.depth <= depth).length;
+        html += `<option value="${depth}">Depth ${depth}：本层 ${exactCount} / 累计 ${throughCount}</option>`;
+    }
+    sel.innerHTML = html;
+}
+
 async function forceUnlockSelected() {
     if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
     const id = document.getElementById('force-tech-select').value;
@@ -1478,6 +1499,39 @@ async function forceUnlockSelected() {
     appState.slots.forEach(slot => {
         if (slot.current_research === id) slot.current_research = null;
     });
+    await saveState();
+    renderAll();
+}
+
+async function forceUnlockDepthExact() {
+    await forceUnlockByDepth(false);
+}
+
+async function forceUnlockThroughDepth() {
+    await forceUnlockByDepth(true);
+}
+
+async function forceUnlockByDepth(throughDepth) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const depth = Number(document.getElementById('force-depth-select').value);
+    if (!Number.isInteger(depth) || depth < 0) return;
+
+    const affected = techNodes.filter(node => throughDepth ? node.depth <= depth : node.depth === depth);
+    const set = researchedSet();
+    const newlyUnlocked = affected.filter(node => !set.has(node.id));
+    const actionLabel = throughDepth ? `推进到 Depth ${depth}` : `解锁 Depth ${depth}`;
+    if (!affected.length) return alert('该层级没有科技节点');
+    if (!newlyUnlocked.length) return alert('所选范围内的科技已经全部解锁');
+    if (!confirm(`确定为「${targetLabel || targetUid}」${actionLabel}？将强制解锁 ${newlyUnlocked.length} 个科技。`)) return;
+
+    newlyUnlocked.forEach(node => set.add(node.id));
+    appState.researched_ids = techNodes.filter(node => set.has(node.id)).map(node => node.id);
+
+    const affectedIds = new Set(newlyUnlocked.map(node => node.id));
+    appState.slots.forEach(slot => {
+        if (affectedIds.has(slot.current_research)) slot.current_research = null;
+    });
+
     await saveState();
     renderAll();
 }
