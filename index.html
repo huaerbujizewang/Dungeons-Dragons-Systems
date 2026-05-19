@@ -400,6 +400,12 @@
         .emp-card-content img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 1px solid #eee; }
         .review-btn { font-size:0.8em; padding:4px 8px; border:1px solid #3498db; background:#f0f9ff; color:#2980b9; border-radius:4px; cursor:pointer; }
         .review-btn:hover { background:#3498db; color:#fff; }
+        .emp-action-btn { font-size:0.8em; padding:4px 8px; border:1px solid #16a085; background:#f0fffb; color:#16a085; border-radius:4px; cursor:pointer; }
+        .emp-action-btn:hover { background:#16a085; color:#fff; }
+        .emp-action-btn.recall { border-color:#27ae60; background:#f3fff7; color:#27ae60; }
+        .emp-action-btn.recall:hover { background:#27ae60; color:#fff; }
+        .emp-pending-note { text-align:left; margin:8px 0 4px; padding:8px; border:1px solid #f5d6a6; background:#fffaf2; border-radius:6px; color:#7a4c08; font-size:0.76em; line-height:1.45; word-break:break-word; }
+        .emp-pending-note strong { display:block; margin-bottom:3px; color:#b76700; }
         .review-form-row { display:flex; gap:8px; margin-bottom:10px; }
         .review-form-row input { flex:1; min-width:0; }
         .review-textarea { width:100%; min-height:92px; resize:vertical; box-sizing:border-box; line-height:1.6; }
@@ -2284,7 +2290,19 @@
     const DM_EMAIL = '739477825@qq.com';
     const ADMIN_ROLES = ['dm', 'root'];
     const WAR_CONTROLLER_EMAILS = [DM_EMAIL, 'master@almorel.com'];
-    const EMPLOYEE_STATUSES = ['在职', '科研中', '出差', '休假', '特殊状态', '申请解雇', '离职', '违规'];
+    const EMPLOYEE_STATUSES = ['在职', '科研中', '出差', '休假', '特殊状态', '申请出差', '申请调回', '申请解雇', '离职', '违规'];
+    const EMPLOYEE_PENDING_STATUS_REQUESTS = ['申请出差', '申请调回', '申请解雇'];
+    const EMPLOYEE_SALARY_STATUSES = ['在职', '科研中', '出差', '申请出差', '申请调回'];
+    const EMPLOYEE_STATUS_REQUESTS = {
+        '申请出差': { requestType: 'trip', title: '出差申请', approveStatus: '出差', rejectStatus: '在职', approveLabel: '批准出差', logName: '出差申请' },
+        '申请调回': { requestType: 'recall', title: '调回申请', approveStatus: '在职', rejectStatus: '出差', approveLabel: '批准调回', logName: '调回申请' },
+        '申请解雇': { requestType: 'fire', title: '解雇申请', approveStatus: '离职', rejectStatus: '在职', approveLabel: '准许解雇', logName: '解雇申请' }
+    };
+    const EMPLOYEE_STATUS_REQUEST_TYPES = {
+        trip: { status: '申请出差', title: '出差申请', reasonLabel: '出差理由', taskLabel: '任务内容' },
+        recall: { status: '申请调回', title: '调回申请', reasonLabel: '调回理由' },
+        fire: { status: '申请解雇', title: '解雇申请', reasonLabel: '解雇理由' }
+    };
     const OMNI_POSTER_CONFIG_KEY = 'login_poster';
     let warPosterImages = [];
     let warPosterIndex = 0;
@@ -2307,6 +2325,29 @@
             const selected = status === selectedStatus ? 'selected' : '';
             return `<option value="${escapeHTML(status)}" ${selected}>${escapeHTML(status)}</option>`;
         }).join('');
+    }
+
+    function renderStatusRequestDetail(req, options = {}) {
+        if (!req) return '';
+        const typeConfig = EMPLOYEE_STATUS_REQUEST_TYPES[req.request_type] || {};
+        const title = req.title || typeConfig.title || EMPLOYEE_STATUS_REQUESTS[req.requested_status]?.title || req.requested_status || '状态申请';
+        const reasonLabel = typeConfig.reasonLabel || '申请理由';
+        const reason = escapeHTML(req.reason || '未填写').replace(/\n/g, '<br>');
+        const task = String(req.task_detail || '').trim();
+        const taskHtml = task ? `<div><b>${escapeHTML(typeConfig.taskLabel || '任务内容')}：</b>${escapeHTML(task).replace(/\n/g, '<br>')}</div>` : '';
+        const createdAt = req.created_at
+            ? `<div style="color:#9a6a24; margin-top:3px;">提交时间：${escapeHTML(new Date(req.created_at).toLocaleString('zh-CN', { hour12:false }))}</div>`
+            : '';
+        const requester = options.showRequester && req.requester_email
+            ? `<div style="color:#9a6a24;">申请人：${escapeHTML(req.requester_email)}</div>`
+            : '';
+        return `
+            <strong>${escapeHTML(title)}</strong>
+            <div><b>${escapeHTML(reasonLabel)}：</b>${reason}</div>
+            ${taskHtml}
+            ${requester}
+            ${createdAt}
+        `;
     }
 
     let authVerifyDepth = 0;
@@ -2611,6 +2652,7 @@ function isPhandalinPlayer(email) {
                 console.log('人员/小队状态变动');
                 loadTeam();
                 loadEmployees();
+                if (isCurrentAdmin()) loadPendingRequests();
             })
             // 5. 监听角色评价变动
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_reviews', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
@@ -2624,6 +2666,11 @@ function isPhandalinPlayer(email) {
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_profile_change_requests', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
                 console.log('核心队友档案审批有更新');
+                if (isCurrentAdmin()) loadPendingRequests();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_status_change_requests', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
+                console.log('雇员状态审批有更新');
+                loadEmployees();
                 if (isCurrentAdmin()) loadPendingRequests();
             })
             // 7. 监听装备栏变动 (Equipped 表)
@@ -2755,6 +2802,25 @@ function isPhandalinPlayer(email) {
             return;
         }
 
+        let pendingStatusRequestMap = {};
+        try {
+            const { data: pendingRequests, error: pendingError } = await supabaseClient
+                .from('employee_status_change_requests')
+                .select('id, employee_id, request_type, requested_status, reason, task_detail, requester_email, created_at')
+                .eq('employee_owner_id', viewingUserId)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false });
+
+            if (pendingError) throw pendingError;
+            (pendingRequests || []).forEach(req => {
+                if (!pendingStatusRequestMap[req.employee_id]) {
+                    pendingStatusRequestMap[req.employee_id] = req;
+                }
+            });
+        } catch (e) {
+            console.warn('雇员状态申请记录读取失败，请确认 employee_status_change_requests 表已创建', e);
+        }
+
         // 1. 触发立绘预加载
         const standUrls = data.map(e => e.stand_url).filter(u => u && u.length > 0);
         preloadImages(standUrls);
@@ -2762,7 +2828,7 @@ function isPhandalinPlayer(email) {
         // 2. 状态权重配置
         // 2. 状态权重配置 (加入出差，排在科研之后)
         const statusWeight = {
-            '在职': 1, '科研中': 2, '出差': 3, '休假': 4, '特殊状态': 5, '申请解雇': 6, '离职': 7, '违规': 8
+            '在职': 1, '科研中': 2, '出差': 3, '申请出差': 4, '申请调回': 5, '休假': 6, '特殊状态': 7, '申请解雇': 8, '离职': 9, '违规': 10
         };
 
         // --- 排序权重计算 ---
@@ -2796,7 +2862,7 @@ function isPhandalinPlayer(email) {
 
         // 计算总薪资 
         const totalSalary = data
-            .filter(e => (e.status === '在职' || e.status === '科研中' || e.status === '出差') && e.salary !== -1)
+            .filter(e => EMPLOYEE_SALARY_STATUSES.includes(e.status) && e.salary !== -1)
             .reduce((sum, e) => sum + (Number(e.salary) || 0), 0);
         // 分组并排序
         const coreMembers = data.filter(e => e.role === '核心队友').sort(sortLogic);
@@ -2816,6 +2882,8 @@ function isPhandalinPlayer(email) {
                 else if(e.status === '违规') config.color = '#c0392b'; 
                 else if(e.status === '离职') config.color = '#95a5a6';
                 else if(e.status === '申请解雇') config.color = '#e67e22';
+                else if(e.status === '申请出差') config.color = '#48c9b0';
+                else if(e.status === '申请调回') config.color = '#58d68d';
 
                 const isCore = e.role === '核心队友';
                 const isPlayer = e.salary === -1;
@@ -2823,8 +2891,15 @@ function isPhandalinPlayer(email) {
                 const roleDisplay = isCore || isPlayer 
                     ? `<div>${e.role || '队友'}</div>`
                     : `<div>${e.role || '雇员'} | ${e.salary} GP</div>`;
-                const canFire = !isCore && !isPlayer && e.status === '在职';
+                const pendingRequest = pendingStatusRequestMap[e.id];
+                const canControlStatus = !isCore && !isPlayer && (viewingUserId === myId || isCurrentAdmin());
+                const canFire = canControlStatus && !pendingRequest && e.status === '在职';
+                const canSendTrip = canControlStatus && !pendingRequest && e.status === '在职';
+                const canRecallTrip = canControlStatus && !pendingRequest && e.status === '出差';
                 const canEditCoreSheet = isCore && (viewingUserId === myId || isCurrentAdmin());
+                const pendingNote = pendingRequest
+                    ? `<div class="emp-pending-note">${renderStatusRequestDetail(pendingRequest)}</div>`
+                    : '';
 
                 const rarity = e.rarity || 3;
                 const stars = '★'.repeat(rarity);
@@ -2849,11 +2924,15 @@ function isPhandalinPlayer(email) {
                         ${e.status}
                     </div>
 
+                    ${pendingNote}
+
                     <div style="margin-top:5px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
                         ${hasSheet ? `<button onclick="openDossierModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 档案</button>` : ''}
                         ${canEditCoreSheet ? `<button onclick="openCoreSheetEditor(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #16a085; background:#f0fffb; color:#16a085; border-radius:4px; cursor:pointer;">填卡</button>` : ''}
                         <button class="review-btn" onclick="openEmployeeReviewModal(${e.id}, ${jsStringAttr(e.name)})">评价</button>
-                        ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id})" style="width:auto; margin-top:0; display:none;">解雇</button>` : ''}
+                        ${canSendTrip ? `<button class="emp-action-btn" onclick="requestBusinessTrip(${e.id})">出差</button>` : ''}
+                        ${canRecallTrip ? `<button class="emp-action-btn recall" onclick="requestTripRecall(${e.id})">调回</button>` : ''}
+                        ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id}, ${jsStringAttr(e.status)})" style="width:auto; margin-top:0;">解雇</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -3005,12 +3084,121 @@ async function openEquipModal(empId, slotIdx) {
         await loadTeam();
         hideLoading();
     }
-    async function requestFire(id) {
-        if (!confirm('确定申请解雇？')) return;
+    function collectEmployeeStatusRequestInput(requestType) {
+        const typeConfig = EMPLOYEE_STATUS_REQUEST_TYPES[requestType];
+        if (!typeConfig) return null;
+
+        const reason = prompt(`请填写${typeConfig.reasonLabel}：`);
+        if (reason === null) return null;
+        const cleanReason = reason.trim();
+        if (!cleanReason) {
+            alert(`${typeConfig.reasonLabel}不能为空。`);
+            return null;
+        }
+
+        let cleanTask = '';
+        if (requestType === 'trip') {
+            const task = prompt('请填写本次出差任务是什么：');
+            if (task === null) return null;
+            cleanTask = task.trim();
+            if (!cleanTask) {
+                alert('出差任务不能为空。');
+                return null;
+            }
+        }
+
+        return { reason: cleanReason, taskDetail: cleanTask };
+    }
+
+    async function requestEmployeeStatusChange(id, currentStatus, targetStatus, confirmText, successText) {
+        const requestConfig = EMPLOYEE_STATUS_REQUESTS[targetStatus];
+        if (!requestConfig) return alert('未知的雇员状态申请');
+        if (!confirm(confirmText)) return;
+
+        const requestInput = collectEmployeeStatusRequestInput(requestConfig.requestType);
+        if (!requestInput) return;
+
         showLoading();
-        await supabaseClient.from('employees').update({ status: '申请解雇' }).eq('id', id);
-        await loadEmployees();
-        hideLoading();
+        try {
+            const { data: emp, error: empError } = await supabaseClient
+                .from('employees')
+                .select('id, name, status')
+                .eq('id', id)
+                .eq('user_id', viewingUserId)
+                .single();
+
+            if (empError) throw empError;
+            if (!emp || emp.status !== currentStatus) {
+                alert('申请未提交：雇员状态可能已经变化，请刷新后重试。');
+                return;
+            }
+
+            const { data: existingRequest, error: existingError } = await supabaseClient
+                .from('employee_status_change_requests')
+                .select('id')
+                .eq('employee_id', id)
+                .eq('status', 'pending')
+                .maybeSingle();
+            if (existingError) throw existingError;
+            if (existingRequest) {
+                alert('该雇员已有待审批的状态申请。');
+                return;
+            }
+
+            const { data: req, error: reqError } = await supabaseClient
+                .from('employee_status_change_requests')
+                .insert([{
+                    employee_id: id,
+                    employee_owner_id: viewingUserId,
+                    employee_name: emp.name || `ID:${id}`,
+                    request_type: requestConfig.requestType,
+                    original_status: currentStatus,
+                    requested_status: targetStatus,
+                    reason: requestInput.reason,
+                    task_detail: requestInput.taskDetail || null,
+                    requester_email: currentUserEmail || null
+                }])
+                .select('id')
+                .single();
+            if (reqError) throw reqError;
+
+            const { data: updatedEmp, error: updateError } = await supabaseClient
+                .from('employees')
+                .update({ status: targetStatus })
+                .eq('id', id)
+                .eq('user_id', viewingUserId)
+                .eq('status', currentStatus)
+                .select('id, name')
+                .maybeSingle();
+
+            if (updateError) throw updateError;
+            if (!updatedEmp) {
+                alert(`申请记录已提交，但雇员状态未同步变化。申请编号：${req.id}`);
+                return;
+            }
+
+            logAction('雇员状态申请', `申请将雇员 [${emp.name || id}] 的状态改为 [${targetStatus}]，理由：${requestInput.reason}`)
+                .catch(e => console.error('日志写入失败', e));
+            alert(successText);
+            await loadEmployees();
+        } catch (e) {
+            console.error(e);
+            alert('申请提交失败：' + (e.message || '网络错误，请确认 employee_status_change_requests 表已创建'));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function requestFire(id, currentStatus = '在职') {
+        await requestEmployeeStatusChange(id, currentStatus, '申请解雇', '确定申请解雇该雇员？提交后需等待 DM 批准。', '解雇申请已提交，等待 DM 审批。');
+    }
+
+    async function requestBusinessTrip(id) {
+        await requestEmployeeStatusChange(id, '在职', '申请出差', '确定申请让该雇员出差？提交后需等待 DM 批准。', '出差申请已提交，等待 DM 审批。');
+    }
+
+    async function requestTripRecall(id) {
+        await requestEmployeeStatusChange(id, '出差', '申请调回', '确定申请调回该雇员？提交后需等待 DM 批准。', '调回申请已提交，等待 DM 审批。');
     }
     
     // 基础加载 (修复背包分类)
@@ -4087,23 +4275,24 @@ async function loadGold() {
         if (!listDiv) return;
         let html = '';
 
-        const { data: fireData, error } = await supabaseClient
-            .from('employees')
-            .select('id, name, user_id, status') 
-            .eq('status', '申请解雇');
+        const { data: statusRequestData, error } = await supabaseClient
+            .from('employee_status_change_requests')
+            .select('*') 
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true });
 
         if (error) {
             console.error("加载申请失败 (400错误通常源于此处):", error);
-            html += `<div style="color:red; font-size:0.8em; padding:8px;">解雇申请加载失败: ${escapeHTML(error.message)}</div>`;
+            html += `<div style="color:red; font-size:0.8em; padding:8px;">雇员状态申请加载失败: ${escapeHTML(error.message)}。请确认 employee_status_change_requests.sql 已执行。</div>`;
         }
 
-        const fireUserIds = [...new Set((fireData || []).map(item => item.user_id).filter(Boolean))];
+        const statusRequestUserIds = [...new Set((statusRequestData || []).map(item => item.employee_owner_id).filter(Boolean))];
         const profileEmailMap = {};
-        if (fireUserIds.length > 0) {
+        if (statusRequestUserIds.length > 0) {
             const { data: profiles, error: profileError } = await supabaseClient
                 .from('profiles')
                 .select('id, email')
-                .in('id', fireUserIds);
+                .in('id', statusRequestUserIds);
             if (profileError) {
                 html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">玩家邮箱加载失败: ${escapeHTML(profileError.message)}</div>`;
             } else {
@@ -4113,17 +4302,22 @@ async function loadGold() {
             }
         }
 
-        (fireData || []).forEach(item => {
-            const playerEmail = profileEmailMap[item.user_id] || item.user_id || '未知玩家';
+        (statusRequestData || []).forEach(req => {
+            const typeConfig = EMPLOYEE_STATUS_REQUEST_TYPES[req.request_type];
+            const statusConfig = EMPLOYEE_STATUS_REQUESTS[req.requested_status];
+            if (!typeConfig && !statusConfig) return;
+            const playerEmail = profileEmailMap[req.employee_owner_id] || req.employee_owner_id || '未知玩家';
+            const detailHtml = renderStatusRequestDetail(req, { showRequester: true });
             html += `
-                <div style="background:#fff; padding:10px; border:1px solid #eee; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-weight:bold;">解雇申请：${escapeHTML(item.name)}</div>
+                <div style="background:#fff; padding:10px; border:1px solid #eee; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <div style="min-width:0;">
+                        <div style="font-weight:bold;">${escapeHTML((typeConfig || statusConfig).title)}：${escapeHTML(req.employee_name || `ID:${req.employee_id}`)}</div>
                         <div style="font-size:0.75em; color:#888;">所属玩家: ${escapeHTML(playerEmail)}</div>
+                        <div class="emp-pending-note" style="margin-bottom:0;">${detailHtml}</div>
                     </div>
-                    <div style="display:flex; gap:5px;">
-                        <button onclick="handleFireRequest(${item.id}, 'approve')" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">准许</button>
-                        <button onclick="handleFireRequest(${item.id}, 'reject')" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
+                    <div style="display:flex; gap:5px; flex:none;">
+                        <button onclick="handleEmployeeStatusRequest(${req.id}, true)" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">${escapeHTML(statusConfig?.approveLabel || '批准')}</button>
+                        <button onclick="handleEmployeeStatusRequest(${req.id}, false)" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
                     </div>
                 </div>
             `;
@@ -4342,31 +4536,80 @@ async function loadGold() {
         }
     }
 
-    // --- 处理审批 ---
-    async function approveFire(empId, isApproved) {
+    // --- 处理雇员状态审批 ---
+    async function handleEmployeeStatusRequest(requestId, isApproved) {
         if (!await requireAdminRole()) return;
+
         showLoading();
         try {
-            // 如果批准，状态改为 '离职' (这样就不扣钱了，但也还在列表里)
-            // 如果驳回，状态改回 '在职'
-            const newStatus = isApproved ? '离职' : '在职';
+            const { data: req, error: reqError } = await supabaseClient
+                .from('employee_status_change_requests')
+                .select('*')
+                .eq('id', requestId)
+                .eq('status', 'pending')
+                .single();
+            if (reqError || !req) throw reqError || new Error('申请不存在或已处理');
+
+            const requestConfig = EMPLOYEE_STATUS_REQUESTS[req.requested_status];
+            if (!requestConfig) throw new Error('未知的雇员状态申请');
+
+            const newStatus = isApproved ? requestConfig.approveStatus : requestConfig.rejectStatus;
             
-            await supabaseClient
+            const { data, error } = await supabaseClient
                 .from('employees')
                 .update({ status: newStatus })
-                .eq('id', empId);
+                .eq('id', req.employee_id)
+                .eq('status', req.requested_status)
+                .select('id, name')
+                .maybeSingle();
 
-            await logAction('审批操作', `${isApproved ? '批准' : '驳回'}了雇员(ID:${empId}) 的解雇申请`);
+            if (error) throw error;
+            if (!data) {
+                alert('该申请可能已经被处理，请刷新审批列表。');
+                return;
+            }
+
+            const { error: updateReqError } = await supabaseClient
+                .from('employee_status_change_requests')
+                .update({
+                    status: isApproved ? 'approved' : 'rejected',
+                    reviewed_at: new Date().toISOString(),
+                    reviewer_email: currentUserEmail || null
+                })
+                .eq('id', requestId);
+            if (updateReqError) throw updateReqError;
+
+            logAction('审批操作', `${isApproved ? '批准' : '驳回'}了雇员 [${data.name || req.employee_id}] 的${requestConfig.logName}，状态改为 [${newStatus}]`)
+                .catch(e => console.error('日志写入失败', e));
             
             alert('处理完成');
             loadPendingRequests(); // 刷新审批列表
             loadEmployees();       // 刷新雇员显示
         } catch (e) {
             console.error(e);
-            alert('操作失败');
+            alert('操作失败：' + (e.message || '网络错误'));
         } finally {
             hideLoading();
         }
+    }
+
+    async function approveFire(empId, isApproved) {
+        if (!await requireAdminRole()) return;
+        const { data: req, error } = await supabaseClient
+            .from('employee_status_change_requests')
+            .select('id')
+            .eq('employee_id', empId)
+            .eq('request_type', 'fire')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error || !req) {
+            alert(error ? `读取解雇申请失败：${error.message}` : '未找到该雇员的待审批解雇申请。');
+            return;
+        }
+        await handleEmployeeStatusRequest(req.id, isApproved);
     }
 
 
@@ -5058,7 +5301,7 @@ async function calculateCityNetIncome(targetUserId) {
         const [expensesRes, incomeRes, empRes] = await Promise.all([
             supabaseClient.from('city_expenses').select('*').eq('user_id', targetUserId).eq('location', loc),
             supabaseClient.from('city_incomes').select('*').eq('user_id', targetUserId).eq('location', loc),
-            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('location', loc).in('status', ['在职', '科研中', '出差'])
+            supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('location', loc).in('status', EMPLOYEE_SALARY_STATUSES)
         ]);
 
         const expenses = expensesRes.data || [];
