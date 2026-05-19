@@ -426,6 +426,15 @@
             <div class="warning" id="storage-warning"></div>
 
             <div class="control-section">
+                <h3>玩家科技档案</h3>
+                <div class="form-row">
+                    <label>当前操作玩家</label>
+                    <select id="dm-player-select" onchange="switchResearchTarget(this.value)"></select>
+                </div>
+                <div class="slot-cats" id="target-player-line">未选择玩家</div>
+            </div>
+
+            <div class="control-section">
                 <h3>科研槽管理</h3>
                 <div class="form-row">
                     <label>槽位名称</label>
@@ -992,7 +1001,9 @@ let techNodes = [];
 let techById = new Map();
 let idByName = new Map();
 let selectedCategory = categories[0];
+let currentUserId = null;
 let targetUid = null;
+let targetLabel = '';
 let currentUserRole = 'player';
 let persistenceMode = 'supabase';
 let appState = { researched_ids: [], slots: [] };
@@ -1079,8 +1090,7 @@ async function init() {
         return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    targetUid = params.get('uid') || session.user.id;
+    currentUserId = session.user.id;
 
     const { data: roleData } = await supabaseClient
         .from('admin_users')
@@ -1089,12 +1099,22 @@ async function init() {
         .maybeSingle();
     currentUserRole = roleData?.role_level || 'player';
 
+    const isAdmin = ['dm', 'root'].includes(currentUserRole);
+    const params = new URLSearchParams(window.location.search);
+    const requestedUid = params.get('uid');
+    targetUid = isAdmin ? (requestedUid || currentUserId) : currentUserId;
+    targetLabel = targetUid === currentUserId ? '我的科技档案' : targetUid;
+
     if (['dm', 'root'].includes(currentUserRole)) {
         document.getElementById('dm-panel').classList.remove('hidden');
         document.getElementById('dm-role-line').innerText = `权限已确认：${currentUserRole}`;
         document.querySelector('.layout').classList.remove('no-admin');
+        await loadPlayerOptions();
     } else {
         document.querySelector('.layout').classList.add('no-admin');
+        if (requestedUid && requestedUid !== currentUserId) {
+            history.replaceState(null, '', 'research.html');
+        }
     }
 
     await loadState();
@@ -1105,6 +1125,11 @@ async function init() {
 
 async function loadState() {
     const localKey = `tech_tree_state_${targetUid}`;
+    const warning = document.getElementById('storage-warning');
+    if (warning) {
+        warning.style.display = 'none';
+        warning.innerText = '';
+    }
     try {
         const { data, error } = await supabaseClient
             .from('tech_tree_state')
@@ -1151,13 +1176,58 @@ async function saveState() {
 }
 
 function setStateLine(text) {
-    document.getElementById('state-line').innerText = `${text} · 已解锁 ${appState.researched_ids?.length || 0}/${techNodes.length}`;
+    const label = targetLabel || targetUid || '未选择玩家';
+    document.getElementById('state-line').innerText = `${label} · ${text} · 已解锁 ${appState.researched_ids?.length || 0}/${techNodes.length}`;
+    const targetLine = document.getElementById('target-player-line');
+    if (targetLine) targetLine.innerText = `当前档案：${label}`;
 }
 
 function showWarning(text) {
     const box = document.getElementById('storage-warning');
     box.style.display = 'block';
     box.innerText = text;
+}
+
+async function loadPlayerOptions() {
+    const select = document.getElementById('dm-player-select');
+    if (!select) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('profiles')
+            .select('id, email')
+            .order('email', { ascending: true });
+        if (error) throw error;
+
+        const rows = data && data.length
+            ? data
+            : [{ id: currentUserId, email: '当前账号' }];
+        if (!rows.some(row => row.id === targetUid)) {
+            rows.unshift({ id: targetUid, email: targetUid });
+        }
+
+        select.innerHTML = rows.map(row => {
+            const selected = row.id === targetUid ? 'selected' : '';
+            return `<option value="${escapeHTML(row.id)}" ${selected}>${escapeHTML(row.email || row.id)}</option>`;
+        }).join('');
+
+        const active = rows.find(row => row.id === targetUid);
+        targetLabel = active?.email || targetUid;
+    } catch (e) {
+        select.innerHTML = `<option value="${escapeHTML(targetUid)}">${escapeHTML(targetUid)}</option>`;
+        showWarning(`玩家列表读取失败，但仍可操作当前 URL 指定档案。错误：${e.message || e}`);
+    }
+}
+
+async function switchResearchTarget(uid) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可切换玩家科技档案');
+    if (!uid || uid === targetUid) return;
+    targetUid = uid;
+    const select = document.getElementById('dm-player-select');
+    targetLabel = select?.selectedOptions?.[0]?.textContent || uid;
+    history.replaceState(null, '', `research.html?uid=${encodeURIComponent(uid)}`);
+    await loadState();
+    renderAll();
 }
 
 function renderAll() {
@@ -1342,12 +1412,47 @@ function renderSlotAdminList() {
     list.innerHTML = (appState.slots || []).map(slot => {
         const cats = (slot.allowed_categories || []).includes('ALL') ? 'ALL / 全领域' : slot.allowed_categories.join('、');
         const tech = slot.current_research ? techById.get(slot.current_research)?.name || slot.current_research : '空闲';
+        const options = techNodes.map(node => {
+            const disabled = isSlotAllowed(slot, node.category) ? '' : 'disabled';
+            const selected = slot.current_research === node.id ? 'selected' : '';
+            return `<option value="${node.id}" ${selected} ${disabled}>${escapeHTML(node.category)} / ${escapeHTML(node.name)}</option>`;
+        }).join('');
         return `<div class="slot-card" style="margin-bottom:8px;">
             <div class="slot-name"><span>${escapeHTML(slot.name)}</span><button class="btn danger" style="padding:3px 6px;" onclick="deleteSlot('${slot.id}')">删除</button></div>
             <div class="slot-cats">${escapeHTML(cats)}</div>
             <div class="slot-work">${escapeHTML(tech)}</div>
+            <div class="slot-actions" style="display:block;">
+                <select id="slot-force-${slot.id}" style="margin-top:8px;">${options}</select>
+                <button class="btn gold" style="width:100%; margin-top:6px;" onclick="assignTechToSlot('${slot.id}')">指定此槽研发</button>
+                <button class="btn danger" style="width:100%; margin-top:6px;" onclick="clearAdminSlot('${slot.id}')">清空此槽</button>
+            </div>
         </div>`;
     }).join('');
+}
+
+async function assignTechToSlot(slotId) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const slot = appState.slots.find(s => s.id === slotId);
+    const select = document.getElementById(`slot-force-${slotId}`);
+    if (!slot || !select?.value) return;
+    const tech = techById.get(select.value);
+    if (!tech) return alert('科技不存在');
+    if (!isSlotAllowed(slot, tech.category)) return alert('该槽位不允许此科技领域');
+    appState.slots.forEach(s => {
+        if (s.current_research === tech.id) s.current_research = null;
+    });
+    slot.current_research = tech.id;
+    await saveState();
+    renderAll();
+}
+
+async function clearAdminSlot(slotId) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const slot = appState.slots.find(s => s.id === slotId);
+    if (!slot) return;
+    slot.current_research = null;
+    await saveState();
+    renderAll();
 }
 
 async function deleteSlot(slotId) {
