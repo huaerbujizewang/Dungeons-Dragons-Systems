@@ -406,6 +406,17 @@
         .emp-action-btn.recall:hover { background:#27ae60; color:#fff; }
         .emp-pending-note { text-align:left; margin:8px 0 4px; padding:8px; border:1px solid #f5d6a6; background:#fffaf2; border-radius:6px; color:#7a4c08; font-size:0.76em; line-height:1.45; word-break:break-word; }
         .emp-pending-note strong { display:block; margin-bottom:3px; color:#b76700; }
+        .status-request-field { display:flex; flex-direction:column; gap:5px; margin-bottom:10px; text-align:left; }
+        .status-request-field label { font-size:0.8em; color:#666; font-weight:bold; }
+        .status-request-field textarea { width:100%; min-height:94px; resize:vertical; box-sizing:border-box; line-height:1.6; }
+        .status-request-field textarea.compact { min-height:70px; }
+        .status-history-list { margin-top:12px; display:flex; flex-direction:column; gap:10px; }
+        .status-history-item { border:1px solid #eee; border-radius:6px; padding:10px; background:#fafafa; text-align:left; }
+        .status-history-head { display:flex; justify-content:space-between; gap:10px; margin-bottom:6px; font-size:0.82em; color:#666; }
+        .status-history-badge { flex:none; border-radius:10px; padding:1px 8px; color:#fff; font-size:0.78em; font-weight:bold; }
+        .status-history-badge.pending { background:#e67e22; }
+        .status-history-badge.approved { background:#27ae60; }
+        .status-history-badge.rejected { background:#95a5a6; }
         .review-form-row { display:flex; gap:8px; margin-bottom:10px; }
         .review-form-row input { flex:1; min-width:0; }
         .review-textarea { width:100%; min-height:92px; resize:vertical; box-sizing:border-box; line-height:1.6; }
@@ -1727,6 +1738,45 @@
     </div>
 </div>
 
+<!-- 弹窗：雇员状态申请 -->
+<div id="employee-status-request-modal" class="modal" onclick="if(event.target === this) closeModal('employee-status-request-modal')">
+    <div class="modal-box" style="width:560px; max-width:95%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+            <div>
+                <h3 id="status-request-modal-title" style="margin:0;">状态申请</h3>
+                <div id="status-request-modal-subtitle" style="font-size:0.8em; color:#7f8c8d; margin-top:4px;"></div>
+            </div>
+            <button onclick="closeModal('employee-status-request-modal')" style="background:none; border:none; color:#999; font-size:1.2em; cursor:pointer;">✕</button>
+        </div>
+
+        <div class="status-request-field">
+            <label id="status-request-reason-label" for="status-request-reason-input">申请理由</label>
+            <textarea id="status-request-reason-input" maxlength="2000" placeholder="写清楚为什么要这样调派..."></textarea>
+        </div>
+        <div id="status-request-task-wrap" class="status-request-field">
+            <label for="status-request-task-input">任务内容</label>
+            <textarea id="status-request-task-input" class="compact" maxlength="2000" placeholder="这次出差要执行什么任务？"></textarea>
+        </div>
+        <button id="status-request-submit-btn" class="review-submit-btn" onclick="submitEmployeeStatusRequest()">提交申请</button>
+    </div>
+</div>
+
+<!-- 弹窗：雇员调派履历 -->
+<div id="employee-status-history-modal" class="modal" onclick="if(event.target === this) closeModal('employee-status-history-modal')">
+    <div class="modal-box" style="width:640px; max-width:95%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+            <div>
+                <h3 id="status-history-modal-title" style="margin:0;">调派履历</h3>
+                <div style="font-size:0.8em; color:#7f8c8d; margin-top:4px;">记录此人的出差、调回、解雇申请及审批结果。</div>
+            </div>
+            <button onclick="closeModal('employee-status-history-modal')" style="background:none; border:none; color:#999; font-size:1.2em; cursor:pointer;">✕</button>
+        </div>
+        <div id="employee-status-history-list" class="status-history-list">
+            <div style="color:#999; text-align:center; padding:12px;">正在读取履历...</div>
+        </div>
+    </div>
+</div>
+
 <!-- 弹窗：核心队友简易填卡 -->
 <div id="core-sheet-editor-modal" class="modal" onclick="if(event.target === this) closeModal('core-sheet-editor-modal')">
     <div class="modal-box" style="width:900px; max-width:96%; max-height:88vh;">
@@ -2303,6 +2353,11 @@
         recall: { status: '申请调回', title: '调回申请', reasonLabel: '调回理由' },
         fire: { status: '申请解雇', title: '解雇申请', reasonLabel: '解雇理由' }
     };
+    const EMPLOYEE_STATUS_REVIEW_LABELS = {
+        pending: '待审批',
+        approved: '已批准',
+        rejected: '已驳回'
+    };
     const OMNI_POSTER_CONFIG_KEY = 'login_poster';
     let warPosterImages = [];
     let warPosterIndex = 0;
@@ -2348,6 +2403,15 @@
             ${requester}
             ${createdAt}
         `;
+    }
+
+    function renderStatusRequestReviewMeta(req) {
+        if (!req || req.status === 'pending') return '';
+        const reviewedAt = req.reviewed_at
+            ? new Date(req.reviewed_at).toLocaleString('zh-CN', { hour12:false })
+            : '';
+        const reviewer = req.reviewer_email ? ` · 审批人：${escapeHTML(req.reviewer_email)}` : '';
+        return `<div style="color:#777; margin-top:4px;">审批：${escapeHTML(EMPLOYEE_STATUS_REVIEW_LABELS[req.status] || req.status)}${reviewedAt ? ` · ${escapeHTML(reviewedAt)}` : ''}${reviewer}</div>`;
     }
 
     let authVerifyDepth = 0;
@@ -2614,6 +2678,8 @@ function isPhandalinPlayer(email) {
     let userProfile = null;
     let currentEquipTarget = { empId: null, slotIdx: null };
     let currentReviewTarget = { employeeId: null, name: '' };
+    let currentStatusRequestTarget = { employeeId: null, name: '', currentStatus: '', targetStatus: '', requestType: '' };
+    let currentStatusHistoryTarget = { employeeId: null, name: '' };
     let currentCoreSheetTarget = { employeeId: null, ownerId: null, name: '', standUrls: [] };
     let currentStandUrls = []; 
     let currentStandIndex = 0; 
@@ -2671,6 +2737,7 @@ function isPhandalinPlayer(email) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_status_change_requests', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
                 console.log('雇员状态审批有更新');
                 loadEmployees();
+                if (currentStatusHistoryTarget.employeeId) loadEmployeeStatusHistory(currentStatusHistoryTarget.employeeId);
                 if (isCurrentAdmin()) loadPendingRequests();
             })
             // 7. 监听装备栏变动 (Equipped 表)
@@ -2892,8 +2959,8 @@ function isPhandalinPlayer(email) {
                     ? `<div>${e.role || '队友'}</div>`
                     : `<div>${e.role || '雇员'} | ${e.salary} GP</div>`;
                 const pendingRequest = pendingStatusRequestMap[e.id];
-                const canControlStatus = !isCore && !isPlayer && (viewingUserId === myId || isCurrentAdmin());
-                const canFire = canControlStatus && !pendingRequest && e.status === '在职';
+                const canControlStatus = (isCore || !isPlayer) && (viewingUserId === myId || isCurrentAdmin());
+                const canFire = canControlStatus && !isCore && !isPlayer && !pendingRequest && e.status === '在职';
                 const canSendTrip = canControlStatus && !pendingRequest && e.status === '在职';
                 const canRecallTrip = canControlStatus && !pendingRequest && e.status === '出差';
                 const canEditCoreSheet = isCore && (viewingUserId === myId || isCurrentAdmin());
@@ -2930,9 +2997,10 @@ function isPhandalinPlayer(email) {
                         ${hasSheet ? `<button onclick="openDossierModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 档案</button>` : ''}
                         ${canEditCoreSheet ? `<button onclick="openCoreSheetEditor(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #16a085; background:#f0fffb; color:#16a085; border-radius:4px; cursor:pointer;">填卡</button>` : ''}
                         <button class="review-btn" onclick="openEmployeeReviewModal(${e.id}, ${jsStringAttr(e.name)})">评价</button>
-                        ${canSendTrip ? `<button class="emp-action-btn" onclick="requestBusinessTrip(${e.id})">出差</button>` : ''}
-                        ${canRecallTrip ? `<button class="emp-action-btn recall" onclick="requestTripRecall(${e.id})">调回</button>` : ''}
-                        ${canFire ? `<button class="danger-btn" onclick="requestFire(${e.id}, ${jsStringAttr(e.status)})" style="width:auto; margin-top:0;">解雇</button>` : ''}
+                        <button class="emp-action-btn" onclick="openEmployeeStatusHistoryModal(${e.id}, ${jsStringAttr(e.name)})">履历</button>
+                        ${canSendTrip ? `<button class="emp-action-btn" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请出差')">出差</button>` : ''}
+                        ${canRecallTrip ? `<button class="emp-action-btn recall" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请调回')">调回</button>` : ''}
+                        ${canFire ? `<button class="danger-btn" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请解雇')" style="width:auto; margin-top:0;">解雇</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -3084,59 +3152,71 @@ async function openEquipModal(empId, slotIdx) {
         await loadTeam();
         hideLoading();
     }
-    function collectEmployeeStatusRequestInput(requestType) {
-        const typeConfig = EMPLOYEE_STATUS_REQUEST_TYPES[requestType];
-        if (!typeConfig) return null;
-
-        const reason = prompt(`请填写${typeConfig.reasonLabel}：`);
-        if (reason === null) return null;
-        const cleanReason = reason.trim();
-        if (!cleanReason) {
-            alert(`${typeConfig.reasonLabel}不能为空。`);
-            return null;
-        }
-
-        let cleanTask = '';
-        if (requestType === 'trip') {
-            const task = prompt('请填写本次出差任务是什么：');
-            if (task === null) return null;
-            cleanTask = task.trim();
-            if (!cleanTask) {
-                alert('出差任务不能为空。');
-                return null;
-            }
-        }
-
-        return { reason: cleanReason, taskDetail: cleanTask };
-    }
-
-    async function requestEmployeeStatusChange(id, currentStatus, targetStatus, confirmText, successText) {
+    async function openEmployeeStatusRequestModal(id, employeeName, currentStatus, targetStatus) {
         const requestConfig = EMPLOYEE_STATUS_REQUESTS[targetStatus];
         if (!requestConfig) return alert('未知的雇员状态申请');
-        if (!confirm(confirmText)) return;
+        const typeConfig = EMPLOYEE_STATUS_REQUEST_TYPES[requestConfig.requestType];
 
-        const requestInput = collectEmployeeStatusRequestInput(requestConfig.requestType);
-        if (!requestInput) return;
+        currentStatusRequestTarget = {
+            employeeId: id,
+            name: employeeName || '',
+            currentStatus,
+            targetStatus,
+            requestType: requestConfig.requestType
+        };
 
+        document.getElementById('status-request-modal-title').innerText = `${requestConfig.title}${employeeName ? `：${employeeName}` : ''}`;
+        document.getElementById('status-request-modal-subtitle').innerText = `当前状态：${currentStatus} → 申请状态：${targetStatus}`;
+        document.getElementById('status-request-reason-label').innerText = typeConfig?.reasonLabel || '申请理由';
+        document.getElementById('status-request-reason-input').value = '';
+        document.getElementById('status-request-task-input').value = '';
+        document.getElementById('status-request-task-wrap').style.display = requestConfig.requestType === 'trip' ? 'flex' : 'none';
+        document.getElementById('status-request-submit-btn').disabled = false;
+        document.getElementById('employee-status-request-modal').style.display = 'flex';
+    }
+
+    async function submitEmployeeStatusRequest() {
+        const target = currentStatusRequestTarget;
+        if (!target.employeeId) return alert('请先选择要申请的角色');
+
+        const requestConfig = EMPLOYEE_STATUS_REQUESTS[target.targetStatus];
+        const typeConfig = EMPLOYEE_STATUS_REQUEST_TYPES[target.requestType];
+        if (!requestConfig || !typeConfig) return alert('未知的雇员状态申请');
+
+        const reason = document.getElementById('status-request-reason-input').value.trim();
+        const taskDetail = document.getElementById('status-request-task-input').value.trim();
+        const submitBtn = document.getElementById('status-request-submit-btn');
+
+        if (!reason) return alert(`${typeConfig.reasonLabel}不能为空。`);
+        if (reason.length > 2000) return alert(`${typeConfig.reasonLabel}不能超过 2000 个字符。`);
+        if (target.requestType === 'trip' && !taskDetail) return alert('任务内容不能为空。');
+        if (taskDetail.length > 2000) return alert('任务内容不能超过 2000 个字符。');
+
+        submitBtn.disabled = true;
         showLoading();
         try {
             const { data: emp, error: empError } = await supabaseClient
                 .from('employees')
-                .select('id, name, status')
-                .eq('id', id)
+                .select('id, name, status, role, salary')
+                .eq('id', target.employeeId)
                 .eq('user_id', viewingUserId)
                 .single();
 
             if (empError) throw empError;
-            if (!emp || emp.status !== currentStatus) {
+            if (!emp || emp.status !== target.currentStatus) {
                 alert('申请未提交：雇员状态可能已经变化，请刷新后重试。');
+                return;
+            }
+
+            if (target.requestType === 'fire' && (emp.role === '核心队友' || emp.salary === -1)) {
+                alert('核心成员或玩家角色不能申请解雇。');
                 return;
             }
 
             const { data: existingRequest, error: existingError } = await supabaseClient
                 .from('employee_status_change_requests')
                 .select('id')
-                .eq('employee_id', id)
+                .eq('employee_id', target.employeeId)
                 .eq('status', 'pending')
                 .maybeSingle();
             if (existingError) throw existingError;
@@ -3148,14 +3228,14 @@ async function openEquipModal(empId, slotIdx) {
             const { data: req, error: reqError } = await supabaseClient
                 .from('employee_status_change_requests')
                 .insert([{
-                    employee_id: id,
+                    employee_id: target.employeeId,
                     employee_owner_id: viewingUserId,
-                    employee_name: emp.name || `ID:${id}`,
+                    employee_name: emp.name || `ID:${target.employeeId}`,
                     request_type: requestConfig.requestType,
-                    original_status: currentStatus,
-                    requested_status: targetStatus,
-                    reason: requestInput.reason,
-                    task_detail: requestInput.taskDetail || null,
+                    original_status: target.currentStatus,
+                    requested_status: target.targetStatus,
+                    reason,
+                    task_detail: target.requestType === 'trip' ? taskDetail : null,
                     requester_email: currentUserEmail || null
                 }])
                 .select('id')
@@ -3164,10 +3244,10 @@ async function openEquipModal(empId, slotIdx) {
 
             const { data: updatedEmp, error: updateError } = await supabaseClient
                 .from('employees')
-                .update({ status: targetStatus })
-                .eq('id', id)
+                .update({ status: target.targetStatus })
+                .eq('id', target.employeeId)
                 .eq('user_id', viewingUserId)
-                .eq('status', currentStatus)
+                .eq('status', target.currentStatus)
                 .select('id, name')
                 .maybeSingle();
 
@@ -3177,28 +3257,81 @@ async function openEquipModal(empId, slotIdx) {
                 return;
             }
 
-            logAction('雇员状态申请', `申请将雇员 [${emp.name || id}] 的状态改为 [${targetStatus}]，理由：${requestInput.reason}`)
+            logAction('雇员状态申请', `申请将雇员 [${emp.name || target.employeeId}] 的状态改为 [${target.targetStatus}]，理由：${reason}`)
                 .catch(e => console.error('日志写入失败', e));
-            alert(successText);
+            alert(`${requestConfig.title}已提交，等待 DM 审批。`);
+            closeModal('employee-status-request-modal');
             await loadEmployees();
         } catch (e) {
             console.error(e);
             alert('申请提交失败：' + (e.message || '网络错误，请确认 employee_status_change_requests 表已创建'));
         } finally {
+            submitBtn.disabled = false;
             hideLoading();
         }
     }
 
     async function requestFire(id, currentStatus = '在职') {
-        await requestEmployeeStatusChange(id, currentStatus, '申请解雇', '确定申请解雇该雇员？提交后需等待 DM 批准。', '解雇申请已提交，等待 DM 审批。');
+        await openEmployeeStatusRequestModal(id, '', currentStatus, '申请解雇');
     }
 
     async function requestBusinessTrip(id) {
-        await requestEmployeeStatusChange(id, '在职', '申请出差', '确定申请让该雇员出差？提交后需等待 DM 批准。', '出差申请已提交，等待 DM 审批。');
+        await openEmployeeStatusRequestModal(id, '', '在职', '申请出差');
     }
 
     async function requestTripRecall(id) {
-        await requestEmployeeStatusChange(id, '出差', '申请调回', '确定申请调回该雇员？提交后需等待 DM 批准。', '调回申请已提交，等待 DM 审批。');
+        await openEmployeeStatusRequestModal(id, '', '出差', '申请调回');
+    }
+
+    async function openEmployeeStatusHistoryModal(employeeId, employeeName) {
+        currentStatusHistoryTarget = { employeeId, name: employeeName || '未知角色' };
+        document.getElementById('status-history-modal-title').innerText = `调派履历：${currentStatusHistoryTarget.name}`;
+        document.getElementById('employee-status-history-list').innerHTML = '<div style="color:#999; text-align:center; padding:12px;">正在读取履历...</div>';
+        document.getElementById('employee-status-history-modal').style.display = 'flex';
+        await loadEmployeeStatusHistory(employeeId);
+    }
+
+    async function loadEmployeeStatusHistory(employeeId) {
+        const list = document.getElementById('employee-status-history-list');
+        if (!list) return;
+
+        const { data, error } = await supabaseClient
+            .from('employee_status_change_requests')
+            .select('*')
+            .eq('employee_id', employeeId)
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (error) {
+            console.error('读取调派履历失败:', error);
+            list.innerHTML = `<div style="color:#e74c3c; text-align:center; padding:12px;">履历读取失败：${escapeHTML(error.message)}。请确认 employee_status_change_requests 表已创建。</div>`;
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            list.innerHTML = '<div style="color:#999; text-align:center; padding:12px;">还没有调派履历。</div>';
+            return;
+        }
+
+        list.innerHTML = data.map(req => {
+            const typeConfig = EMPLOYEE_STATUS_REQUEST_TYPES[req.request_type] || {};
+            const createdAt = req.created_at
+                ? new Date(req.created_at).toLocaleString('zh-CN', { hour12:false })
+                : '';
+            const label = EMPLOYEE_STATUS_REVIEW_LABELS[req.status] || req.status || '未知';
+            const statusClass = ['pending', 'approved', 'rejected'].includes(req.status) ? req.status : 'pending';
+            const reviewMeta = renderStatusRequestReviewMeta(req);
+            return `
+                <div class="status-history-item">
+                    <div class="status-history-head">
+                        <strong>${escapeHTML(typeConfig.title || req.requested_status || '状态申请')} · ${escapeHTML(req.original_status || '')} → ${escapeHTML(req.requested_status || '')}</strong>
+                        <span class="status-history-badge ${statusClass}">${escapeHTML(label)}</span>
+                    </div>
+                    <div class="emp-pending-note" style="margin:0;">${renderStatusRequestDetail(req, { showRequester: true })}${reviewMeta}</div>
+                    <div style="font-size:0.75em; color:#888; margin-top:6px;">提交时间：${escapeHTML(createdAt)}</div>
+                </div>
+            `;
+        }).join('');
     }
     
     // 基础加载 (修复背包分类)
@@ -4553,7 +4686,7 @@ async function loadGold() {
             const requestConfig = EMPLOYEE_STATUS_REQUESTS[req.requested_status];
             if (!requestConfig) throw new Error('未知的雇员状态申请');
 
-            const newStatus = isApproved ? requestConfig.approveStatus : requestConfig.rejectStatus;
+            const newStatus = isApproved ? requestConfig.approveStatus : (req.original_status || requestConfig.rejectStatus);
             
             const { data, error } = await supabaseClient
                 .from('employees')
@@ -4585,6 +4718,7 @@ async function loadGold() {
             alert('处理完成');
             loadPendingRequests(); // 刷新审批列表
             loadEmployees();       // 刷新雇员显示
+            if (currentStatusHistoryTarget.employeeId) loadEmployeeStatusHistory(currentStatusHistoryTarget.employeeId);
         } catch (e) {
             console.error(e);
             alert('操作失败：' + (e.message || '网络错误'));
