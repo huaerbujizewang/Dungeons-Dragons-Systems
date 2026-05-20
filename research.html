@@ -146,6 +146,46 @@
             box-shadow: inset 3px 0 0 var(--blue);
         }
 
+        .era-tabs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .era-btn {
+            min-height: 48px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.035);
+            color: var(--text);
+            border-radius: 4px;
+            padding: 7px 8px;
+            text-align: left;
+        }
+
+        .era-btn strong {
+            display: block;
+            font-size: 0.82rem;
+            margin-bottom: 3px;
+        }
+
+        .era-btn span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.68rem;
+            line-height: 1.25;
+        }
+
+        .era-btn.active {
+            border-color: rgba(88,166,255,0.85);
+            background: rgba(88,166,255,0.15);
+            box-shadow: inset 0 -2px 0 var(--blue);
+        }
+
+        .era-btn.empty {
+            opacity: 0.68;
+        }
+
         .category-count {
             color: var(--muted);
             font-size: 0.75rem;
@@ -177,6 +217,12 @@
             flex-wrap: wrap;
             color: var(--muted);
             font-size: 0.78rem;
+        }
+
+        .era-line {
+            color: #aab7c8;
+            font-size: 0.78rem;
+            margin-bottom: 7px;
         }
 
         .legend span {
@@ -294,7 +340,67 @@
         .tech-chip { border:1px solid rgba(255,255,255,0.12); border-radius:999px; padding:2px 7px; background:rgba(0,0,0,0.16); }
         .tech-state { font-size:0.75rem; color:#dcecff; margin-bottom:8px; }
         .tech-prereq { color: var(--muted); font-size:0.72rem; line-height:1.45; }
+        .prereq-row {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 5px;
+            align-items: start;
+        }
+        .prereq-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .prereq-link {
+            border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(0,0,0,0.18);
+            color: #dcecff;
+            border-radius: 4px;
+            padding: 3px 5px;
+            font-size: 0.7rem;
+            line-height: 1.2;
+            cursor: pointer;
+            text-align: left;
+        }
+        .prereq-link span {
+            display: block;
+            color: #8fa0b6;
+            font-size: 0.62rem;
+            margin-top: 1px;
+        }
+        .prereq-link.researched {
+            border-color: rgba(85,209,125,0.55);
+            color: #d8ffe1;
+        }
+        .prereq-link.missing {
+            border-color: rgba(217,164,65,0.65);
+            color: #ffd89c;
+        }
         .node-action { margin-top:10px; width:100%; padding:7px 8px; font-size:0.78rem; }
+
+        .tech-node.dm-click-unlock {
+            cursor: crosshair;
+            box-shadow: 0 0 0 1px rgba(217,164,65,0.2), 0 12px 24px rgba(0,0,0,0.28);
+        }
+
+        .focus-pulse {
+            animation: focusPulse 1.2s ease-out 2;
+        }
+
+        @keyframes focusPulse {
+            0% { box-shadow: 0 0 0 0 rgba(119,183,255,0.8), 0 12px 24px rgba(0,0,0,0.28); }
+            100% { box-shadow: 0 0 0 14px rgba(119,183,255,0), 0 12px 24px rgba(0,0,0,0.28); }
+        }
+
+        .empty-era {
+            color: var(--muted);
+            border: 1px dashed rgba(255,255,255,0.16);
+            background: rgba(255,255,255,0.025);
+            border-radius: 4px;
+            padding: 14px;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
 
         .link-path {
             fill: none;
@@ -398,12 +504,14 @@
             <div class="panel-title">科研槽位</div>
             <section id="slot-strip" class="slot-strip"></section>
             <div class="panel-title">科技领域</div>
+            <div id="era-tabs" class="era-tabs"></div>
             <div id="category-menu"></div>
         </aside>
 
         <main class="main">
             <section class="category-header">
                 <h2 id="category-title">科技树</h2>
+                <div class="era-line" id="era-line">时代 / 页面</div>
                 <div class="legend">
                     <span>暗色虚线：Locked</span>
                     <span>蓝框：Available</span>
@@ -424,6 +532,12 @@
             <div class="panel-title">DM 控制面板</div>
             <div class="slot-cats" id="dm-role-line" style="margin-bottom:10px;">正在验证权限...</div>
             <div class="warning" id="storage-warning"></div>
+
+            <div class="control-section">
+                <h3>DM 快捷操作</h3>
+                <button class="btn" id="dm-click-unlock-btn" style="width:100%;" onclick="toggleDmClickUnlockMode()">点击解锁模式：关闭</button>
+                <div class="slot-cats" id="dm-click-unlock-line" style="margin-top:8px;">开启后，点击科技节点即可为当前玩家强制解锁。</div>
+            </div>
 
             <div class="control-section">
                 <h3>玩家科技档案</h3>
@@ -1004,16 +1118,26 @@ const stateLabels = {
     Researched: 'Researched / 已解锁'
 };
 
+const ERA_DEFS = [
+    { id: 'medieval', name: '中世纪', start: 1, end: 16, pageLabel: '1—16' },
+    { id: 'earlyModern', name: '近代', start: 17, end: 77, pageLabel: '17—77' },
+    { id: 'modern', name: '现代', start: null, end: null, pageLabel: '待补充' },
+    { id: 'future', name: '未来', start: null, end: null, pageLabel: '待补充' }
+];
+
 let categories = Object.keys(RAW_TECH);
 let techNodes = [];
 let techById = new Map();
 let idByName = new Map();
+let categoryMeta = new Map();
 let selectedCategory = categories[0];
+let selectedEra = 'medieval';
 let currentUserId = null;
 let targetUid = null;
 let targetLabel = '';
 let currentUserRole = 'player';
 let persistenceMode = 'supabase';
+let dmClickUnlockMode = false;
 let appState = { researched_ids: [], slots: [] };
 
 function escapeHTML(value) {
@@ -1022,13 +1146,24 @@ function escapeHTML(value) {
     }[ch]));
 }
 
+function getEraByPage(page) {
+    return ERA_DEFS.find(era => era.start !== null && page >= era.start && page <= era.end) || ERA_DEFS[0];
+}
+
 function buildTechData() {
+    techNodes = [];
+    techById = new Map();
+    idByName = new Map();
+    categoryMeta = new Map();
     let seq = 1;
-    categories.forEach(category => {
+    categories.forEach((category, index) => {
+        const page = index + 1;
+        const era = getEraByPage(page);
+        categoryMeta.set(category, { page, era: era.id, eraName: era.name });
         RAW_TECH[category].forEach(([name, prereqNames, days]) => {
             const id = `tech_${String(seq++).padStart(3, '0')}`;
             idByName.set(name, id);
-            techNodes.push({ id, name, category, prereqNames, prerequisites: [], base_days: days, depth: 0 });
+            techNodes.push({ id, name, category, prereqNames, prerequisites: [], base_days: days, depth: 0, page, era: era.id });
         });
     });
 
@@ -1087,6 +1222,7 @@ function getTechState(node) {
 
 async function init() {
     buildTechData();
+    renderEraTabs();
     renderCategoryMenu();
     renderSlotCategoryChecks();
     renderForceSelect();
@@ -1240,26 +1376,58 @@ async function switchResearchTarget(uid) {
 }
 
 function renderAll() {
+    renderEraTabs();
     renderCategoryMenu();
     renderSlots();
     renderTechTree();
     renderSlotAdminList();
+    renderDmClickUnlockMode();
     setStateLine(persistenceMode === 'supabase' ? 'Supabase 档案已连接' : '本机缓存模式');
 }
 
-function renderCategoryMenu() {
-    const menu = document.getElementById('category-menu');
-    menu.innerHTML = categories.map(category => {
-        const count = techNodes.filter(t => t.category === category).length;
-        return `<button class="category-btn ${category === selectedCategory ? 'active' : ''}" onclick="selectCategory('${category}')">
-            <span>${CATEGORY_ICONS[category] || '◇'} ${escapeHTML(category)}</span>
-            <span class="category-count">${count}</span>
+function renderEraTabs() {
+    const tabs = document.getElementById('era-tabs');
+    tabs.innerHTML = ERA_DEFS.map(era => {
+        const count = categories.filter(category => categoryMeta.get(category)?.era === era.id).length;
+        const label = count ? `${count} 页 / ${era.pageLabel}` : '暂无页面';
+        return `<button class="era-btn ${era.id === selectedEra ? 'active' : ''} ${count ? '' : 'empty'}" onclick="selectEra('${era.id}')">
+            <strong>${escapeHTML(era.name)}</strong>
+            <span>${escapeHTML(label)}</span>
         </button>`;
     }).join('');
 }
 
+function renderCategoryMenu() {
+    const menu = document.getElementById('category-menu');
+    const eraCategories = categories.filter(category => categoryMeta.get(category)?.era === selectedEra);
+    if (!eraCategories.length) {
+        selectedCategory = null;
+        const era = ERA_DEFS.find(item => item.id === selectedEra);
+        menu.innerHTML = `<div class="empty-era">${escapeHTML(era?.name || '该时代')}科技页尚未录入。先留空，后续补节点时会自动出现在这里。</div>`;
+        return;
+    }
+
+    if (!selectedCategory || !eraCategories.includes(selectedCategory)) selectedCategory = eraCategories[0];
+    menu.innerHTML = eraCategories.map(category => {
+        const count = techNodes.filter(t => t.category === category).length;
+        const meta = categoryMeta.get(category);
+        return `<button class="category-btn ${category === selectedCategory ? 'active' : ''}" onclick="selectCategory('${category}')">
+            <span>${CATEGORY_ICONS[category] || '◇'} ${escapeHTML(category)}</span>
+            <span class="category-count">${meta?.page || '-'} / ${count}</span>
+        </button>`;
+    }).join('');
+}
+
+function selectEra(eraId) {
+    selectedEra = eraId;
+    const eraCategories = categories.filter(category => categoryMeta.get(category)?.era === selectedEra);
+    selectedCategory = eraCategories[0] || null;
+    renderAll();
+}
+
 function selectCategory(category) {
     selectedCategory = category;
+    selectedEra = categoryMeta.get(category)?.era || selectedEra;
     renderAll();
 }
 
@@ -1284,7 +1452,20 @@ function renderSlots() {
 }
 
 function renderTechTree() {
+    const era = ERA_DEFS.find(item => item.id === selectedEra);
+    if (!selectedCategory) {
+        document.getElementById('category-title').innerText = `${era?.name || '科技树'} / 暂无科技`;
+        document.getElementById('era-line').innerText = '该时代尚未录入科技节点';
+        document.getElementById('link-layer').innerHTML = '';
+        const columns = document.getElementById('tech-columns');
+        columns.style.gridTemplateColumns = 'minmax(280px, 520px)';
+        columns.innerHTML = `<div class="empty-era">现代和未来时代已经预留入口；等你给出节点后，可以直接加入 RAW_TECH 并分配页码。</div>`;
+        return;
+    }
+
     document.getElementById('category-title').innerText = `${CATEGORY_ICONS[selectedCategory] || '◇'} ${selectedCategory}`;
+    const meta = categoryMeta.get(selectedCategory);
+    document.getElementById('era-line').innerText = `${meta?.eraName || era?.name || '时代'} · 第 ${meta?.page || '-'} 页 · 点击前置标识可跳转`;
     const nodes = techNodes.filter(t => t.category === selectedCategory);
     const depths = Array.from(new Set(nodes.map(n => n.depth))).sort((a, b) => a - b);
     const columns = document.getElementById('tech-columns');
@@ -1301,34 +1482,53 @@ function renderTechTree() {
 
 function renderNode(node) {
     const state = getTechState(node);
-    const prereqText = node.prereqNames.length ? node.prereqNames.join('、') : '无';
+    const prereqText = node.prereqNames.length
+        ? node.prereqNames.map(name => renderPrereqBadge(name)).join('')
+        : '<span>无</span>';
     const missingText = node.missingPrerequisites.length
         ? `<div class="tech-prereq" style="color:#ffd89c;">缺失前置定义：${escapeHTML(node.missingPrerequisites.join('、'))}</div>`
         : '';
     const action = state === 'Available'
-        ? `<button class="btn node-action" onclick="startResearch('${node.id}')">挂载研发</button>`
+        ? `<button class="btn node-action" onclick="event.stopPropagation(); startResearch('${node.id}')">挂载研发</button>`
         : state === 'Locked'
             ? `<button class="btn node-action" disabled>前置未满足</button>`
             : state === 'Researching'
                 ? `<button class="btn gold node-action" disabled>槽位研发中</button>`
                 : `<button class="btn good node-action" disabled>已解锁</button>`;
+    const clickUnlockClass = dmClickUnlockMode && ['dm', 'root'].includes(currentUserRole) ? ' dm-click-unlock' : '';
 
-    return `<article class="tech-node ${state.toLowerCase()}" id="node-${node.id}" data-tech-id="${node.id}">
+    return `<article class="tech-node ${state.toLowerCase()}${clickUnlockClass}" id="node-${node.id}" data-tech-id="${node.id}" onclick="handleTechNodeClick(event, '${node.id}')">
         <div class="tech-name">${escapeHTML(node.name)}</div>
         <div class="tech-meta">
             <span class="tech-chip">${node.base_days} 天</span>
             <span class="tech-chip">${escapeHTML(node.category)}</span>
         </div>
         <div class="tech-state">${stateLabels[state]}</div>
-        <div class="tech-prereq">前置：${escapeHTML(prereqText)}</div>
+        <div class="tech-prereq prereq-row"><span>前置：</span><div class="prereq-list">${prereqText}</div></div>
         ${missingText}
         ${action}
     </article>`;
 }
 
+function renderPrereqBadge(name) {
+    const id = idByName.get(name);
+    if (!id) return `<span class="prereq-link missing">${escapeHTML(name)}<span>缺失定义</span></span>`;
+    const node = techById.get(id);
+    const meta = categoryMeta.get(node.category);
+    const state = getTechState(node).toLowerCase();
+    const title = `${node.category} · 第 ${meta?.page || '-'} 页 · Depth ${node.depth}`;
+    return `<button type="button" class="prereq-link ${state}" title="${escapeHTML(title)}" onclick="jumpToPrerequisite(event, '${id}')">
+        ${escapeHTML(name)}<span>${escapeHTML(meta?.eraName || '')} / ${escapeHTML(node.category)} / P${meta?.page || '-'}</span>
+    </button>`;
+}
+
 function drawLinks() {
     const board = document.getElementById('tree-board');
     const svg = document.getElementById('link-layer');
+    if (!selectedCategory) {
+        svg.innerHTML = '';
+        return;
+    }
     const nodes = techNodes.filter(t => t.category === selectedCategory);
     const visibleIds = new Set(nodes.map(n => n.id));
     svg.setAttribute('width', board.scrollWidth);
@@ -1356,6 +1556,58 @@ function drawLinks() {
             svg.appendChild(path);
         });
     });
+}
+
+function jumpToPrerequisite(event, techId) {
+    event.stopPropagation();
+    const node = techById.get(techId);
+    if (!node) return;
+    selectedCategory = node.category;
+    selectedEra = categoryMeta.get(node.category)?.era || selectedEra;
+    renderAll();
+    requestAnimationFrame(() => {
+        const el = document.getElementById(`node-${techId}`);
+        if (!el) return;
+        el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+        el.classList.add('focus-pulse');
+        window.setTimeout(() => el.classList.remove('focus-pulse'), 2400);
+    });
+}
+
+async function handleTechNodeClick(event, techId) {
+    if (!dmClickUnlockMode || !['dm', 'root'].includes(currentUserRole)) return;
+    if (event.target.closest('.prereq-link') || event.target.closest('.node-action')) return;
+    await forceUnlockTechId(techId);
+}
+
+function toggleDmClickUnlockMode() {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    dmClickUnlockMode = !dmClickUnlockMode;
+    renderDmClickUnlockMode();
+    renderTechTree();
+}
+
+function renderDmClickUnlockMode() {
+    const btn = document.getElementById('dm-click-unlock-btn');
+    const line = document.getElementById('dm-click-unlock-line');
+    if (!btn || !line) return;
+    btn.textContent = dmClickUnlockMode ? '点击解锁模式：开启' : '点击解锁模式：关闭';
+    btn.classList.toggle('gold', dmClickUnlockMode);
+    line.textContent = dmClickUnlockMode
+        ? `当前目标：${targetLabel || targetUid || '未选择玩家'}。点击任意科技节点会立刻强制解锁。`
+        : '开启后，点击科技节点即可为当前玩家强制解锁。';
+}
+
+async function forceUnlockTechId(id) {
+    if (!['dm', 'root'].includes(currentUserRole)) return false;
+    if (!id || !techById.has(id)) return false;
+    if (!appState.researched_ids.includes(id)) appState.researched_ids.push(id);
+    appState.slots.forEach(slot => {
+        if (slot.current_research === id) slot.current_research = null;
+    });
+    await saveState();
+    renderAll();
+    return true;
 }
 
 async function startResearch(techId) {
@@ -1495,12 +1747,7 @@ async function forceUnlockSelected() {
     if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
     const id = document.getElementById('force-tech-select').value;
     if (!id) return;
-    if (!appState.researched_ids.includes(id)) appState.researched_ids.push(id);
-    appState.slots.forEach(slot => {
-        if (slot.current_research === id) slot.current_research = null;
-    });
-    await saveState();
-    renderAll();
+    await forceUnlockTechId(id);
 }
 
 async function forceUnlockDepthExact() {
