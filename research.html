@@ -254,6 +254,25 @@
         .slot-name { display:flex; justify-content:space-between; gap:8px; font-weight:bold; color:#f1f6ff; font-size:0.86rem; }
         .slot-cats { color: var(--muted); font-size:0.72rem; margin-top:4px; line-height:1.4; }
         .slot-work { margin-top:8px; font-size:0.78rem; color:#c8d8ea; }
+        .slot-progress {
+            height: 8px;
+            margin-top: 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.28);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .slot-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, rgba(88,166,255,0.9), rgba(85,209,125,0.9));
+            box-shadow: 0 0 10px rgba(88,166,255,0.35);
+        }
+        .slot-progress-text {
+            margin-top: 5px;
+            color: #aab7c8;
+            font-size: 0.7rem;
+        }
         .slot-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
         .slot-actions .btn { padding:5px 7px; font-size:0.72rem; }
 
@@ -536,7 +555,7 @@
             <div class="control-section">
                 <h3>DM 快捷操作</h3>
                 <button class="btn" id="dm-click-unlock-btn" style="width:100%;" onclick="toggleDmClickUnlockMode()">点击解锁模式：关闭</button>
-                <div class="slot-cats" id="dm-click-unlock-line" style="margin-top:8px;">开启后，点击科技节点即可为当前玩家强制解锁。</div>
+                <div class="slot-cats" id="dm-click-unlock-line" style="margin-top:8px;">开启后，点击科技节点即可为当前玩家解锁或取消解锁。</div>
             </div>
 
             <div class="control-section">
@@ -1192,8 +1211,38 @@ function buildTechData() {
 function defaultSlots() {
     return [
         { id: 'slot_1', name: '通用槽', allowed_categories: ['ALL'], current_research: null },
-        { id: 'slot_2', name: '军工专修槽', allowed_categories: ['武器与防具', '攻城、火器与爆破'], current_research: idByName.get('链甲') || null }
+        createResearchSlot('slot_2', '军工专修槽', ['武器与防具', '攻城、火器与爆破'], idByName.get('链甲') || null)
     ];
+}
+
+function createResearchSlot(id, name, allowedCategories, techId = null) {
+    const tech = techId ? techById.get(techId) : null;
+    return {
+        id,
+        name,
+        allowed_categories: allowedCategories,
+        current_research: tech ? tech.id : null,
+        progress_days: 0,
+        research_total_days: tech ? tech.base_days : null,
+        research_started_at: tech ? new Date().toISOString() : null,
+        research_name: tech ? tech.name : null
+    };
+}
+
+function clearSlotResearch(slot) {
+    slot.current_research = null;
+    slot.progress_days = 0;
+    slot.research_total_days = null;
+    slot.research_started_at = null;
+    slot.research_name = null;
+}
+
+function setSlotResearch(slot, tech) {
+    slot.current_research = tech.id;
+    slot.progress_days = 0;
+    slot.research_total_days = tech.base_days;
+    slot.research_started_at = new Date().toISOString();
+    slot.research_name = tech.name;
 }
 
 function researchedSet() {
@@ -1284,15 +1333,27 @@ async function loadState() {
         if (error) throw error;
         appState = data || { researched_ids: [], slots: defaultSlots() };
         if (!appState.slots || appState.slots.length === 0) appState.slots = defaultSlots();
+        const shouldSaveMetadata = hasSlotMissingProgressMetadata();
+        normalizeState();
         persistenceMode = 'supabase';
         setStateLine('Supabase 档案已连接');
+        if (shouldSaveMetadata) await saveState();
     } catch (e) {
         persistenceMode = 'local';
         const cached = localStorage.getItem(localKey);
         appState = cached ? JSON.parse(cached) : { researched_ids: [], slots: defaultSlots() };
+        const shouldSaveMetadata = hasSlotMissingProgressMetadata();
+        normalizeState();
         showWarning(`科技树状态表未就绪，当前使用本机缓存。请执行 tech_tree_state.sql。错误：${e.message || e}`);
         setStateLine('本机缓存模式');
+        if (shouldSaveMetadata) await saveState();
     }
+}
+
+function hasSlotMissingProgressMetadata() {
+    return (appState.slots || []).some(slot =>
+        slot.current_research && (slot.progress_days === undefined || !slot.research_total_days)
+    );
 }
 
 async function saveState() {
@@ -1436,8 +1497,15 @@ function renderSlots() {
     strip.innerHTML = (appState.slots || []).map(slot => {
         const tech = slot.current_research ? techById.get(slot.current_research) : null;
         const cats = (slot.allowed_categories || []).includes('ALL') ? 'ALL / 全领域' : slot.allowed_categories.join('、');
+        const done = tech ? Math.min(Number(slot.progress_days) || 0, Number(slot.research_total_days) || tech.base_days) : 0;
+        const total = tech ? (Number(slot.research_total_days) || tech.base_days) : 0;
+        const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
         const work = tech
-            ? `<div class="slot-work">研发中：<b>${escapeHTML(tech.name)}</b> · ${tech.base_days} 天</div>
+            ? `<div class="slot-work">研发中：<b>${escapeHTML(tech.name)}</b></div>
+               <div class="slot-progress" title="${done}/${total} 天">
+                   <div class="slot-progress-fill" style="width:${pct}%"></div>
+               </div>
+               <div class="slot-progress-text">${done} / ${total} 天 · ${pct}%</div>
                <div class="slot-actions">
                    <button class="btn good" onclick="completeResearch('${slot.id}')">完成研究</button>
                    <button class="btn danger" onclick="cancelSlotResearch('${slot.id}')">撤销挂载</button>
@@ -1577,7 +1645,7 @@ function jumpToPrerequisite(event, techId) {
 async function handleTechNodeClick(event, techId) {
     if (!dmClickUnlockMode || !['dm', 'root'].includes(currentUserRole)) return;
     if (event.target.closest('.prereq-link') || event.target.closest('.node-action')) return;
-    await forceUnlockTechId(techId);
+    await forceToggleTechId(techId);
 }
 
 function toggleDmClickUnlockMode() {
@@ -1594,8 +1662,8 @@ function renderDmClickUnlockMode() {
     btn.textContent = dmClickUnlockMode ? '点击解锁模式：开启' : '点击解锁模式：关闭';
     btn.classList.toggle('gold', dmClickUnlockMode);
     line.textContent = dmClickUnlockMode
-        ? `当前目标：${targetLabel || targetUid || '未选择玩家'}。点击任意科技节点会立刻强制解锁。`
-        : '开启后，点击科技节点即可为当前玩家强制解锁。';
+        ? `当前目标：${targetLabel || targetUid || '未选择玩家'}。点击未解锁科技会解锁，点击已解锁科技会取消并重算后续依赖。`
+        : '开启后，点击科技节点即可为当前玩家解锁或取消解锁。';
 }
 
 async function forceUnlockTechId(id) {
@@ -1603,7 +1671,39 @@ async function forceUnlockTechId(id) {
     if (!id || !techById.has(id)) return false;
     if (!appState.researched_ids.includes(id)) appState.researched_ids.push(id);
     appState.slots.forEach(slot => {
-        if (slot.current_research === id) slot.current_research = null;
+        if (slot.current_research === id) clearSlotResearch(slot);
+    });
+    await saveState();
+    renderAll();
+    return true;
+}
+
+async function forceToggleTechId(id) {
+    if (researchedSet().has(id)) return forceCancelTechId(id, false);
+    return forceUnlockTechId(id);
+}
+
+async function forceCancelTechId(id, askConfirm = true) {
+    if (!['dm', 'root'].includes(currentUserRole)) return false;
+    if (!id || !techById.has(id)) return false;
+    const node = techById.get(id);
+    if (askConfirm && !confirm(`确定取消「${node?.name || id}」的解锁？依赖它且前置不再满足的后续科技也会失效。`)) return false;
+    const set = researchedSet();
+    set.delete(id);
+    let changed = true;
+    while (changed) {
+        changed = false;
+        techNodes.forEach(tech => {
+            if (set.has(tech.id) && !prereqsMet(tech, set)) {
+                set.delete(tech.id);
+                changed = true;
+            }
+        });
+    }
+    appState.researched_ids = techNodes.filter(node => set.has(node.id)).map(node => node.id);
+    appState.slots.forEach(slot => {
+        const tech = techById.get(slot.current_research);
+        if (tech && !prereqsMet(tech, set)) clearSlotResearch(slot);
     });
     await saveState();
     renderAll();
@@ -1618,7 +1718,7 @@ async function startResearch(techId) {
         alert('无对应领域的可用科研槽');
         return;
     }
-    slot.current_research = techId;
+    setSlotResearch(slot, node);
     await saveState();
     renderAll();
 }
@@ -1628,7 +1728,7 @@ async function completeResearch(slotId) {
     if (!slot?.current_research) return;
     const techId = slot.current_research;
     if (!appState.researched_ids.includes(techId)) appState.researched_ids.push(techId);
-    slot.current_research = null;
+    clearSlotResearch(slot);
     await saveState();
     renderAll();
 }
@@ -1637,7 +1737,7 @@ async function cancelSlotResearch(slotId) {
     const slot = appState.slots.find(s => s.id === slotId);
     if (!slot?.current_research) return;
     if (!confirm('确定撤销该槽位当前研发？')) return;
-    slot.current_research = null;
+    clearSlotResearch(slot);
     await saveState();
     renderAll();
 }
@@ -1659,7 +1759,7 @@ async function addSlot() {
     const selected = Array.from(document.querySelectorAll('#slot-category-checks input:checked')).map(i => i.value);
     const allowed = all ? ['ALL'] : selected;
     if (allowed.length === 0) return alert('请选择至少一个允许领域，或勾选 ALL');
-    appState.slots.push({ id: `slot_${Date.now()}`, name, allowed_categories: allowed, current_research: null });
+    appState.slots.push(createResearchSlot(`slot_${Date.now()}`, name, allowed, null));
     document.getElementById('new-slot-name').value = '';
     document.getElementById('new-slot-all').checked = false;
     document.querySelectorAll('#slot-category-checks input').forEach(i => { i.checked = false; i.disabled = false; });
@@ -1672,7 +1772,11 @@ function renderSlotAdminList() {
     if (!list) return;
     list.innerHTML = (appState.slots || []).map(slot => {
         const cats = (slot.allowed_categories || []).includes('ALL') ? 'ALL / 全领域' : slot.allowed_categories.join('、');
-        const tech = slot.current_research ? techById.get(slot.current_research)?.name || slot.current_research : '空闲';
+        const techNode = slot.current_research ? techById.get(slot.current_research) : null;
+        const total = techNode ? (Number(slot.research_total_days) || techNode.base_days) : 0;
+        const done = techNode ? Math.min(Number(slot.progress_days) || 0, total) : 0;
+        const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+        const tech = techNode ? `${techNode.name} · ${done}/${total} 天 · ${pct}%` : '空闲';
         const options = techNodes.map(node => {
             const disabled = isSlotAllowed(slot, node.category) ? '' : 'disabled';
             const selected = slot.current_research === node.id ? 'selected' : '';
@@ -1700,9 +1804,9 @@ async function assignTechToSlot(slotId) {
     if (!tech) return alert('科技不存在');
     if (!isSlotAllowed(slot, tech.category)) return alert('该槽位不允许此科技领域');
     appState.slots.forEach(s => {
-        if (s.current_research === tech.id) s.current_research = null;
+        if (s.current_research === tech.id) clearSlotResearch(s);
     });
-    slot.current_research = tech.id;
+    setSlotResearch(slot, tech);
     await saveState();
     renderAll();
 }
@@ -1711,7 +1815,7 @@ async function clearAdminSlot(slotId) {
     if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
     const slot = appState.slots.find(s => s.id === slotId);
     if (!slot) return;
-    slot.current_research = null;
+    clearSlotResearch(slot);
     await saveState();
     renderAll();
 }
@@ -1776,7 +1880,7 @@ async function forceUnlockByDepth(throughDepth) {
 
     const affectedIds = new Set(newlyUnlocked.map(node => node.id));
     appState.slots.forEach(slot => {
-        if (affectedIds.has(slot.current_research)) slot.current_research = null;
+        if (affectedIds.has(slot.current_research)) clearSlotResearch(slot);
     });
 
     await saveState();
@@ -1787,37 +1891,27 @@ async function forceUnresearchSelected() {
     if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
     const id = document.getElementById('force-tech-select').value;
     if (!id) return;
-    const node = techById.get(id);
-    if (!confirm(`确定取消「${node?.name || id}」的解锁？依赖它且前置不再满足的后续科技也会失效。`)) return;
-    const set = researchedSet();
-    set.delete(id);
-    let changed = true;
-    while (changed) {
-        changed = false;
-        techNodes.forEach(tech => {
-            if (set.has(tech.id) && !prereqsMet(tech, set)) {
-                set.delete(tech.id);
-                changed = true;
-            }
-        });
-    }
-    appState.researched_ids = Array.from(set);
-    appState.slots.forEach(slot => {
-        const tech = techById.get(slot.current_research);
-        if (tech && !prereqsMet(tech, set)) slot.current_research = null;
-    });
-    await saveState();
-    renderAll();
+    await forceCancelTechId(id, true);
 }
 
 function normalizeState() {
     appState.researched_ids = Array.from(new Set((appState.researched_ids || []).filter(id => techById.has(id))));
-    appState.slots = (appState.slots || []).map(slot => ({
-        id: slot.id || `slot_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        name: slot.name || '未命名科研槽',
-        allowed_categories: slot.allowed_categories?.length ? slot.allowed_categories : ['ALL'],
-        current_research: techById.has(slot.current_research) ? slot.current_research : null
-    }));
+    appState.slots = (appState.slots || []).map(slot => {
+        const current = techById.has(slot.current_research) ? slot.current_research : null;
+        const tech = current ? techById.get(current) : null;
+        const progress = Math.max(0, Number(slot.progress_days) || 0);
+        const total = tech ? (Number(slot.research_total_days) || tech.base_days) : null;
+        return {
+            id: slot.id || `slot_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+            name: slot.name || '未命名科研槽',
+            allowed_categories: slot.allowed_categories?.length ? slot.allowed_categories : ['ALL'],
+            current_research: current,
+            progress_days: tech ? Math.min(progress, total) : 0,
+            research_total_days: tech ? total : null,
+            research_started_at: tech ? (slot.research_started_at || new Date().toISOString()) : null,
+            research_name: tech ? (slot.research_name || tech.name) : null
+        };
+    });
 }
 
 window.onload = init;
