@@ -4173,6 +4173,8 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
                     }
                 }
             }
+
+            await advanceTechTreeResearch(viewingUserId, daysPassed);
         }
 
         // 4. 更新数据库时间
@@ -5320,6 +5322,73 @@ async function updateUserGold() {
         }
         hideLoading();
     }
+async function advanceTechTreeResearch(targetUserId, daysPassed) {
+    if (!targetUserId || !daysPassed || daysPassed <= 0) return { completed: 0, advanced: 0 };
+
+    const { data, error } = await supabaseClient
+        .from('tech_tree_state')
+        .select('researched_ids, slots')
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+
+    if (error || !data) {
+        if (error) console.warn('[tech_tree_state] 推进失败或状态表未就绪:', error.message || error);
+        return { completed: 0, advanced: 0 };
+    }
+
+    const researched = new Set(Array.isArray(data.researched_ids) ? data.researched_ids : []);
+    let completed = 0;
+    let advanced = 0;
+    const slots = (Array.isArray(data.slots) ? data.slots : []).map(slot => {
+        if (!slot.current_research) return slot;
+        const total = Number(slot.research_total_days) || 0;
+        const multiplier = Math.max(0, Number(slot.speed_multiplier) || 1);
+        const progress = Math.max(0, Number(slot.progress_days) || 0) + (daysPassed * multiplier);
+        advanced++;
+
+        if (total > 0 && progress >= total) {
+            researched.add(slot.current_research);
+            completed++;
+            if (typeof logAction === 'function') {
+                logAction('科技树突破', `[${slot.research_name || slot.current_research}] 研发已完成！`);
+            }
+            return {
+                ...slot,
+                current_research: null,
+                progress_days: 0,
+                research_total_days: null,
+                research_started_at: null,
+                research_name: null,
+                speed_multiplier: multiplier,
+                boost_label: slot.boost_label || null
+            };
+        }
+
+        return {
+            ...slot,
+            progress_days: total > 0 ? Math.min(progress, total) : progress,
+            speed_multiplier: multiplier,
+            boost_label: slot.boost_label || null
+        };
+    });
+
+    const { error: updateError } = await supabaseClient
+        .from('tech_tree_state')
+        .upsert({
+            user_id: targetUserId,
+            researched_ids: Array.from(researched),
+            slots,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+    if (updateError) {
+        console.warn('[tech_tree_state] 科技树进度保存失败:', updateError.message || updateError);
+        return { completed: 0, advanced: 0 };
+    }
+
+    return { completed, advanced };
+}
+
 // --- 真正的推进时间逻辑 ---
 async function advanceTime() {
         if (!confirm(`确定推进 [当前视角] 的时间吗？\n(1号将自动扣除该玩家的薪资)`)) return;
@@ -5384,6 +5453,7 @@ async function advanceTime() {
                     }
                 }
             }
+            await advanceTechTreeResearch(viewingUserId, 1);
 // 循环结束后，手动刷新一下 DM 控制台里的科研列表显示
 if (typeof loadAdminResearch === 'function') {
     loadAdminResearch();
