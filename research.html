@@ -450,7 +450,7 @@
 
         .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
         .form-row label { color: var(--muted); font-size:0.76rem; }
-        input[type="text"], select {
+        input[type="text"], input[type="number"], select {
             width: 100%;
             color: var(--text);
             background: rgba(0,0,0,0.24);
@@ -1225,7 +1225,9 @@ function createResearchSlot(id, name, allowedCategories, techId = null) {
         progress_days: 0,
         research_total_days: tech ? tech.base_days : null,
         research_started_at: tech ? new Date().toISOString() : null,
-        research_name: tech ? tech.name : null
+        research_name: tech ? tech.name : null,
+        speed_multiplier: 1,
+        boost_label: null
     };
 }
 
@@ -1500,12 +1502,14 @@ function renderSlots() {
         const done = tech ? Math.min(Number(slot.progress_days) || 0, Number(slot.research_total_days) || tech.base_days) : 0;
         const total = tech ? (Number(slot.research_total_days) || tech.base_days) : 0;
         const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+        const multiplier = Math.max(0, Number(slot.speed_multiplier) || 1);
+        const boostText = multiplier !== 1 ? ` · 加速 ${Math.round(multiplier * 100)}%` : '';
         const work = tech
             ? `<div class="slot-work">研发中：<b>${escapeHTML(tech.name)}</b></div>
                <div class="slot-progress" title="${done}/${total} 天">
                    <div class="slot-progress-fill" style="width:${pct}%"></div>
                </div>
-               <div class="slot-progress-text">${done} / ${total} 天 · ${pct}%</div>
+               <div class="slot-progress-text">${done} / ${total} 天 · ${pct}%${boostText}</div>
                <div class="slot-actions">
                    <button class="btn good" onclick="completeResearch('${slot.id}')">完成研究</button>
                    <button class="btn danger" onclick="cancelSlotResearch('${slot.id}')">撤销挂载</button>
@@ -1662,7 +1666,7 @@ function renderDmClickUnlockMode() {
     btn.textContent = dmClickUnlockMode ? '点击解锁模式：开启' : '点击解锁模式：关闭';
     btn.classList.toggle('gold', dmClickUnlockMode);
     line.textContent = dmClickUnlockMode
-        ? `当前目标：${targetLabel || targetUid || '未选择玩家'}。点击未解锁科技会解锁，点击已解锁科技会取消并重算后续依赖。`
+        ? `当前目标：${targetLabel || targetUid || '未选择玩家'}。点击未解锁科技会解锁，点击已解锁科技只会取消它本身。`
         : '开启后，点击科技节点即可为当前玩家解锁或取消解锁。';
 }
 
@@ -1687,23 +1691,12 @@ async function forceCancelTechId(id, askConfirm = true) {
     if (!['dm', 'root'].includes(currentUserRole)) return false;
     if (!id || !techById.has(id)) return false;
     const node = techById.get(id);
-    if (askConfirm && !confirm(`确定取消「${node?.name || id}」的解锁？依赖它且前置不再满足的后续科技也会失效。`)) return false;
+    if (askConfirm && !confirm(`确定取消「${node?.name || id}」的解锁？只会取消该科技本身，不会牵连后续科技。`)) return false;
     const set = researchedSet();
     set.delete(id);
-    let changed = true;
-    while (changed) {
-        changed = false;
-        techNodes.forEach(tech => {
-            if (set.has(tech.id) && !prereqsMet(tech, set)) {
-                set.delete(tech.id);
-                changed = true;
-            }
-        });
-    }
     appState.researched_ids = techNodes.filter(node => set.has(node.id)).map(node => node.id);
     appState.slots.forEach(slot => {
-        const tech = techById.get(slot.current_research);
-        if (tech && !prereqsMet(tech, set)) clearSlotResearch(slot);
+        if (slot.current_research === id) clearSlotResearch(slot);
     });
     await saveState();
     renderAll();
@@ -1776,7 +1769,8 @@ function renderSlotAdminList() {
         const total = techNode ? (Number(slot.research_total_days) || techNode.base_days) : 0;
         const done = techNode ? Math.min(Number(slot.progress_days) || 0, total) : 0;
         const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-        const tech = techNode ? `${techNode.name} · ${done}/${total} 天 · ${pct}%` : '空闲';
+        const boostPct = Math.round((Number(slot.speed_multiplier) || 1) * 100);
+        const tech = techNode ? `${techNode.name} · ${done}/${total} 天 · ${pct}% · 加速 ${boostPct}%` : `空闲 · 加速 ${boostPct}%`;
         const options = techNodes.map(node => {
             const disabled = isSlotAllowed(slot, node.category) ? '' : 'disabled';
             const selected = slot.current_research === node.id ? 'selected' : '';
@@ -1789,6 +1783,15 @@ function renderSlotAdminList() {
             <div class="slot-actions" style="display:block;">
                 <select id="slot-force-${slot.id}" style="margin-top:8px;">${options}</select>
                 <button class="btn gold" style="width:100%; margin-top:6px;" onclick="assignTechToSlot('${slot.id}')">指定此槽研发</button>
+                <div style="display:grid; grid-template-columns: 1fr auto; gap:6px; margin-top:6px;">
+                    <input type="number" id="slot-progress-${slot.id}" min="0" max="${total || ''}" value="${done}" placeholder="已研发天数">
+                    <button class="btn good" onclick="setSlotProgress('${slot.id}')">设进度</button>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr auto; gap:6px; margin-top:6px;">
+                    <input type="number" id="slot-boost-${slot.id}" min="0" step="25" value="${boostPct}" placeholder="加速百分比">
+                    <button class="btn good" onclick="setSlotBoost('${slot.id}')">发加速卡</button>
+                </div>
+                <button class="btn" style="width:100%; margin-top:6px;" onclick="clearSlotBoost('${slot.id}')">清除加速卡</button>
                 <button class="btn danger" style="width:100%; margin-top:6px;" onclick="clearAdminSlot('${slot.id}')">清空此槽</button>
             </div>
         </div>`;
@@ -1816,6 +1819,48 @@ async function clearAdminSlot(slotId) {
     const slot = appState.slots.find(s => s.id === slotId);
     if (!slot) return;
     clearSlotResearch(slot);
+    await saveState();
+    renderAll();
+}
+
+async function setSlotProgress(slotId) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const slot = appState.slots.find(s => s.id === slotId);
+    const tech = slot?.current_research ? techById.get(slot.current_research) : null;
+    if (!slot || !tech) return alert('该槽位当前没有研发项目');
+    const input = document.getElementById(`slot-progress-${slotId}`);
+    const total = Number(slot.research_total_days) || tech.base_days;
+    const value = Math.max(0, Number(input?.value) || 0);
+    if (value >= total) {
+        if (!appState.researched_ids.includes(tech.id)) appState.researched_ids.push(tech.id);
+        clearSlotResearch(slot);
+    } else {
+        slot.progress_days = value;
+        slot.research_total_days = total;
+        slot.research_name = tech.name;
+    }
+    await saveState();
+    renderAll();
+}
+
+async function setSlotBoost(slotId) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const slot = appState.slots.find(s => s.id === slotId);
+    if (!slot) return;
+    const input = document.getElementById(`slot-boost-${slotId}`);
+    const percent = Math.max(0, Number(input?.value) || 100);
+    slot.speed_multiplier = percent / 100;
+    slot.boost_label = percent === 100 ? null : `${percent}% 加速卡`;
+    await saveState();
+    renderAll();
+}
+
+async function clearSlotBoost(slotId) {
+    if (!['dm', 'root'].includes(currentUserRole)) return alert('仅 DM 可操作');
+    const slot = appState.slots.find(s => s.id === slotId);
+    if (!slot) return;
+    slot.speed_multiplier = 1;
+    slot.boost_label = null;
     await saveState();
     renderAll();
 }
@@ -1909,7 +1954,9 @@ function normalizeState() {
             progress_days: tech ? Math.min(progress, total) : 0,
             research_total_days: tech ? total : null,
             research_started_at: tech ? (slot.research_started_at || new Date().toISOString()) : null,
-            research_name: tech ? (slot.research_name || tech.name) : null
+            research_name: tech ? (slot.research_name || tech.name) : null,
+            speed_multiplier: Math.max(0, Number(slot.speed_multiplier) || 1),
+            boost_label: slot.boost_label || null
         };
     });
 }
