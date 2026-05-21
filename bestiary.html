@@ -134,6 +134,11 @@
         .spell-items { color: #ccc; }
 
         .resume-text { font-family: 'Courier New', Courier, monospace; line-height: 1.8; color: #ccc; font-size: 0.95em; white-space: pre-wrap; }
+        .intel-lock-page { min-height: 330px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 1px dashed #444; background: linear-gradient(135deg, rgba(231,76,60,0.08), rgba(0,0,0,0.25)); padding: 30px; box-sizing: border-box; }
+        .intel-lock-icon { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #e74c3c; color: #e74c3c; display: flex; align-items: center; justify-content: center; font-size: 2em; font-weight: 900; margin-bottom: 18px; box-shadow: 0 0 24px rgba(231,76,60,0.2); }
+        .intel-lock-title { color: #fff; font-size: 1.35em; font-weight: 900; letter-spacing: 1px; margin-bottom: 8px; }
+        .intel-lock-text { color: #aaa; line-height: 1.8; max-width: 440px; }
+        .cr-badge.masked { background: #2c3e50; color: #bdc3c7; }
 
         /* ================= 势力分割头样式================= */
         .faction-header {
@@ -352,6 +357,7 @@
     let currentFaction = '全部';
 
     const threatWeights = { '首领': 3, '精英': 2, '杂兵': 1 };
+    const combatPaneTemplate = document.getElementById('dossier-pane-combat').innerHTML;
 
     // --- 2. 页面加载与鉴权 ---
     async function initBestiary() {
@@ -371,6 +377,7 @@
             const { data: profile } = await supabaseClient.from('profiles').select('email').eq('id', uid).single();
             if (profile) targetEmail = profile.email;
         }
+        currentUserEmail = targetEmail;
 
         try {
             const { data, error } = await supabaseClient.from('bestiary').select('*');
@@ -383,8 +390,8 @@
 
             allEnemies.sort((a, b) => {
                 // cr排序
-                const crA = (a.stat_block && a.stat_block.cr !== undefined) ? Number(a.stat_block.cr) : 0;
-                const crB = (b.stat_block && b.stat_block.cr !== undefined) ? Number(b.stat_block.cr) : 0;
+                const crA = getDisplayCr(a);
+                const crB = getDisplayCr(b);
     
                 return crB - crA; 
             });
@@ -412,6 +419,33 @@
         currentFaction = faction;
         renderTabs();
         renderEnemies();
+    }
+
+    function normalizeAccessList(value) {
+        if (Array.isArray(value)) return value.map(v => String(v).trim().toLowerCase()).filter(Boolean);
+        if (typeof value === 'string') return value.split(',').map(v => v.trim().toLowerCase()).filter(Boolean);
+        return [];
+    }
+
+    function getCombatMaskList(enemy) {
+        const block = enemy && enemy.stat_block ? enemy.stat_block : {};
+        const visibility = block.visibility || {};
+        return [
+            ...normalizeAccessList(visibility.combat_masked_to),
+            ...normalizeAccessList(block.combat_masked_to),
+            ...normalizeAccessList(block.combat_hidden_from)
+        ];
+    }
+
+    function isCombatMasked(enemy) {
+        const email = (currentUserEmail || '').trim().toLowerCase();
+        const maskList = getCombatMaskList(enemy);
+        return maskList.includes('all') || (!!email && maskList.includes(email));
+    }
+
+    function getDisplayCr(enemy) {
+        if (isCombatMasked(enemy)) return 0;
+        return (enemy.stat_block && enemy.stat_block.cr !== undefined) ? Number(enemy.stat_block.cr) : 0;
     }
 
     // --- 4. 渲染怪物网格卡片 ---
@@ -450,8 +484,8 @@
         const threatWeights = { '首领': 3, '精英': 2, '杂兵': 1 };
         
         filtered.sort((a, b) => {
-            const crA = (a.stat_block && a.stat_block.cr !== undefined) ? Number(a.stat_block.cr) : 0;
-            const crB = (b.stat_block && b.stat_block.cr !== undefined) ? Number(b.stat_block.cr) : 0;
+            const crA = getDisplayCr(a);
+            const crB = getDisplayCr(b);
             
             // 如果 CR 不一样，直接按 CR 排
             if (crA !== crB) {
@@ -490,11 +524,12 @@
             
             enemies.forEach(e => {
                 const sb = e.stat_block || {};
-                const crVal = sb.cr !== undefined ? sb.cr : '?';
+                const combatMasked = isCombatMasked(e);
+                const crVal = combatMasked ? '?' : (sb.cr !== undefined ? sb.cr : '?');
                 
                 html += `
                 <div class="card emp-card-content" onclick="openEnemyDossier('${e.id}')" style="cursor:pointer; position:relative;">
-                    <div class="cr-badge">CR ${crVal}</div>
+                    <div class="cr-badge ${combatMasked ? 'masked' : ''}">${combatMasked ? '情报不足' : `CR ${crVal}`}</div>
                     <img src="${e.avatar_url || 'https://via.placeholder.com/80'}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:2px solid #ccc;">
                     <div style="font-weight:bold; font-size:1.1em; margin-bottom:5px;">${e.name}</div>
                     <div style="font-size:0.85em; color:#666; margin-bottom:8px;">${e.faction || '未知'} - ${e.status || '无标签'}</div>
@@ -578,13 +613,18 @@
         }
 
         // 3. Tab 2: 战斗属性
-        renderCombatTab(data);
+        if (isCombatMasked(enemy)) {
+            renderCombatIntelLocked();
+        } else {
+            renderCombatTab(data);
+        }
 
         // 4. Tab 3: 情报
         document.getElementById('resume-content').innerText = data.resume || "【系统提示】\n未检索到该实体的详细侦查情报。";
     }
 
     function resetDossierUI() {
+        document.getElementById('dossier-pane-combat').innerHTML = combatPaneTemplate;
         document.getElementById('dossier-stand-img').src = ''; 
         document.getElementById('dossier-stand-img').classList.remove('loaded');
         document.getElementById('dossier-bg-blur').style.backgroundImage = 'none';
@@ -596,6 +636,18 @@
         document.getElementById('combat-stats-grid').innerHTML = '';
         document.getElementById('combat-props').innerHTML = '';
         document.getElementById('combat-abilities-list').innerHTML = '';
+    }
+
+    function renderCombatIntelLocked() {
+        document.getElementById('dossier-pane-combat').innerHTML = `
+            <div class="intel-lock-page">
+                <div class="intel-lock-icon">?</div>
+                <div class="intel-lock-title">情报不足</div>
+                <div class="intel-lock-text">
+                    本目标的战斗数据尚未被确认。当前权限仅允许查阅基础档案与现有情报；生命值、护甲、速度、属性、能力与行动模式仍处于遮罩状态。
+                </div>
+            </div>
+        `;
     }
 
     function renderCombatTab(data) {
