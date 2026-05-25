@@ -177,7 +177,6 @@
     overflow: visible !important;
 }
 
-#war-room-panel .war-photos,
 #war-room-panel .war-bar-container,
 #war-map-slot {
     display: none !important;
@@ -220,55 +219,20 @@
     text-align: center;
 }
 
-.war-side-photo-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    align-content: space-between;
-    min-height: clamp(420px, 52vw, 620px);
+.war-side-photo-rail {
+    width: 150px;
+    min-height: 0;
+    margin: 0 auto;
+    flex: none;
 }
 
-.war-side-photo-grid.count-1 {
-    grid-template-columns: minmax(0, 1fr);
+.war-side-photo-rail .war-photo-item {
+    width: 120px;
+    height: 180px;
 }
 
-.war-side-photo {
-    aspect-ratio: 2 / 3;
-    border: 1px solid #d4dae2;
-    border-radius: 4px;
-    background: linear-gradient(135deg, #2c3e50, #7b241c);
-    box-shadow: 0 6px 14px rgba(0,0,0,0.14);
-    overflow: hidden;
-    position: relative;
-}
-
-.war-side-photo img {
-    width: 100%;
-    height: 100%;
+.war-side-photo-rail .war-photo-img {
     object-fit: cover;
-    display: block;
-}
-
-.war-side-photo.missing img {
-    display: none;
-}
-
-.war-side-photo-fallback {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    text-align: center;
-    color: rgba(255,255,255,0.86);
-    font-size: 0.78em;
-    font-weight: bold;
-    line-height: 1.4;
-}
-
-.war-side-photo.missing .war-side-photo-fallback {
-    display: flex;
 }
 
 .war-front-group-buttons {
@@ -8864,6 +8828,8 @@ function renderWarFront(data) {
             ${renderWarSide(data?.alliance, 'alliance')}
         </div>
     `;
+    renderWarPhotos('war-empire-photos', data?.empire?.photos || [], 'left');
+    renderWarPhotos('war-alliance-photos', data?.alliance?.photos || [], 'right');
 }
 
 function renderWarSide(sideData, sideClass) {
@@ -8879,22 +8845,11 @@ function renderWarSide(sideData, sideClass) {
             </button>
         `;
     }).join('');
-    const photos = (Array.isArray(sideData?.photos) ? sideData.photos : []).slice(0, 5);
-    const photoHtml = photos.map((photo, index) => {
-        const src = typeof photo === 'string' ? photo : photo?.url;
-        const alt = typeof photo === 'object' ? (photo.alt || `${title} 战争影像 ${index + 1}`) : `${title} 战争影像 ${index + 1}`;
-        return `
-            <div class="war-side-photo">
-                <img src="${escapeHTML(src || '')}" alt="${escapeHTML(alt)}" onerror="this.parentElement.classList.add('missing')">
-                <div class="war-side-photo-fallback">${escapeHTML(alt)}</div>
-            </div>
-        `;
-    }).join('');
 
     return `
         <aside class="war-front-side ${sideClass}">
             <h3 class="war-front-title">${escapeHTML(title)}</h3>
-            <div class="war-side-photo-grid count-${photos.length}">${photoHtml}</div>
+            <div id="war-${sideClass}-photos" class="war-photos war-side-photo-rail"></div>
             <div class="war-front-group-buttons">${groupButtons}</div>
         </aside>
     `;
@@ -8907,16 +8862,23 @@ function renderWarPhotos(containerId, photosList, align) {
     if (!photosList || photosList.length === 0) return;
 
     const total = photosList.length;
+    const isSideRail = container.classList.contains('war-side-photo-rail');
+    const itemHeight = isSideRail ? 180 : 130;
+    const itemGap = isSideRail ? 18 : 0;
+    if (isSideRail) {
+        container.style.height = `${total * itemHeight + Math.max(0, total - 1) * itemGap + 12}px`;
+    }
     
     // Y轴最大排布高度 1050px，照片高度 130px
-    const maxTrackHeight = 1050; 
-    const photoH = 130;         
-    const startTop = 20;
+    const maxTrackHeight = isSideRail ? (total * itemHeight + Math.max(0, total - 1) * itemGap) : 1050; 
+    const photoH = itemHeight;         
+    const startTop = isSideRail ? 0 : 20;
 
     // Y轴智能均分间距
-    const spreadY = total > 1 ? (maxTrackHeight - photoH) / (total - 1) : 0;
+    const spreadY = isSideRail ? (photoH + itemGap) : (total > 1 ? (maxTrackHeight - photoH) / (total - 1) : 0);
 
     photosList.forEach((photo, index) => {
+        const photoUrl = typeof photo === 'string' ? photo : photo.url;
         const offsetY = startTop + (index * spreadY); 
         
         // 带一点点随机的左右错位（-4 到 4 像素）
@@ -8928,7 +8890,9 @@ function renderWarPhotos(containerId, photosList, align) {
         const isDead = photo.is_dead ? `<div class="war-dead-mark">✕</div>` : '';
         
         // 让照片死死贴住左/右边缘的 10px 位置，呈绝对垂直的平行线落下
-        const horizontalAlign = align === 'left' ? `left: ${10 + offsetX}px;` : `right: ${10 + offsetX}px;`;
+        const horizontalAlign = isSideRail
+            ? `left: 50%; margin-left: ${-65 + offsetX}px;`
+            : (align === 'left' ? `left: ${10 + offsetX}px;` : `right: ${10 + offsetX}px;`);
 
         container.innerHTML += `
             <div class="war-photo-item" style="
@@ -8936,7 +8900,7 @@ function renderWarPhotos(containerId, photosList, align) {
                 ${horizontalAlign} 
                 transform: rotate(${rotate}deg); 
                 z-index: ${index};">
-                <img src="${photo.url}" class="war-photo-img" onerror="this.src='https://via.placeholder.com/100x130?text=?'">
+                <img src="${escapeHTML(photoUrl)}" class="war-photo-img" onerror="this.src='https://via.placeholder.com/120x180?text=?'">
                 ${isDead}
             </div>
         `;
