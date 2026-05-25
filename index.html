@@ -171,6 +171,155 @@
     margin-top: 30px;
 }
 
+#war-room-panel {
+    height: auto !important;
+    min-height: 760px;
+    overflow: visible !important;
+}
+
+#war-room-panel .war-photos,
+#war-room-panel .war-bar-container,
+#war-map-slot {
+    display: none !important;
+}
+
+#war-command-console,
+#card-action-menu {
+    display: none !important;
+}
+
+.war-front-panel {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(360px, 620px) minmax(220px, 1fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.war-front-side {
+    background: rgba(255,255,255,0.84);
+    border: 1px solid #d9dee5;
+    border-radius: 6px;
+    padding: 16px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+}
+
+.war-front-side.empire { border-top: 5px solid #c0392b; }
+.war-front-side.alliance { border-top: 5px solid #2980b9; }
+
+.war-front-title {
+    margin: 0 0 12px;
+    font-size: 1.15em;
+    color: #1f2d3a;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.war-front-group {
+    margin-top: 14px;
+}
+
+.war-front-group:first-of-type {
+    margin-top: 0;
+}
+
+.war-front-group-title {
+    margin: 0 0 8px;
+    color: #6b7785;
+    font-size: 0.82em;
+    font-weight: bold;
+    border-bottom: 1px solid #e7ebf0;
+    padding-bottom: 6px;
+}
+
+.war-front-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+}
+
+.war-front-item {
+    padding: 8px 10px;
+    border: 1px solid #e0e4ea;
+    border-radius: 4px;
+    background: #fff;
+    color: #2c3e50;
+    font-weight: 700;
+    font-size: 0.92em;
+    line-height: 1.35;
+}
+
+.war-nuke-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.war-nuke-heading {
+    text-align: center;
+}
+
+.war-nuke-heading h3 {
+    margin: 0 0 8px;
+    color: #2c3e50;
+    font-size: 1.45em;
+    letter-spacing: 1px;
+}
+
+.war-nuke-heading p {
+    margin: 0;
+    color: #566573;
+    line-height: 1.6;
+}
+
+.war-nuke-frame {
+    aspect-ratio: 8951 / 12000;
+    width: 100%;
+    background: radial-gradient(circle at 50% 42%, #f9d976 0, #f39c12 22%, #7b241c 48%, #17202a 76%);
+    border: 2px solid #1a252f;
+    border-radius: 6px;
+    box-shadow: 0 18px 36px rgba(0,0,0,0.28);
+    overflow: hidden;
+    position: relative;
+}
+
+.war-nuke-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.war-nuke-frame.missing img {
+    display: none;
+}
+
+.war-nuke-fallback {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.88);
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 24px;
+    background: linear-gradient(180deg, rgba(23,32,42,0.12), rgba(23,32,42,0.62));
+}
+
+.war-nuke-frame.missing .war-nuke-fallback {
+    display: flex;
+}
+
+@media (max-width: 980px) {
+    .war-front-panel {
+        grid-template-columns: 1fr;
+    }
+}
+
 
         #login-section {
             position: fixed;
@@ -8622,28 +8771,63 @@ async function loadWarSituation() {
     }
     if (warTabBtn) { warTabBtn.style.display = 'inline-block'; }
     loadWarPosterStrip();
+    const commandConsole = document.getElementById('war-command-console');
+    if (commandConsole) commandConsole.style.display = 'none';
 
-    // 【第一步】：先去拉取只存在于 JSON 里的静态视觉数据
     try {
-        const res = await fetch('https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/war_situation.json?t=' + Date.now());
-        if (!res.ok) throw new Error("JSON Fetch Failed");
+        const res = await fetch('war_battlefront.json?t=' + Date.now());
+        if (!res.ok) throw new Error('JSON Fetch Failed');
         const data = await res.json();
-
-        // 仅保留照片和势力的渲染，彻底删除原来关于 readiness 的 DOM 操作
-        renderWarPhotos('empire-photos', data.empire.photos, 'left');
-        renderWarFactions('empire-factions', '帝国远征军', data.empire.factions); 
-
-        renderWarPhotos('alliance-photos', data.alliance.photos, 'right');
-        renderWarFactions('alliance-factions', '费伦联军', data.alliance.factions); 
-
-        // 应用地图动态控制权
-        if (data.map_control) {
-            applyMapControl(data.map_control);
+        renderWarFront(data);
+    } catch (e) {
+        console.warn('战局 JSON 加载失败:', e);
+        if (warPanel) {
+            warPanel.innerHTML = '<div style="position:relative; z-index:1; padding:40px; text-align:center; color:#7f8c8d; font-weight:bold;">战局数据暂不可用</div>';
         }
-    } catch (e) { console.warn("静态 JSON 视觉数据加载失败:", e); }
+    }
+}
 
-    // 【第二步】：启动军推引擎，从 SQL 数据库拉取真实的准备度并接管进度条
-    await initWarEngine(); 
+function renderWarFront(data) {
+    const warPanel = document.getElementById('war-room-panel');
+    if (!warPanel) return;
+    const imageFile = data?.nuclear_image || 'nuclear_blast.jpg';
+    warPanel.innerHTML = `
+        <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px); pointer-events:none;"></div>
+        <div class="war-front-panel">
+            ${renderWarSide(data?.empire, 'empire')}
+            <section class="war-nuke-stage">
+                <div class="war-nuke-heading">
+                    <h3>${escapeHTML(data?.title || '战局态势')}</h3>
+                    <p>${escapeHTML(data?.subtitle || '')}</p>
+                </div>
+                <div class="war-nuke-frame">
+                    <img src="${escapeHTML(imageFile)}" alt="${escapeHTML(data?.image_alt || '核爆影像')}" onerror="this.parentElement.classList.add('missing')">
+                    <div class="war-nuke-fallback">核爆影像待接入</div>
+                </div>
+            </section>
+            ${renderWarSide(data?.alliance, 'alliance')}
+        </div>
+    `;
+}
+
+function renderWarSide(sideData, sideClass) {
+    const title = sideData?.title || (sideClass === 'empire' ? '帝国方' : '费伦联军');
+    const groups = Array.isArray(sideData?.groups) ? sideData.groups : [];
+    const groupHtml = groups.map(group => `
+        <section class="war-front-group">
+            <h4 class="war-front-group-title">${escapeHTML(group.label || '势力')}</h4>
+            <div class="war-front-list">
+                ${(group.items || []).map(item => `<div class="war-front-item">${escapeHTML(item)}</div>`).join('')}
+            </div>
+        </section>
+    `).join('');
+
+    return `
+        <aside class="war-front-side ${sideClass}">
+            <h3 class="war-front-title">${escapeHTML(title)}</h3>
+            ${groupHtml}
+        </aside>
+    `;
 }
 
 // --- 2. 照片渲染：垂直平行瀑布流 ---
