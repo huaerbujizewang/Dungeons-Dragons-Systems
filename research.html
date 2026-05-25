@@ -476,6 +476,13 @@
             font-size:0.78rem;
         }
 
+        .check-group-title {
+            margin-top: 4px;
+            color: #f2f7ff;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
         .warning {
             color: #ffd89c;
             border: 1px solid rgba(217,164,65,0.38);
@@ -571,11 +578,11 @@
                 <h3>科研槽管理</h3>
                 <div class="form-row">
                     <label>槽位名称</label>
-                    <input type="text" id="new-slot-name" placeholder="例如：炼金专修槽">
+                    <input type="text" id="new-slot-name" placeholder="例如：近代科研槽">
                 </div>
-                <label class="check-row"><input type="checkbox" id="new-slot-all" onchange="toggleAllCategoryChecks()">允许全部领域（ALL）</label>
+                <label class="check-row"><input type="checkbox" id="new-slot-all" onchange="toggleAllCategoryChecks()">允许全部科技（ALL）</label>
                 <div class="form-row" style="margin-top:8px;">
-                    <label>允许领域</label>
+                    <label>允许范围</label>
                     <div id="slot-category-checks" class="check-grid"></div>
                 </div>
                 <button class="btn good" style="width:100%;" onclick="addSlot()">新增槽位</button>
@@ -4151,6 +4158,8 @@ const ERA_DEFS = [
     { id: 'future', name: '未来', start: null, end: null, pageLabel: '待补充' }
 ];
 
+const ERA_SLOT_PREFIX = 'ERA:';
+
 let categories = Object.keys(RAW_TECH);
 let techNodes = [];
 let techById = new Map();
@@ -4174,6 +4183,29 @@ function escapeHTML(value) {
 
 function getEraByPage(page) {
     return ERA_DEFS.find(era => era.start !== null && page >= era.start && page <= era.end) || ERA_DEFS[0];
+}
+
+function getEraSlotDefs() {
+    return ERA_DEFS
+        .filter(era => era.start !== null)
+        .map(era => ({
+            id: era.id,
+            value: `${ERA_SLOT_PREFIX}${era.id}`,
+            label: `${era.name}科研槽`,
+            pageLabel: era.pageLabel
+        }));
+}
+
+function getEraSlotLabel(value) {
+    return getEraSlotDefs().find(era => era.value === value)?.label || value;
+}
+
+function formatSlotAllowedCategories(allowedCategories = []) {
+    if (allowedCategories.includes('ALL')) return 'ALL / 全科技';
+    return allowedCategories.map(value => {
+        if (String(value).startsWith(ERA_SLOT_PREFIX)) return getEraSlotLabel(value);
+        return value;
+    }).join('、');
 }
 
 function buildTechData() {
@@ -4218,7 +4250,7 @@ function buildTechData() {
 function defaultSlots() {
     return [
         { id: 'slot_1', name: '通用槽', allowed_categories: ['ALL'], current_research: null },
-        createResearchSlot('slot_2', '军工专修槽', ['武器与防具', '攻城、火器与爆破'], idByName.get('链甲') || null)
+        createResearchSlot('slot_2', '中世纪科研槽', [`${ERA_SLOT_PREFIX}medieval`], idByName.get('链甲') || null)
     ];
 }
 
@@ -4259,7 +4291,10 @@ function researchedSet() {
 }
 
 function isSlotAllowed(slot, category) {
-    return (slot.allowed_categories || []).includes('ALL') || (slot.allowed_categories || []).includes(category);
+    const allowed = slot.allowed_categories || [];
+    if (allowed.includes('ALL') || allowed.includes(category)) return true;
+    const eraId = categoryMeta.get(category)?.era;
+    return Boolean(eraId && allowed.includes(`${ERA_SLOT_PREFIX}${eraId}`));
 }
 
 function isResearching(id) {
@@ -4505,7 +4540,7 @@ function renderSlots() {
     const strip = document.getElementById('slot-strip');
     strip.innerHTML = (appState.slots || []).map(slot => {
         const tech = slot.current_research ? techById.get(slot.current_research) : null;
-        const cats = (slot.allowed_categories || []).includes('ALL') ? 'ALL / 全领域' : slot.allowed_categories.join('、');
+        const cats = formatSlotAllowedCategories(slot.allowed_categories || []);
         const done = tech ? Math.min(Number(slot.progress_days) || 0, Number(slot.research_total_days) || tech.base_days) : 0;
         const total = tech ? (Number(slot.research_total_days) || tech.base_days) : 0;
         const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
@@ -4715,7 +4750,7 @@ async function startResearch(techId) {
     if (!node || getTechState(node) !== 'Available') return;
     const slot = (appState.slots || []).find(s => !s.current_research && isSlotAllowed(s, node.category));
     if (!slot) {
-        alert('无对应领域的可用科研槽');
+        alert('无匹配范围的可用科研槽');
         return;
     }
     setSlotResearch(slot, node);
@@ -4744,7 +4779,13 @@ async function cancelSlotResearch(slotId) {
 
 function renderSlotCategoryChecks() {
     const box = document.getElementById('slot-category-checks');
-    box.innerHTML = categories.map(cat => `<label class="check-row"><input type="checkbox" value="${escapeHTML(cat)}"> ${CATEGORY_ICONS[cat] || '◇'} ${escapeHTML(cat)}</label>`).join('');
+    const eraChecks = getEraSlotDefs().map(era =>
+        `<label class="check-row"><input type="checkbox" value="${escapeHTML(era.value)}"> ◈ ${escapeHTML(era.label)} <span class="category-count">${escapeHTML(era.pageLabel)}</span></label>`
+    ).join('');
+    const categoryChecks = categories.map(cat =>
+        `<label class="check-row"><input type="checkbox" value="${escapeHTML(cat)}"> ${CATEGORY_ICONS[cat] || '◇'} ${escapeHTML(cat)}</label>`
+    ).join('');
+    box.innerHTML = `<div class="check-group-title">槽位种类</div>${eraChecks}<div class="check-group-title">细分领域</div>${categoryChecks}`;
 }
 
 function toggleAllCategoryChecks() {
@@ -4758,7 +4799,7 @@ async function addSlot() {
     const all = document.getElementById('new-slot-all').checked;
     const selected = Array.from(document.querySelectorAll('#slot-category-checks input:checked')).map(i => i.value);
     const allowed = all ? ['ALL'] : selected;
-    if (allowed.length === 0) return alert('请选择至少一个允许领域，或勾选 ALL');
+    if (allowed.length === 0) return alert('请选择至少一个允许范围，或勾选 ALL');
     appState.slots.push(createResearchSlot(`slot_${Date.now()}`, name, allowed, null));
     document.getElementById('new-slot-name').value = '';
     document.getElementById('new-slot-all').checked = false;
@@ -4771,7 +4812,7 @@ function renderSlotAdminList() {
     const list = document.getElementById('slot-admin-list');
     if (!list) return;
     list.innerHTML = (appState.slots || []).map(slot => {
-        const cats = (slot.allowed_categories || []).includes('ALL') ? 'ALL / 全领域' : slot.allowed_categories.join('、');
+        const cats = formatSlotAllowedCategories(slot.allowed_categories || []);
         const techNode = slot.current_research ? techById.get(slot.current_research) : null;
         const total = techNode ? (Number(slot.research_total_days) || techNode.base_days) : 0;
         const done = techNode ? Math.min(Number(slot.progress_days) || 0, total) : 0;
@@ -4812,7 +4853,7 @@ async function assignTechToSlot(slotId) {
     if (!slot || !select?.value) return;
     const tech = techById.get(select.value);
     if (!tech) return alert('科技不存在');
-    if (!isSlotAllowed(slot, tech.category)) return alert('该槽位不允许此科技领域');
+    if (!isSlotAllowed(slot, tech.category)) return alert('该槽位不允许此科技范围');
     appState.slots.forEach(s => {
         if (s.current_research === tech.id) clearSlotResearch(s);
     });
