@@ -4305,6 +4305,40 @@ function prereqsMet(node, set = researchedSet()) {
     return node.missingPrerequisites.length === 0 && node.prerequisites.every(id => set.has(id));
 }
 
+function getUnmetPrereqNames(node, set = researchedSet()) {
+    return (node?.prereqNames || []).filter(name => {
+        const id = idByName.get(name);
+        return !id || !set.has(id);
+    });
+}
+
+function getResearchingSlotForTech(techId, ignoreSlotId = null) {
+    return (appState.slots || []).find(slot => slot.id !== ignoreSlotId && slot.current_research === techId);
+}
+
+function getTechResearchRejection(tech, options = {}) {
+    if (!tech) return '科技不存在';
+    const set = researchedSet();
+    if (set.has(tech.id)) return '该科技已经解锁，不能重复研发';
+    const duplicateSlot = getResearchingSlotForTech(tech.id, options.ignoreSlotId || null);
+    if (duplicateSlot) return `该科技已挂载在「${duplicateSlot.name || '未命名科研槽'}」`;
+    const unmet = getUnmetPrereqNames(tech, set);
+    if (unmet.length) return `前置科技未满足：${unmet.slice(0, 4).join('、')}${unmet.length > 4 ? ' 等' : ''}`;
+    return '';
+}
+
+function getSlotResearchRejection(slot, tech, options = {}) {
+    if (!slot) return '科研槽不存在';
+    if (!tech) return '科技不存在';
+    const currentInThisSlot = slot.current_research === tech.id;
+    const allowCurrentSlot = Boolean(options.allowCurrentSlot && currentInThisSlot);
+    const requireEmptySlot = options.requireEmptySlot !== false;
+    if (requireEmptySlot && slot.current_research && !allowCurrentSlot) return '该槽位已有研发项目，请先完成或清空当前项目';
+    if (!isSlotAllowed(slot, tech.category)) return '该槽位不允许此科技范围';
+    const ignoreSlotId = options.ignoreDuplicate || allowCurrentSlot ? slot.id : null;
+    return getTechResearchRejection(tech, { ignoreSlotId });
+}
+
 function getTechState(node) {
     const set = researchedSet();
     if (set.has(node.id)) return 'Researched';
@@ -4378,19 +4412,19 @@ async function loadState() {
         appState = data || { researched_ids: [], slots: defaultSlots() };
         if (!appState.slots || appState.slots.length === 0) appState.slots = defaultSlots();
         const shouldSaveMetadata = hasSlotMissingProgressMetadata();
-        normalizeState();
+        const shouldSaveNormalizedState = normalizeState();
         persistenceMode = 'supabase';
         setStateLine('Supabase 档案已连接');
-        if (shouldSaveMetadata) await saveState();
+        if (shouldSaveMetadata || shouldSaveNormalizedState) await saveState();
     } catch (e) {
         persistenceMode = 'local';
         const cached = localStorage.getItem(localKey);
         appState = cached ? JSON.parse(cached) : { researched_ids: [], slots: defaultSlots() };
         const shouldSaveMetadata = hasSlotMissingProgressMetadata();
-        normalizeState();
+        const shouldSaveNormalizedState = normalizeState();
         showWarning(`科技树状态表未就绪，当前使用本机缓存。请执行 tech_tree_state.sql。错误：${e.message || e}`);
         setStateLine('本机缓存模式');
-        if (shouldSaveMetadata) await saveState();
+        if (shouldSaveMetadata || shouldSaveNormalizedState) await saveState();
     }
 }
 
@@ -4747,10 +4781,14 @@ async function forceCancelTechId(id, askConfirm = true) {
 
 async function startResearch(techId) {
     const node = techById.get(techId);
-    if (!node || getTechState(node) !== 'Available') return;
-    const slot = (appState.slots || []).find(s => !s.current_research && isSlotAllowed(s, node.category));
+    const techRejection = getTechResearchRejection(node);
+    if (techRejection) {
+        alert(techRejection);
+        return;
+    }
+    const slot = (appState.slots || []).find(s => !getSlotResearchRejection(s, node));
     if (!slot) {
-        alert('无匹配范围的可用科研槽');
+        alert('没有空闲且匹配范围的科研槽');
         return;
     }
     setSlotResearch(slot, node);
@@ -4820,9 +4858,11 @@ function renderSlotAdminList() {
         const boostPct = Math.round((Number(slot.speed_multiplier) || 1) * 100);
         const tech = techNode ? `${techNode.name} · ${done}/${total} 天 · ${pct}% · 加速 ${boostPct}%` : `空闲 · 加速 ${boostPct}%`;
         const options = techNodes.map(node => {
-            const disabled = isSlotAllowed(slot, node.category) ? '' : 'disabled';
+            const rejection = getSlotResearchRejection(slot, node, { allowCurrentSlot: true });
+            const disabled = rejection ? 'disabled' : '';
             const selected = slot.current_research === node.id ? 'selected' : '';
-            return `<option value="${node.id}" ${selected} ${disabled}>${escapeHTML(node.category)} / ${escapeHTML(node.name)}</option>`;
+            const title = rejection ? `title="${escapeHTML(rejection)}"` : '';
+            return `<option value="${node.id}" ${selected} ${disabled} ${title}>${escapeHTML(node.category)} / ${escapeHTML(node.name)}</option>`;
         }).join('');
         return `<div class="slot-card" style="margin-bottom:8px;">
             <div class="slot-name"><span>${escapeHTML(slot.name)}</span><button class="btn danger" style="padding:3px 6px;" onclick="deleteSlot('${slot.id}')">删除</button></div>
@@ -4853,10 +4893,9 @@ async function assignTechToSlot(slotId) {
     if (!slot || !select?.value) return;
     const tech = techById.get(select.value);
     if (!tech) return alert('科技不存在');
-    if (!isSlotAllowed(slot, tech.category)) return alert('该槽位不允许此科技范围');
-    appState.slots.forEach(s => {
-        if (s.current_research === tech.id) clearSlotResearch(s);
-    });
+    if (slot.current_research === tech.id) return alert('该科技已在此槽位研发中');
+    const rejection = getSlotResearchRejection(slot, tech);
+    if (rejection) return alert(rejection);
     setSlotResearch(slot, tech);
     await saveState();
     renderAll();
@@ -4988,13 +5027,19 @@ async function forceUnresearchSelected() {
 }
 
 function normalizeState() {
+    let changed = false;
+    const originalResearchedLength = (appState.researched_ids || []).length;
     appState.researched_ids = Array.from(new Set((appState.researched_ids || []).filter(id => techById.has(id))));
+    if (appState.researched_ids.length !== originalResearchedLength) changed = true;
+
+    const seenResearchIds = new Set();
     appState.slots = (appState.slots || []).map(slot => {
         const current = techById.has(slot.current_research) ? slot.current_research : null;
+        if (slot.current_research && !current) changed = true;
         const tech = current ? techById.get(current) : null;
         const progress = Math.max(0, Number(slot.progress_days) || 0);
         const total = tech ? (Number(slot.research_total_days) || tech.base_days) : null;
-        return {
+        const normalized = {
             id: slot.id || `slot_${Date.now()}_${Math.random().toString(16).slice(2)}`,
             name: slot.name || '未命名科研槽',
             allowed_categories: slot.allowed_categories?.length ? slot.allowed_categories : ['ALL'],
@@ -5006,7 +5051,23 @@ function normalizeState() {
             speed_multiplier: Math.max(0, Number(slot.speed_multiplier) || 1),
             boost_label: slot.boost_label || null
         };
+        if (!slot.id || !slot.name || !slot.allowed_categories?.length) changed = true;
+        if (tech) {
+            const rejection = getSlotResearchRejection(normalized, tech, {
+                allowCurrentSlot: true,
+                requireEmptySlot: false,
+                ignoreDuplicate: true
+            });
+            if (rejection || seenResearchIds.has(tech.id)) {
+                clearSlotResearch(normalized);
+                changed = true;
+            } else {
+                seenResearchIds.add(tech.id);
+            }
+        }
+        return normalized;
     });
+    return changed;
 }
 
 window.onload = init;
