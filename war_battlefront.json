@@ -5,6 +5,10 @@
   "image_alt": "核爆战局影像",
   "empire": {
     "title": "帝国方",
+    "photos": [
+      { "url": "empire_war_01.png", "alt": "帝国战争影像 01" },
+      { "url": "empire_war_02.png", "alt": "帝国战争影像 02" }
+    ],
     "groups": [
       {
         "label": "势力",
@@ -34,6 +38,10 @@
   },
   "alliance": {
     "title": "费伦联军",
+    "photos": [
+      { "url": "empire_war_03.png", "alt": "费伦联军战争影像 01" },
+      { "url": "empire_war_04.png", "alt": "费伦联军战争影像 02" }
+    ],
     "groups": [
       {
         "label": "神",
