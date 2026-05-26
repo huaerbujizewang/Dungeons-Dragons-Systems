@@ -174,7 +174,8 @@
 #war-room-panel {
     height: auto !important;
     min-height: 760px;
-    overflow: visible !important;
+    overflow: hidden !important;
+    isolation: isolate;
 }
 
 #war-room-panel .war-bar-container,
@@ -194,6 +195,14 @@
     grid-template-columns: minmax(220px, 1fr) minmax(360px, 620px) minmax(220px, 1fr);
     gap: 22px;
     align-items: stretch;
+}
+
+.war-front-mask {
+    position: absolute;
+    inset: -24px;
+    z-index: 0;
+    background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.025) 10px, rgba(0,0,0,0.025) 20px);
+    pointer-events: none;
 }
 
 .war-front-side {
@@ -332,6 +341,37 @@
 
 .war-nuke-frame.missing .war-nuke-fallback {
     display: flex;
+}
+
+.war-population-panel {
+    background: rgba(255,255,255,0.88);
+    border: 1px solid #d4dae2;
+    border-left: 5px solid #8e44ad;
+    border-radius: 6px;
+    padding: 13px 15px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+}
+
+.war-population-label {
+    color: #6b7785;
+    font-size: 0.82em;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.war-population-value {
+    color: #1f2d3a;
+    font-size: 1.65em;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.war-population-meta {
+    margin-top: 6px;
+    color: #7f8c8d;
+    font-size: 0.82em;
+    line-height: 1.5;
 }
 
 @media (max-width: 980px) {
@@ -2538,6 +2578,9 @@
     let warPosterPointerStartX = 0;
     let warPosterLoadSeq = 0;
     let warPosterCacheKey = '';
+    let currentWarFrontData = null;
+    const WAR_BGM_FILE = 'Puerto Plata.mp3';
+    let warBgmAudio = null;
 
     function escapeHTML(value) {
         return String(value ?? '').replace(/[&<>'"]/g, ch => ({
@@ -4315,6 +4358,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         if (prof && prof.world_date) {
             currentDate = prof.world_date;
             document.getElementById('date-text').innerText = `FR${currentDate.year} ${currentDate.month}月${currentDate.day}日`;
+            updateWarPopulationPanel();
             
             // 【】回显到 DM 后台输入框
             if(document.getElementById('time-year')) {
@@ -4410,6 +4454,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         
         // 同步本地变量
         currentDate = { year: nY, month: nM, day: nD };
+        updateWarPopulationPanel();
 
         await logAction('时间跃迁', `DM 将时间调整为 FR${nY}/${nM}/${nD}`);
         await refreshAllData();
@@ -4449,6 +4494,7 @@ async function loadGold() {
 
     async function switchTab(tab) {
         if (tab === 'security' && !await requireAdminRole(['root'], true)) return;
+        setWarBgmActive(tab === 'war');
 
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -4468,6 +4514,28 @@ async function loadGold() {
         if (tab === 'war') {
             loadWarPosterStrip();
         }
+    }
+
+    function getWarBgmAudio() {
+        if (!warBgmAudio) {
+            warBgmAudio = new Audio(WAR_BGM_FILE);
+            warBgmAudio.loop = true;
+            warBgmAudio.volume = 0.45;
+            warBgmAudio.preload = 'auto';
+        }
+        return warBgmAudio;
+    }
+
+    function setWarBgmActive(active) {
+        const audio = getWarBgmAudio();
+        if (active) {
+            audio.play().catch(error => {
+                console.warn('战局 BGM 播放被浏览器阻止:', error.message || error);
+            });
+            return;
+        }
+        audio.pause();
+        audio.currentTime = 0;
     }
 
     async function toggleAdmin() {
@@ -8810,9 +8878,11 @@ async function loadWarSituation() {
 function renderWarFront(data) {
     const warPanel = document.getElementById('war-room-panel');
     if (!warPanel) return;
+    currentWarFrontData = data || null;
     const imageFile = data?.nuclear_image || 'nuclear_blast.jpg';
+    const population = getWarPopulationSnapshot(data?.population);
     warPanel.innerHTML = `
-        <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px); pointer-events:none;"></div>
+        <div class="war-front-mask"></div>
         <div class="war-front-panel">
             ${renderWarSide(data?.empire, 'empire')}
             <section class="war-nuke-stage">
@@ -8823,6 +8893,11 @@ function renderWarFront(data) {
                 <div class="war-nuke-frame">
                     <img src="${escapeHTML(imageFile)}" alt="${escapeHTML(data?.image_alt || '核爆影像')}" onerror="this.parentElement.classList.add('missing')">
                     <div class="war-nuke-fallback">核爆影像待接入</div>
+                </div>
+                <div class="war-population-panel">
+                    <div class="war-population-label">${escapeHTML(population.label)}</div>
+                    <div class="war-population-value" id="war-population-value">${formatWarPopulation(population.value)}</div>
+                    <div class="war-population-meta" id="war-population-meta">核战后第 ${population.daysPassed} 天 · 基准 ${formatWarPopulation(population.base)}</div>
                 </div>
             </section>
             ${renderWarSide(data?.alliance, 'alliance')}
@@ -8853,6 +8928,52 @@ function renderWarSide(sideData, sideClass) {
             <div class="war-front-group-buttons">${groupButtons}</div>
         </aside>
     `;
+}
+
+function warDateToSerial(date) {
+    const safeDate = date || currentDate || { year: 1494, month: 2, day: 12 };
+    return (Number(safeDate.year) * 360) + (Number(safeDate.month) * 30) + Number(safeDate.day);
+}
+
+function estimateWarPopulation(daysPassed, config = {}) {
+    const base = Number(config.base) || 96411031;
+    const floor = Number(config.floor) || 12000000;
+    const rapidShare = 0.6344;
+    const slowShare = 1 - rapidShare;
+    const rapidK = 0.16;
+    const slowK = 0.015;
+    const span = Math.max(0, base - floor);
+    const day = Math.max(0, Number(daysPassed) || 0);
+    return Math.max(floor, Math.round(floor + span * (
+        rapidShare * Math.exp(-rapidK * day) +
+        slowShare * Math.exp(-slowK * day)
+    )));
+}
+
+function getWarPopulationSnapshot(config = {}) {
+    const startDate = config.start_date || { year: 1494, month: 2, day: 12 };
+    const daysPassed = Math.max(0, warDateToSerial(currentDate) - warDateToSerial(startDate));
+    const base = Number(config.base) || 96411031;
+    return {
+        label: config.label || '费伦现存人口',
+        base,
+        daysPassed,
+        value: estimateWarPopulation(daysPassed, config)
+    };
+}
+
+function formatWarPopulation(value) {
+    return Math.max(0, Math.round(Number(value) || 0)).toLocaleString('zh-CN');
+}
+
+function updateWarPopulationPanel() {
+    if (!currentWarFrontData?.population) return;
+    const valueEl = document.getElementById('war-population-value');
+    const metaEl = document.getElementById('war-population-meta');
+    if (!valueEl || !metaEl) return;
+    const population = getWarPopulationSnapshot(currentWarFrontData.population);
+    valueEl.innerText = formatWarPopulation(population.value);
+    metaEl.innerText = `核战后第 ${population.daysPassed} 天 · 基准 ${formatWarPopulation(population.base)}`;
 }
 
 // --- 2. 照片渲染：垂直平行瀑布流 ---
