@@ -8927,6 +8927,7 @@ async function loadWarSituation() {
     if (commandConsole) commandConsole.style.display = 'none';
 
     try {
+        await loadUserDate();
         const res = await fetch('war_battlefront.json?t=' + Date.now());
         if (!res.ok) throw new Error('JSON Fetch Failed');
         const data = await res.json();
@@ -9145,10 +9146,10 @@ function normalizeWarFactionStatus(faction) {
 
 function getWarFactionStatusMeta(status) {
     const meta = {
-        green: { label: '绿色 / 稳定', color: '#27ae60' },
-        yellow: { label: '黄色 / 承压', color: '#f1c40f' },
-        red: { label: '红色 / 危急', color: '#e74c3c' },
-        dead: { label: '死亡 / 失效', color: '#2f3438' }
+        green: { label: '稳定', color: '#27ae60' },
+        yellow: { label: '承压', color: '#f1c40f' },
+        red: { label: '危急', color: '#e74c3c' },
+        dead: { label: '灭亡', color: '#2f3438' }
     };
     return meta[status] || meta.green;
 }
