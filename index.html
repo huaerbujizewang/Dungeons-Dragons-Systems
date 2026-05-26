@@ -279,6 +279,69 @@
     color: rgba(0,0,0,0.65);
 }
 
+.war-faction-status-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-left: 5px solid var(--status-color, #27ae60);
+    color: #333;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-weight: bold;
+    overflow: hidden;
+}
+
+.war-faction-status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--status-color, #27ae60);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-color, #27ae60) 18%, transparent);
+}
+
+.war-faction-status-name {
+    min-width: 0;
+}
+
+.war-faction-status-label {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--status-color, #27ae60) 16%, #fff);
+    color: var(--status-color, #27ae60);
+    border: 1px solid color-mix(in srgb, var(--status-color, #27ae60) 35%, #fff);
+    font-size: 0.78em;
+    white-space: nowrap;
+}
+
+.war-faction-status-card.dead {
+    --status-color: #2f3438;
+    background: #efefef;
+    color: #777;
+    filter: grayscale(1);
+    opacity: 0.72;
+}
+
+.war-faction-status-card.dead .war-faction-status-name {
+    text-decoration: line-through;
+}
+
+.war-faction-status-card.dead::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -10%;
+    width: 120%;
+    height: 3px;
+    background: rgba(30, 30, 30, 0.7);
+    transform: rotate(-7deg);
+    pointer-events: none;
+}
+
 .war-nuke-stage {
     display: flex;
     flex-direction: column;
@@ -2580,6 +2643,7 @@
     let warPosterCacheKey = '';
     let currentWarFrontData = null;
     const WAR_BGM_FILE = 'Puerto Plata.mp3';
+    const WAR_POPULATION_START_DATE = { year: 1494, month: 8, day: 11 };
     let warBgmAudio = null;
 
     function escapeHTML(value) {
@@ -8897,7 +8961,7 @@ function renderWarFront(data) {
                 <div class="war-population-panel">
                     <div class="war-population-label">${escapeHTML(population.label)}</div>
                     <div class="war-population-value" id="war-population-value">${formatWarPopulation(population.value)}</div>
-                    <div class="war-population-meta" id="war-population-meta">核战后第 ${population.daysPassed} 天 · 基准 ${formatWarPopulation(population.base)}</div>
+                    <div class="war-population-meta" id="war-population-meta">核战后第 ${population.daysPassed} 天 · 战前 ${formatWarPopulation(population.base)}</div>
                 </div>
             </section>
             ${renderWarSide(data?.alliance, 'alliance')}
@@ -8931,8 +8995,14 @@ function renderWarSide(sideData, sideClass) {
 }
 
 function warDateToSerial(date) {
-    const safeDate = date || currentDate || { year: 1494, month: 2, day: 12 };
-    return (Number(safeDate.year) * 360) + (Number(safeDate.month) * 30) + Number(safeDate.day);
+    const safeDate = date || currentDate || WAR_POPULATION_START_DATE;
+    const year = Number(safeDate.year);
+    const month = Number(safeDate.month);
+    const day = Number(safeDate.day);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+        return (WAR_POPULATION_START_DATE.year * 360) + (WAR_POPULATION_START_DATE.month * 30) + WAR_POPULATION_START_DATE.day;
+    }
+    return (year * 360) + (month * 30) + day;
 }
 
 function estimateWarPopulation(daysPassed, config = {}) {
@@ -8951,7 +9021,7 @@ function estimateWarPopulation(daysPassed, config = {}) {
 }
 
 function getWarPopulationSnapshot(config = {}) {
-    const startDate = config.start_date || { year: 1494, month: 2, day: 12 };
+    const startDate = config.start_date || WAR_POPULATION_START_DATE;
     const daysPassed = Math.max(0, warDateToSerial(currentDate) - warDateToSerial(startDate));
     const base = Number(config.base) || 96411031;
     return {
@@ -8973,7 +9043,7 @@ function updateWarPopulationPanel() {
     if (!valueEl || !metaEl) return;
     const population = getWarPopulationSnapshot(currentWarFrontData.population);
     valueEl.innerText = formatWarPopulation(population.value);
-    metaEl.innerText = `核战后第 ${population.daysPassed} 天 · 基准 ${formatWarPopulation(population.base)}`;
+    metaEl.innerText = `核战后第 ${population.daysPassed} 天 · 战前 ${formatWarPopulation(population.base)}`;
 }
 
 // --- 2. 照片渲染：垂直平行瀑布流 ---
@@ -9051,29 +9121,36 @@ function openFactionModal(title, listStr) {
     
     const listContainer = document.getElementById('faction-modal-list');
     listContainer.innerHTML = factionList.map(f => {
-        // 兼容处理：判断它是纯文本，还是带 defeated 标记的对象
         const name = typeof f === 'object' ? f.name : f;
-        const isDefeated = typeof f === 'object' && f.defeated === true;
-
-        if (isDefeated) {
-            // 被击溃的样式：文字变灰 + 贯穿红斜杠 + 整体半透明
-            return `
-            <div style="position: relative; padding: 12px; background: #f4f4f4; border: 1px solid #ddd; font-weight: bold; color: #999; border-radius: 4px; overflow: hidden;">
-                <span style="text-decoration: line-through;">${name}</span>
-                <div style="position: absolute; top: 50%; left: -10%; width: 120%; height: 3px; background: rgba(231, 76, 60, 0.7); transform: rotate(-8deg); pointer-events: none;"></div>
+        const status = normalizeWarFactionStatus(f);
+        const meta = getWarFactionStatusMeta(status);
+        return `
+            <div class="war-faction-status-card ${status === 'dead' ? 'dead' : ''}" style="--status-color:${meta.color};">
+                <span class="war-faction-status-dot"></span>
+                <span class="war-faction-status-name">${escapeHTML(name)}</span>
+                <span class="war-faction-status-label">${escapeHTML(meta.label)}</span>
             </div>
-            `;
-        } else {
-            // 正常的势力样式
-            return `
-            <div style="padding: 12px; background: #fff; border: 1px solid #ddd; font-weight: bold; color: #333; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                ${name}
-            </div>
-            `;
-        }
+        `;
     }).join('');
     
     document.getElementById('faction-modal').style.display = 'flex';
+}
+
+function normalizeWarFactionStatus(faction) {
+    if (!faction || typeof faction !== 'object') return 'green';
+    if (faction.defeated === true) return 'dead';
+    const status = String(faction.status || 'green').toLowerCase();
+    return ['green', 'yellow', 'red', 'dead'].includes(status) ? status : 'green';
+}
+
+function getWarFactionStatusMeta(status) {
+    const meta = {
+        green: { label: '绿色 / 稳定', color: '#27ae60' },
+        yellow: { label: '黄色 / 承压', color: '#f1c40f' },
+        red: { label: '红色 / 危急', color: '#e74c3c' },
+        dead: { label: '死亡 / 失效', color: '#2f3438' }
+    };
+    return meta[status] || meta.green;
 }
 
 
