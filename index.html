@@ -1498,7 +1498,7 @@
             
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                 <div id="date-text" style="font-weight:bold; background:#f1c40f; color:#333; padding:4px 10px; border-radius:4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">日期加载中...</div>
-                <div style="color:#d35400; font-weight:bold; margin-top:4px;">💰 <span id="gold-amount">0</span> GP</div>
+                <div style="color:#d35400; font-weight:bold; margin-top:4px;">💰 <span id="gold-amount">0</span> <span id="currency-label">GP</span></div>
                 <a href="#" onclick="logout()" style="color:#999; font-size:0.8em; text-decoration: underline;">退出登录</a>
             </div>
         </div>
@@ -1837,7 +1837,7 @@
             
             <div style="display:flex; gap:15px; align-items:center;">
                 <div style="text-align:right; font-size:0.8em; color:#bbb; line-height:1.2;">
-                    <span style="color:#f1c40f; font-weight:bold; font-size:1.1em;">600</span> GP<br>寻访一次
+                    <span id="gacha-single-cost-label" style="color:#f1c40f; font-weight:bold; font-size:1.1em;">600 GP</span><br>寻访一次
                 </div>
                 <button class="ak-pull-btn" onclick="pullOperator()">
                     <span>寻访一次</span>
@@ -1846,7 +1846,7 @@
                 <div style="width:1px; height:40px; background:#555; margin:0 5px;"></div>
 
                 <div style="text-align:right; font-size:0.8em; color:#bbb; line-height:1.2;">
-                    <span style="color:#f1c40f; font-weight:bold; font-size:1.1em;">6000</span> GP<br>寻访十次
+                    <span id="gacha-ten-cost-label" style="color:#f1c40f; font-weight:bold; font-size:1.1em;">6,000 GP</span><br>寻访十次
                 </div>
                 <button class="ak-pull-btn ten" onclick="pullOperatorTen()">
                     <span>寻访十次</span>
@@ -1897,7 +1897,7 @@
             <div style="margin:20px 0;">
                 <div style="font-size:0.9em; color:#aaa;">当前阶段: <span id="wheel-step">1</span> / 8</div>
                 <div style="font-size:1.2em; font-weight:bold; margin-top:5px;">
-                    本次消耗: <span id="wheel-cost" style="color:#f1c40f;">0</span> GP
+                    本次消耗: <span id="wheel-cost" style="color:#f1c40f;">0</span> <span id="wheel-cost-unit">GP</span>
                 </div>
             </div>
 
@@ -2418,7 +2418,7 @@
                         </select>
                     </div>
                     <div style="margin-bottom:10px;">
-                        💰 金币: <input type="number" id="adm-user-gold" style="width:80px"> <button onclick="updateUserGold()">修改</button>
+                        💰 资金: <input type="number" id="adm-user-gold" style="width:80px"> <span id="adm-user-currency-label">GP</span> <button onclick="updateUserGold()">修改</button>
                     </div>
                     <!-- Root 专用：分配负责 DM -->
                     <div id="root-assign-dm" style="display:none; margin-bottom:10px; padding:10px; border:1px dashed #3498db;">
@@ -2556,7 +2556,7 @@
                 <!-- 单个添加 -->
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
                     <input type="text" id="adm-wanted-name" placeholder="姓名" style="grid-column: 1/3;">
-                    <input type="number" id="adm-wanted-amount" placeholder="赏金 GP">
+                    <input type="number" id="adm-wanted-amount" placeholder="赏金金额">
                     <select id="adm-wanted-status">
                         <option value="DEAD OR ALIVE">DEAD OR ALIVE</option>
                         <option value="CAPTURED">CAPTURED (已捕获)</option>
@@ -2920,6 +2920,38 @@ function isCocCampaign(value = viewingCampaignType) {
     return normalizeCampaignType(value) === 'coc';
 }
 
+function getCurrencyUnit() {
+    return isCocCampaign() ? '美元' : 'GP';
+}
+
+function formatCurrency(value) {
+    const num = Number(value);
+    const displayValue = Number.isFinite(num) ? num.toLocaleString() : String(value ?? 0);
+    return `${displayValue} ${getCurrencyUnit()}`;
+}
+
+function formatWorldDate(date = currentDate) {
+    const safeDate = date || {};
+    const year = safeDate.year ?? '----';
+    const month = safeDate.month ?? '--';
+    const day = safeDate.day ?? '--';
+    return isCocCampaign() ? `公元${year}年${month}月${day}日` : `FR${year} ${month}月${day}日`;
+}
+
+function refreshHeaderLocaleLabels() {
+    const currencyLabel = document.getElementById('currency-label');
+    if (currencyLabel) currencyLabel.innerText = getCurrencyUnit();
+    const singleCostLabel = document.getElementById('gacha-single-cost-label');
+    if (singleCostLabel) singleCostLabel.innerText = formatCurrency(600);
+    const tenCostLabel = document.getElementById('gacha-ten-cost-label');
+    if (tenCostLabel) tenCostLabel.innerText = formatCurrency(6000);
+    const wheelCostUnit = document.getElementById('wheel-cost-unit');
+    if (wheelCostUnit) wheelCostUnit.innerText = getCurrencyUnit();
+
+    const dateText = document.getElementById('date-text');
+    if (dateText && currentDate) dateText.innerText = formatWorldDate(currentDate);
+}
+
 function setElementDisplay(id, shouldShow, displayValue = '') {
     const el = document.getElementById(id);
     if (el) el.style.display = shouldShow ? displayValue : 'none';
@@ -2936,6 +2968,7 @@ function applyCampaignVisibility() {
 
     setElementDisplay('gacha-tab-btn', !isCoc && !isPhandalin, 'inline-block');
     if (isCoc || isPhandalin) setElementDisplay('war-tab-btn', false);
+    refreshHeaderLocaleLabels();
 
     const activeHiddenTab = (isCoc && document.getElementById('war-section')?.classList.contains('active'))
         || (isCoc && document.getElementById('gacha-section')?.classList.contains('active'));
@@ -3321,7 +3354,7 @@ function fillCoc7thMonsterTemplate() {
                             <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
                             <div class="team-info">
                                 <h3>${m.name}</h3>
-                                <p>${m.role || '雇员'}${m.role === '核心队友' ? '' : ' | ' + m.salary + ' GP'}</p>
+                                <p>${m.role || '雇员'}${m.role === '核心队友' ? '' : ' | ' + formatCurrency(m.salary)}</p>
                             </div>
                         </div>
                         <button class="edit-bag-btn" onclick="openCharacterBag(${m.id}, '${m.name}')">编辑装备</button>
@@ -3496,7 +3529,7 @@ function fillCoc7thMonsterTemplate() {
                 const hasSheet = e.stat_block ? true : false;
                 const roleDisplay = isCore || isPlayer 
                     ? `<div>${e.role || '队友'}</div>`
-                    : `<div>${e.role || '雇员'} | ${e.salary} GP</div>`;
+                    : `<div>${e.role || '雇员'} | ${formatCurrency(e.salary)}</div>`;
                 const pendingRequest = pendingStatusRequestMap[e.id];
                 const canControlStatus = (isCore || !isPlayer) && (viewingUserId === myId || isCurrentAdmin());
                 const canFire = canControlStatus && !isCore && !isPlayer && !pendingRequest && e.status === '在职';
@@ -3548,7 +3581,7 @@ function fillCoc7thMonsterTemplate() {
 
         container.innerHTML = `
             <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:30px; text-align:center; border-radius:8px;">
-                <h3 style="margin:0; color:#d35400;">📉 每月薪资总支出: ${totalSalary} GP</h3>
+                <h3 style="margin:0; color:#d35400;">📉 每月薪资总支出: ${formatCurrency(totalSalary)}</h3>
             </div>
             
             <div class="section-title">⚔️ 核心队友</div>
@@ -4614,7 +4647,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         const { data: prof } = await supabaseClient.from('profiles').select('world_date').eq('id', viewingUserId).single();
         if (prof && prof.world_date) {
             currentDate = prof.world_date;
-            document.getElementById('date-text').innerText = `FR${currentDate.year} ${currentDate.month}月${currentDate.day}日`;
+            document.getElementById('date-text').innerText = formatWorldDate(currentDate);
             updateWarPopulationPanel();
             
             // 【】回显到 DM 后台输入框
@@ -4661,13 +4694,13 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
                 await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
                 
                 const logMsg = netIncome > 0 
-                    ? `时间跃迁触发结算：城市盈利，国库增加 ${netIncome} GP` 
-                    : `时间跃迁触发结算：城市赤字，国库扣除 ${Math.abs(netIncome)} GP`;
+                    ? `时间跃迁触发结算：城市盈利，资金增加 ${formatCurrency(netIncome)}` 
+                    : `时间跃迁触发结算：城市赤字，资金扣除 ${formatCurrency(Math.abs(netIncome))}`;
                     
                 await logAction('系统结算', logMsg);
                 alert(logMsg);
             } else {
-                alert("本月城市收支平衡，净利润为 0 GP。");
+                alert(`本月城市收支平衡，净利润为 ${formatCurrency(0)}。`);
             }
         }
     }
@@ -4713,7 +4746,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         currentDate = { year: nY, month: nM, day: nD };
         updateWarPopulationPanel();
 
-        await logAction('时间跃迁', `DM 将时间调整为 FR${nY}/${nM}/${nD}`);
+        await logAction('时间跃迁', `DM 将时间调整为 ${formatWorldDate(currentDate)}`);
         await refreshAllData();
         
         // 刷新 DM 列表
@@ -4749,6 +4782,8 @@ async function loadGold() {
         if (viewingUserId === myId) currentCampaignType = viewingCampaignType;
         applyCampaignVisibility();
         document.getElementById('gold-amount').innerText = profile.gold_gp.toLocaleString();
+        const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
+        if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
     }
 
 
@@ -4920,7 +4955,7 @@ async function loadGold() {
                     </div>
                     
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-                        <span style="color:#d35400; font-weight:bold; font-size:1.1em;">💰 ${i.price}</span>
+                        <span style="color:#d35400; font-weight:bold; font-size:1.1em;">💰 ${formatCurrency(i.price)}</span>
                         <span style="font-size:0.8em; color:${isOut ? 'red' : '#27ae60'};">
                             ${isOut ? '❌ 售罄' : `库存: ${i.stock}`}
                         </span>
@@ -5416,6 +5451,8 @@ async function buy(id, p, n, c) {
             loadWarPosterStrip();
             const campaignSelect = document.getElementById('adm-user-campaign-type');
             if (campaignSelect) campaignSelect.value = 'dnd';
+            const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
+            if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
             document.getElementById('adm-emp-list').innerHTML = '';
             document.getElementById('adm-status-emp-list').innerHTML = '';
             document.getElementById('adm-status-val').innerHTML = '';
@@ -5436,6 +5473,8 @@ async function buy(id, p, n, c) {
             viewingCampaignType = normalizeCampaignType(prof.campaign_type);
             const campaignSelect = document.getElementById('adm-user-campaign-type');
             if (campaignSelect) campaignSelect.value = viewingCampaignType;
+            const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
+            if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
             applyCampaignVisibility();
         }
 
@@ -5635,14 +5674,14 @@ async function updateUserGold() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return;
         const newGold = Number(document.getElementById('adm-user-gold').value);
-        if (Number.isNaN(newGold)) return alert('金币必须是数字，可以为负数');
+        if (Number.isNaN(newGold)) return alert('资金必须是数字，可以为负数');
         showLoading();
         await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', selectedUserId);
         
         // 记录日志
-        await logAction('DM操作', `修改了玩家(ID:${selectedUserId})的金币为 ${newGold}`);
+        await logAction('DM操作', `修改了玩家(ID:${selectedUserId})的资金为 ${formatCurrency(newGold)}`);
         
-        hideLoading(); alert('金币已修改');
+        hideLoading(); alert('资金已修改');
     }
 
     const GRANT_CATEGORIES = ['魔法物品', '装备', '卷轴', '药水', '材料', '凭证', '杂项'];
@@ -5764,7 +5803,7 @@ async function updateUserGold() {
         resultBox.innerHTML = grantSearchResults.map((item, index) => `
             <div class="grant-result-item" onclick="addGrantQueueFromResult(${index})">
                 <span>${escapeHTML(item.name)}</span>
-                <span style="color:#777; white-space:nowrap;">${escapeHTML(item.category || '杂项')} · ${item.price ?? 0} GP</span>
+                <span style="color:#777; white-space:nowrap;">${escapeHTML(item.category || '杂项')} · ${formatCurrency(item.price ?? 0)}</span>
             </div>
         `).join('');
     }
@@ -5978,8 +6017,8 @@ async function advanceTime() {
                     await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
                     
                     const logMsg = netIncome > 0 
-                        ? `新月结算：城市盈利，国库增加 ${netIncome} GP` 
-                        : `新月结算：城市赤字，国库扣除 ${Math.abs(netIncome)} GP`;
+                        ? `新月结算：城市盈利，资金增加 ${formatCurrency(netIncome)}` 
+                        : `新月结算：城市赤字，资金扣除 ${formatCurrency(Math.abs(netIncome))}`;
                         
                     await logAction('系统结算', logMsg);
                     alert(logMsg);
@@ -6028,7 +6067,7 @@ if (typeof loadAdminResearch === 'function') {
                 .eq('id', viewingUserId);
 
             // 4. 刷新
-            await logAction('时间推进', `时间变更为 FR${year}/${month}/${day} (User:${viewingUserId})`);
+            await logAction('时间推进', `时间变更为 ${formatWorldDate(nextDate)} (User:${viewingUserId})`);
             
             // 局部刷新即可，不需要 reload 整个页面
             await refreshAllData(); 
@@ -6119,7 +6158,7 @@ async function calculateCityNetIncome(targetUserId) {
         }
     }
 
-    console.log(`[结算完毕] 领地总计月利润: ${totalEmpireNetIncome} GP`);
+    console.log(`[结算完毕] 领地总计月利润: ${formatCurrency(totalEmpireNetIncome)}`);
     // 最终返回给外层时，再次确保是完美的两份小数
     return Math.round(totalEmpireNetIncome * 100) / 100;
 }
@@ -6330,7 +6369,7 @@ async function loadLoginLogs() {
             <div onclick="fillShopFormByIndex(${index})" 
                  style="padding:5px; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9em; display:flex; justify-content:space-between;">
                 <span>${escapeHTML(item.name)}</span>
-                <span style="color:#666">${item.price} GP</span>
+                <span style="color:#666">${formatCurrency(item.price)}</span>
             </div>
         `).join('');
     }
@@ -6736,7 +6775,7 @@ async function loadLoginLogs() {
                         <strong>${escapeHTML(p.target_name)}</strong>
                         <span style="color:#999;">${escapeHTML(normalizeWantedStatus(p.status_text))}</span>
                     </span>
-                    <span style="font-weight:bold; color:#c0392b;">${Number(p.bounty_amount || 0).toLocaleString()} GP</span>
+                    <span style="font-weight:bold; color:#c0392b;">${formatCurrency(p.bounty_amount || 0)}</span>
                 </label>
             `).join('')}
         `;
@@ -6791,7 +6830,7 @@ async function loadLoginLogs() {
 
         const changes = [];
         if (patch.status_text) changes.push(`状态=${patch.status_text}`);
-        if (patch.bounty_amount !== undefined) changes.push(`赏金=${patch.bounty_amount} GP`);
+        if (patch.bounty_amount !== undefined) changes.push(`赏金=${formatCurrency(patch.bounty_amount)}`);
         if (!confirm(`确定修改 ${ids.length} 份通缉令？\n${changes.join('，')}`)) return;
 
         showLoading();
@@ -6842,7 +6881,7 @@ async function loadLoginLogs() {
             const { error } = await upsertWantedPoster(payload);
             if (error) throw error;
 
-            await logAction('DM通缉令', `签发/更新通缉令 [${name}] ${amount} GP，状态 ${status} (User:${selectedUserId})`);
+            await logAction('DM通缉令', `签发/更新通缉令 [${name}] ${formatCurrency(amount)}，状态 ${status} (User:${selectedUserId})`);
             alert('悬赏令已签发 / 更新');
             document.getElementById('adm-wanted-name').value = '';
             document.getElementById('adm-wanted-amount').value = '';
@@ -6928,9 +6967,9 @@ async function loadLoginLogs() {
                 const discount = Math.round(ratio * 100); // 显示百分比
 
                 sellHtml = `
-                    <div style="font-size:0.8em; color:#999;">原价: ${baseInfo.price} GP</div>
+                    <div style="font-size:0.8em; color:#999;">原价: ${formatCurrency(baseInfo.price)}</div>
                     <div style="color:#e67e22; font-weight:bold; font-size:1.1em; margin:5px 0;">
-                        回收价: ${sellPrice} GP <span style="font-size:0.7em; color:#666;">(${discount}%)</span>
+                        回收价: ${formatCurrency(sellPrice)} <span style="font-size:0.7em; color:#666;">(${discount}%)</span>
                     </div>
                     <div style="font-size:0.75em; color:#aaa; margin-bottom:5px;">今日汇率已锁定</div>
                     <button class="btn-buy" onclick="sellItem(${item.id}, '${item.item_name}', ${sellPrice}, ${item.quantity})" style="border-color:#e67e22; color:#e67e22;">
@@ -6965,7 +7004,7 @@ async function loadLoginLogs() {
 
     // --- 执行出售 ---
     async function sellItem(invId, itemName, unitPrice, maxQty) {
-        const qtyStr = prompt(`出售 [${itemName}] (单价: ${unitPrice} GP)\n当前拥有: ${maxQty}\n\n请输入出售数量:`, "1");
+        const qtyStr = prompt(`出售 [${itemName}] (单价: ${formatCurrency(unitPrice)})\n当前拥有: ${maxQty}\n\n请输入出售数量:`, "1");
         if (qtyStr === null) return;
         const qty = parseInt(qtyStr);
 
@@ -6991,9 +7030,9 @@ async function loadLoginLogs() {
             await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
 
             // 4. 记录日志
-            await logAction('出售物品', `以 ${unitPrice} GP 的单价出售了 [${itemName}] x${qty}，获利 ${totalPrice} GP`);
+            await logAction('出售物品', `以 ${formatCurrency(unitPrice)} 的单价出售了 [${itemName}] x${qty}，获利 ${formatCurrency(totalPrice)}`);
 
-            alert(`出售成功！获得 ${totalPrice} GP`);
+            alert(`出售成功！获得 ${formatCurrency(totalPrice)}`);
             
             // 刷新
             await loadGold(); // 更新右上角金币
@@ -7439,7 +7478,7 @@ async function getRobustIP() {
 
     // 抽卡核心逻辑
     async function pullOperator() {
-        if (!confirm('消耗 600 GP 寻访一次？')) return;
+        if (!confirm(`消耗 ${formatCurrency(600)} 寻访一次？`)) return;
 
         const overlay = document.getElementById('gacha-result-overlay');
         const beam = document.getElementById('gacha-beam');
@@ -7489,7 +7528,7 @@ async function getRobustIP() {
             }, 600);
         } catch (e) {
             overlay.style.display = 'none'; 
-            alert(e.message === "GP 不足" ? "您的金币不足！" : "通讯错误");
+            alert(e.message === "资金不足" ? "您的资金不足！" : "通讯错误");
         }
     }
 
@@ -7967,7 +8006,7 @@ async function getRobustIP() {
 
     // --- 十连抽逻辑 ---
     async function pullOperatorTen() {
-        if (!confirm('消耗 6000 GP 进行十次寻访？')) return;
+        if (!confirm(`消耗 ${formatCurrency(6000)} 进行十次寻访？`)) return;
 
         const overlay = document.getElementById('gacha-result-overlay');
         const beam = document.getElementById('gacha-beam');
@@ -8040,7 +8079,7 @@ async function getRobustIP() {
 
         } catch (e) {
             overlay.style.display = 'none';
-            alert(e.message === "GP 不足" ? "您的金币不足！" : "通讯错误");
+            alert(e.message === "资金不足" ? "您的资金不足！" : "通讯错误");
         }
     }
 
@@ -8071,7 +8110,7 @@ async function getRobustIP() {
     async function processGachaTransaction(results, totalCost) {
         // 1. 扣除金币
         const currentGold = parseInt(document.getElementById('gold-amount').innerText.replace(/,/g, '')) || 0;
-        if (currentGold < totalCost) throw new Error("GP 不足");
+        if (currentGold < totalCost) throw new Error("资金不足");
 
         // 2. 计算新保底数
         let newPity = parseInt(document.getElementById('pity-count-display').innerText) || 0;
