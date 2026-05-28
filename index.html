@@ -1702,7 +1702,7 @@
         </div>
 
         <!-- 卡片 2：国家与组织 -->
-        <div class="card emp-card-content" onclick="goToWorld()" style="cursor:pointer;">
+        <div id="world-card" class="card emp-card-content" onclick="goToWorld()" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px;">🏰</div>
             <div style="font-weight:bold; font-size:1.1em;">地理</div>
             <p style="font-size:0.8em; color:#666;">国家背景、势力范围与关系图</p>
@@ -1716,14 +1716,14 @@
         </div>
 
         <!-- 卡片 4：领地管理 -->
-        <div class="card emp-card-content" onclick="goToTerritory()" style="cursor:pointer;">
+        <div id="territory-card" class="card emp-card-content" onclick="goToTerritory()" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px;">👑</div>
             <div style="font-weight:bold; font-size:1.1em;">领地治理</div>
             <p style="font-size:0.8em; color:#666;">税收、政策与城市概况</p>
         </div>
 
         <!-- 卡片 5：政务厅 -->
-        <div class="card emp-card-content" onclick="window.location.href='proposals.html?uid=' + viewingUserId" style="cursor:pointer; ">
+        <div id="proposals-card" class="card emp-card-content" onclick="window.location.href='proposals.html?uid=' + viewingUserId" style="cursor:pointer; ">
             <div style="font-size: 2.5em; margin-bottom:10px;">💼</div>
             <div style="font-weight:bold; font-size:1.1em;">政务厅</div>
             <p style="font-size:0.8em; color:#666;">审批核心成员提案</p>
@@ -1758,7 +1758,7 @@
         </div>
 
         <!-- 卡片 10：科研所 -->
-        <div class="card emp-card-content" onclick="window.location.href='research.html?uid=' + viewingUserId" style="cursor:pointer;">
+        <div id="research-card" class="card emp-card-content" onclick="window.location.href='research.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #3498db;">🔬</div>
             <div style="font-weight:bold; font-size:1.1em; ">科研中心</div>
             <p style="font-size:0.8em; color:#666;">查看当前领地的逆向工程与研发进度</p>
@@ -1773,21 +1773,21 @@
         </div>
 
         <!-- 卡片 12：超位法术 -->
-        <div class="card emp-card-content" onclick="window.location.href='supermagic.html?uid=' + viewingUserId" style="cursor:pointer;">
+        <div id="supermagic-card" class="card emp-card-content" onclick="window.location.href='supermagic.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #8e44ad;">✦</div>
             <div style="font-weight:bold; font-size:1.1em;">超位法术</div>
             <p style="font-size:0.8em; color:#666;">迷锁、神迹与高等魔法</p>
         </div>
 
         <!-- 卡片 13：法术图鉴 -->
-        <div class="card emp-card-content" onclick="window.location.href='spells.html?uid=' + viewingUserId" style="cursor:pointer;">
+        <div id="spells-card" class="card emp-card-content" onclick="window.location.href='spells.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #6d3f8d;">📖</div>
             <div style="font-weight:bold; font-size:1.1em;">法术图鉴</div>
             <p style="font-size:0.8em; color:#666;">法术与环位档案</p>
         </div>
 
         <!-- 卡片 14：物品图鉴 -->
-        <div class="card emp-card-content" onclick="window.location.href='items.html?uid=' + viewingUserId" style="cursor:pointer;">
+        <div id="items-card" class="card emp-card-content" onclick="window.location.href='items.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color: #9a5a1f;">◈</div>
             <div style="font-weight:bold; font-size:1.1em;">物品图鉴</div>
             <p style="font-size:0.8em; color:#666;">魔法物品与奇珍档案</p>
@@ -2359,7 +2359,10 @@
                     </div>
                     <div style="grid-column: 1/3; font-size:0.78em; color:#666; margin-top:-6px;">被遮罩的玩家仍能看到基础档案和现有情报，但点击“战斗属性”时只显示情报不足。</div>
                     
-                    <div style="grid-column: 1/3; font-size:0.85em; color:#666; margin-top:5px; font-weight:bold;">Stat Block (严格的 JSON 格式数据)：</div>
+                    <div style="grid-column: 1/3; font-size:0.85em; color:#666; margin-top:5px; font-weight:bold; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <span>Stat Block (严格的 JSON 格式数据)：</span>
+                        <button type="button" onclick="fillCoc7thMonsterTemplate()" style="font-size:0.8em; padding:4px 8px; border:1px solid #7f8c8d; background:#f8f9fa; color:#2c3e50; border-radius:4px; cursor:pointer;">套用 COC7th 模板</button>
+                    </div>
                     <textarea id="edit-mon-statblock" style="grid-column: 1/3; height:180px; font-family:monospace; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder='在此粘贴 JSON...'></textarea>
                 </div>
 
@@ -2407,6 +2410,13 @@
                 <select id="adm-user-list" onchange="loadUserDetail()" style="width:100%; padding:10px; margin-bottom:10px; border:2px solid #333;"></select>
                 
                 <div id="user-detail" style="display:none;">
+                    <div style="margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                        <span>🎲 团类型:</span>
+                        <select id="adm-user-campaign-type" onchange="changeSelectedUserCampaignType()" style="padding:5px; border:1px solid #aaa; border-radius:4px;">
+                            <option value="dnd">DND</option>
+                            <option value="coc">COC</option>
+                        </select>
+                    </div>
                     <div style="margin-bottom:10px;">
                         💰 金币: <input type="number" id="adm-user-gold" style="width:80px"> <button onclick="updateUserGold()">修改</button>
                     </div>
@@ -2610,12 +2620,28 @@
     let presenceChannel = null;
     let currentUserRole = 'player'; //权限划分
     let currentUserEmail = ''; 
+    let currentCampaignType = 'dnd';
+    let viewingCampaignType = 'dnd';
     let isSellMode = false;
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const DM_EMAIL = '739477825@qq.com';
     const ADMIN_ROLES = ['dm', 'root'];
+    const CAMPAIGN_TYPES = {
+        dnd: 'DND',
+        coc: 'COC'
+    };
+    const COC_HIDDEN_CARD_IDS = [
+        'world-card',
+        'territory-card',
+        'proposals-card',
+        'research-card',
+        'omni-card',
+        'supermagic-card',
+        'spells-card',
+        'items-card'
+    ];
     const WAR_CONTROLLER_EMAILS = [DM_EMAIL, 'master@almorel.com'];
     const EMPLOYEE_STATUSES = ['在职', '科研中', '出差', '休假', '特殊状态', '申请出差', '申请调回', '申请解雇', '离职', '违规'];
     const EMPLOYEE_PENDING_STATUS_REQUESTS = ['申请出差', '申请调回', '申请解雇'];
@@ -2879,6 +2905,186 @@
 function isPhandalinPlayer(email) {
     if (!email) return false;
     return email.toLowerCase().includes('lmop');
+}
+
+function normalizeCampaignType(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    return raw === 'coc' || raw === 'coc7th' ? 'coc' : 'dnd';
+}
+
+function getCampaignLabel(value) {
+    return CAMPAIGN_TYPES[normalizeCampaignType(value)] || CAMPAIGN_TYPES.dnd;
+}
+
+function isCocCampaign(value = viewingCampaignType) {
+    return normalizeCampaignType(value) === 'coc';
+}
+
+function setElementDisplay(id, shouldShow, displayValue = '') {
+    const el = document.getElementById(id);
+    if (el) el.style.display = shouldShow ? displayValue : 'none';
+}
+
+function applyCampaignVisibility() {
+    const isCoc = isCocCampaign(viewingCampaignType);
+    const isPhandalin = isPhandalinPlayer(currentUserEmail);
+
+    COC_HIDDEN_CARD_IDS.forEach(id => {
+        const hiddenForPhandalin = id === 'omni-card' && isPhandalin;
+        setElementDisplay(id, !isCoc && !hiddenForPhandalin);
+    });
+
+    setElementDisplay('gacha-tab-btn', !isCoc && !isPhandalin, 'inline-block');
+    if (isCoc || isPhandalin) setElementDisplay('war-tab-btn', false);
+
+    const activeHiddenTab = (isCoc && document.getElementById('war-section')?.classList.contains('active'))
+        || (isCoc && document.getElementById('gacha-section')?.classList.contains('active'));
+    if (activeHiddenTab) switchTab('shop');
+}
+
+async function loadViewingCampaignType(targetId = viewingUserId || myId) {
+    const normalizedDefault = 'dnd';
+    if (!targetId) {
+        viewingCampaignType = normalizedDefault;
+        applyCampaignVisibility();
+        return viewingCampaignType;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('profiles')
+            .select('campaign_type')
+            .eq('id', targetId)
+            .maybeSingle();
+
+        if (error) throw error;
+        viewingCampaignType = normalizeCampaignType(data?.campaign_type);
+    } catch (e) {
+        console.warn('读取账号团类型失败，已按 DND 处理:', e.message || e);
+        viewingCampaignType = normalizedDefault;
+    }
+
+    if (targetId === myId) currentCampaignType = viewingCampaignType;
+    applyCampaignVisibility();
+    return viewingCampaignType;
+}
+
+async function changeUserCampaignType(targetId, nextType) {
+    if (!await requireAdminRole()) return;
+    const campaignType = normalizeCampaignType(nextType);
+    showLoading();
+    try {
+        const { error } = await supabaseClient
+            .from('profiles')
+            .update({ campaign_type: campaignType })
+            .eq('id', targetId);
+
+        if (error) throw error;
+        await logAction('团类型修改', `将用户(ID:${targetId}) 标记为 ${getCampaignLabel(campaignType)}`);
+        if (targetId === viewingUserId) {
+            viewingCampaignType = campaignType;
+            applyCampaignVisibility();
+        }
+        if (targetId === myId) currentCampaignType = campaignType;
+        loadAllAccounts();
+        loadAdminData();
+    } catch (e) {
+        console.error(e);
+        alert('团类型修改失败：' + (e.message || '请确认 profiles.campaign_type 字段已创建'));
+    } finally {
+        hideLoading();
+    }
+}
+
+async function changeSelectedUserCampaignType() {
+    if (!selectedUserId) return alert('请先选择一个玩家');
+    const select = document.getElementById('adm-user-campaign-type');
+    await changeUserCampaignType(selectedUserId, select?.value || 'dnd');
+}
+
+const COC7TH_MONSTER_TEMPLATE = {
+    system: "coc7th",
+    name: "塞拉斯·卡拉瓦乔",
+    meta: "犯罪主脑",
+    basic_info: {
+        origin: "全球犯罪网络",
+        tags: ["残暴无情", "贪得无厌", "迷恋权力"],
+        description: "灰白色面具覆盖面部三分之二，身高六英尺多，看上去狡黠睿智。"
+    },
+    hp: 15,
+    armor: "1点 防弹背心",
+    move: 7,
+    characteristics: {
+        str: 60,
+        con: 60,
+        siz: 90,
+        dex: 60,
+        int: 100,
+        app: "35*",
+        pow: 80,
+        edu: 93
+    },
+    derived: {
+        san: 50,
+        mp: 16,
+        luck: 80,
+        db: "+1D4",
+        build: 1
+    },
+    combat: {
+        attacks_per_round: 1,
+        attacks: [
+            { name: "斗殴", value: "70%（35/14）", damage: "1D3+1D4" },
+            { name: ".45自动手枪", value: "80%（40/16）", damage: "1D10+2" },
+            { name: "闪避", value: "45%（22/9）" }
+        ]
+    },
+    skills: [
+        { name: "估价", value: "80%" },
+        { name: "技艺（钢琴）", value: "45%" },
+        { name: "信用评级", value: "90%" },
+        { name: "乔装", value: "80%" },
+        { name: "恐吓", value: "90%" },
+        { name: "法律", value: "50%" },
+        { name: "博物学", value: "60%" },
+        { name: "神秘学", value: "40%" },
+        { name: "说服", value: "70%" },
+        { name: "心理学", value: "60%" },
+        { name: "侦查", value: "70%" }
+    ],
+    languages: [
+        { name: "南非荷兰语", value: "30%" },
+        { name: "英语", value: "93%" },
+        { name: "法语", value: "70%" },
+        { name: "德语", value: "50%" },
+        { name: "意大利语", value: "60%" },
+        { name: "拉丁语", value: "40%" },
+        { name: "汉语", value: "30%" }
+    ],
+    talents: [
+        {
+            name: "钢铁意志",
+            desc: "进行意志检定时可以花费10点幸运来获得一个奖励骰。"
+        }
+    ],
+    background: {
+        appearance: "外貌骇人，个子很高，脸藏在灰白色的面具之下。",
+        traits: "冷酷、精于算计、瑕疵必报",
+        wounds: "很明显那个面具下有着丑陋的旧战伤（也许并没有？）"
+    },
+    notes: ["*戴着面具（面具下的样貌不为人所知）"],
+    resume: "没人知道他到底是想当世界首富还是想控制全世界。不管他到底有什么计划，只有蠢货才会和卡拉瓦乔作对。"
+};
+
+function fillCoc7thMonsterTemplate() {
+    const textArea = document.getElementById('edit-mon-statblock');
+    if (!textArea) return;
+    if (textArea.value.trim() && !confirm('当前 Stat Block 有内容，确定用 COC7th 模板覆盖吗？')) return;
+    document.getElementById('edit-mon-name').value = COC7TH_MONSTER_TEMPLATE.name;
+    document.getElementById('edit-mon-faction').value = 'COC';
+    document.getElementById('edit-mon-threat').value = '首领';
+    document.getElementById('edit-mon-status').value = COC7TH_MONSTER_TEMPLATE.meta;
+    textArea.value = JSON.stringify(COC7TH_MONSTER_TEMPLATE, null, 2);
 }
 
     // 每次打开 DM 面板时，顺便调用这个刷新列表
@@ -4328,25 +4534,12 @@ async function login() {
             // 初始化全局变量
             myId = user.id;
             currentUserEmail = user.email;
-const isPhandalin = isPhandalinPlayer(currentUserEmail); 
-
-const warBtn = document.getElementById('war-tab-btn');
-const gachaBtn = document.getElementById('gacha-tab-btn');
-const omniCard = document.getElementById('omni-card');
-
-if (isPhandalin) {
-    // 凡达林玩家：全部隐藏
-    if (warBtn) warBtn.style.display = 'none';
-    if (gachaBtn) gachaBtn.style.display = 'none';
-    if (omniCard) omniCard.style.display = 'none';
-    console.log("检测到凡达林权限：已隐藏敏感功能入口");
-} else {
-    // 领主/其他玩家：战局按钮由 loadWarSituation 决定，默认先隐藏以防冲突！
-    if (warBtn) warBtn.style.display = 'none'; 
-    if (gachaBtn) gachaBtn.style.display = 'inline-block';
-    if (omniCard) omniCard.style.display = 'block';
-}
             if (!viewingUserId) viewingUserId = user.id;
+            await loadViewingCampaignType(viewingUserId);
+
+            const warBtn = document.getElementById('war-tab-btn');
+            if (warBtn) warBtn.style.display = 'none';
+            applyCampaignVisibility();
             loadWarSituation();
             
             // 检查管理员权限
@@ -4552,6 +4745,9 @@ async function loadGold() {
         }
 
         userProfile = profile; // 赋值给全局变量供其他函数使用
+        viewingCampaignType = normalizeCampaignType(profile.campaign_type);
+        if (viewingUserId === myId) currentCampaignType = viewingCampaignType;
+        applyCampaignVisibility();
         document.getElementById('gold-amount').innerText = profile.gold_gp.toLocaleString();
     }
 
@@ -5162,7 +5358,7 @@ async function buy(id, p, n, c) {
         ulist.innerHTML = '<option value="">加载中...</option>';
 
         // 基础查询
-        let query = supabaseClient.from('profiles').select('id, email');
+        let query = supabaseClient.from('profiles').select('*');
 
         // --- 核心隔离逻辑 ---
         if (currentUserRole === 'root') {
@@ -5188,7 +5384,7 @@ async function buy(id, p, n, c) {
         ulist.innerHTML = '<option value="">-- 选择玩家 --</option>';
         if (users && users.length > 0) {
             users.forEach(u => {
-                ulist.innerHTML += `<option value="${escapeHTML(u.id)}">${escapeHTML(u.email)}</option>`;
+                ulist.innerHTML += `<option value="${escapeHTML(u.id)}">${escapeHTML(u.email)} · ${getCampaignLabel(u.campaign_type)}</option>`;
             });
         } else {
             ulist.innerHTML = '<option value="">(无关联玩家)</option>';
@@ -5218,6 +5414,8 @@ async function buy(id, p, n, c) {
             renderWantedPosterSearchResults([]);
             refreshAllData();
             loadWarPosterStrip();
+            const campaignSelect = document.getElementById('adm-user-campaign-type');
+            if (campaignSelect) campaignSelect.value = 'dnd';
             document.getElementById('adm-emp-list').innerHTML = '';
             document.getElementById('adm-status-emp-list').innerHTML = '';
             document.getElementById('adm-status-val').innerHTML = '';
@@ -5232,8 +5430,14 @@ async function buy(id, p, n, c) {
         await refreshAllData();
         setupMainRealtime(viewingUserId); // 切换视角后，重新挂载对应的实时监听
 
-        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', selectedUserId).single();
-        if (prof) document.getElementById('adm-user-gold').value = prof.gold_gp;
+        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp, campaign_type').eq('id', selectedUserId).single();
+        if (prof) {
+            document.getElementById('adm-user-gold').value = prof.gold_gp;
+            viewingCampaignType = normalizeCampaignType(prof.campaign_type);
+            const campaignSelect = document.getElementById('adm-user-campaign-type');
+            if (campaignSelect) campaignSelect.value = viewingCampaignType;
+            applyCampaignVisibility();
+        }
 
         // 在 select 里加上 'id'
         const { data: inv } = await supabaseClient
@@ -6047,15 +6251,21 @@ async function loadLoginLogs() {
             const safeEmail = escapeHTML(u.email);
             const safeStatus = escapeHTML(statusText);
             const idArg = jsStringAttr(u.id);
+            const campaign = normalizeCampaignType(u.campaign_type);
+            const campaignLabel = getCampaignLabel(campaign);
 
             return `
                 <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="overflow:hidden; text-overflow:ellipsis;">
                         <div style="font-weight:bold;">${safeEmail}</div>
-                        <div style="font-size:0.8em; color:#999;">${safeStatus}</div>
+                        <div style="font-size:0.8em; color:#999;">${safeStatus} · ${campaignLabel}</div>
                     </div>
                     <div style="text-align:right;">
                         <span style="font-size:0.8em; color:${roleColor}; font-weight:bold; margin-right:5px;">${role.toUpperCase()}</span>
+                        <select onchange="changeUserCampaignType(${idArg}, this.value)" style="font-size:0.8em; padding:2px; margin-right:4px;">
+                            <option value="dnd" ${campaign === 'dnd' ? 'selected' : ''}>DND</option>
+                            <option value="coc" ${campaign === 'coc' ? 'selected' : ''}>COC</option>
+                        </select>
                         ${!isMe ? `
                         <select onchange="changeUserRole(${idArg}, this.value)" style="font-size:0.8em; padding:2px;">
                             <option value="">-- 改权限 --</option>
@@ -8915,6 +9125,11 @@ function handleWarPosterPointerUp(event) {
 async function loadWarSituation() {
     const warPanel = document.getElementById('war-room-panel');
     const warTabBtn = document.getElementById('war-tab-btn');
+
+    if (isCocCampaign()) {
+        if (warTabBtn) warTabBtn.style.display = 'none';
+        return;
+    }
     
     // 权限校验 (非 DM/Master 隐藏入口)
     if (!['739477825@qq.com','master@almorel.com'].includes(currentUserEmail)) {
@@ -9780,6 +9995,10 @@ window.endWarTurn = async function() {
 
 
 function goToTerritory() {
+    if (isCocCampaign()) {
+        alert('当前账号标记为 COC，领地治理入口已隐藏。');
+        return;
+    }
     // 使用全局判定函数
     if (isPhandalinPlayer(currentUserEmail)) {
         alert(`啊哦~当前身份[${currentUserEmail}]没有领地。\n镇长哈宾·威斯特可不会轻易把控制权交给你！`);
@@ -9789,6 +10008,10 @@ function goToTerritory() {
 }
 
 function goToWorld() {
+    if (isCocCampaign()) {
+        alert('当前账号标记为 COC，地理入口已隐藏。');
+        return;
+    }
     if (isPhandalinPlayer(currentUserEmail)) {
         alert(`当前身份[${currentUserEmail}]：世界这么大，但你在剑湾。`);
         return; 

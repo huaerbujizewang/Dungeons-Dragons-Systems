@@ -443,6 +443,11 @@
         return maskList.includes('all') || (!!email && maskList.includes(email));
     }
 
+    function isCoc7thBlock(data) {
+        const system = String(data?.system || data?.ruleset || '').trim().toLowerCase();
+        return system === 'coc7th' || system === 'coc';
+    }
+
     function getDisplayCr(enemy) {
         if (isCombatMasked(enemy)) return 0;
         return (enemy.stat_block && enemy.stat_block.cr !== undefined) ? Number(enemy.stat_block.cr) : 0;
@@ -525,11 +530,13 @@
             enemies.forEach(e => {
                 const sb = e.stat_block || {};
                 const combatMasked = isCombatMasked(e);
+                const isCoc = isCoc7thBlock(sb);
                 const crVal = combatMasked ? '?' : (sb.cr !== undefined ? sb.cr : '?');
+                const badgeText = combatMasked ? '情报不足' : (isCoc ? 'COC7' : `CR ${crVal}`);
                 
                 html += `
                 <div class="card emp-card-content" onclick="openEnemyDossier('${e.id}')" style="cursor:pointer; position:relative;">
-                    <div class="cr-badge ${combatMasked ? 'masked' : ''}">${combatMasked ? '情报不足' : `CR ${crVal}`}</div>
+                    <div class="cr-badge ${combatMasked ? 'masked' : ''}">${badgeText}</div>
                     <img src="${e.avatar_url || 'https://via.placeholder.com/80'}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:2px solid #ccc;">
                     <div style="font-weight:bold; font-size:1.1em; margin-bottom:5px;">${e.name}</div>
                     <div style="font-size:0.85em; color:#666; margin-bottom:8px;">${e.faction || '未知'} - ${e.status || '无标签'}</div>
@@ -651,6 +658,11 @@
     }
 
     function renderCombatTab(data) {
+        if (isCoc7thBlock(data)) {
+            renderCoc7thCombatTab(data);
+            return;
+        }
+
         // HP / AC / Speed
         const parseVal = (str) => {
             if(!str) return { val: '--', note: '' };
@@ -680,6 +692,7 @@
         const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
         const grid = document.getElementById('combat-stats-grid');
         if (data.stats) {
+            grid.style.gridTemplateColumns = '';
             statKeys.forEach(k => {
                 const s = data.stats[k] || { score: 10, mod: '+0' };
                 grid.innerHTML += `
@@ -738,6 +751,89 @@
             });
             spellHtml += '</div>';
             listDiv.innerHTML += spellHtml;
+        }
+    }
+
+    function renderCoc7thCombatTab(data) {
+        const characteristics = data.characteristics || data.stats || {};
+        const derived = data.derived || {};
+        const combat = data.combat || {};
+        const background = data.background || {};
+
+        document.getElementById('combat-hp').innerText = data.hp ?? '--';
+        document.getElementById('combat-hp-note').innerText = `SAN ${derived.san ?? data.san ?? '--'}`;
+        document.getElementById('combat-ac').innerText = data.armor || data.ac || '无';
+        document.getElementById('combat-ac-note').innerText = '护甲';
+        document.getElementById('combat-speed').innerText = data.move ?? data.speed ?? '--';
+        document.getElementById('combat-speed-note').innerText = 'MOV';
+
+        const grid = document.getElementById('combat-stats-grid');
+        grid.innerHTML = '';
+        grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        [
+            ['str', 'STR'], ['con', 'CON'], ['siz', 'SIZ'], ['dex', 'DEX'],
+            ['int', 'INT'], ['app', 'APP'], ['pow', 'POW'], ['edu', 'EDU']
+        ].forEach(([key, label]) => {
+            const score = characteristics[key] ?? '--';
+            const numeric = parseInt(score, 10);
+            const half = Number.isFinite(numeric) ? Math.floor(numeric / 2) : '--';
+            const fifth = Number.isFinite(numeric) ? Math.floor(numeric / 5) : '--';
+            grid.innerHTML += `
+                <div class="ability-box">
+                    <span class="ability-title">${label}</span>
+                    <span class="ability-mod">${score}</span>
+                    <span class="ability-score">${half}/${fifth}</span>
+                </div>`;
+        });
+
+        const propsDiv = document.getElementById('combat-props');
+        propsDiv.innerHTML = [
+            ['幸运', derived.luck ?? data.luck],
+            ['魔法值', derived.mp ?? data.mp],
+            ['伤害加值', derived.db ?? data.db],
+            ['体格', derived.build ?? data.build],
+            ['每回合攻击', combat.attacks_per_round]
+        ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '').map(([label, value]) => `
+            <div class="props-row">
+                <div class="props-key">${label}</div>
+                <div class="props-val">${value}</div>
+            </div>
+        `).join('');
+
+        const listDiv = document.getElementById('combat-abilities-list');
+        listDiv.innerHTML = '';
+
+        const renderRows = (title, rows, typeClass = '') => {
+            if (!rows || rows.length === 0) return;
+            listDiv.innerHTML += `<div class="combat-section-title ${typeClass}">${title}</div>`;
+            rows.forEach(row => {
+                const parts = [row.value, row.damage ? `伤害 ${row.damage}` : '', row.desc || ''].filter(Boolean).join('；');
+                listDiv.innerHTML += `
+                    <div class="trait-card ${typeClass}">
+                        <div class="trait-title">${row.name}</div>
+                        <div class="trait-desc">${parts}</div>
+                    </div>`;
+            });
+        };
+
+        renderRows('战斗 / COMBAT', combat.attacks || [], 'action');
+        renderRows('技能 / SKILLS', data.skills || []);
+        renderRows('语言 / LANGUAGES', data.languages || []);
+        renderRows('天赋 / TALENTS', data.talents || [], 'legendary');
+
+        const backgroundRows = [
+            background.appearance ? { name: '形象描述', desc: background.appearance } : null,
+            background.traits ? { name: '特质', desc: background.traits } : null,
+            background.wounds ? { name: '伤口和疤痕', desc: background.wounds } : null
+        ].filter(Boolean);
+        renderRows('背景故事 / BACKGROUND', backgroundRows, 'reaction');
+
+        if (Array.isArray(data.notes) && data.notes.length > 0) {
+            listDiv.innerHTML += `<div class="combat-section-title">备注 / NOTES</div>`;
+            listDiv.innerHTML += `
+                <div class="trait-card">
+                    <div class="trait-desc">${data.notes.join('<br>')}</div>
+                </div>`;
         }
     }
 
