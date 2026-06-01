@@ -1155,6 +1155,53 @@
     .ability-score { font-size: 0.9em; color: #bdc3c7; }
     .ability-mod { font-size: 1.4em; font-weight: bold; color: #fff; display: block; margin-top: -2px; }
 
+    .coc-ability-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px;
+    }
+    .coc-ability-grid .ability-box {
+        background: #263238;
+        border: 1px solid #34495e;
+        padding: 10px 0;
+    }
+    .coc-ability-grid .ability-title {
+        color: #9fb3bd;
+        letter-spacing: 0;
+    }
+    .coc-ability-grid .ability-mod {
+        font-size: 1.75em;
+        margin-top: 0;
+    }
+    .coc-ability-grid .ability-score {
+        display: none;
+    }
+    .coc-compact-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .coc-compact-item {
+        background: #242424;
+        border-left: 3px solid #555;
+        padding: 8px 10px;
+        min-width: 0;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: baseline;
+    }
+    .coc-compact-name {
+        color: #eee;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+    }
+    .coc-compact-value {
+        color: #f1c40f;
+        white-space: nowrap;
+        font-family: Consolas, monospace;
+    }
+
     /* 列表属性 */
     .props-list {
         font-size: 0.9em; color: #ccc; margin-bottom: 20px;
@@ -2485,8 +2532,8 @@
             </div>
 
             <div class="admin-box" style="border:1px solid #f1c40f; padding:15px; border-radius:8px; background:#fffff0;">
-                <h3 style="margin-top:0; color:#f39c12;">🌟 雇员星级调整</h3>
-                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选雇员</div>
+                <h3 style="margin-top:0; color:#f39c12;">🌟 人员星级调整</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选人员</div>
                 <div style="display:flex; gap:5px;">
                     <select id="adm-rarity-emp-list" style="flex:1;"></select>
                     <select id="adm-rarity-val" style="width:80px;">
@@ -2502,8 +2549,8 @@
             </div>
 
             <div class="admin-box" style="border:1px solid #2ecc71; padding:15px; border-radius:8px; background:#f0fff4;">
-                <h3 style="margin-top:0; color:#27ae60;">📌 雇员状态调整</h3>
-                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选雇员</div>
+                <h3 style="margin-top:0; color:#27ae60;">📌 人员状态调整</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选人员</div>
                 <div style="display:flex; gap:5px;">
                     <select id="adm-status-emp-list" onchange="syncAdminStatusValue()" style="flex:1;"></select>
                     <select id="adm-status-val" style="width:110px;"></select>
@@ -2534,11 +2581,11 @@
                 </div>
             </div>
 
-            <!-- 雇员头像 -->
+            <!-- 人员头像 -->
             <div class="admin-box" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#fbf0ff;">
-                <h3 style="margin-top:0; color:#8e44ad;">🎨 雇员图片管理</h3>
+                <h3 style="margin-top:0; color:#8e44ad;">🎨 人员图片管理</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:10px;">
-                    先在上方 [玩家资产操控] 选择玩家，再在此处选择雇员
+                    先在上方 [玩家资产操控] 选择玩家，再在此处选择人员、玩家角色或社会连结
                 </div>
                 
                 <select id="adm-emp-list" onchange="renderAdminStandManager()" style="width:100%; margin-bottom:15px; padding:8px; border:2px solid #8e44ad; border-radius:4px; font-weight:bold;"></select>
@@ -2569,7 +2616,7 @@
                 <div style="margin-top:12px; border-top:1px dashed #d7bde2; padding-top:10px;">
                     <div style="font-size:0.85em; font-weight:bold; margin-bottom:6px; color:#8e44ad;">单张立绘管理</div>
                     <div id="adm-stand-manager" class="stand-thumb-grid">
-                        <div style="color:#999; font-size:0.8em;">选择雇员后显示已有立绘。</div>
+                        <div style="color:#999; font-size:0.8em;">选择人员后显示已有立绘。</div>
                     </div>
                 </div>
             </div>
@@ -2589,7 +2636,7 @@
 </div>
 
             <div class="admin-box" style="border:1px solid #822000; padding:15px; border-radius:8px; background:#fffcf0;">
-                <h3 style="margin-top:0; color:#822000;">📜 角色卡数据录入 (JSON)</h3>
+                <h3 style="margin-top:0; color:#822000;">📜 人员 / 社会连结 JSON</h3>
                 <select id="adm-sheet-list" onchange="updateStatBlockSelect()" style="width:100%; margin-bottom:10px;"></select>
                 <textarea id="adm-sheet-json" placeholder="在此粘贴 JSON 数据..." style="width:100%; height:150px; font-family:monospace; font-size:0.8em;"></textarea>
                 <div style="display:flex; gap:10px; margin-top:5px;">
@@ -3205,12 +3252,12 @@ const COC7TH_MONSTER_TEMPLATE = {
     background: {
         appearance: "外貌骇人，个子很高，脸藏在灰白色的面具之下。",
         traits: "冷酷、精于算计、瑕疵必报",
-        wounds: "很明显那个面具下有着丑陋的旧战伤（也许并没有？）"
+        wounds: "很明显那个面具下有着丑陋的旧战伤（也许并没有？）",
+        resume: "没人知道他到底是想当世界首富还是想控制全世界。不管他到底有什么计划，只有蠢货才会和卡拉瓦乔作对。"
     },
     armor_note: "",
     sanity_loss: "",
-    notes: ["*戴着面具（面具下的样貌不为人所知）"],
-    resume: "没人知道他到底是想当世界首富还是想控制全世界。不管他到底有什么计划，只有蠢货才会和卡拉瓦乔作对。"
+    notes: ["*戴着面具（面具下的样貌不为人所知）"]
 };
 
 function fillCoc7thMonsterTemplate() {
@@ -3265,10 +3312,10 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     spells: ["支配术", "犹格-索托斯之拳", "枯萎术"],
     background: {
         appearance: "55岁左右，有稍长的白发，身穿实验服。",
-        wounds: "他的头发遮盖着环绕他头顶一圈的伤疤，正是他的大脑被移除的位置。"
+        wounds: "他的头发遮盖着环绕他头顶一圈的伤疤，正是他的大脑被移除的位置。",
+        resume: "科伯特教授是具有米·戈科学背景的异常人物，可使用死亡射线、催眠和若干神话法术。"
     },
-    sanity_loss: "如果科伯特教授有一个米·戈大脑的事实以某种方式暴露了，知情人丧失1/1D4理智值。",
-    resume: "科伯特教授是具有米·戈科学背景的异常人物，可使用死亡射线、催眠和若干神话法术。"
+    sanity_loss: "如果科伯特教授有一个米·戈大脑的事实以某种方式暴露了，知情人丧失1/1D4理智值。"
 };
 
     // 每次打开 DM 面板时，顺便调用这个刷新列表
@@ -3406,6 +3453,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     let currentCoreSheetTarget = { employeeId: null, ownerId: null, name: '', standUrls: [] };
     let currentStandUrls = []; 
     let currentStandIndex = 0; 
+    const dossierBasicPaneTemplate = document.getElementById('dossier-pane-basic').innerHTML;
     const dossierCombatPaneTemplate = document.getElementById('dossier-pane-combat').innerHTML;
     const CORE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -3708,6 +3756,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                         玩家不可见
                     </div>
                 ` : '';
+                const hideDndStaffActions = isCocCampaign();
                 const statusBadge = isSocial ? '' : `
                     <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold; margin-bottom:8px;">
                         ${e.status}
@@ -3746,11 +3795,11 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
 
                     <div style="margin-top:5px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
                         ${hasSheet ? `<button onclick="openDossierModal(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #822000; background:#fffcf0; color:#822000; border-radius:4px; cursor:pointer;">📜 档案</button>` : ''}
-                        ${canEditCoreSheet ? `<button onclick="openCoreSheetEditor(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #16a085; background:#f0fffb; color:#16a085; border-radius:4px; cursor:pointer;">填卡</button>` : ''}
+                        ${!hideDndStaffActions && canEditCoreSheet ? `<button onclick="openCoreSheetEditor(${e.id})" style="font-size:0.8em; padding:4px 8px; border:1px solid #16a085; background:#f0fffb; color:#16a085; border-radius:4px; cursor:pointer;">填卡</button>` : ''}
                         <button class="review-btn" onclick="openEmployeeReviewModal(${e.id}, ${jsStringAttr(e.name)})">评价</button>
-                        <button class="emp-action-btn" onclick="openEmployeeStatusHistoryModal(${e.id}, ${jsStringAttr(e.name)})">履历</button>
-                        ${canSendTrip ? `<button class="emp-action-btn" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请出差')">出差</button>` : ''}
-                        ${canRecallTrip ? `<button class="emp-action-btn recall" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请调回')">调回</button>` : ''}
+                        ${!hideDndStaffActions ? `<button class="emp-action-btn" onclick="openEmployeeStatusHistoryModal(${e.id}, ${jsStringAttr(e.name)})">履历</button>` : ''}
+                        ${!hideDndStaffActions && canSendTrip ? `<button class="emp-action-btn" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请出差')">出差</button>` : ''}
+                        ${!hideDndStaffActions && canRecallTrip ? `<button class="emp-action-btn recall" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请调回')">调回</button>` : ''}
                         ${canFire ? `<button class="danger-btn" onclick="openEmployeeStatusRequestModal(${e.id}, ${jsStringAttr(e.name)}, ${jsStringAttr(e.status)}, '申请解雇')" style="width:auto; margin-top:0;">解雇</button>` : ''}
                     </div>
                 </div>`;
@@ -5720,7 +5769,7 @@ async function buy(id, p, n, c) {
                 sheetSelect.innerHTML += opt; // 同时填入数据
             });
         } else {
-            const none = '<option value="">(该玩家无雇员)</option>';
+            const none = '<option value="">(该玩家无人员)</option>';
             empSelect.innerHTML = none;
             sheetSelect.innerHTML = none;
         }
@@ -6098,7 +6147,7 @@ async function updateUserGold() {
         if (!await requireAdminRole()) return;
         const f = document.getElementById('adm-emp-avatar').files[0];
         const id = document.getElementById('adm-emp-list').value;
-        if (!id) return alert('请先选择一名雇员');
+        if (!id) return alert('请先选择一名人员');
         if (!f) return alert('请选择头像图片');
         showLoading();
         const { data: oldEmp } = await supabaseClient.from('employees').select('avatar_url').eq('id', id).single();
@@ -6113,7 +6162,7 @@ async function updateUserGold() {
                 alert('头像写入失败：' + updError.message);
             } else {
                 await removeAvatarStorageUrls([oldEmp?.avatar_url]);
-                await logAction('DM操作', `更新了雇员(ID:${id}) 的头像，并清理旧头像`);
+                await logAction('DM操作', `更新了人员(ID:${id}) 的头像，并清理旧头像`);
             }
             alert('OK');
         }
@@ -7378,7 +7427,7 @@ async function loadLoginLogs() {
         `;
     }
 
-    // --- DM 控制台功能：加载雇员到下拉框 ---
+        // --- DM 控制台功能：加载人员到下拉框 ---
 
     async function updateStatBlockSelect() {
         if (!await requireAdminRole()) return;
@@ -7429,7 +7478,7 @@ async function loadLoginLogs() {
         const empId = document.getElementById('adm-sheet-list').value;
         const jsonStr = document.getElementById('adm-sheet-json').value;
 
-        if (!empId) return alert('请选择雇员');
+        if (!empId) return alert('请选择人员');
         if (!jsonStr) return alert('请输入 JSON');
 
         try {
@@ -7457,10 +7506,10 @@ async function loadLoginLogs() {
         const empId = document.getElementById('adm-sheet-list').value;
         
         // 1. 检查是否选择了人
-        if (!empId) return alert('请先选择要操作的雇员');
+        if (!empId) return alert('请先选择要操作的人员');
 
         // 2. 二次确认防止手滑
-        if (!confirm('⚠️ 警告：确定要彻底删除该角色的属性卡数据吗？\n\n(此操作不可撤销，该角色将不再显示"查看属性"按钮)')) return;
+        if (!confirm('⚠️ 警告：确定要彻底删除该人员的属性卡数据吗？\n\n(此操作不可撤销，该人员将不再显示"查看属性"按钮)')) return;
 
         showLoading();
         try {
@@ -8082,7 +8131,7 @@ async function getRobustIP() {
         }
 
         if (!data || data.length === 0) {
-            empSelect.innerHTML = '<option value="">(该玩家无雇员)</option>';
+            empSelect.innerHTML = '<option value="">(该玩家无人员)</option>';
             return;
         }
 
@@ -8457,7 +8506,7 @@ async function getRobustIP() {
         const empName = empSelect.selectedOptions[0]?.textContent.replace(/\s*\([^)]*\)\s*$/, '') || `ID:${empId}`;
 
         if (!selectedUserId) return alert('请先选择玩家');
-        if (!empId) return alert('请先选择雇员');
+        if (!empId) return alert('请先选择人员');
         if (!EMPLOYEE_STATUSES.includes(newStatus)) return alert('状态值无效');
 
         showLoading();
@@ -8473,14 +8522,14 @@ async function getRobustIP() {
             return;
         }
 
-        await logAction('DM操作', `将雇员 [${empName}] 的状态改为 [${newStatus}] (User:${selectedUserId})`);
+        await logAction('DM操作', `将人员 [${empName}] 的状态改为 [${newStatus}] (User:${selectedUserId})`);
         await Promise.all([
             loadEmpForStatus(selectedUserId),
             loadEmpForVisibility(selectedUserId),
             loadEmployees(),
             loadTeam()
         ]);
-        alert('雇员状态已更新');
+        alert('人员状态已更新');
     }
 
     async function updateEmpRoleFromAdmin() {
@@ -8791,6 +8840,7 @@ async function getRobustIP() {
 
     const data = emp.stat_block || {};
     const basic = data.basic_info || {};
+    const isCoc = isCoc7thBlock(data);
 
     // --- 修改：多立绘渲染逻辑 ---
     let stands = [];
@@ -8820,23 +8870,10 @@ async function getRobustIP() {
     document.getElementById('dossier-stars').innerText = '★'.repeat(emp.rarity || 3);
     
     // --- 渲染 Tab 1: 基础档案 ---
-    document.getElementById('info-name').innerText = emp.name;
-    document.getElementById('info-race').innerText = data.meta || '--';
-    document.getElementById('info-gender').innerText = basic.gender || '未知';
-    document.getElementById('info-size').innerText = basic.size || '中型';
-    document.getElementById('info-origin').innerText = basic.origin || '未知区域';
-    document.getElementById('info-height').innerText = basic.height || '--';
-    document.getElementById('info-birthday').innerText = basic.birthday || '--';
-    
-    // 渲染标签
-    const tagsContainer = document.getElementById('info-tags');
-    tagsContainer.innerHTML = '';
-    if (basic.tags && Array.isArray(basic.tags)) {
-        basic.tags.forEach(tag => {
-            tagsContainer.innerHTML += `<span class="tag-box">${tag}</span>`;
-        });
+    if (isCoc) {
+        renderCoc7thBasicTab(emp.name, data);
     } else {
-        tagsContainer.innerHTML = '<span style="color:#666">--</span>';
+        renderDndBasicTab(emp.name, data);
     }
 
     // --- 渲染 Tab 2: 战斗属性 ---
@@ -8847,9 +8884,74 @@ async function getRobustIP() {
     }
 
     // --- 渲染 Tab 3: 客观履历 ---
-    const resumeText = data.resume || "【数据缺失】\n暂无该干员的详细履历记录。";
+    const resumeText = isCoc
+        ? getCoc7thResumeText(data)
+        : (data.resume || "【数据缺失】\n暂无该干员的详细履历记录。");
     document.getElementById('resume-content').innerText = resumeText;
 }
+
+    function renderDndBasicTab(displayName, data) {
+        const basic = data.basic_info || {};
+        const pane = document.getElementById('dossier-pane-basic');
+        if (pane.innerHTML !== dossierBasicPaneTemplate) pane.innerHTML = dossierBasicPaneTemplate;
+
+        document.getElementById('info-name').innerText = displayName || data.name || '--';
+        document.getElementById('info-race').innerText = data.meta || '--';
+        document.getElementById('info-gender').innerText = basic.gender || '未知';
+        document.getElementById('info-size').innerText = basic.size || '中型';
+        document.getElementById('info-origin').innerText = basic.origin || '未知区域';
+        document.getElementById('info-height').innerText = basic.height || '--';
+        document.getElementById('info-birthday').innerText = basic.birthday || basic.birth || '--';
+
+        const tagsContainer = document.getElementById('info-tags');
+        tagsContainer.innerHTML = '';
+        if (basic.tags && Array.isArray(basic.tags) && basic.tags.length > 0) {
+            basic.tags.forEach(tag => {
+                tagsContainer.innerHTML += `<span class="tag-box">${escapeHTML(tag)}</span>`;
+            });
+        } else {
+            tagsContainer.innerHTML = '<span style="color:#666">--</span>';
+        }
+    }
+
+    function renderCoc7thBasicTab(displayName, data) {
+        const basic = data.basic_info || {};
+        const rows = [
+            ['姓名', displayName || data.name],
+            ['身份', data.meta],
+            ['出生', basic.birth || basic.birthday],
+            ['出身', basic.origin],
+            ['描述', basic.description]
+        ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '');
+
+        const tags = Array.isArray(basic.tags) && basic.tags.length > 0
+            ? basic.tags.map(tag => `<span class="tag-box">${escapeHTML(tag)}</span>`).join('')
+            : '<span style="color:#666">--</span>';
+
+        document.getElementById('dossier-pane-basic').innerHTML = `
+            <div class="info-grid">
+                ${rows.map(([label, value]) => `
+                    <div class="info-item" style="${label === '描述' ? 'grid-column:1/-1;' : ''}">
+                        <span class="info-label">【${escapeHTML(label)}】</span>
+                        <span class="info-val">${escapeHTML(value)}</span>
+                    </div>
+                `).join('')}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">【标签】</span>
+                    <div style="margin-top:5px;">${tags}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    function getCoc7thResumeText(data) {
+        const background = data.background || {};
+        return background.resume || data.resume || basicResumeFallback(data);
+    }
+
+    function basicResumeFallback(data) {
+        return data?.basic_info?.description || "【数据缺失】\n暂无该调查员或实体的详细背景记录。";
+    }
 
     function renderCurrentStand() {
     const imgEl = document.getElementById('dossier-stand-img');
@@ -8911,6 +9013,7 @@ function goToStandImg(index) {
 
     // 重置 UI 的辅助函数
     function resetDossierUI() {
+        document.getElementById('dossier-pane-basic').innerHTML = dossierBasicPaneTemplate;
         document.getElementById('dossier-pane-combat').innerHTML = dossierCombatPaneTemplate;
         // 1. 重置图片和背景
         document.getElementById('dossier-stand-img').src = ''; 
@@ -8933,7 +9036,10 @@ function goToStandImg(index) {
         document.getElementById('combat-hp').innerText = '--';
         document.getElementById('combat-ac').innerText = '--';
         document.getElementById('combat-speed').innerText = '--';
-        document.getElementById('combat-stats-grid').innerHTML = '<div style="color:#666;padding:10px;">数据加载中...</div>';
+        const statsGrid = document.getElementById('combat-stats-grid');
+        statsGrid.classList.remove('coc-ability-grid');
+        statsGrid.style.gridTemplateColumns = '';
+        statsGrid.innerHTML = '<div style="color:#666;padding:10px;">数据加载中...</div>';
         document.getElementById('combat-props').innerHTML = '';
         document.getElementById('combat-abilities-list').innerHTML = '';
 
@@ -9015,6 +9121,8 @@ function goToStandImg(index) {
         const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
         const grid = document.getElementById('combat-stats-grid');
         grid.innerHTML = '';
+        grid.classList.remove('coc-ability-grid');
+        grid.style.gridTemplateColumns = '';
         
         if (data.stats) {
             statKeys.forEach(k => {
@@ -9119,34 +9227,32 @@ function goToStandImg(index) {
 
         const grid = document.getElementById('combat-stats-grid');
         grid.innerHTML = '';
-        grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        grid.classList.add('coc-ability-grid');
+        grid.style.gridTemplateColumns = '';
         [
             ['str', 'STR'], ['con', 'CON'], ['siz', 'SIZ'], ['dex', 'DEX'],
-            ['int', 'INT'], ['app', 'APP'], ['pow', 'POW'], ['edu', 'EDU']
-        ].forEach(([key, label]) => {
-            const score = characteristics[key] ?? '--';
-            const numeric = parseInt(score, 10);
-            const half = Number.isFinite(numeric) ? Math.floor(numeric / 2) : '--';
-            const fifth = Number.isFinite(numeric) ? Math.floor(numeric / 5) : '--';
+            ['int', 'INT'], ['app', 'APP'], ['pow', 'POW'], ['edu', 'EDU'],
+            ['luck', '幸运', derived.luck ?? data.luck]
+        ].forEach(([key, label, overrideValue]) => {
+            const score = overrideValue ?? characteristics[key] ?? '--';
             grid.innerHTML += `
                 <div class="ability-box">
                     <span class="ability-title">${label}</span>
-                    <span class="ability-mod">${score}</span>
-                    <span class="ability-score">${half}/${fifth}</span>
+                    <span class="ability-mod">${escapeHTML(score)}</span>
+                    <span class="ability-score"></span>
                 </div>`;
         });
 
         const propsDiv = document.getElementById('combat-props');
         propsDiv.innerHTML = [
-            ['幸运', derived.luck ?? data.luck],
             ['魔法值', derived.mp ?? data.mp],
             ['伤害加值', derived.db ?? data.db],
             ['体格', derived.build ?? data.build],
             ['每回合攻击', combat.attacks_per_round]
         ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '').map(([label, value]) => `
-            <div class="props-row">
-                <div class="props-key">${label}</div>
-                <div class="props-val">${value}</div>
+                <div class="props-row">
+                <div class="props-key">${escapeHTML(label)}</div>
+                <div class="props-val">${escapeHTML(value)}</div>
             </div>
         `).join('');
 
@@ -9155,16 +9261,34 @@ function goToStandImg(index) {
 
         const renderRows = (title, rows, typeClass = '') => {
             if (!rows || rows.length === 0) return;
-            listDiv.innerHTML += `<div class="combat-section-title ${typeClass}">${title}</div>`;
+            listDiv.innerHTML += `<div class="combat-section-title ${typeClass}">${escapeHTML(title)}</div>`;
             rows.forEach(row => {
                 if (typeof row === 'string') row = { name: row };
                 const parts = [row.value, row.damage ? `伤害 ${row.damage}` : '', row.cost ? `消耗 ${row.cost}` : '', row.desc || ''].filter(Boolean).join('；');
                 listDiv.innerHTML += `
                     <div class="trait-card ${typeClass}">
-                        <div class="trait-title">${row.name}</div>
-                        <div class="trait-desc">${parts}</div>
+                        <div class="trait-title">${escapeHTML(row.name || '--')}</div>
+                        <div class="trait-desc">${escapeHTML(parts).replace(/\n/g, '<br>')}</div>
                     </div>`;
             });
+        };
+
+        const renderCompactRows = (title, rows) => {
+            if (!rows || rows.length === 0) return;
+            listDiv.innerHTML += `<div class="combat-section-title">${escapeHTML(title)}</div>`;
+            listDiv.innerHTML += `
+                <div class="coc-compact-grid">
+                    ${rows.map(row => {
+                        if (typeof row === 'string') row = { name: row };
+                        return `
+                            <div class="coc-compact-item">
+                                <span class="coc-compact-name">${escapeHTML(row.name || '--')}</span>
+                                <span class="coc-compact-value">${escapeHTML(row.value || '')}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         };
 
         const normalizeSpells = (spells) => {
@@ -9178,8 +9302,8 @@ function goToStandImg(index) {
         };
 
         renderRows('战斗 / COMBAT', combat.attacks || [], 'action');
-        renderRows('技能 / SKILLS', data.skills || []);
-        renderRows('语言 / LANGUAGES', data.languages || []);
+        renderCompactRows('技能 / SKILLS', data.skills || []);
+        renderCompactRows('语言 / LANGUAGES', data.languages || []);
         renderRows('特殊能力 / SPECIAL', data.special_abilities || data.special || [], 'bonus');
         renderRows('法术 / SPELLS', normalizeSpells(data.spells), 'legendary');
         renderRows('天赋 / TALENTS', data.talents || [], 'legendary');
@@ -9221,7 +9345,7 @@ function goToStandImg(index) {
         const empId = document.getElementById('adm-emp-list')?.value;
         if (!box) return;
         if (!empId) {
-            box.innerHTML = '<div style="color:#999; font-size:0.8em;">选择雇员后显示已有立绘。</div>';
+            box.innerHTML = '<div style="color:#999; font-size:0.8em;">选择人员后显示已有立绘。</div>';
             return;
         }
 
@@ -9282,13 +9406,13 @@ function goToStandImg(index) {
         }
     }
 
-    // --- 为现有雇员上传立绘 ---
+    // --- 为现有人员上传立绘 ---
     async function uploadExistingStand() {
         if (!await requireAdminRole()) return;
         const file = document.getElementById('adm-emp-stand').files[0];
         const empId = document.getElementById('adm-emp-list').value;
         
-        if (!empId) return alert('请先在列表中选择一名雇员');
+        if (!empId) return alert('请先在列表中选择一名人员');
         if (!file) return alert('请选择立绘图片文件');
 
         showLoading();
@@ -9342,7 +9466,7 @@ function goToStandImg(index) {
 async function clearExistingStand() {
     const empId = document.getElementById('adm-emp-list').value;
     
-    if (!empId) return alert('请先在列表中选择一名雇员');
+    if (!empId) return alert('请先在列表中选择一名人员');
     if (!confirm('⚠️ 警告：确定要清空该角色的所有立绘吗？此操作不可逆！')) return;
 
     showLoading();
