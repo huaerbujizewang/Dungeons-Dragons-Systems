@@ -807,7 +807,8 @@
             if (!rows || rows.length === 0) return;
             listDiv.innerHTML += `<div class="combat-section-title ${typeClass}">${title}</div>`;
             rows.forEach(row => {
-                const parts = [row.value, row.damage ? `伤害 ${row.damage}` : '', row.desc || ''].filter(Boolean).join('；');
+                if (typeof row === 'string') row = { name: row };
+                const parts = [row.value, row.damage ? `伤害 ${row.damage}` : '', row.cost ? `消耗 ${row.cost}` : '', row.desc || ''].filter(Boolean).join('；');
                 listDiv.innerHTML += `
                     <div class="trait-card ${typeClass}">
                         <div class="trait-title">${row.name}</div>
@@ -816,15 +817,30 @@
             });
         };
 
+        const normalizeSpells = (spells) => {
+            if (!spells) return [];
+            if (Array.isArray(spells)) return spells.map(spell => typeof spell === 'string' ? { name: spell } : spell);
+            if (Array.isArray(spells.list)) return spells.list.map(spell => {
+                if (typeof spell === 'string') return { name: spell };
+                return { name: spell.name || spell.level || '法术', value: spell.value || spell.spells || '', desc: spell.desc || '' };
+            });
+            return [];
+        };
+
         renderRows('战斗 / COMBAT', combat.attacks || [], 'action');
         renderRows('技能 / SKILLS', data.skills || []);
         renderRows('语言 / LANGUAGES', data.languages || []);
+        renderRows('特殊能力 / SPECIAL', data.special_abilities || data.special || [], 'bonus');
+        renderRows('法术 / SPELLS', normalizeSpells(data.spells), 'legendary');
         renderRows('天赋 / TALENTS', data.talents || [], 'legendary');
 
         const backgroundRows = [
             background.appearance ? { name: '形象描述', desc: background.appearance } : null,
             background.traits ? { name: '特质', desc: background.traits } : null,
-            background.wounds ? { name: '伤口和疤痕', desc: background.wounds } : null
+            background.wounds ? { name: '伤口和疤痕', desc: background.wounds } : null,
+            background.armor ? { name: '护甲', desc: background.armor } : null,
+            data.armor_note ? { name: '护甲说明', desc: data.armor_note } : null,
+            data.sanity_loss ? { name: '理智损失', desc: data.sanity_loss } : null
         ].filter(Boolean);
         renderRows('背景故事 / BACKGROUND', backgroundRows, 'reaction');
 

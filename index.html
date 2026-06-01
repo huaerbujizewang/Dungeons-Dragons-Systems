@@ -2918,6 +2918,17 @@
         return nextBlock;
     }
 
+    function isCombatMaskedStatBlock(statBlock = {}) {
+        const email = (currentUserEmail || '').trim().toLowerCase();
+        const maskList = getMonsterCombatMaskList(statBlock).map(v => String(v).trim().toLowerCase());
+        return maskList.includes('all') || (!!email && maskList.includes(email));
+    }
+
+    function isCoc7thBlock(data) {
+        const system = String(data?.system || data?.ruleset || '').trim().toLowerCase();
+        return system === 'coc7th' || system === 'coc';
+    }
+
     function addSelectedPlayerToMonsterCombatMask() {
         const select = document.getElementById('adm-user-list');
         const input = document.getElementById('edit-mon-combat-mask');
@@ -3127,6 +3138,8 @@ const COC7TH_MONSTER_TEMPLATE = {
         { name: "拉丁语", value: "40%" },
         { name: "汉语", value: "30%" }
     ],
+    special_abilities: [],
+    spells: [],
     talents: [
         {
             name: "钢铁意志",
@@ -3138,6 +3151,8 @@ const COC7TH_MONSTER_TEMPLATE = {
         traits: "冷酷、精于算计、瑕疵必报",
         wounds: "很明显那个面具下有着丑陋的旧战伤（也许并没有？）"
     },
+    armor_note: "",
+    sanity_loss: "",
     notes: ["*戴着面具（面具下的样貌不为人所知）"],
     resume: "没人知道他到底是想当世界首富还是想控制全世界。不管他到底有什么计划，只有蠢货才会和卡拉瓦乔作对。"
 };
@@ -3288,6 +3303,7 @@ function fillCoc7thMonsterTemplate() {
     let currentCoreSheetTarget = { employeeId: null, ownerId: null, name: '', standUrls: [] };
     let currentStandUrls = []; 
     let currentStandIndex = 0; 
+    const dossierCombatPaneTemplate = document.getElementById('dossier-pane-combat').innerHTML;
     const CORE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 
     function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
@@ -3571,9 +3587,19 @@ function fillCoc7thMonsterTemplate() {
                 const canSendTrip = canControlStatus && !pendingRequest && e.status === '在职';
                 const canRecallTrip = canControlStatus && !pendingRequest && e.status === '出差';
                 const canEditCoreSheet = isCore && (viewingUserId === myId || isCurrentAdmin());
-                const pendingNote = pendingRequest
+                const pendingNote = !isSocial && pendingRequest
                     ? `<div class="emp-pending-note">${renderStatusRequestDetail(pendingRequest)}</div>`
                     : '';
+                const statusBadge = isSocial ? '' : `
+                    <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold; margin-bottom:8px;">
+                        ${e.status}
+                    </div>
+                `;
+                const intelBadge = isSocial && hasSheet && isCombatMaskedStatBlock(e.stat_block) ? `
+                    <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:#2c3e50; color:#bdc3c7; font-weight:bold; margin-bottom:8px;">
+                        情报不足
+                    </div>
+                ` : '';
 
                 const rarity = e.rarity || 3;
                 const stars = '★'.repeat(rarity);
@@ -3594,9 +3620,8 @@ function fillCoc7thMonsterTemplate() {
                         ${roleDisplay}
                     </div>
 
-                    <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold; margin-bottom:8px;">
-                        ${e.status}
-                    </div>
+                    ${statusBadge}
+                    ${intelBadge}
 
                     ${pendingNote}
 
@@ -8394,7 +8419,11 @@ async function getRobustIP() {
     }
 
     // --- 渲染 Tab 2: 战斗属性 ---
-    renderCombatTab(data);
+    if (isCombatMaskedStatBlock(data)) {
+        renderCombatIntelLocked();
+    } else {
+        renderCombatTab(data);
+    }
 
     // --- 渲染 Tab 3: 客观履历 ---
     const resumeText = data.resume || "【数据缺失】\n暂无该干员的详细履历记录。";
@@ -8461,6 +8490,7 @@ function goToStandImg(index) {
 
     // 重置 UI 的辅助函数
     function resetDossierUI() {
+        document.getElementById('dossier-pane-combat').innerHTML = dossierCombatPaneTemplate;
         // 1. 重置图片和背景
         document.getElementById('dossier-stand-img').src = ''; 
         document.getElementById('dossier-stand-img').classList.remove('loaded'); // 隐藏图片直到加载完成
@@ -8490,8 +8520,24 @@ function goToStandImg(index) {
         document.getElementById('resume-content').innerText = '正在解密档案...';
     }
 
+    function renderCombatIntelLocked() {
+        document.getElementById('dossier-pane-combat').innerHTML = `
+            <div style="min-height:330px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; border:1px dashed #444; background:linear-gradient(135deg, rgba(231,76,60,0.08), rgba(0,0,0,0.25)); padding:30px; box-sizing:border-box;">
+                <div style="width:70px; height:70px; border-radius:50%; border:2px solid #e74c3c; color:#e74c3c; display:flex; align-items:center; justify-content:center; font-size:2em; font-weight:900; margin-bottom:18px; box-shadow:0 0 24px rgba(231,76,60,0.2);">?</div>
+                <div style="color:#fff; font-size:1.35em; font-weight:900; letter-spacing:1px; margin-bottom:8px;">情报不足</div>
+                <div style="color:#aaa; line-height:1.8; max-width:440px;">
+                    本目标的战斗数据或异常能力尚未被确认。当前权限仅允许查阅基础档案与现有情报。
+                </div>
+            </div>
+        `;
+    }
+
     // 2. 渲染战斗属性 Tab
     function renderCombatTab(data) {
+        if (isCoc7thBlock(data)) {
+            renderCoc7thCombatTab(data);
+            return;
+        }
         
         // --- A. 顶部数值 (HP/AC) 智能解析 ---
         // 解析 "19 (24 护盾术)" 这种格式 -> val="19", note="24 护盾术"
@@ -8634,6 +8680,105 @@ function goToStandImg(index) {
             });
             spellHtml += '</div>';
             listDiv.innerHTML += spellHtml;
+        }
+    }
+
+    function renderCoc7thCombatTab(data) {
+        const characteristics = data.characteristics || data.stats || {};
+        const derived = data.derived || {};
+        const combat = data.combat || {};
+        const background = data.background || {};
+
+        document.getElementById('combat-hp').innerText = data.hp ?? '--';
+        document.getElementById('combat-hp-note').innerText = `SAN ${derived.san ?? data.san ?? '--'}`;
+        document.getElementById('combat-ac').innerText = data.armor || data.ac || '无';
+        document.getElementById('combat-ac-note').innerText = '护甲';
+        document.getElementById('combat-speed').innerText = data.move ?? data.speed ?? '--';
+        document.getElementById('combat-speed-note').innerText = 'MOV';
+
+        const grid = document.getElementById('combat-stats-grid');
+        grid.innerHTML = '';
+        grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        [
+            ['str', 'STR'], ['con', 'CON'], ['siz', 'SIZ'], ['dex', 'DEX'],
+            ['int', 'INT'], ['app', 'APP'], ['pow', 'POW'], ['edu', 'EDU']
+        ].forEach(([key, label]) => {
+            const score = characteristics[key] ?? '--';
+            const numeric = parseInt(score, 10);
+            const half = Number.isFinite(numeric) ? Math.floor(numeric / 2) : '--';
+            const fifth = Number.isFinite(numeric) ? Math.floor(numeric / 5) : '--';
+            grid.innerHTML += `
+                <div class="ability-box">
+                    <span class="ability-title">${label}</span>
+                    <span class="ability-mod">${score}</span>
+                    <span class="ability-score">${half}/${fifth}</span>
+                </div>`;
+        });
+
+        const propsDiv = document.getElementById('combat-props');
+        propsDiv.innerHTML = [
+            ['幸运', derived.luck ?? data.luck],
+            ['魔法值', derived.mp ?? data.mp],
+            ['伤害加值', derived.db ?? data.db],
+            ['体格', derived.build ?? data.build],
+            ['每回合攻击', combat.attacks_per_round]
+        ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '').map(([label, value]) => `
+            <div class="props-row">
+                <div class="props-key">${label}</div>
+                <div class="props-val">${value}</div>
+            </div>
+        `).join('');
+
+        const listDiv = document.getElementById('combat-abilities-list');
+        listDiv.innerHTML = '';
+
+        const renderRows = (title, rows, typeClass = '') => {
+            if (!rows || rows.length === 0) return;
+            listDiv.innerHTML += `<div class="combat-section-title ${typeClass}">${title}</div>`;
+            rows.forEach(row => {
+                if (typeof row === 'string') row = { name: row };
+                const parts = [row.value, row.damage ? `伤害 ${row.damage}` : '', row.cost ? `消耗 ${row.cost}` : '', row.desc || ''].filter(Boolean).join('；');
+                listDiv.innerHTML += `
+                    <div class="trait-card ${typeClass}">
+                        <div class="trait-title">${row.name}</div>
+                        <div class="trait-desc">${parts}</div>
+                    </div>`;
+            });
+        };
+
+        const normalizeSpells = (spells) => {
+            if (!spells) return [];
+            if (Array.isArray(spells)) return spells.map(spell => typeof spell === 'string' ? { name: spell } : spell);
+            if (Array.isArray(spells.list)) return spells.list.map(spell => {
+                if (typeof spell === 'string') return { name: spell };
+                return { name: spell.name || spell.level || '法术', value: spell.value || spell.spells || '', desc: spell.desc || '' };
+            });
+            return [];
+        };
+
+        renderRows('战斗 / COMBAT', combat.attacks || [], 'action');
+        renderRows('技能 / SKILLS', data.skills || []);
+        renderRows('语言 / LANGUAGES', data.languages || []);
+        renderRows('特殊能力 / SPECIAL', data.special_abilities || data.special || [], 'bonus');
+        renderRows('法术 / SPELLS', normalizeSpells(data.spells), 'legendary');
+        renderRows('天赋 / TALENTS', data.talents || [], 'legendary');
+
+        const backgroundRows = [
+            background.appearance ? { name: '形象描述', desc: background.appearance } : null,
+            background.traits ? { name: '特质', desc: background.traits } : null,
+            background.wounds ? { name: '伤口和疤痕', desc: background.wounds } : null,
+            background.armor ? { name: '护甲', desc: background.armor } : null,
+            data.armor_note ? { name: '护甲说明', desc: data.armor_note } : null,
+            data.sanity_loss ? { name: '理智损失', desc: data.sanity_loss } : null
+        ].filter(Boolean);
+        renderRows('背景故事 / BACKGROUND', backgroundRows, 'reaction');
+
+        if (Array.isArray(data.notes) && data.notes.length > 0) {
+            listDiv.innerHTML += `<div class="combat-section-title">备注 / NOTES</div>`;
+            listDiv.innerHTML += `
+                <div class="trait-card">
+                    <div class="trait-desc">${data.notes.join('<br>')}</div>
+                </div>`;
         }
     }
 
