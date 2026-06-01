@@ -2440,6 +2440,50 @@
                 </div>
             </div>
 
+            <div class="admin-box" style="border:1px solid #16a085; padding:15px; border-radius:8px; background:#f0fffb;">
+                <h3 style="margin-top:0; color:#16a085;">➕ 新增人员 / 社会连结</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:8px;">先在上方选择玩家；可创建雇员、玩家角色或社会连结，并设置是否对玩家可见。</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                    <input id="new-emp-name" type="text" placeholder="姓名" style="grid-column:1/3; padding:6px;">
+                    <select id="new-emp-role" onchange="syncNewEmployeeRoleDefaults()" style="padding:6px;"></select>
+                    <select id="new-emp-status" style="padding:6px;"></select>
+                    <input id="new-emp-salary" type="number" placeholder="薪资 / 资金" style="padding:6px;">
+                    <input id="new-emp-rarity" type="number" min="1" max="6" value="3" placeholder="星级" style="padding:6px;">
+                    <input id="new-emp-avatar-url" type="text" placeholder="头像 URL（可空）" style="grid-column:1/3; padding:6px;">
+                    <input id="new-emp-stand-url" type="text" placeholder="立绘 URL，可用英文逗号分隔（可空）" style="grid-column:1/3; padding:6px;">
+                    <label style="grid-column:1/3; font-size:0.85em; display:flex; align-items:center; gap:6px;">
+                        <input id="new-emp-visible" type="checkbox" checked>
+                        玩家可见
+                    </label>
+                    <div style="grid-column:1/3; display:flex; gap:6px;">
+                        <input id="new-emp-combat-mask" type="text" placeholder="战斗/神话情报遮罩：all 或邮箱，逗号分隔" style="flex:1; padding:6px;">
+                        <button type="button" onclick="addSelectedPlayerToNewEmployeeMask()" style="padding:6px 8px;">加入当前</button>
+                    </div>
+                    <div style="grid-column:1/3; display:flex; gap:6px; flex-wrap:wrap;">
+                        <button type="button" onclick="fillNewEmployeeTemplate('blank')" style="font-size:0.8em;">空白 DND</button>
+                        <button type="button" onclick="fillNewEmployeeTemplate('coc')" style="font-size:0.8em;">COC 普通</button>
+                        <button type="button" onclick="fillNewEmployeeTemplate('coc_spellcaster')" style="font-size:0.8em;">COC 施法者</button>
+                    </div>
+                    <textarea id="new-emp-statblock" placeholder="stat_block JSON（可空；按钮可生成模板）" style="grid-column:1/3; height:120px; font-family:monospace; font-size:0.8em; padding:8px;"></textarea>
+                </div>
+                <button onclick="createEmployeeFromAdmin()" style="width:100%; margin-top:8px; background:#16a085; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">创建人员档案</button>
+            </div>
+
+            <div class="admin-box" style="border:1px solid #34495e; padding:15px; border-radius:8px; background:#f4f6f8;">
+                <h3 style="margin-top:0; color:#34495e;">👁️ 人员可见性 / 情报遮罩</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">完全不可见会从玩家列表消失；情报遮罩则显示卡片但战斗属性为“情报不足”。</div>
+                <select id="adm-visibility-emp-list" onchange="syncAdminVisibilityValue()" style="width:100%; margin-bottom:6px; padding:6px;"></select>
+                <label style="font-size:0.85em; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <input id="adm-emp-visible-to-player" type="checkbox">
+                    玩家可见
+                </label>
+                <div style="display:flex; gap:6px;">
+                    <input id="adm-emp-combat-mask" type="text" placeholder="战斗/神话情报遮罩：all 或邮箱，逗号分隔" style="flex:1; padding:6px;">
+                    <button type="button" onclick="addSelectedPlayerToEmployeeMask()" style="padding:6px 8px;">加入当前</button>
+                </div>
+                <button onclick="updateEmpVisibilityFromAdmin()" style="width:100%; margin-top:8px; background:#34495e; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">保存可见性</button>
+            </div>
+
             <div class="admin-box" style="border:1px solid #f1c40f; padding:15px; border-radius:8px; background:#fffff0;">
                 <h3 style="margin-top:0; color:#f39c12;">🌟 雇员星级调整</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选雇员</div>
@@ -2666,7 +2710,8 @@
         recall: { status: '申请调回', title: '调回申请', reasonLabel: '调回理由' },
         fire: { status: '申请解雇', title: '解雇申请', reasonLabel: '解雇理由' }
     };
-    const EMPLOYEE_ROLE_OPTIONS = ['核心队友', '雇员', '随从', '中立与社会连结'];
+    const EMPLOYEE_ROLE_OPTIONS = ['核心队友', '玩家角色', '雇员', '随从', '中立与社会连结'];
+    const PLAYER_CHARACTER_ROLES = ['玩家角色'];
     const SOCIAL_CONNECTION_ROLES = ['中立与社会连结', '中立', '社会连结', '联系人', '盟友', '友方NPC'];
     const EMPLOYEE_STATUS_REVIEW_LABELS = {
         pending: '待审批',
@@ -2708,6 +2753,10 @@
 
     function isCoreMemberRole(role) {
         return normalizeEmployeeRole(role) === '核心队友';
+    }
+
+    function isPlayerCharacterRole(role) {
+        return PLAYER_CHARACTER_ROLES.includes(normalizeEmployeeRole(role));
     }
 
     function isSocialConnectionRole(role) {
@@ -2934,15 +2983,22 @@
         const input = document.getElementById('edit-mon-combat-mask');
         if (!select || !input || !select.value) return alert('请先在【玩家资产操控】里选择一个玩家。');
 
-        const selectedText = select.options[select.selectedIndex]?.textContent || '';
-        const emailMatch = selectedText.match(/[^\s<>]+@[^\s<>]+/);
-        if (!emailMatch) return alert('未能从当前玩家选项中识别邮箱。');
+        const email = getSelectedAdminPlayerEmail();
+        if (!email) return alert('未能从当前玩家选项中识别邮箱。');
 
         const list = normalizeCommaList(input.value);
-        if (!list.map(v => v.toLowerCase()).includes(emailMatch[0].toLowerCase())) {
-            list.push(emailMatch[0]);
+        if (!list.map(v => v.toLowerCase()).includes(email.toLowerCase())) {
+            list.push(email);
         }
         input.value = list.join(',');
+    }
+
+    function getSelectedAdminPlayerEmail() {
+        const select = document.getElementById('adm-user-list');
+        if (!select || !select.value) return '';
+        const selectedText = select.options[select.selectedIndex]?.textContent || '';
+        const emailMatch = selectedText.match(/[^\s<>]+@[^\s<>]+/);
+        return emailMatch ? emailMatch[0] : '';
     }
 
 // 全局判定是否为凡达林玩家的函数
@@ -3168,6 +3224,53 @@ function fillCoc7thMonsterTemplate() {
     textArea.value = JSON.stringify(COC7TH_MONSTER_TEMPLATE, null, 2);
 }
 
+const COC7TH_SPELLCASTER_TEMPLATE = {
+    system: "coc7th",
+    name: "科伯特教授",
+    meta: "米·戈科学家",
+    basic_info: {
+        origin: "未知研究网络",
+        tags: ["米·戈", "科学家", "异常大脑", "施法者"],
+        description: "55岁左右，有稍长的白发，身穿实验服。"
+    },
+    hp: 12,
+    armor: "无",
+    armor_note: "当身体是人类时，大脑是一个米·戈构造物，所有穿刺武器（包括子弹）对大脑造成最小伤害；理论上这个大脑可以被移动到新的宿主中。",
+    move: 8,
+    characteristics: { str: 50, con: 60, siz: 60, dex: 60, int: 80, app: 70, pow: 50, edu: "—" },
+    derived: { san: "—", mp: 10, luck: 50, db: "0", build: 0 },
+    combat: {
+        attacks_per_round: 1,
+        attacks: [
+            { name: "格斗", value: "55%（27/11）", damage: "1D3，或取决于武器" },
+            { name: "死亡射线", value: "60%（30/12）", damage: "1D10+5，无视护甲" },
+            { name: "闪避", value: "35%" }
+        ]
+    },
+    skills: [
+        { name: "计算机使用", value: "70%" },
+        { name: "克苏鲁神话", value: "50%" },
+        { name: "催眠", value: "70%" },
+        { name: "医学", value: "90%" },
+        { name: "科学（任意）", value: "80%" },
+        { name: "侦查", value: "40%" }
+    ],
+    special_abilities: [
+        {
+            name: "催眠",
+            value: "70%",
+            desc: "目标进行POW对抗检定；技能成功使目标被控制1D6小时。教授可以用传心术和人类对话，每5回合消耗1点魔法值。"
+        }
+    ],
+    spells: ["支配术", "犹格-索托斯之拳", "枯萎术"],
+    background: {
+        appearance: "55岁左右，有稍长的白发，身穿实验服。",
+        wounds: "他的头发遮盖着环绕他头顶一圈的伤疤，正是他的大脑被移除的位置。"
+    },
+    sanity_loss: "如果科伯特教授有一个米·戈大脑的事实以某种方式暴露了，知情人丧失1/1D4理智值。",
+    resume: "科伯特教授是具有米·戈科学背景的异常人物，可使用死亡射线、催眠和若干神话法术。"
+};
+
     // 每次打开 DM 面板时，顺便调用这个刷新列表
     async function loadAdminMonsters() {
         if (!await requireAdminRole()) return;
@@ -3339,7 +3442,10 @@ function fillCoc7thMonsterTemplate() {
                 console.log('人员/小队状态变动');
                 loadTeam();
                 loadEmployees();
-                if (isCurrentAdmin()) loadPendingRequests();
+                if (isCurrentAdmin()) {
+                    loadPendingRequests();
+                    if (selectedUserId) loadEmpForVisibility(selectedUserId);
+                }
             })
             // 5. 监听角色评价变动
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_reviews', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
@@ -3388,13 +3494,16 @@ function fillCoc7thMonsterTemplate() {
             .eq('is_in_party', true)
             .eq('user_id', viewingUserId)
             .order('id');
+        const visibleMembers = isCurrentAdmin()
+            ? (members || [])
+            : (members || []).filter(m => m.is_visible_to_player !== false);
 
         // 清空容器，准备重新渲染
         container.innerHTML = '';
         
         // 1. 渲染现有队员
-        if (members && members.length > 0) {
-            members.forEach(m => {
+        if (visibleMembers && visibleMembers.length > 0) {
+            visibleMembers.forEach(m => {
                 // 将卡片加入容器
                 container.innerHTML += `
                     <div class="team-card">
@@ -3403,7 +3512,7 @@ function fillCoc7thMonsterTemplate() {
                             <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
                             <div class="team-info">
                                 <h3>${m.name}</h3>
-                                <p>${m.role || '雇员'}${isCoreMemberRole(m.role) || isSocialConnectionRole(m.role) || m.salary === -1 ? '' : ' | ' + formatCurrency(m.salary)}</p>
+                                <p>${m.role || '雇员'}${isCoreMemberRole(m.role) || isPlayerCharacterRole(m.role) || isSocialConnectionRole(m.role) || m.salary === -1 ? '' : ' | ' + formatCurrency(m.salary)}</p>
                             </div>
                         </div>
                         <button class="edit-bag-btn" onclick="openCharacterBag(${m.id}, '${m.name}')">编辑装备</button>
@@ -3412,11 +3521,11 @@ function fillCoc7thMonsterTemplate() {
         }
 
         // 2. 渲染添加按钮 (如果人数不满8人)
-        if (!members || members.length < 8) {
+        if (!visibleMembers || visibleMembers.length < 8) {
             container.innerHTML += `
                 <div class="team-card add-member-card" onclick="openMemberModal()">
                     <div style="font-size:3em;">+</div>
-                    <div>添加队员 (${members ? members.length : 0}/8)</div>
+                    <div>添加队员 (${visibleMembers ? visibleMembers.length : 0}/8)</div>
                 </div>`;
         }
         
@@ -3490,6 +3599,10 @@ function fillCoc7thMonsterTemplate() {
             return;
         }
 
+        const visibleData = isCurrentAdmin()
+            ? (data || [])
+            : (data || []).filter(e => e.is_visible_to_player !== false);
+
         let pendingStatusRequestMap = {};
         try {
             const { data: pendingRequests, error: pendingError } = await supabaseClient
@@ -3510,7 +3623,7 @@ function fillCoc7thMonsterTemplate() {
         }
 
         // 1. 触发立绘预加载
-        const standUrls = data.map(e => e.stand_url).filter(u => u && u.length > 0);
+        const standUrls = visibleData.map(e => e.stand_url).filter(u => u && u.length > 0);
         preloadImages(standUrls);
 
         // 2. 状态权重配置
@@ -3522,7 +3635,7 @@ function fillCoc7thMonsterTemplate() {
         // --- 排序权重计算 ---
         const getSortWeight = (e) => {
             const sWeight = statusWeight[e.status] || 99;
-            const isPlayer = e.salary === -1;
+            const isPlayer = e.salary === -1 || isPlayerCharacterRole(e.role);
             const salary = Number(e.salary) || 0;
             return {
                 status: sWeight,
@@ -3549,13 +3662,13 @@ function fillCoc7thMonsterTemplate() {
         };
 
         // 计算总薪资 
-        const totalSalary = data
-            .filter(e => EMPLOYEE_SALARY_STATUSES.includes(e.status) && e.salary !== -1 && !isSocialConnectionRole(e.role))
+        const totalSalary = visibleData
+            .filter(e => EMPLOYEE_SALARY_STATUSES.includes(e.status) && e.salary !== -1 && !isPlayerCharacterRole(e.role) && !isSocialConnectionRole(e.role))
             .reduce((sum, e) => sum + (Number(e.salary) || 0), 0);
         // 分组并排序
-        const coreMembers = data.filter(e => isCoreMemberRole(e.role)).sort(sortLogic);
-        const socialConnections = data.filter(e => isSocialConnectionRole(e.role)).sort(sortLogic);
-        const hirelings = data.filter(e => !isCoreMemberRole(e.role) && !isSocialConnectionRole(e.role)).sort(sortLogic);
+        const coreMembers = visibleData.filter(e => isCoreMemberRole(e.role) || isPlayerCharacterRole(e.role)).sort(sortLogic);
+        const socialConnections = visibleData.filter(e => isSocialConnectionRole(e.role)).sort(sortLogic);
+        const hirelings = visibleData.filter(e => !isCoreMemberRole(e.role) && !isPlayerCharacterRole(e.role) && !isSocialConnectionRole(e.role)).sort(sortLogic);
 
         // 4. 渲染函数
         const renderGrid = (list) => {
@@ -3576,7 +3689,7 @@ function fillCoc7thMonsterTemplate() {
 
                 const isCore = isCoreMemberRole(e.role);
                 const isSocial = isSocialConnectionRole(e.role);
-                const isPlayer = e.salary === -1;
+                const isPlayer = e.salary === -1 || isPlayerCharacterRole(e.role);
                 const hasSheet = e.stat_block ? true : false;
                 const roleDisplay = isCore || isPlayer || isSocial
                     ? `<div>${e.role || '队友'}</div>`
@@ -3586,10 +3699,15 @@ function fillCoc7thMonsterTemplate() {
                 const canFire = canControlStatus && !isCore && !isPlayer && !pendingRequest && e.status === '在职';
                 const canSendTrip = canControlStatus && !pendingRequest && e.status === '在职';
                 const canRecallTrip = canControlStatus && !pendingRequest && e.status === '出差';
-                const canEditCoreSheet = isCore && (viewingUserId === myId || isCurrentAdmin());
+                const canEditCoreSheet = (isCore || isPlayer) && (viewingUserId === myId || isCurrentAdmin());
                 const pendingNote = !isSocial && pendingRequest
                     ? `<div class="emp-pending-note">${renderStatusRequestDetail(pendingRequest)}</div>`
                     : '';
+                const hiddenBadge = e.is_visible_to_player === false ? `
+                    <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:#7f8c8d; color:white; font-weight:bold; margin-bottom:8px;">
+                        玩家不可见
+                    </div>
+                ` : '';
                 const statusBadge = isSocial ? '' : `
                     <div style="font-size:0.75em; display:inline-block; padding:2px 10px; border-radius:12px; background:${config.color}; color:white; font-weight:bold; margin-bottom:8px;">
                         ${e.status}
@@ -3622,6 +3740,7 @@ function fillCoc7thMonsterTemplate() {
 
                     ${statusBadge}
                     ${intelBadge}
+                    ${hiddenBadge}
 
                     ${pendingNote}
 
@@ -4501,11 +4620,14 @@ async function openEquipModal(empId, slotIdx) {
             .order('id');
             
         list.innerHTML = '';
-        if (!candidates || candidates.length === 0) {
+        const visibleCandidates = isCurrentAdmin()
+            ? (candidates || [])
+            : (candidates || []).filter(c => c.is_visible_to_player !== false);
+        if (!visibleCandidates || visibleCandidates.length === 0) {
             return list.innerHTML = '<div style="padding:10px;text-align:center;color:#999">没有可用的雇员</div>';
         }
         
-        candidates.forEach(c => {
+        visibleCandidates.forEach(c => {
             list.innerHTML += `
                 <div onclick="addToParty(${c.id})">
                     <span>
@@ -4903,6 +5025,7 @@ async function loadGold() {
         p.style.display = p.style.display === 'block' ? 'none' : 'block';
 
         if (p.style.display === 'block') {
+            initNewEmployeeForm();
             if (typeof loadPendingRequests === 'function') {
                 loadPendingRequests(); 
             }
@@ -5521,6 +5644,12 @@ async function buy(id, p, n, c) {
             document.getElementById('adm-status-val').innerHTML = '';
             document.getElementById('adm-role-emp-list').innerHTML = '';
             document.getElementById('adm-role-val').innerHTML = '';
+            const visibilitySelect = document.getElementById('adm-visibility-emp-list');
+            const visibilityMask = document.getElementById('adm-emp-combat-mask');
+            const visibilityCheck = document.getElementById('adm-emp-visible-to-player');
+            if (visibilitySelect) visibilitySelect.innerHTML = '';
+            if (visibilityMask) visibilityMask.value = '';
+            if (visibilityCheck) visibilityCheck.checked = false;
             return;
         }
 
@@ -5601,6 +5730,7 @@ async function buy(id, p, n, c) {
         loadEmpForRarity(selectedUserId);
         loadEmpForStatus(selectedUserId);
         loadEmpForRole(selectedUserId);
+        loadEmpForVisibility(selectedUserId);
         loadAdminResearch();
         loadWarPosterStrip();
     }
@@ -8013,6 +8143,295 @@ async function getRobustIP() {
         roleSelect.innerHTML = renderEmployeeRoleOptions(currentRole);
     }
 
+    function cloneJsonTemplate(template) {
+        return JSON.parse(JSON.stringify(template || {}));
+    }
+
+    function initNewEmployeeForm() {
+        const roleSelect = document.getElementById('new-emp-role');
+        const statusSelect = document.getElementById('new-emp-status');
+        if (roleSelect && !roleSelect.innerHTML.trim()) {
+            roleSelect.innerHTML = renderEmployeeRoleOptions('雇员');
+        }
+        if (statusSelect && !statusSelect.innerHTML.trim()) {
+            statusSelect.innerHTML = renderEmployeeStatusOptions('在职');
+        }
+        syncNewEmployeeRoleDefaults();
+    }
+
+    function syncNewEmployeeRoleDefaults() {
+        const role = normalizeEmployeeRole(document.getElementById('new-emp-role')?.value);
+        const statusSelect = document.getElementById('new-emp-status');
+        const salaryInput = document.getElementById('new-emp-salary');
+        const visibleInput = document.getElementById('new-emp-visible');
+
+        if (statusSelect && !statusSelect.value) statusSelect.value = '在职';
+        if (visibleInput) visibleInput.checked = true;
+        if (!salaryInput) return;
+
+        if (isPlayerCharacterRole(role)) {
+            salaryInput.value = '-1';
+        } else if ((isCoreMemberRole(role) || isSocialConnectionRole(role)) && salaryInput.value === '') {
+            salaryInput.value = '0';
+        }
+    }
+
+    function fillNewEmployeeTemplate(kind = 'blank') {
+        initNewEmployeeForm();
+        const nameInput = document.getElementById('new-emp-name');
+        const textarea = document.getElementById('new-emp-statblock');
+        if (!textarea) return;
+
+        const name = (nameInput?.value || '').trim();
+        let block;
+        if (kind === 'coc') {
+            block = cloneJsonTemplate(COC7TH_MONSTER_TEMPLATE);
+        } else if (kind === 'coc_spellcaster') {
+            block = cloneJsonTemplate(COC7TH_SPELLCASTER_TEMPLATE);
+        } else {
+            block = {
+                name: name || '未命名人物',
+                meta: '人类 / 未知',
+                basic_info: {
+                    source: 'DM 手动录入',
+                    tags: []
+                },
+                resume: '',
+                hp: '10',
+                ac: '10',
+                speed: '30尺',
+                stats: {
+                    STR: 10,
+                    DEX: 10,
+                    CON: 10,
+                    INT: 10,
+                    WIS: 10,
+                    CHA: 10
+                },
+                props: [],
+                traits: [],
+                actions: [],
+                visibility: {}
+            };
+        }
+
+        if (name) block.name = name;
+        const maskList = normalizeCommaList(document.getElementById('new-emp-combat-mask')?.value || '');
+        block = applyMonsterCombatMask(block, maskList);
+        textarea.value = JSON.stringify(block, null, 2);
+    }
+
+    function addSelectedPlayerToNewEmployeeMask() {
+        const input = document.getElementById('new-emp-combat-mask');
+        if (!input) return;
+        const email = getSelectedAdminPlayerEmail();
+        if (!email) return alert('请先在【玩家资产操控】里选择一个玩家。');
+
+        const list = normalizeCommaList(input.value);
+        if (!list.map(v => v.toLowerCase()).includes(email.toLowerCase())) list.push(email);
+        input.value = list.join(',');
+    }
+
+    function addSelectedPlayerToEmployeeMask() {
+        const input = document.getElementById('adm-emp-combat-mask');
+        if (!input) return;
+        const email = getSelectedAdminPlayerEmail();
+        if (!email) return alert('请先在【玩家资产操控】里选择一个玩家。');
+
+        const list = normalizeCommaList(input.value);
+        if (!list.map(v => v.toLowerCase()).includes(email.toLowerCase())) list.push(email);
+        input.value = list.join(',');
+    }
+
+    function parseEmployeeStatBlock(text, maskList) {
+        const raw = String(text || '').trim();
+        if (!raw) return maskList.length ? applyMonsterCombatMask({}, maskList) : null;
+        let statBlock;
+        try {
+            statBlock = JSON.parse(raw);
+        } catch (e) {
+            throw new Error('stat_block JSON 格式不正确：' + e.message);
+        }
+        return applyMonsterCombatMask(statBlock, maskList);
+    }
+
+    async function createEmployeeFromAdmin() {
+        if (!await requireAdminRole()) return;
+        initNewEmployeeForm();
+
+        if (!selectedUserId) return alert('请先选择玩家');
+        const name = document.getElementById('new-emp-name')?.value.trim();
+        if (!name) return alert('姓名不能为空');
+
+        const role = normalizeEmployeeRole(document.getElementById('new-emp-role')?.value);
+        const status = document.getElementById('new-emp-status')?.value || '在职';
+        const salaryText = document.getElementById('new-emp-salary')?.value;
+        const rarity = parseInt(document.getElementById('new-emp-rarity')?.value || '3', 10);
+        const avatarUrl = document.getElementById('new-emp-avatar-url')?.value.trim() || null;
+        const standUrl = document.getElementById('new-emp-stand-url')?.value.trim() || null;
+        const isVisible = document.getElementById('new-emp-visible')?.checked !== false;
+        const maskList = normalizeCommaList(document.getElementById('new-emp-combat-mask')?.value || '');
+
+        if (!EMPLOYEE_ROLE_OPTIONS.includes(role)) return alert('分类值无效');
+        if (!EMPLOYEE_STATUSES.includes(status)) return alert('状态值无效');
+
+        let statBlock;
+        try {
+            statBlock = parseEmployeeStatBlock(document.getElementById('new-emp-statblock')?.value || '', maskList);
+        } catch (e) {
+            return alert(e.message);
+        }
+
+        const payload = {
+            user_id: selectedUserId,
+            name,
+            role,
+            status,
+            salary: isPlayerCharacterRole(role) ? -1 : (salaryText === '' ? 0 : Number(salaryText)),
+            rarity: Number.isFinite(rarity) ? Math.max(1, Math.min(6, rarity)) : 3,
+            is_in_party: false,
+            avatar_url: avatarUrl,
+            stand_url: standUrl,
+            stat_block: statBlock,
+            is_visible_to_player: isVisible
+        };
+
+        if (!Number.isFinite(payload.salary)) return alert('薪资 / 资金必须是数字');
+
+        showLoading();
+        const { error } = await supabaseClient.from('employees').insert([payload]);
+        hideLoading();
+
+        if (error) {
+            const hint = error.message && error.message.includes('is_visible_to_player')
+                ? '\n请先执行 employees_visibility.sql，为 employees 表新增 is_visible_to_player 字段。'
+                : '';
+            alert('创建失败：' + error.message + hint);
+            return;
+        }
+
+        await logAction('DM操作', `为玩家 ${selectedUserId} 新增人员 [${name}]，分类：[${role}]，玩家可见：${isVisible ? '是' : '否'}`);
+        document.getElementById('new-emp-name').value = '';
+        document.getElementById('new-emp-statblock').value = '';
+        await Promise.all([
+            loadEmployees(),
+            loadTeam(),
+            loadEmpForRarity(selectedUserId),
+            loadEmpForStatus(selectedUserId),
+            loadEmpForRole(selectedUserId),
+            loadEmpForVisibility(selectedUserId)
+        ]);
+        alert('人员档案已创建');
+    }
+
+    async function loadEmpForVisibility(uid) {
+        if (!await requireAdminRole()) return;
+        const empSelect = document.getElementById('adm-visibility-emp-list');
+        const visibleCheck = document.getElementById('adm-emp-visible-to-player');
+        const maskInput = document.getElementById('adm-emp-combat-mask');
+        if (!empSelect || !visibleCheck || !maskInput) return;
+
+        empSelect.innerHTML = '<option value="">加载中...</option>';
+        visibleCheck.checked = false;
+        maskInput.value = '';
+
+        const { data, error } = await supabaseClient
+            .from('employees')
+            .select('id, name, role, stat_block, is_visible_to_player')
+            .eq('user_id', uid)
+            .order('id');
+
+        if (error) {
+            empSelect.innerHTML = '<option value="">读取失败</option>';
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            empSelect.innerHTML = '<option value="">(该玩家无人员)</option>';
+            return;
+        }
+
+        empSelect.innerHTML = data.map(e => {
+            const role = normalizeEmployeeRole(e.role);
+            const visible = e.is_visible_to_player !== false;
+            const mask = getMonsterCombatMaskList(e.stat_block || {}).join(',');
+            const tags = [
+                visible ? '' : '隐藏',
+                mask ? '情报不足' : ''
+            ].filter(Boolean).join(' / ');
+            const label = `${e.name} (${role})${tags ? ` [${tags}]` : ''}`;
+            return `<option value="${e.id}" data-visible="${visible ? '1' : '0'}" data-mask="${escapeHTML(mask)}">${escapeHTML(label)}</option>`;
+        }).join('');
+        syncAdminVisibilityValue();
+    }
+
+    function syncAdminVisibilityValue() {
+        const empSelect = document.getElementById('adm-visibility-emp-list');
+        const visibleCheck = document.getElementById('adm-emp-visible-to-player');
+        const maskInput = document.getElementById('adm-emp-combat-mask');
+        if (!empSelect || !visibleCheck || !maskInput) return;
+
+        const opt = empSelect.selectedOptions[0];
+        visibleCheck.checked = opt?.dataset.visible !== '0';
+        maskInput.value = opt?.dataset.mask || '';
+    }
+
+    async function updateEmpVisibilityFromAdmin() {
+        if (!await requireAdminRole()) return;
+        const empSelect = document.getElementById('adm-visibility-emp-list');
+        const empId = empSelect?.value;
+        if (!selectedUserId) return alert('请先选择玩家');
+        if (!empId) return alert('请先选择人员');
+
+        const isVisible = document.getElementById('adm-emp-visible-to-player')?.checked === true;
+        const maskList = normalizeCommaList(document.getElementById('adm-emp-combat-mask')?.value || '');
+        const empName = empSelect.selectedOptions[0]?.textContent.replace(/\s*\[[^\]]*\]\s*$/, '') || `ID:${empId}`;
+
+        showLoading();
+        const { data: emp, error: fetchError } = await supabaseClient
+            .from('employees')
+            .select('id, stat_block')
+            .eq('id', empId)
+            .eq('user_id', selectedUserId)
+            .single();
+
+        if (fetchError) {
+            hideLoading();
+            alert('读取人员失败：' + fetchError.message);
+            return;
+        }
+
+        const nextBlock = emp?.stat_block
+            ? applyMonsterCombatMask(emp.stat_block, maskList)
+            : (maskList.length ? applyMonsterCombatMask({}, maskList) : null);
+
+        const { error } = await supabaseClient
+            .from('employees')
+            .update({
+                is_visible_to_player: isVisible,
+                stat_block: nextBlock
+            })
+            .eq('id', empId)
+            .eq('user_id', selectedUserId);
+        hideLoading();
+
+        if (error) {
+            const hint = error.message && error.message.includes('is_visible_to_player')
+                ? '\n请先执行 employees_visibility.sql，为 employees 表新增 is_visible_to_player 字段。'
+                : '';
+            alert('可见性更新失败：' + error.message + hint);
+            return;
+        }
+
+        await logAction('DM操作', `更新人员 [${empName}] 可见性：玩家可见=${isVisible ? '是' : '否'}，情报遮罩=${maskList.join(',') || '无'}`);
+        await Promise.all([
+            loadEmpForVisibility(selectedUserId),
+            loadEmployees(),
+            loadTeam()
+        ]);
+        alert('人员可见性已保存');
+    }
+
     async function updateEmpRarity() {
         if (!await requireAdminRole()) return;
         const empId = document.getElementById('adm-rarity-emp-list').value;
@@ -8057,6 +8476,7 @@ async function getRobustIP() {
         await logAction('DM操作', `将雇员 [${empName}] 的状态改为 [${newStatus}] (User:${selectedUserId})`);
         await Promise.all([
             loadEmpForStatus(selectedUserId),
+            loadEmpForVisibility(selectedUserId),
             loadEmployees(),
             loadTeam()
         ]);
@@ -8092,6 +8512,7 @@ async function getRobustIP() {
         await logAction('DM操作', `将人员 [${empName}] 的分类改为 [${newRole}] (User:${selectedUserId})`);
         await Promise.all([
             loadEmpForRole(selectedUserId),
+            loadEmpForVisibility(selectedUserId),
             loadEmployees(),
             loadTeam()
         ]);
