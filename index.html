@@ -3015,6 +3015,7 @@
     }
 
     function isCombatMaskedStatBlock(statBlock = {}) {
+        if (isCurrentAdmin()) return false;
         const email = (currentUserEmail || '').trim().toLowerCase();
         const maskList = getMonsterCombatMaskList(statBlock).map(v => String(v).trim().toLowerCase());
         return maskList.includes('all') || (!!email && maskList.includes(email));

@@ -359,9 +359,11 @@
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw'; // 使用你 index.html 中的 Key
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const ADMIN_ROLES = ['dm', 'root'];
     let currentStandUrls = [];
     let currentStandIndex = 0;
     let currentUserEmail = null;
+    let currentUserRole = 'player';
     let allEnemies = [];
     let currentFaction = '全部';
 
@@ -382,6 +384,12 @@
         const uid = urlParams.get('uid');
         
         let targetEmail = session.user.email; 
+        const { data: selfProfile } = await supabaseClient
+            .from('profiles')
+            .select('role_level')
+            .eq('id', session.user.id)
+            .maybeSingle();
+        currentUserRole = selfProfile?.role_level || 'player';
         
         if (uid && uid !== 'undefined' && uid !== 'null') {
             const { data: profile } = await supabaseClient.from('profiles').select('email').eq('id', uid).single();
@@ -448,6 +456,7 @@
     }
 
     function isCombatMasked(enemy) {
+        if (ADMIN_ROLES.includes(currentUserRole)) return false;
         const email = (currentUserEmail || '').trim().toLowerCase();
         const maskList = getCombatMaskList(enemy);
         return maskList.includes('all') || (!!email && maskList.includes(email));
