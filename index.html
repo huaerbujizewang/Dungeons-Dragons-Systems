@@ -3187,12 +3187,12 @@ const COC7TH_MONSTER_TEMPLATE = {
     name: "塞拉斯·卡拉瓦乔",
     meta: "犯罪主脑",
     basic_info: {
-        birth: "未知",
+        size: "中型",
         gender: "男",
-        height: "六英尺多",
+        height: "185cm",
         origin: "全球犯罪网络",
-        tags: ["残暴无情", "贪得无厌", "迷恋权力"],
-        description: "灰白色面具覆盖面部三分之二，身高六英尺多，看上去狡黠睿智。"
+        birthday: "未知",
+        tags: ["残暴无情", "贪得无厌", "迷恋权力"]
     },
     hp: 15,
     armor: "1点 防弹背心",
@@ -3279,12 +3279,12 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     name: "科伯特教授",
     meta: "米·戈科学家",
     basic_info: {
-        birth: "约55年前，具体地点未知",
+        size: "中型",
         gender: "男（人类宿主）",
-        height: "未知",
+        height: "175cm",
         origin: "未知研究网络",
-        tags: ["米·戈", "科学家", "异常大脑", "施法者"],
-        description: "55岁左右，有稍长的白发，身穿实验服。"
+        birthday: "未知",
+        tags: ["米·戈", "科学家", "异常大脑", "施法者"]
     },
     hp: 12,
     armor: "无",
@@ -8899,7 +8899,7 @@ async function getRobustIP() {
     function renderDndBasicTab(displayName, data) {
         const basic = data.basic_info || {};
         const pane = document.getElementById('dossier-pane-basic');
-        if (pane.innerHTML !== dossierBasicPaneTemplate) pane.innerHTML = dossierBasicPaneTemplate;
+        pane.innerHTML = dossierBasicPaneTemplate;
 
         document.getElementById('info-name').innerText = displayName || data.name || '--';
         document.getElementById('info-race').innerText = data.meta || '--';
@@ -8907,7 +8907,7 @@ async function getRobustIP() {
         document.getElementById('info-size').innerText = basic.size || '中型';
         document.getElementById('info-origin').innerText = basic.origin || '未知区域';
         document.getElementById('info-height').innerText = basic.height || '--';
-        document.getElementById('info-birthday').innerText = basic.birthday || basic.birth || '--';
+        document.getElementById('info-birthday').innerText = basic.birthday || '--';
 
         const tagsContainer = document.getElementById('info-tags');
         tagsContainer.innerHTML = '';
@@ -8922,35 +8922,29 @@ async function getRobustIP() {
 
     function renderCoc7thBasicTab(displayName, data) {
         const basic = data.basic_info || {};
-        const background = data.background || {};
-        const rows = [
-            ['姓名', displayName || data.name],
-            ['身份', data.meta],
-            ['性别', basic.gender],
-            ['身高', basic.height],
-            ['生日', basic.birthday || basic.birth],
-            ['出身', basic.origin],
-            ['形象描述', basic.description || background.appearance]
-        ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '');
+        const pane = document.getElementById('dossier-pane-basic');
+        pane.innerHTML = dossierBasicPaneTemplate;
 
-        const tags = Array.isArray(basic.tags) && basic.tags.length > 0
-            ? basic.tags.map(tag => `<span class="tag-box">${escapeHTML(tag)}</span>`).join('')
-            : '<span style="color:#666">--</span>';
+        const raceLabel = document.getElementById('info-race')?.previousElementSibling;
+        if (raceLabel) raceLabel.innerText = '【身份】';
 
-        document.getElementById('dossier-pane-basic').innerHTML = `
-            <div class="info-grid">
-                ${rows.map(([label, value]) => `
-                    <div class="info-item" style="${label === '描述' ? 'grid-column:1/-1;' : ''}">
-                        <span class="info-label">【${escapeHTML(label)}】</span>
-                        <span class="info-val">${escapeHTML(value)}</span>
-                    </div>
-                `).join('')}
-                <div class="info-item" style="grid-column: 1 / -1;">
-                    <span class="info-label">【标签】</span>
-                    <div style="margin-top:5px;">${tags}</div>
-                </div>
-            </div>
-        `;
+        document.getElementById('info-name').innerText = displayName || data.name || '--';
+        document.getElementById('info-race').innerText = data.meta || '--';
+        document.getElementById('info-size').innerText = basic.size || '中型';
+        document.getElementById('info-gender').innerText = basic.gender || '未知';
+        document.getElementById('info-origin').innerText = basic.origin || '未知区域';
+        document.getElementById('info-height').innerText = basic.height || '--';
+        document.getElementById('info-birthday').innerText = basic.birthday || '--';
+
+        const tagsContainer = document.getElementById('info-tags');
+        tagsContainer.innerHTML = '';
+        if (basic.tags && Array.isArray(basic.tags) && basic.tags.length > 0) {
+            basic.tags.forEach(tag => {
+                tagsContainer.innerHTML += `<span class="tag-box">${escapeHTML(tag)}</span>`;
+            });
+        } else {
+            tagsContainer.innerHTML = '<span style="color:#666">--</span>';
+        }
     }
 
     function getCoc7thResumeText(data) {
@@ -8958,7 +8952,7 @@ async function getRobustIP() {
     }
 
     function basicResumeFallback(data) {
-        return data?.basic_info?.description || "【数据缺失】\n暂无该调查员或实体的详细背景记录。";
+        return data?.background?.appearance || "【数据缺失】\n暂无该调查员或实体的详细背景记录。";
     }
 
     function renderCurrentStand() {

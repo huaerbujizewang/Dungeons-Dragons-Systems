@@ -663,15 +663,14 @@
 
     function renderCoc7thBasicTab(displayName, data, enemy) {
         const basic = data.basic_info || {};
-        const background = data.background || {};
         const rows = [
             ['目标名称', displayName || data.name],
             ['身份', data.meta],
+            ['体型', basic.size],
             ['性别', basic.gender],
             ['身高', basic.height],
-            ['生日', basic.birthday || basic.birth],
-            ['出身', basic.origin || enemy.faction],
-            ['形象描述', basic.description || background.appearance]
+            ['生日', basic.birthday],
+            ['出身', basic.origin || enemy.faction]
         ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '');
 
         const tags = [
@@ -696,7 +695,7 @@
     }
 
     function getCoc7thResumeText(data) {
-        return data?.resume || data?.basic_info?.description || "【系统提示】\n未检索到该实体的详细侦查情报。";
+        return data?.resume || data?.background?.appearance || "【系统提示】\n未检索到该实体的详细侦查情报。";
     }
 
     function resetDossierUI() {

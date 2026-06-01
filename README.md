@@ -558,12 +558,12 @@ coc7th_bestiary_template.json
   "name": "塞拉斯·卡拉瓦乔",
   "meta": "犯罪主脑",
   "basic_info": {
-    "birth": "未知",
+    "size": "中型",
     "gender": "男",
-    "height": "六英尺多",
+    "height": "185cm",
     "origin": "全球犯罪网络",
-    "tags": ["残暴无情", "贪得无厌", "迷恋权力"],
-    "description": "灰白色面具覆盖面部三分之二。"
+    "birthday": "未知",
+    "tags": ["残暴无情", "贪得无厌", "迷恋权力"]
   },
   "hp": 15,
   "armor": "1点 防弹背心",
@@ -629,11 +629,12 @@ coc7th_bestiary_template.json
 
 `basic_info` 是故事性档案字段，COC 人物建议至少保留：
 
-- `birth` 或 `birthday`：生日 / 出生信息。
+- `size`：体型。
+- `tags`：标签数组。
 - `gender`：性别或宿主说明。
-- `height`：身高。
+- `height`：数字身高，例如 `185cm`。
 - `origin`：出身、活动区域或组织来源。
-- `description`：基础外观描述。
+- `birthday`：生日 / 出生信息。
 
 长履历仍放在顶层 `resume`，与 DND JSON 保持兼容。`background` 只放形象、特质、伤口等背景条目，不再使用 `background.resume`。
 
