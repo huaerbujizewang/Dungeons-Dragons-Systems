@@ -3187,6 +3187,9 @@ const COC7TH_MONSTER_TEMPLATE = {
     name: "塞拉斯·卡拉瓦乔",
     meta: "犯罪主脑",
     basic_info: {
+        birth: "未知",
+        gender: "男",
+        height: "六英尺多",
         origin: "全球犯罪网络",
         tags: ["残暴无情", "贪得无厌", "迷恋权力"],
         description: "灰白色面具覆盖面部三分之二，身高六英尺多，看上去狡黠睿智。"
@@ -3252,12 +3255,12 @@ const COC7TH_MONSTER_TEMPLATE = {
     background: {
         appearance: "外貌骇人，个子很高，脸藏在灰白色的面具之下。",
         traits: "冷酷、精于算计、瑕疵必报",
-        wounds: "很明显那个面具下有着丑陋的旧战伤（也许并没有？）",
-        resume: "没人知道他到底是想当世界首富还是想控制全世界。不管他到底有什么计划，只有蠢货才会和卡拉瓦乔作对。"
+        wounds: "很明显那个面具下有着丑陋的旧战伤（也许并没有？）"
     },
     armor_note: "",
     sanity_loss: "",
-    notes: ["*戴着面具（面具下的样貌不为人所知）"]
+    notes: ["*戴着面具（面具下的样貌不为人所知）"],
+    resume: "没人知道他到底是想当世界首富还是想控制全世界。不管他到底有什么计划，只有蠢货才会和卡拉瓦乔作对。"
 };
 
 function fillCoc7thMonsterTemplate() {
@@ -3276,6 +3279,9 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     name: "科伯特教授",
     meta: "米·戈科学家",
     basic_info: {
+        birth: "约55年前，具体地点未知",
+        gender: "男（人类宿主）",
+        height: "未知",
         origin: "未知研究网络",
         tags: ["米·戈", "科学家", "异常大脑", "施法者"],
         description: "55岁左右，有稍长的白发，身穿实验服。"
@@ -3312,10 +3318,10 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     spells: ["支配术", "犹格-索托斯之拳", "枯萎术"],
     background: {
         appearance: "55岁左右，有稍长的白发，身穿实验服。",
-        wounds: "他的头发遮盖着环绕他头顶一圈的伤疤，正是他的大脑被移除的位置。",
-        resume: "科伯特教授是具有米·戈科学背景的异常人物，可使用死亡射线、催眠和若干神话法术。"
+        wounds: "他的头发遮盖着环绕他头顶一圈的伤疤，正是他的大脑被移除的位置。"
     },
-    sanity_loss: "如果科伯特教授有一个米·戈大脑的事实以某种方式暴露了，知情人丧失1/1D4理智值。"
+    sanity_loss: "如果科伯特教授有一个米·戈大脑的事实以某种方式暴露了，知情人丧失1/1D4理智值。",
+    resume: "科伯特教授是具有米·戈科学背景的异常人物，可使用死亡射线、催眠和若干神话法术。"
 };
 
     // 每次打开 DM 面板时，顺便调用这个刷新列表
@@ -8916,12 +8922,15 @@ async function getRobustIP() {
 
     function renderCoc7thBasicTab(displayName, data) {
         const basic = data.basic_info || {};
+        const background = data.background || {};
         const rows = [
             ['姓名', displayName || data.name],
             ['身份', data.meta],
-            ['出生', basic.birth || basic.birthday],
+            ['性别', basic.gender],
+            ['身高', basic.height],
+            ['生日', basic.birthday || basic.birth],
             ['出身', basic.origin],
-            ['描述', basic.description]
+            ['形象描述', basic.description || background.appearance]
         ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '');
 
         const tags = Array.isArray(basic.tags) && basic.tags.length > 0
@@ -8945,8 +8954,7 @@ async function getRobustIP() {
     }
 
     function getCoc7thResumeText(data) {
-        const background = data.background || {};
-        return background.resume || data.resume || basicResumeFallback(data);
+        return data.resume || basicResumeFallback(data);
     }
 
     function basicResumeFallback(data) {
