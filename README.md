@@ -445,3 +445,274 @@ Copyright © 2026 滑而不稽则罔.
 “滑而不稽则罔”为作者公开使用的笔名。
 ---
 
+## 9. 🕯️ DND / COC 多团支持与新增功能
+
+本节记录近期新增的 COC 兼容功能。原有 DND 功能不需要改动；未特别标记的账号默认仍按 DND 处理。
+
+### 9.1 初始化数据库字段
+
+首次使用前，请在 Supabase SQL Editor 中执行以下两个脚本：
+
+```sql
+-- 账号团类型字段：dnd / coc，默认 dnd
+-- 文件：profiles_campaign_type.sql
+
+-- 雇员中心第三分栏：中立与社会连结
+-- 文件：employees_social_connections.sql
+```
+
+也可以直接打开并复制运行：
+
+- `profiles_campaign_type.sql`
+- `employees_social_connections.sql`
+
+### 9.2 设置账号为 DND 或 COC
+
+进入主界面后，用 DM 或 Root 账号打开：
+
+```text
+DM 控制台 → 玩家资产操控（视角切换） → 选择玩家 → 团类型
+```
+
+可选值：
+
+- `DND`：默认模式，保留原本全部 DND 功能。
+- `COC`：COC 模式，会隐藏不适合 COC 的入口。
+
+Root 账号还可以在：
+
+```text
+安全与权限 → 账号权限管理
+```
+
+直接用每个账号右侧的 `DND / COC` 下拉框批量调整。
+
+### 9.3 COC 账号会隐藏哪些入口
+
+账号标记为 `COC` 后，`index.html` 会自动隐藏：
+
+- 战局
+- 抽卡
+- 地理
+- 领地治理
+- 政务厅
+- 科研中心
+- OMNI
+- 超位法术
+- 法术图鉴
+- 物品图鉴
+
+仍保留的主要入口包括：
+
+- 商城
+- 队伍
+- 背包
+- 雇员中心
+- 其他内容中未被隐藏的档案入口，例如编年史、人物志、赏金名录、阅报室、敌人图鉴等
+
+### 9.4 COC 显示单位
+
+COC 账号只做 `index.html` 内置显示替换，底层字段名不变。
+
+显示效果：
+
+- DND：`FR1494 2月12日`、`GP`
+- COC：`公元1494年2月12日`、`美元`
+
+受影响的前端展示包括：
+
+- 顶栏日期
+- 顶栏资金
+- DM 控制台玩家资金
+- 商店价格
+- 雇员薪资
+- 悬赏金额
+- 出售回收价
+- 时间推进 / 结算提示
+
+注意：数据库字段仍是 `profiles.world_date` 和 `profiles.gold_gp`。这是为了兼容旧逻辑，不需要改表名。
+
+### 9.5 COC7th 怪物 / NPC JSON
+
+怪物图鉴现在支持 COC7th 格式。关键字段是：
+
+```json
+{
+  "system": "coc7th"
+}
+```
+
+只要 `stat_block.system` 写成 `"coc7th"`，敌人图鉴就会使用 COC 面板渲染，不再按 DND 的 CR / AC / 六维修正值来显示。
+
+完整模板见：
+
+```text
+coc7th_bestiary_template.json
+```
+
+最小示例：
+
+```json
+{
+  "system": "coc7th",
+  "name": "塞拉斯·卡拉瓦乔",
+  "meta": "犯罪主脑",
+  "basic_info": {
+    "origin": "全球犯罪网络",
+    "tags": ["残暴无情", "贪得无厌", "迷恋权力"],
+    "description": "灰白色面具覆盖面部三分之二。"
+  },
+  "hp": 15,
+  "armor": "1点 防弹背心",
+  "move": 7,
+  "characteristics": {
+    "str": 60,
+    "con": 60,
+    "siz": 90,
+    "dex": 60,
+    "int": 100,
+    "app": "35*",
+    "pow": 80,
+    "edu": 93
+  },
+  "derived": {
+    "san": 50,
+    "mp": 16,
+    "luck": 80,
+    "db": "+1D4",
+    "build": 1
+  },
+  "combat": {
+    "attacks_per_round": 1,
+    "attacks": [
+      { "name": "斗殴", "value": "70%（35/14）", "damage": "1D3+1D4" },
+      { "name": ".45自动手枪", "value": "80%（40/16）", "damage": "1D10+2" },
+      { "name": "闪避", "value": "45%（22/9）" }
+    ]
+  },
+  "skills": [
+    { "name": "估价", "value": "80%" },
+    { "name": "信用评级", "value": "90%" },
+    { "name": "恐吓", "value": "90%" }
+  ],
+  "languages": [
+    { "name": "英语", "value": "93%" }
+  ],
+  "talents": [
+    {
+      "name": "钢铁意志",
+      "desc": "进行意志检定时可以花费10点幸运来获得一个奖励骰。"
+    }
+  ],
+  "background": {
+    "appearance": "外貌骇人，个子很高，脸藏在灰白色的面具之下。",
+    "traits": "冷酷、精于算计、瑕疵必报",
+    "wounds": "面具下似乎有旧战伤。"
+  },
+  "notes": ["*戴着面具（面具下的样貌不为人所知）"],
+  "resume": "没人知道他到底是想当世界首富还是想控制全世界。"
+}
+```
+
+### 9.6 在 DM 控制台录入 COC7th 怪物
+
+路径：
+
+```text
+DM 控制台 → 怪物图鉴在线编辑器
+```
+
+使用方式：
+
+1. 选择已有怪物，或留空新建。
+2. 填写怪物名称、阵营势力、身份标签、可见权限等基础字段。
+3. 点击 `套用 COC7th 模板`，系统会把塞拉斯·卡拉瓦乔模板写入 Stat Block。
+4. 根据实际 NPC 修改 JSON。
+5. 点击 `保存 / 录入怪物至数据库`。
+
+如果只想让某些玩家看见基础档案，但隐藏战斗数据，可以继续使用：
+
+```text
+战斗属性遮罩玩家邮箱
+```
+
+填入玩家邮箱或 `all`。被遮罩者打开“战斗属性”页时会看到“情报不足”。
+
+### 9.7 雇员中心新增“中立与社会连结”
+
+雇员中心现在分为三栏：
+
+```text
+⚔️ 核心队友
+🛡️ 雇员 / 随从
+⚖️ 中立与社会连结
+```
+
+分类规则来自 `employees.role`：
+
+- `核心队友` → 核心队友栏
+- `中立与社会连结` → 中立与社会连结栏
+- `雇员`、`随从`、其他普通值 → 雇员 / 随从栏
+
+DM 调整路径：
+
+```text
+DM 控制台 → 玩家资产操控（视角切换） → 选择玩家 → 人员分类调整
+```
+
+可选分类：
+
+- `核心队友`
+- `雇员`
+- `随从`
+- `中立与社会连结`
+
+中立与社会连结通常用于：
+
+- 线人
+- 盟友
+- 社交关系
+- 可交涉 NPC
+- 暂不属于队伍或雇佣体系的人物
+
+### 9.8 SQL 直接操作示例
+
+#### 将账号标记为 COC
+
+```sql
+update profiles
+set campaign_type = 'coc'
+where email = '玩家邮箱@example.com';
+```
+
+#### 将账号恢复为 DND
+
+```sql
+update profiles
+set campaign_type = 'dnd'
+where email = '玩家邮箱@example.com';
+```
+
+#### 将某人改为中立与社会连结
+
+```sql
+update employees
+set role = '中立与社会连结'
+where name = '某个NPC名字'
+and user_id = (select id from auth.users where email = '玩家邮箱@example.com');
+```
+
+#### 新增一个社会连结人物
+
+```sql
+insert into employees (name, salary, status, role, is_in_party, user_id)
+select
+  '塞拉斯·卡拉瓦乔',
+  0,
+  '在职',
+  '中立与社会连结',
+  false,
+  id
+from auth.users
+where email = '玩家邮箱@example.com';
+```
