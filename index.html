@@ -2500,7 +2500,7 @@
                     <input id="new-emp-stand-url" type="text" placeholder="立绘 URL，可用英文逗号分隔（可空）" style="grid-column:1/3; padding:6px;">
                     <label style="grid-column:1/3; font-size:0.85em; display:flex; align-items:center; gap:6px;">
                         <input id="new-emp-visible" type="checkbox" checked>
-                        玩家可见
+                        玩家列表显示（关闭后玩家完全看不见，DM/root 仍可见）
                     </label>
                     <div style="grid-column:1/3; display:flex; gap:6px;">
                         <input id="new-emp-combat-mask" type="text" placeholder="战斗/神话情报遮罩：all 或邮箱，逗号分隔" style="flex:1; padding:6px;">
@@ -2517,18 +2517,22 @@
             </div>
 
             <div class="admin-box" style="border:1px solid #34495e; padding:15px; border-radius:8px; background:#f4f6f8;">
-                <h3 style="margin-top:0; color:#34495e;">👁️ 人员可见性 / 情报遮罩</h3>
-                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">完全不可见会从玩家列表消失；情报遮罩则显示卡片但战斗属性为“情报不足”。</div>
+                <h3 style="margin-top:0; color:#34495e;">👁️ 人员显示 / 情报遮罩</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:5px;">玩家列表显示关闭后，该人员或社会连结会直接从玩家界面消失；DM/root 仍会显示。情报遮罩只隐藏战斗属性。</div>
                 <select id="adm-visibility-emp-list" onchange="syncAdminVisibilityValue()" style="width:100%; margin-bottom:6px; padding:6px;"></select>
                 <label style="font-size:0.85em; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
                     <input id="adm-emp-visible-to-player" type="checkbox">
-                    玩家可见
+                    玩家列表显示
                 </label>
                 <div style="display:flex; gap:6px;">
                     <input id="adm-emp-combat-mask" type="text" placeholder="战斗/神话情报遮罩：all 或邮箱，逗号分隔" style="flex:1; padding:6px;">
                     <button type="button" onclick="addSelectedPlayerToEmployeeMask()" style="padding:6px 8px;">加入当前</button>
                 </div>
-                <button onclick="updateEmpVisibilityFromAdmin()" style="width:100%; margin-top:8px; background:#34495e; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">保存可见性</button>
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <button type="button" onclick="setSelectedEmpVisibleQuick(false)" style="flex:1; background:#7f8c8d; color:white; border:none; padding:7px; border-radius:4px; font-weight:bold;">完全隐藏</button>
+                    <button type="button" onclick="setSelectedEmpVisibleQuick(true)" style="flex:1; background:#16a085; color:white; border:none; padding:7px; border-radius:4px; font-weight:bold;">恢复显示</button>
+                </div>
+                <button onclick="updateEmpVisibilityFromAdmin()" style="width:100%; margin-top:8px; background:#34495e; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">保存显示 / 遮罩</button>
             </div>
 
             <div class="admin-box" style="border:1px solid #f1c40f; padding:15px; border-radius:8px; background:#fffff0;">
@@ -8430,6 +8434,14 @@ async function getRobustIP() {
         const opt = empSelect.selectedOptions[0];
         visibleCheck.checked = opt?.dataset.visible !== '0';
         maskInput.value = opt?.dataset.mask || '';
+    }
+
+    async function setSelectedEmpVisibleQuick(isVisible) {
+        const visibleCheck = document.getElementById('adm-emp-visible-to-player');
+        const empSelect = document.getElementById('adm-visibility-emp-list');
+        if (!empSelect?.value) return alert('请先选择人员或社会连结');
+        if (visibleCheck) visibleCheck.checked = !!isVisible;
+        await updateEmpVisibilityFromAdmin();
     }
 
     async function updateEmpVisibilityFromAdmin() {
