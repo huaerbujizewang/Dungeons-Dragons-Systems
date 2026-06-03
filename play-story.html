@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>剧情播放中...</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -13,6 +13,10 @@
             --line: rgba(255, 255, 255, 0.18);
             --accent: #f4c95d;
             --danger: #ef4444;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
         }
 
         * { box-sizing: border-box; }
@@ -25,11 +29,14 @@
             color: var(--text);
             font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         #stage {
             width: 100%;
             height: 100%;
+            min-height: 100dvh;
             position: relative;
             overflow: hidden;
             background: #05070a;
@@ -189,6 +196,7 @@
             font: inherit;
             text-align: left;
             cursor: pointer;
+            min-height: 44px;
             transition: background 0.16s ease, border-color 0.16s ease;
         }
 
@@ -199,8 +207,8 @@
 
         .controls {
             position: absolute;
-            top: 18px;
-            right: 18px;
+            top: calc(18px + var(--safe-top));
+            right: calc(18px + var(--safe-right));
             z-index: 60;
             display: flex;
             gap: 8px;
@@ -215,6 +223,7 @@
             color: white;
             cursor: pointer;
             backdrop-filter: blur(5px);
+            font-size: 14px;
         }
 
         .btn:hover, .btn.active { background: rgba(244, 201, 93, 0.22); border-color: rgba(244, 201, 93, 0.48); }
@@ -316,17 +325,196 @@
             to { background-position: 18px 84px; }
         }
 
-        @media (max-width: 720px) {
-            .character { max-width: 56vw; max-height: 72vh; }
-            .character.left { left: -10%; }
-            .character.right { right: -10%; }
-            #avatar-container { left: 20px; bottom: 38px; width: 88px; height: 88px; }
-            #dialogue-box { bottom: 18px; width: calc(100vw - 24px); min-height: 156px; padding: 26px 18px 18px 118px; }
-            #dialogue-box.no-avatar { padding-left: 18px; }
-            #speaker-name { left: 118px; }
-            #dialogue-box.no-avatar #speaker-name { left: 18px; }
-            #text-content { font-size: 17px; }
-            .controls { top: 10px; right: 10px; }
+        @media (max-width: 820px) {
+            #stage {
+                height: 100dvh;
+            }
+
+            #background-layer {
+                background-position: center center;
+            }
+
+            .character {
+                max-width: 76vw;
+                max-height: 64dvh;
+            }
+
+            .character.left { left: -14%; }
+            .character.right { right: -14%; }
+
+            #avatar-container {
+                left: calc(16px + var(--safe-left));
+                bottom: calc(30px + var(--safe-bottom));
+                width: 88px;
+                height: 88px;
+            }
+
+            #main-avatar {
+                border-width: 3px;
+                box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+            }
+
+            #dialogue-box {
+                bottom: calc(14px + var(--safe-bottom));
+                width: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
+                min-height: 150px;
+                max-height: min(44dvh, 330px);
+                padding: 26px 16px 16px 116px;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+
+            #dialogue-box.no-avatar {
+                padding-left: 16px;
+            }
+
+            #speaker-name {
+                left: 116px;
+                top: -16px;
+                min-width: 92px;
+                max-width: calc(100% - 132px);
+                padding: 6px 12px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: 14px;
+            }
+
+            #dialogue-box.no-avatar #speaker-name {
+                left: 16px;
+                max-width: calc(100% - 32px);
+            }
+
+            #text-content {
+                min-height: 56px;
+                font-size: 17px;
+                line-height: 1.68;
+            }
+
+            #choices {
+                margin-top: 12px;
+                gap: 8px;
+            }
+
+            .choice-btn {
+                padding: 11px 12px;
+                font-size: 15px;
+                line-height: 1.45;
+            }
+
+            .controls {
+                top: calc(10px + var(--safe-top));
+                right: calc(10px + var(--safe-right));
+                gap: 6px;
+            }
+
+            .btn {
+                height: 38px;
+                min-width: 44px;
+                padding: 0 10px;
+                font-size: 13px;
+            }
+
+            #history-panel {
+                top: calc(58px + var(--safe-top));
+                right: calc(10px + var(--safe-right));
+                width: calc(100vw - 20px - var(--safe-left) - var(--safe-right));
+                max-height: calc(100dvh - 90px - var(--safe-top) - var(--safe-bottom));
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            #avatar-container {
+                left: calc(12px + var(--safe-left));
+                bottom: calc(28px + var(--safe-bottom));
+                width: 76px;
+                height: 76px;
+            }
+
+            #dialogue-box {
+                width: calc(100vw - 16px - var(--safe-left) - var(--safe-right));
+                min-height: 142px;
+                padding: 24px 12px 14px 96px;
+            }
+
+            #dialogue-box.no-avatar {
+                padding-left: 12px;
+            }
+
+            #speaker-name {
+                left: 96px;
+                max-width: calc(100% - 108px);
+                font-size: 13px;
+            }
+
+            #dialogue-box.no-avatar #speaker-name {
+                left: 12px;
+                max-width: calc(100% - 24px);
+            }
+
+            #text-content {
+                font-size: 16px;
+                line-height: 1.62;
+            }
+        }
+
+        @media (max-height: 520px) and (orientation: landscape) {
+            .character {
+                max-width: 42vw;
+                max-height: 76dvh;
+            }
+
+            #avatar-container {
+                width: 64px;
+                height: 64px;
+                left: calc(14px + var(--safe-left));
+                bottom: calc(18px + var(--safe-bottom));
+            }
+
+            #dialogue-box {
+                left: calc(50% + 44px);
+                bottom: calc(10px + var(--safe-bottom));
+                width: calc(100vw - 120px - var(--safe-left) - var(--safe-right));
+                min-height: 108px;
+                max-height: min(54dvh, 190px);
+                padding: 22px 14px 12px 86px;
+            }
+
+            #dialogue-box.no-avatar {
+                left: 50%;
+                width: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
+                padding-left: 14px;
+            }
+
+            #speaker-name {
+                left: 86px;
+                top: -14px;
+                min-width: 74px;
+                max-width: calc(100% - 100px);
+                padding: 5px 10px;
+                font-size: 13px;
+            }
+
+            #dialogue-box.no-avatar #speaker-name {
+                left: 14px;
+                max-width: calc(100% - 28px);
+            }
+
+            #text-content {
+                min-height: 42px;
+                font-size: 15px;
+                line-height: 1.5;
+            }
+
+            #choices {
+                margin-top: 8px;
+            }
+
+            .choice-btn {
+                min-height: 38px;
+                padding: 8px 10px;
+            }
         }
     </style>
 </head>
