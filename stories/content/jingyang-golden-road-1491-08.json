@@ -1,0 +1,320 @@
+{
+    "title": "行万里路",
+    "date": "DR1491 - 8月",
+    "typeSpeed": 26,
+    "autoDelay": 900,
+    "bg": "jing_courtyard_spring_rain",
+    "assets": {
+        "jing_courtyard_spring_rain": "assets/stories/backgrounds/jing_courtyard_spring_rain.png",
+        "jingyang_avatar_calm": "assets/stories/jingyang/jingyang_avatar_calm.png",
+        "jingyang_avatar_resolved": "assets/stories/jingyang/jingyang_avatar_resolved.png",
+        "jingyang_avatar_respectful": "assets/stories/jingyang/jingyang_avatar_respectful.png",
+        "fubo_avatar_worried": "assets/stories/fubo/fubo_avatar_worried.png",
+        "fubo_avatar_gentle": "assets/stories/fubo/fubo_avatar_gentle.png",
+        "jing_father_avatar_stern": "assets/stories/jing_father/jing_father_avatar_stern.png",
+        "jing_father_avatar_softened": "assets/stories/jing_father/jing_father_avatar_softened.png"
+    },
+    "characters": {
+        "jingyang": {
+            "name": "景阳",
+            "sprites": {
+                "calm": "jingyang_avatar_calm",
+                "resolved": "jingyang_avatar_resolved",
+                "respectful": "jingyang_avatar_respectful"
+            }
+        },
+        "fubo": {
+            "name": "福伯",
+            "sprites": {
+                "worried": "fubo_avatar_worried",
+                "gentle": "fubo_avatar_gentle"
+            }
+        },
+        "jing_father": {
+            "name": "景老爷子",
+            "sprites": {
+                "stern": "jing_father_avatar_stern",
+                "softened": "jing_father_avatar_softened"
+            }
+        }
+    },
+    "script": [
+        {
+            "type": "scene",
+            "bg": "jing_courtyard_spring_rain",
+            "duration": 0
+        },
+        {
+            "type": "overlay",
+            "name": "rain"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "受龙帝国的邺城，春雨总是下得极其绵长。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景府的后院里，青石板被雨水洗得发亮。院角那棵几百年的老槐树下，景阳正蹲在地上，仔细地将几张画满朱砂符文的黄纸折叠起来，收进腰间的防水皮革囊里。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "他穿一身极其干练的青色短打，腰间束着一根黑色的宽布带，脚上蹬着一双耐磨的牛皮千层底靴。若不是他眉宇间那股挥之不去的书卷气，任谁看这副打扮，都会以为是哪个镖局里准备出远门的趟子手。"
+        },
+        {
+            "type": "say",
+            "speaker": "福伯",
+            "character": "fubo",
+            "emotion": "worried",
+            "text": "三少爷，您这行头，看着真让人心里不踏实。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "老管家福伯撑着一把油纸伞，站在廊檐下，看着景阳打点行装，满是皱纹的脸上写满了担忧。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "calm",
+            "text": "福伯，出门在外，穿长衫容易被树枝挂住，也不方便画符。这身挺好，利落。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景阳站起身，拍了拍手上的灰尘，回过头对老管家温和地笑了笑。"
+        },
+        {
+            "type": "say",
+            "speaker": "福伯",
+            "character": "fubo",
+            "emotion": "worried",
+            "text": "可您是读书人啊。"
+        },
+        {
+            "type": "say",
+            "speaker": "福伯",
+            "character": "fubo",
+            "emotion": "worried",
+            "text": "大少爷在朝中做官，二少爷接管了家里的绸缎庄。老爷本指望您能在翰林院谋个清闲的修撰差事，安安稳稳地做学问。"
+        },
+        {
+            "type": "say",
+            "speaker": "福伯",
+            "character": "fubo",
+            "emotion": "worried",
+            "text": "您倒好，非要去那什么“黄金之路”，去给那些商贾当保镖！那种风餐露宿的苦差事，哪是您这种金贵身子受得了的？"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "calm",
+            "text": "纸上得来终觉浅，绝知此事要躬行。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "calm",
+            "text": "福伯，书斋里的墨香味太浓了，我总觉得闻不到活人的气味。您别担心，就算遇到山贼匪患，自保也是绰绰有余的。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "正说着，长廊尽头传来了一阵沉稳的脚步声。"
+        },
+        {
+            "type": "say",
+            "speaker": "福伯",
+            "character": "fubo",
+            "emotion": "gentle",
+            "text": "老爷。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "福伯连忙收起伞，恭敬地退到一边。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景老爷子背着手走了过来。他走到书房门口，看了一眼景阳那身粗糙的打扮，又看了一眼桌上那个塞得鼓鼓囊囊的行囊，眉头微微皱起。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "respectful",
+            "text": "父亲。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景阳上前一步，双手交叠，恭恭敬敬地行了一个大礼。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景老爷子没有立刻叫他起来，只是沉默地看着这个自己最不起眼、却也最让他看不透的三儿子。"
+        },
+        {
+            "type": "say",
+            "speaker": "景老爷子",
+            "character": "jing_father",
+            "emotion": "stern",
+            "text": "想清楚了？"
+        },
+        {
+            "type": "say",
+            "speaker": "景老爷子",
+            "character": "jing_father",
+            "emotion": "stern",
+            "text": "你可知黄金之路那地方，千里黄沙，白骨露于野？那里的马贼可不认得你写的文章，也不会跟你讲圣人教诲。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "resolved",
+            "text": "回父亲，儿子想清楚了。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "resolved",
+            "text": "正因为他们不讲圣人教诲，儿子才更要去看看。儿子读了二十年的书，书里写着“天下大同”，写着“民生多艰”。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "resolved",
+            "text": "可儿子在邺城看到的，除了才子佳人，就是歌舞升平。若我连真实的苦难和人心都没有见过，我笔下写出的文章，岂不成了无病呻吟的废纸？"
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 260
+        },
+        {
+            "type": "say",
+            "speaker": "景老爷子",
+            "character": "jing_father",
+            "emotion": "stern",
+            "text": "放肆！"
+        },
+        {
+            "type": "say",
+            "speaker": "景老爷子",
+            "character": "jing_father",
+            "emotion": "stern",
+            "text": "你的意思是，我邺城的鸿儒们，写的都是废纸？"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "respectful",
+            "text": "儿子不敢。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "calm",
+            "text": "只是每个人求的道不同。大哥求的是治国平天下的庙堂之高，二哥求的是陶朱公的富甲一方。而儿子求的，是自己的一双眼睛。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "resolved",
+            "text": "儿子想去看看受龙帝国之外的天地，看看那些为了几枚铜板就在刀尖上讨生活的人。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "resolved",
+            "text": "我不能一辈子做个只会在纸上画符的公子哥。"
+        },
+        {
+            "type": "say",
+            "speaker": "景老爷子",
+            "character": "jing_father",
+            "emotion": "softened",
+            "text": "罢了。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景老爷子长长地叹了一口气，转身走回走廊。走了几步，他又停下脚步。"
+        },
+        {
+            "type": "say",
+            "speaker": "景老爷子",
+            "character": "jing_father",
+            "emotion": "stern",
+            "text": "你要去行万里路，我不拦你。但你记住，景家的男人，就算是死在外面，骨头也得是硬的。别辱没了你读过的那些圣贤书。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "respectful",
+            "text": "儿子谨遵教诲。谢父亲成全。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景阳再次深深地拜了下去。当他直起身时，父亲的背影已经消失在拐角处。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "福伯将一把用油布包裹得严严实实的油纸伞塞进景阳手里。"
+        },
+        {
+            "type": "say",
+            "speaker": "福伯",
+            "character": "fubo",
+            "emotion": "worried",
+            "text": "三少爷，外头雨大，您千万保重啊。"
+        },
+        {
+            "type": "say",
+            "speaker": "景阳",
+            "character": "jingyang",
+            "emotion": "calm",
+            "text": "福伯回去吧，替我向母亲和两位哥哥道个别。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "景阳戴上斗笠，背起行囊，将那把油纸伞撑开。"
+        },
+        {
+            "type": "overlay",
+            "name": "clear"
+        }
+    ]
+}
