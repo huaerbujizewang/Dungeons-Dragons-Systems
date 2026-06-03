@@ -60,8 +60,16 @@ const storyList = [
         id: "test_01",
         title: "牢玩家的故事",
         description: "这是一段只有 IDRotF 负责的玩家才能看到的剧情。",
-        owner: "IDRotF@1.com", 
+        owner: "IDRotF@1.com",
         tags: "系统测试",
         date: "2026-01-06"
+    },
+    {
+        id: "estella-magic-seed-1364-07-19",
+        title: "艾斯特拉",
+        description: "某个夏天的午后。",
+        owner: "master@almorel.com",
+        tags: "艾丝特拉",
+        date: "FR1364 - 7月"
     }
 ];
