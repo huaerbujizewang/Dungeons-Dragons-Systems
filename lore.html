@@ -2,24 +2,133 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>人物志 - 往昔回响</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-    document.write('<script src="stories/list.js?v=' + new Date().getTime() + '"><\/script>');
+        document.write('<script src="stories/list.js?v=' + Date.now() + '"><\/script>');
     </script>
     <style>
-        body { font-family: "PingFang SC", sans-serif; background: #fff; padding: 40px; color: #333; }
-        .back-btn { padding: 8px 15px; border: 1px solid #333; text-decoration: none; color: #333; border-radius: 4px; }
-        .story-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
-        .story-card { border: 1px solid #eee; padding: 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; position: relative; }
-        .story-card:hover { border-color: #333; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transform: translateY(-3px); }
-        .time-tag { font-size: 0.7em; color: #999; margin-bottom: 5px; }
-        .owner-tag { font-size: 0.7em; color: #3498db; margin-top: 10px; border-top: 1px solid #f5f5f5; padding-top: 5px; }
+        :root {
+            --text: #263241;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #9b6a2f;
+            --surface: #ffffff;
+            --bg: #f7f3ec;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 36px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            max-width: 1180px;
+            margin: 0 auto 28px;
+        }
+
+        .back-btn {
+            padding: 8px 14px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        h1 {
+            max-width: 1180px;
+            margin: 0 auto;
+            font-size: 30px;
+            letter-spacing: 0;
+        }
+
+        .subtitle {
+            max-width: 1180px;
+            margin: 8px auto 0;
+            color: var(--muted);
+        }
+
+        #loading {
+            max-width: 1180px;
+            margin: 28px auto 0;
+            color: var(--muted);
+        }
+
+        .story-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            max-width: 1180px;
+            margin: 28px auto 0;
+        }
+
+        .story-card {
+            min-height: 174px;
+            padding: 18px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .story-card:hover {
+            border-color: rgba(155, 106, 47, 0.52);
+            box-shadow: 0 12px 28px rgba(38, 50, 65, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .time-tag {
+            margin-bottom: 8px;
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .story-title {
+            font-size: 18px;
+            font-weight: 800;
+            line-height: 1.35;
+        }
+
+        .story-desc {
+            margin: 12px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .owner-tag {
+            margin-top: 16px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+            color: #2563eb;
+            font-size: 12px;
+        }
+
+        @media (max-width: 720px) {
+            body { padding: 20px 14px; }
+            .topbar { align-items: flex-start; flex-direction: column; }
+        }
     </style>
 </head>
 <body>
-    <a href="index.html" class="back-btn">⬅ 返回主界面</a>
-    <h1>📜 人物志 / 互动间章</h1>
+    <div class="topbar">
+        <a href="index.html" class="back-btn">返回主界面</a>
+    </div>
+
+    <h1>人物志 / 互动间章</h1>
+    <p class="subtitle">这里保存可播放的剧情回想与角色间章。</p>
+
     <div id="loading">正在连接位面，检索因果记录...</div>
     <div id="story-grid" class="story-grid"></div>
 
@@ -29,46 +138,64 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function init() {
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (!user) { window.location.href = 'index.html'; return; }
+            const localDev = new URLSearchParams(location.search).get('dev') === '1'
+                && (location.protocol === 'file:' || ['localhost', '127.0.0.1'].includes(location.hostname));
 
-            // 1. 获取我的角色和负责的玩家
-            const { data: admin } = await supabaseClient.from('admin_users').select('role_level').eq('id', user.id).maybeSingle();
-            const role = admin ? admin.role_level : 'player';
-
-            // 2. 如果是 DM，查出我负责的所有玩家 Email
+            let user = { id: 'local-dev', email: 'demo@example.com' };
+            let role = 'root';
             let myPlayers = [];
-            if (role === 'dm') {
-                const { data: profiles } = await supabaseClient.from('profiles').select('email').eq('assigned_dm_id', user.id);
-                myPlayers = profiles.map(p => p.email);
+
+            if (!localDev) {
+                const authResult = await supabaseClient.auth.getUser();
+                user = authResult.data.user;
+                if (!user) {
+                    location.href = 'index.html';
+                    return;
+                }
+
+                const { data: admin } = await supabaseClient.from('admin_users').select('role_level').eq('id', user.id).maybeSingle();
+                role = admin ? admin.role_level : 'player';
+
+                if (role === 'dm') {
+                    const { data: profiles } = await supabaseClient.from('profiles').select('email').eq('assigned_dm_id', user.id);
+                    myPlayers = (profiles || []).map(profile => profile.email);
+                }
             }
 
-            // 3. 过滤故事列表
-            const visibleStories = storyList.filter(story => {
-                if (role === 'root') return true; // Root 看所有
-                if (user.email === story.owner) return true; // 玩家看自己的
-                if (role === 'dm' && myPlayers.includes(story.owner)) return true; // DM 看自己手下玩家的
+            const allStories = Array.isArray(window.storyList) ? window.storyList : [];
+            const visibleStories = allStories.filter(story => {
+                if (localDev || role === 'root') return true;
+                if (user.email === story.owner) return true;
+                if (role === 'dm' && myPlayers.includes(story.owner)) return true;
                 return false;
             });
 
-            // 4. 渲染
             document.getElementById('loading').style.display = 'none';
             const grid = document.getElementById('story-grid');
-            
-            if (visibleStories.length === 0) {
-                grid.innerHTML = "<p style='color:#999'>目前没有任何属于你的故事记载。</p>";
+
+            if (!visibleStories.length) {
+                grid.innerHTML = '<p style="color:#6b7280">目前没有任何属于你的故事记录。</p>';
                 return;
             }
 
-            visibleStories.forEach(s => {
-                grid.innerHTML += `
-                    <div class="story-card" onclick="window.location.href='play-story.html?id=${s.id}'">
-                        <div class="time-tag">${s.date}</div>
-                        <div style="font-weight:bold; font-size:1.1em;">${s.title}</div>
-                        <p style="font-size:0.85em; color:#666;">${s.description}</p>
-                        <div class="owner-tag">持有者: ${s.owner}</div>
-                    </div>`;
-            });
+            grid.innerHTML = visibleStories.map(story => `
+                <article class="story-card" onclick="location.href='play-story.html?id=${encodeURIComponent(story.id)}${localDev ? '&dev=1' : ''}'">
+                    <div class="time-tag">${escapeHTML(story.date || '')}</div>
+                    <div class="story-title">${escapeHTML(story.title || '未命名故事')}</div>
+                    <p class="story-desc">${escapeHTML(story.description || '')}</p>
+                    <div class="owner-tag">持有者：${escapeHTML(story.owner || 'unknown')}</div>
+                </article>
+            `).join('');
+        }
+
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
         }
 
         init();
