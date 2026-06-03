@@ -162,7 +162,7 @@
                 }
             }
 
-            const allStories = Array.isArray(window.storyList) ? window.storyList : [];
+            const allStories = getStoryList();
             const visibleStories = allStories.filter(story => {
                 if (localDev || role === 'root') return true;
                 if (user.email === story.owner) return true;
@@ -196,6 +196,12 @@
                 '"': '&quot;',
                 "'": '&#39;'
             }[char]));
+        }
+
+        function getStoryList() {
+            if (typeof storyList !== 'undefined' && Array.isArray(storyList)) return storyList;
+            if (Array.isArray(window.storyList)) return window.storyList;
+            return [];
         }
 
         init();
