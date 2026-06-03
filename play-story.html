@@ -690,6 +690,8 @@
         img.src = src;
         img.alt = id;
         img.className = `character ${position}`;
+        img.style.marginLeft = normalizeOffset(line.offsetX || line.x || 0);
+        img.style.marginBottom = normalizeOffset(line.offsetY || line.y || 0);
         if (line.enter === 'left') img.classList.add('enter-left');
         else if (line.enter === 'right') img.classList.add('enter-right');
         else if (line.enter !== 'none') img.classList.add('enter-pop');
@@ -736,6 +738,11 @@
         if (/^(https?:|data:|\.{0,2}\/|素材\/|stories\/)/.test(key)) return key;
         const assets = currentStory && currentStory.assets ? currentStory.assets : {};
         return assets[key] || key;
+    }
+
+    function normalizeOffset(value) {
+        if (typeof value === 'number') return `${value}px`;
+        return value || '0px';
     }
 
     async function setBackground(value, line = {}) {
