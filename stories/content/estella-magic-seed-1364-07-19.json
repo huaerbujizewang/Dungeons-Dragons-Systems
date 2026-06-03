@@ -75,6 +75,7 @@
             "emotion": "child_sprite",
             "display": "sprite",
             "position": "center",
+            "offsetX": "24px",
             "enter": "pop"
         },
         {
@@ -83,6 +84,11 @@
             "character": "estella",
             "emotion": "excited",
             "text": "父亲！你知道我今天在历史课上学了什么吗？"
+        },
+        {
+            "type": "hide",
+            "character": "estella",
+            "duration": 260
         },
         {
             "type": "say",
