@@ -71,5 +71,13 @@ const storyList = [
         owner: "master@almorel.com",
         tags: "艾丝特拉",
         date: "FR1364 - 7月"
+    },
+    {
+        id: "jingyang-golden-road-1491-08",
+        title: "景阳",
+        description: "行万里路",
+        owner: "master@almorel.com",
+        tags: "景阳",
+        date: "DR1491 - 8月"
     }
 ];
