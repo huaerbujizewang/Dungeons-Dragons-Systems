@@ -1,0 +1,352 @@
+{
+    "title": "艾斯特拉",
+    "date": "1364-07-19",
+    "typeSpeed": 26,
+    "autoDelay": 900,
+    "bg": "orlando_study_summer",
+    "assets": {
+        "orlando_study_summer": "assets/stories/backgrounds/orlando_study_summer.png",
+        "orlando_avatar_normal": "assets/stories/orlando/orlando_avatar_normal.png",
+        "orlando_avatar_smile": "assets/stories/orlando/orlando_avatar_smile.png",
+        "orlando_avatar_thinking": "assets/stories/orlando/orlando_avatar_thinking.png",
+        "estella_avatar_excited": "assets/stories/estella/estella_avatar_excited.png",
+        "estella_avatar_proud": "assets/stories/estella/estella_avatar_proud.png",
+        "estella_avatar_confused": "assets/stories/estella/estella_avatar_confused.png",
+        "estella_child_sprite": "assets/stories/estella/estella_child_sprite.png"
+    },
+    "characters": {
+        "orlando": {
+            "name": "奥兰多",
+            "sprites": {
+                "normal": "orlando_avatar_normal",
+                "smile": "orlando_avatar_smile",
+                "thinking": "orlando_avatar_thinking"
+            }
+        },
+        "estella": {
+            "name": "艾丝特拉",
+            "sprites": {
+                "excited": "estella_avatar_excited",
+                "proud": "estella_avatar_proud",
+                "confused": "estella_avatar_confused",
+                "child_sprite": "estella_child_sprite"
+            }
+        }
+    },
+    "script": [
+        {
+            "type": "scene",
+            "bg": "orlando_study_summer",
+            "duration": 0
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "某个夏天的午后，奥兰多的书房里。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "阳光透过彩色玻璃窗洒在地毯上。奥兰多正坐在宽大的橡木桌后，咬着羽毛笔的笔杆，对着一张复杂的香料进货单发愁。"
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 260
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "excited",
+            "text": "父亲！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "书房的门被猛地推开，艾丝特拉像一阵风似的跑了进来。她今天穿着一件极其繁复的蕾丝边小裙子，手里还拿着一根不知道从哪里捡来的木棍，把它当成细剑一样挥舞着。"
+        },
+        {
+            "type": "show",
+            "character": "estella",
+            "emotion": "child_sprite",
+            "display": "sprite",
+            "position": "center",
+            "enter": "pop"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "excited",
+            "text": "父亲！你知道我今天在历史课上学了什么吗？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她跑过去，毫不客气地扒住书桌的边缘，踮起脚尖看着奥兰多。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "thinking",
+            "text": "学了什么？又是哪位精灵王大破兽人军队的故事？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多叹了口气，放下羽毛笔，把那张脆弱的羊皮纸从女儿的魔爪下抢救出来。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "excited",
+            "text": "不是！是关于路斯坎的海盗！哈伦老师说，几十年前有一群超级可怕的海盗，他们开着黑色的船，把无冬城的商船全抢光了！他们甚至还有法师在船上放火球！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她一边说，一边挥舞着手里的木棍，“嗖”的一下戳在了一叠空白的账本上。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "然后呢？你打算去当海盗？"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "confused",
+            "text": "当然不是！海盗脏死了，而且据说他们都不洗澡。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "我是想说，为什么我们家的商船要怕海盗？既然我们这么有钱，为什么不直接买十艘战舰，上面装满大炮和法师，把海盗全炸沉呢？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她双手叉腰，语气里满是不加掩饰的傲慢和天真。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "等我长大了，我就要把深水城所有的船都买下来！谁敢抢我的东西，我就让法师把他变成烤猪！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多被女儿的“宏图伟业”逗得哈哈大笑，他一把将艾丝特拉抱起来，放在自己的膝盖上。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "这主意听起来真不错，我的小总督。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多揉了揉她的金发。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "但是，买十艘战舰的钱，足够我们亏损一百次了。而且深水城的领主们可不会允许一个商人拥有自己的无敌舰队。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "confused",
+            "text": "为什么不？"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "那我就把深水城的领主也买下来！把领主宫殿买下来刷成粉色的！"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "那恐怕你得先去抢劫巨龙的宝库才行。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多笑着捏了捏她的鼻子。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "好了，大富豪艾丝特拉小姐，今天除了海盗，你还学了什么？拼写课怎么样？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "一提到这个，艾丝特拉立刻像只骄傲的小孔雀一样挺起了胸膛。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "满分！"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "老师考了三十个北地城邦的名字，我一个字母都没有拼错！隔壁那个安布雷斯家的小子，连“银月城”的“月”都少写了，蠢死了。老师夸我是班上记忆力最好的！"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "干得漂亮！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多毫不吝啬自己的夸奖，甚至从抽屉里摸出了一枚金币塞进她的小手里。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "这是奖励你完美拼写的。去让厨房给你烤个樱桃派吧。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "excited",
+            "text": "好耶！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "艾丝特拉欢呼一声，拿着金币从父亲膝盖上跳下来。她刚跑到门口，突然又停住了脚步，回头看着奥兰多，大眼睛滴溜溜地转了一圈。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "confused",
+            "text": "父亲，既然我记忆力这么好，那我是不是应该去学魔法？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她突然问道，语气里带着小孩子特有的、想一出是一出的随性。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "老师说，厉害的法师能记住几百个咒语呢。我要是去学魔法，肯定比所有人都厉害。到时候我就能自己搓火球去炸海盗了！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多愣了一下。在深水城，日精灵贵族家庭确实有把孩子送去魔法学院镀金的传统，但他其实一直没把这事提上日程。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "thinking",
+            "text": "学魔法可不是光靠死记硬背就行了的，那是很辛苦的。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "我不怕辛苦！我连那么复杂的家族纹章都背得下来！"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "proud",
+            "text": "而且伊文捷琳的哥哥就在学魔法，他昨天还在街上用魔法变了一朵花出来，我才不想输给他们家！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "说到底，小女孩的胜负欲往往来源于极其幼稚的攀比。"
+        },
+        {
+            "type": "say",
+            "speaker": "奥兰多",
+            "character": "orlando",
+            "emotion": "smile",
+            "text": "好好好，等你再大一点，要是你拼写课还是满分，我就给你请个魔法启蒙老师。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多无奈地摆摆手，把女儿打发走。"
+        },
+        {
+            "type": "say",
+            "speaker": "艾丝特拉",
+            "character": "estella",
+            "emotion": "excited",
+            "text": "一言为定！我要当深水城最厉害的法师！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "艾丝特拉高举着木棍，像个打了胜仗的将军一样冲出了书房，走廊里很快传来了她大呼小叫着找女仆要樱桃派的声音。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "奥兰多笑着摇了摇头，重新拿起羽毛笔。"
+        }
+    ]
+}
