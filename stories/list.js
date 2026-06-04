@@ -71,7 +71,7 @@ const storyList = [
         owner: "master@almorel.com",
         tags: "克莱门汀·瓦勒留斯",
         date: "现在",
-        url: "clem-psychic-hold.html"
+        url: "clem-psychic-hold.html?v=20260604-psychic-clock"
     },
     {
         id: "misha-meditation-room-1484-07",
