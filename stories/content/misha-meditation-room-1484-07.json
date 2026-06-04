@@ -5,8 +5,7 @@
   "autoDelay": 900,
   "bg": "meditation_chamber_default",
   "notes": [
-    "这是由 Mermaid 分支图生成的粗骨架。",
-    "每个节点暂用旁白占位，后续可在对应 label 下替换为正式剧情。",
+    "A 线正式剧情骨架。",
     "choice 会改变主线进程；终点节点会统一跳到 END_OF_STORY。"
   ],
   "assets": {
@@ -197,14 +196,14 @@
           "text": "张开手指，默发《护盾术》。",
           "jump": "A03"
         },
-        {
-          "text": "引动自然魔力，施展《吸收元素》。",
-          "jump": "A03B"
-        },
-        {
-          "text": "抢先出手，对准她的脸砸出《魔法飞弹》。",
-          "jump": "A03C"
-        }
+      {
+        "text": "引动自然魔力，施展《吸收元素》。",
+        "jump": "BE_A0"
+      },
+      {
+        "text": "抢先出手，对准她的脸砸出《魔法飞弹》。",
+        "jump": "BE_A0"
+      }
       ]
     },
     {
@@ -377,34 +376,6 @@
     {
       "type": "jump",
       "target": "A04"
-    },
-    {
-      "type": "label",
-      "name": "A03B"
-    },
-    {
-      "type": "say",
-      "speaker": "旁白",
-      "narration": true,
-      "text": "反应过慢, 酸液已经成形, 半边身体被腐蚀灼伤"
-    },
-    {
-      "type": "jump",
-      "target": "BE_A0"
-    },
-    {
-      "type": "label",
-      "name": "A03C"
-    },
-    {
-      "type": "say",
-      "speaker": "旁白",
-      "narration": true,
-      "text": "年幼身体施法前摇太长, 强酸箭先一步命中"
-    },
-    {
-      "type": "jump",
-      "target": "END_OF_STORY"
     },
     {
       "type": "label",
@@ -1727,7 +1698,7 @@
     {
       "type": "say",
       "speaker": "系统",
-      "text": "这个分支骨架到此结束。后续可以继续补充具体对白、演出和结算。"
+      "text": "剧情到此结束。"
     }
   ],
   "assetBase": "assets/stories/misha-meditation-room-1484-07"
