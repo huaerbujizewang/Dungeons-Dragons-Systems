@@ -984,7 +984,6 @@
         }
         if (state.lureRoom && state.lureUntil <= now) {
             state.lureRoom = null;
-            replanMonsters();
             renderMap();
         }
     }
@@ -999,13 +998,17 @@
                 continue;
             }
 
-            if (monster.plannedRoom && state.lockedUntil.has(monster.plannedRoom)) planMonster(monster);
-            applyActiveLure(monster);
+            if (monster.plannedRoom && state.lockedUntil.has(monster.plannedRoom)) {
+                clearLureLock(monster);
+                planMonster(monster);
+            }
+            if (!monster.lureLockedRoom) applyActiveLure(monster);
             const next = monster.plannedRoom;
             if (next) {
                 monster.room = next;
                 moved = true;
             }
+            clearLureLock(monster);
             if (monster.room === GREENHOUSE_ROOM) {
                 nextMonsters.push(...feedPlant(monster));
                 moved = true;
@@ -1081,6 +1084,7 @@
                     <div>当前位置：${escapeHTML(current)}</div>
                     <div>行动目标：${escapeHTML(target)}</div>
                     <div>下一步：${escapeHTML(next)}（${seconds}s 后）</div>
+                    <div>锁定：${escapeHTML(monster.lureLockedRoom ? `引诱 -> ${monster.lureLockedRoom}` : "无")}</div>
                     <div>出生点：${escapeHTML(roomLabel(monster.spawnRoom))}；引诱抗性 ${Number(monster.lureResist || 0)}；震慑抗性 ${Number(monster.shockResist || 0)}</div>
                     <div>逻辑：${escapeHTML(monster.planReason || "未计算")}</div>
                     <div>权重：${escapeHTML(weights || "无可用出口")}</div>
@@ -1203,6 +1207,15 @@
     }
 
     function planMonster(monster) {
+        if (monster.lureLockedRoom) {
+            monster.plannedTarget = monster.lureLockedRoom;
+            monster.plannedRoom = monster.lureLockedRoom;
+            monster.plannedWeights = [{ id: monster.lureLockedRoom, weight: 1 }];
+            monster.planReason = `引诱锁定：进入 ${monster.lureLockedRoom}`;
+            monster.planAt = performance.now();
+            return;
+        }
+
         if (applyActiveLure(monster)) return;
 
         const target = PLAYER_ROOM;
@@ -1229,9 +1242,14 @@
         monster.plannedTarget = state.lureRoom;
         monster.plannedRoom = state.lureRoom;
         monster.plannedWeights = [{ id: state.lureRoom, weight: 1 }];
+        monster.lureLockedRoom = state.lureRoom;
         monster.planReason = `相邻引诱强制：进入 ${state.lureRoom}`;
         monster.planAt = performance.now();
         return true;
+    }
+
+    function clearLureLock(monster) {
+        delete monster.lureLockedRoom;
     }
 
     function replanMonsters() {
@@ -1303,6 +1321,7 @@
                     resisted += 1;
                     return;
                 }
+                clearLureLock(monster);
                 monster.room = monster.spawnRoom || monster.room;
                 monster.nextMove = performance.now() + 26000 + Math.random() * 10000;
                 planMonster(monster);
