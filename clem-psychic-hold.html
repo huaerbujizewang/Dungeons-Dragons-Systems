@@ -341,30 +341,40 @@
         .monster-dot {
             position: absolute;
             z-index: 5;
-            width: 13px;
-            height: 13px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
         }
 
         .monster-dot {
-            background: #020202;
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            box-shadow: 0 0 14px rgba(0, 0, 0, 0.98);
+            background:
+                radial-gradient(circle at 38% 35%, rgba(255, 255, 255, 0.72), transparent 18%),
+                radial-gradient(circle, #111827 0 34%, #020617 64%, #000 100%);
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            box-shadow:
+                0 0 0 5px rgba(255, 255, 255, 0.1),
+                0 0 18px rgba(226, 232, 240, 0.7),
+                0 0 34px rgba(15, 23, 42, 0.96);
         }
 
         .plant-dot {
             position: absolute;
             z-index: 6;
-            width: 17px;
-            height: 17px;
+            width: 19px;
+            height: 19px;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
-            background: #65a30d;
-            border: 1px solid rgba(236, 252, 203, 0.8);
-            box-shadow: 0 0 18px rgba(132, 204, 22, 0.88), 0 0 34px rgba(101, 163, 13, 0.54);
+            background:
+                radial-gradient(circle at 36% 32%, rgba(255, 255, 255, 0.84), transparent 18%),
+                radial-gradient(circle, #bef264 0 30%, #65a30d 62%, #1a2e05 100%);
+            border: 1px solid rgba(236, 252, 203, 0.92);
+            box-shadow:
+                0 0 0 6px rgba(132, 204, 22, 0.14),
+                0 0 20px rgba(190, 242, 100, 0.92),
+                0 0 42px rgba(101, 163, 13, 0.7);
         }
 
         .side-stack {
@@ -730,11 +740,15 @@
         <div id="dm-monsters"></div>
         <div class="dm-controls">
             <button class="dm-btn" data-dm-action="win">当场胜利</button>
-            <button class="dm-btn" data-dm-action="jumpscare">触发跳杀</button>
+            <button class="dm-btn" data-dm-action="sludge-jumpscare">测试污泥跳杀</button>
+            <button class="dm-btn" data-dm-action="plant-jumpscare">测试植物跳杀</button>
+            <button class="dm-btn" data-dm-action="collapse">测试精神崩溃</button>
             <button class="dm-btn" data-dm-action="psi-plus">心能 +10</button>
             <button class="dm-btn" data-dm-action="psi-minus">心能 -10</button>
             <button class="dm-btn" data-dm-action="stable-plus">稳定 +10</button>
             <button class="dm-btn" data-dm-action="stable-minus">稳定 -10</button>
+            <button class="dm-btn" data-dm-action="plant-plus">饥饿 +10</button>
+            <button class="dm-btn" data-dm-action="plant-minus">饥饿 -10</button>
             <button class="dm-btn" data-dm-action="spawn">追加怪物</button>
             <button class="dm-btn" data-dm-action="replan">重算行动</button>
         </div>
@@ -1050,13 +1064,26 @@
     function runDmAction(action) {
         if (!state.dmMode) return;
         if (action === "win") return win();
-        if (action === "jumpscare") return fail("DM 触发跳杀。", "sludge");
+        if (action === "jumpscare" || action === "sludge-jumpscare") return fail("DM 测试污泥跳杀。", "sludge");
+        if (action === "plant-jumpscare") return fail("DM 测试植物跳杀。", "plant");
+        if (action === "collapse") return fail("DM 测试精神崩溃。", "collapse");
         if (action === "psi-plus") state.psi = clamp(state.psi + 10, 0, 100);
         if (action === "psi-minus") state.psi = clamp(state.psi - 10, 0, 100);
         if (action === "stable-plus") state.stability = clamp(state.stability + 10, 0, 100);
         if (action === "stable-minus") {
             state.stability = clamp(state.stability - 10, 0, 100);
             if (state.stability <= 0) return fail("DM 将精神稳定度归零。", "collapse");
+        }
+        if (action === "plant-plus") {
+            state.plantHunger = clamp(state.plantHunger + 10, 0, 100);
+            if (state.plantHunger > 0) {
+                state.plantAttack = false;
+                state.plantAttackPath = [];
+            }
+        }
+        if (action === "plant-minus") {
+            state.plantHunger = clamp(state.plantHunger - 10, 0, 100);
+            if (state.plantHunger <= 0 && !state.plantAttack) startPlantAttack(performance.now());
         }
         if (action === "spawn") spawnMonster();
         if (action === "replan") replanMonsters();
@@ -1321,8 +1348,13 @@
             els.map.appendChild(button);
         }
 
+        const roomDotCounts = new Map();
         const realDots = state.monsters.filter(monster => rooms[monster.room].floor === state.floor);
-        realDots.forEach((monster, index) => addDot("monster-dot", rooms[monster.room], index));
+        realDots.forEach(monster => {
+            const index = roomDotCounts.get(monster.room) || 0;
+            roomDotCounts.set(monster.room, index + 1);
+            addDot("monster-dot", rooms[monster.room], index);
+        });
         renderPlantDot();
         updateSelectedRoom();
         updateAbilityButtons();
@@ -1331,10 +1363,22 @@
     function addDot(className, point, index) {
         const dot = document.createElement("div");
         dot.className = className;
-        const offset = (index % 3 - 1) * 3;
-        dot.style.left = `${point.x + offset}%`;
-        dot.style.top = `${point.y + Math.floor(index / 3) * 3}%`;
+        const offset = className === "plant-dot" ? { x: 0, y: 0 } : dotOffset(index);
+        dot.style.left = `${point.x + offset.x}%`;
+        dot.style.top = `${point.y + offset.y}%`;
         els.map.appendChild(dot);
+    }
+
+    function dotOffset(index) {
+        if (!index) return { x: 0, y: 0 };
+        const ring = Math.floor((index - 1) / 8);
+        const slot = (index - 1) % 8;
+        const radius = 1.05 + ring * 0.48;
+        const angle = (-Math.PI / 2) + slot * (Math.PI * 2 / 8);
+        return {
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius
+        };
     }
 
     function renderPlantDot() {
