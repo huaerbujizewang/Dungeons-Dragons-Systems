@@ -567,9 +567,20 @@
 
         #jumpscare.collapse {
             background-image: none;
+            background: #000;
+            perspective: 900px;
+            overflow: hidden;
+        }
+
+        #jumpscare.collapse::before {
+            content: "";
+            position: absolute;
+            inset: -6vh -4vw;
+            z-index: 0;
             background:
                 radial-gradient(circle at 50% 12%, rgba(248, 250, 252, 0.16), transparent 18%),
                 linear-gradient(180deg, rgba(3, 7, 18, 0.88), #030507 68%, #000);
+            transform-origin: 50% 86%;
             animation: collapseFall 1.15s cubic-bezier(0.55, 0.04, 0.28, 1) both;
         }
 
@@ -577,8 +588,8 @@
             position: relative;
             z-index: 2;
             opacity: 0;
-            transform: translateY(26vh) rotateX(58deg) scale(0.92);
-            animation: collapseTextIn 0.48s ease 1.28s both;
+            transform: translateY(8px) scale(0.98);
+            animation: collapseTextIn 0.42s ease 1.28s both;
         }
 
         #jumpscare.collapse::after {
@@ -629,9 +640,9 @@
         }
 
         @keyframes collapseFall {
-            0% { transform: perspective(900px) rotateX(0deg) translateY(0); filter: blur(0) brightness(1); }
-            55% { transform: perspective(900px) rotateX(38deg) translateY(10vh); filter: blur(1px) brightness(0.72); }
-            100% { transform: perspective(900px) rotateX(68deg) translateY(22vh); filter: blur(2px) brightness(0.42); }
+            0% { transform: rotateX(0deg) translateY(0) scale(1); filter: blur(0) brightness(1); opacity: 1; }
+            55% { transform: rotateX(42deg) translateY(9vh) scale(1.08); filter: blur(1px) brightness(0.72); opacity: 0.72; }
+            100% { transform: rotateX(76deg) translateY(26vh) scale(1.14); filter: blur(2px) brightness(0.34); opacity: 0.26; }
         }
 
         @keyframes collapseBlackout {
@@ -640,8 +651,8 @@
         }
 
         @keyframes collapseTextIn {
-            from { opacity: 0; transform: translateY(30vh) rotateX(58deg) scale(0.9); }
-            to { opacity: 0.92; transform: translateY(22vh) rotateX(58deg) scale(0.92); }
+            from { opacity: 0; transform: translateY(8px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         @media (max-width: 980px) {
