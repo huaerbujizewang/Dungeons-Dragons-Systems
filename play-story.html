@@ -264,6 +264,92 @@
         #flash-layer.red { background: rgba(239, 68, 68, 0.85); animation: flash 0.42s ease; }
         #flash-layer.black { background: #000; animation: flash 0.55s ease; }
 
+        #death-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 90;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: #030000;
+            background-size: cover;
+            background-position: center;
+            pointer-events: auto;
+        }
+
+        #death-layer.visible { display: flex; }
+
+        #death-layer::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 42%, rgba(126, 0, 0, 0.22), transparent 42%),
+                linear-gradient(180deg, rgba(0, 0, 0, 0.36), rgba(26, 0, 0, 0.92));
+        }
+
+        #death-layer::after {
+            content: "";
+            position: absolute;
+            inset: -18px;
+            border: 26px solid rgba(126, 0, 0, 0.22);
+            filter: blur(18px);
+        }
+
+        .death-content {
+            position: relative;
+            z-index: 1;
+            width: min(92vw, 760px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            text-align: center;
+        }
+
+        #death-title {
+            color: #8b0000;
+            font-size: clamp(76px, 13vw, 168px);
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: 0;
+            text-shadow:
+                0 0 10px rgba(255, 0, 0, 0.55),
+                0 0 38px rgba(111, 0, 0, 0.88),
+                0 10px 0 rgba(0, 0, 0, 0.8);
+            animation: deathPulse 2.2s ease-in-out infinite;
+        }
+
+        #death-subtitle {
+            min-height: 28px;
+            color: rgba(248, 250, 252, 0.72);
+            font-size: 18px;
+        }
+
+        #death-actions {
+            display: none;
+            width: min(82vw, 420px);
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        #death-actions.visible { display: flex; }
+
+        .death-btn {
+            min-height: 46px;
+            border: 1px solid rgba(185, 28, 28, 0.64);
+            background: rgba(0, 0, 0, 0.58);
+            color: #f8fafc;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .death-btn:hover {
+            background: rgba(127, 29, 29, 0.42);
+            border-color: rgba(248, 113, 113, 0.82);
+        }
+
         #weather-layer { z-index: 18; opacity: 0; transition: opacity 0.35s ease; }
         #weather-layer.rain {
             opacity: 0;
@@ -315,6 +401,10 @@
             0% { opacity: 0; }
             22% { opacity: 1; }
             100% { opacity: 0; }
+        }
+        @keyframes deathPulse {
+            0%, 100% { transform: scale(1); filter: brightness(0.86); }
+            50% { transform: scale(1.035); filter: brightness(1.14); }
         }
         @keyframes weatherMove {
             from { background-position: 0 0; }
@@ -531,6 +621,13 @@
     <div id="weather-layer"></div>
     <div id="character-layer"></div>
     <div id="flash-layer"></div>
+    <div id="death-layer">
+        <div class="death-content">
+            <div id="death-title"></div>
+            <div id="death-subtitle"></div>
+            <div id="death-actions"></div>
+        </div>
+    </div>
     <div id="avatar-container">
         <img id="main-avatar" alt="">
     </div>
@@ -566,6 +663,7 @@
     let typingJob = null;
     let activeChoice = false;
     let autoMode = false;
+    let deathMode = false;
     let defaultSpeed = 28;
     let labelMap = new Map();
     let historyItems = [];
@@ -578,6 +676,10 @@
         cg: document.getElementById('cg-layer'),
         weather: document.getElementById('weather-layer'),
         flash: document.getElementById('flash-layer'),
+        death: document.getElementById('death-layer'),
+        deathTitle: document.getElementById('death-title'),
+        deathSubtitle: document.getElementById('death-subtitle'),
+        deathActions: document.getElementById('death-actions'),
         characters: document.getElementById('character-layer'),
         avatarContainer: document.getElementById('avatar-container'),
         avatar: document.getElementById('main-avatar'),
@@ -757,6 +859,9 @@
                 break;
             case 'flash':
                 await runEffect(line.color || 'white', line);
+                break;
+            case 'death':
+                await runDeath(line);
                 break;
             case 'wait':
                 await sleep(Number(line.duration || line.ms || 600));
@@ -1036,6 +1141,35 @@
         els.flash.className = '';
     }
 
+    async function runDeath(line = {}) {
+        deathMode = true;
+        autoMode = false;
+        els.autoBtn.classList.remove('active');
+        activeChoice = false;
+
+        hideAllCharacters();
+        els.dialogue.classList.add('hidden');
+        els.choices.style.display = 'none';
+        els.choices.innerHTML = '';
+        els.deathActions.classList.remove('visible');
+        els.deathActions.innerHTML = '';
+
+        const bg = resolveAsset(line.bg || line.background || line.src || currentStory.deathBg || 'death_screen');
+        if (bg) {
+            await ensureImageReady(bg);
+            els.death.style.backgroundImage = `url("${bg}")`;
+        } else {
+            els.death.style.backgroundImage = '';
+        }
+
+        els.deathTitle.innerText = line.text || line.title || '\u4f60\u6b7b\u4e86';
+        els.deathSubtitle.innerText = line.subtitle || line.message || '';
+        els.death.classList.add('visible');
+
+        const duration = Number(line.duration || 900);
+        if (duration > 0) await sleep(duration);
+    }
+
     function playAudio(channel, value, line = {}) {
         const src = resolveAsset(value);
         const player = channel === 'se' ? els.se : channel === 'voice' ? els.voice : els.bgm;
@@ -1219,6 +1353,17 @@
     }
 
     function showEnding() {
+        if (deathMode) {
+            els.dialogue.classList.add('hidden');
+            els.deathActions.innerHTML = `
+            <button class="death-btn" onclick="location.reload(); event.stopPropagation();">\u91cd\u8bfb\u4e00\u904d</button>
+            <button class="death-btn" onclick="location.href='lore.html'; event.stopPropagation();">\u8fd4\u56de\u5217\u8868</button>
+        `;
+            els.deathActions.classList.add('visible');
+            activeChoice = true;
+            return;
+        }
+
         els.speaker.innerText = '系统';
         els.text.innerText = '（故事结束）';
         els.choices.style.display = 'flex';
