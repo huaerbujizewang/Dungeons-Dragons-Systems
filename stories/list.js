@@ -65,6 +65,15 @@ const storyList = [
         date: "2026-01-06"
     },
     {
+        id: "clem_psychic_hold",
+        title: "克莱门汀",
+        description: "克莱门汀在长女卧室中撑过异常侵入。",
+        owner: "master@almorel.com",
+        tags: "克莱门汀·瓦勒留斯",
+        date: "现在",
+        url: "clem-psychic-hold.html"
+    },
+    {
         id: "misha-meditation-room-1484-07",
         title: "米沙",
         description: "冥想室杀机",
