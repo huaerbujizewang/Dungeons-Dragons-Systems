@@ -5,8 +5,8 @@
   "autoDelay": 900,
   "bg": "meditation_chamber_default",
   "notes": [
-    "A 线正式剧情骨架。",
-    "choice 会改变主线进程；终点节点会统一跳到 END_OF_STORY。"
+    "A线正式剧情。",
+    "失败结局统一进入全屏死亡演出；唯一胜利线为TE。"
   ],
   "assets": {
     "meditation_chamber_default": "assets/stories/misha-meditation-room-1484-07/backgrounds/meditation_chamber_default.png",
@@ -25,7 +25,8 @@
     "iliyana_avatar_angry": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_angry.png",
     "iliyana_avatar_wounded": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_wounded.png",
     "iliyana_avatar_casting": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_casting.png",
-    "mother_shadow_avatar": "assets/stories/misha-meditation-room-1484-07/characters/mother_shadow_avatar.png"
+    "mother_shadow_avatar": "assets/stories/misha-meditation-room-1484-07/characters/mother_shadow_avatar.png",
+    "death_screen": "assets/stories/misha-meditation-room-1484-07/backgrounds/death_screen.png"
   },
   "characters": {
     "misha": {
@@ -196,14 +197,14 @@
           "text": "张开手指，默发《护盾术》。",
           "jump": "A03"
         },
-      {
-        "text": "引动自然魔力，施展《吸收元素》。",
-        "jump": "BE_A0"
-      },
-      {
-        "text": "抢先出手，对准她的脸砸出《魔法飞弹》。",
-        "jump": "BE_A0"
-      }
+        {
+          "text": "引动自然魔力，施展《吸收元素》。",
+          "jump": "BE_A0"
+        },
+        {
+          "text": "抢先出手，对准她的脸砸出《魔法飞弹》。",
+          "jump": "BE_A0"
+        }
       ]
     },
     {
@@ -455,9 +456,10 @@
       "text": "肮脏的血脉，连一发戏法都接不住。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：酸蚀残躯。一步踏错，满盘皆输。法术对决中，抢不到先手，就只能迎接死亡。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -678,9 +680,10 @@
       "text": "冰霜顺着你的脊椎蔓延，连同你眼底的不甘一起，彻底冻结。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：门缝里的绝望。延迟的死刑。你以为你挡住了致命一击，实际上，你只是透支了逃跑的双腿。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -751,9 +754,10 @@
       "text": "但你也死了，连同你的野心和绝顶的天赋，一起化作了冥想室里最艳丽的血肉烟花。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：镜花水月。你与她同归于尽。但死人是无法享受胜利的。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -916,9 +920,10 @@
       "text": "伊莉雅娜怜悯地看着你。你甚至没能推偏她分毫。她手腕顺势一翻，淬毒的匕首精准地刺入了你的心脏。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：飞蛾扑火。用肉体去触碰高阶施法者的《火焰护盾》，和主动跳进火炉没有任何区别。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -966,9 +971,10 @@
       "text": "你感觉到喉咙一凉，随后便是滚烫的鲜血喷涌而出，堵住了你所有的声音。你捂住脖子，无力地倒在地上。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：施法扼杀。刀锋永远比舌头快。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -1209,9 +1215,10 @@
       "text": "她轻抚着你的脸颊，淬毒的刀锋贴上你的颈动脉。刀锋一抹。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：待宰羔羊。《定身术》直击精神感知，也许你的选择错误了。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -1418,9 +1425,10 @@
       "text": "法术？在绝对的物理速度面前都是笑话！"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：物理短板。你被匕首捅了个对穿。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -1577,9 +1585,10 @@
       "text": "死灵能量瞬间抽干了你体内仅存的一丝生命力。你重重地栽倒在她的尸体上，双眼大睁，彻底停止了呼吸。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：贪婪的代价。在残血状态下越级拾取未解除绑定的魔法物品，是施法者最愚蠢的死法。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -1637,9 +1646,10 @@
       "text": "一发炽热的火球照亮了地窖。"
     },
     {
-      "type": "say",
-      "speaker": "系统",
-      "text": "达成结局：迟来的追索。魔法会留下脚印。杀人只是一半，处理现场才是施法者的必修课。"
+      "type": "death",
+      "text": "你死了",
+      "bg": "death_screen",
+      "duration": 1200
     },
     {
       "type": "jump",
@@ -1701,5 +1711,6 @@
       "text": "剧情到此结束。"
     }
   ],
-  "assetBase": "assets/stories/misha-meditation-room-1484-07"
+  "assetBase": "assets/stories/misha-meditation-room-1484-07",
+  "deathBg": "death_screen"
 }
