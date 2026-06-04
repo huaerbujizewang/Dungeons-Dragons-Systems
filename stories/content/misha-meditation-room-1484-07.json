@@ -1,0 +1,1734 @@
+{
+  "title": "冥想室杀机",
+  "date": "DR1484 - 7月",
+  "typeSpeed": 22,
+  "autoDelay": 900,
+  "bg": "meditation_chamber_default",
+  "notes": [
+    "这是由 Mermaid 分支图生成的粗骨架。",
+    "每个节点暂用旁白占位，后续可在对应 label 下替换为正式剧情。",
+    "choice 会改变主线进程；终点节点会统一跳到 END_OF_STORY。"
+  ],
+  "assets": {
+    "meditation_chamber_default": "assets/stories/misha-meditation-room-1484-07/backgrounds/meditation_chamber_default.png",
+    "meditation_chamber_arcane_clash": "assets/stories/misha-meditation-room-1484-07/backgrounds/meditation_chamber_arcane_clash.png",
+    "meditation_chamber_accident": "assets/stories/misha-meditation-room-1484-07/backgrounds/meditation_chamber_accident.png",
+    "ventilation_escape": "assets/stories/misha-meditation-room-1484-07/backgrounds/ventilation_escape.png",
+    "misha_child_avatar_terrified": "assets/stories/misha-meditation-room-1484-07/characters/misha_child_avatar_terrified.png",
+    "misha_child_avatar_thinking": "assets/stories/misha-meditation-room-1484-07/characters/misha_child_avatar_thinking.png",
+    "misha_child_avatar_focused": "assets/stories/misha-meditation-room-1484-07/characters/misha_child_avatar_focused.png",
+    "misha_child_avatar_pained": "assets/stories/misha-meditation-room-1484-07/characters/misha_child_avatar_pained.png",
+    "misha_child_avatar_resolved": "assets/stories/misha-meditation-room-1484-07/characters/misha_child_avatar_resolved.png",
+    "misha_child_avatar_collapse": "assets/stories/misha-meditation-room-1484-07/characters/misha_child_avatar_collapse.png",
+    "misha_child_sprite_default": "assets/stories/misha-meditation-room-1484-07/characters/misha_child_sprite_default.png",
+    "iliyana_avatar_cold": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_cold.png",
+    "iliyana_avatar_smirk": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_smirk.png",
+    "iliyana_avatar_angry": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_angry.png",
+    "iliyana_avatar_wounded": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_wounded.png",
+    "iliyana_avatar_casting": "assets/stories/misha-meditation-room-1484-07/characters/iliyana_avatar_casting.png",
+    "mother_shadow_avatar": "assets/stories/misha-meditation-room-1484-07/characters/mother_shadow_avatar.png"
+  },
+  "characters": {
+    "misha": {
+      "name": "米沙",
+      "sprites": {
+        "terrified": "misha_child_avatar_terrified",
+        "thinking": "misha_child_avatar_thinking",
+        "focused": "misha_child_avatar_focused",
+        "pained": "misha_child_avatar_pained",
+        "resolved": "misha_child_avatar_resolved",
+        "collapse": "misha_child_avatar_collapse",
+        "child_sprite": "misha_child_sprite_default"
+      }
+    },
+    "iliyana": {
+      "name": "伊莉雅娜",
+      "sprites": {
+        "cold": "iliyana_avatar_cold",
+        "smirk": "iliyana_avatar_smirk",
+        "angry": "iliyana_avatar_angry",
+        "wounded": "iliyana_avatar_wounded",
+        "casting": "iliyana_avatar_casting"
+      }
+    },
+    "mother_shadow": {
+      "name": "母亲的阴影",
+      "sprites": {
+        "default": "mother_shadow_avatar"
+      }
+    }
+  },
+  "script": [
+    {
+      "type": "scene",
+      "bg": "meditation_chamber_default",
+      "duration": 0
+    },
+    {
+      "type": "label",
+      "name": "Root"
+    },
+    {
+      "type": "scene",
+      "bg": "meditation_chamber_default",
+      "duration": 0
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "冥想室里冷得像冰窖。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "窗外的雪光透过旧玻璃缝隙，惨白地打在墙上的符布和药瓶上。桌上的曼陀罗熏香还没燃尽，灰白色的烟贴着石砖地面缓慢爬行。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜堵在唯一的门前。她居高临下地看着你，红发垂在肩侧。她的脸上没有愤怒，只有一种令人毛骨悚然的轻快笑意。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "casting",
+      "text": "米沙。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她抬起手，指尖飞速勾勒出咒式的残影，一团惨绿色的强酸光芒正在成型。空气里弥漫起刺鼻的苦杏仁与烧焦皮革味。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "terrified",
+      "text": "逃不掉。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "八岁的腿跑不过已经成型的法术，更何况门被她死死堵住。距离、魔力流向、环境。我还活着，我必须自己选个活法。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "smirk",
+      "text": "你母亲把你藏得太久了。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "cold",
+      "text": "别乱动，这样死得痛快点。"
+    },
+    {
+      "type": "jump",
+      "target": "A01"
+    },
+    {
+      "type": "label",
+      "name": "A01"
+    },
+    {
+      "type": "scene",
+      "bg": "meditation_chamber_arcane_clash",
+      "duration": 450
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你不退反进。在伊莉雅娜略带诧异的注视下，你死死咬住嘴唇，将压抑的魔力瞬间逼入指尖。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "视野边缘的空气泛起涟漪，魔网的纹路在你眼中清晰显现。伊莉雅娜指尖的酸光正在收束，那是一个短促、精准且极具穿透力的塑能系结构。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "距离法术脱手，还剩最后半秒。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "她的右手正在完成最后的指向，左手却依然空着。高阶女巫的动作不会有半点多余。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "第一波交锋如果处理不干净，哪怕只是擦伤，这具八岁的身体也会立刻崩溃。我必须用最稳妥的反应动作接下这一击。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "smirk",
+      "text": "哦？还真敢还手？"
+    },
+    {
+      "type": "choice",
+      "text": "强酸法术即将脱手。你的反应是？",
+      "options": [
+        {
+          "text": "顺着魔网节点，切入一发《法术反制》。",
+          "jump": "A02"
+        },
+        {
+          "text": "张开手指，默发《护盾术》。",
+          "jump": "A03"
+        },
+        {
+          "text": "引动自然魔力，施展《吸收元素》。",
+          "jump": "A03B"
+        },
+        {
+          "text": "抢先出手，对准她的脸砸出《魔法飞弹》。",
+          "jump": "A03C"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "A02"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“啪！”空气中发出一声玻璃碎裂般的脆响。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "惨绿色的酸光在伊莉雅娜指尖轰然炸散，化作几滴无害的酸水落在地板上，冒出嘶嘶白烟。她的施法被你强行切断了。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "但错愕只在她脸上停留了半秒。下一瞬，她反手从腰间拔出一把淬毒的匕首。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "与此同时，一层炽热的半透明烈焰猛地从她法袍上腾起，将她整个人包裹在火环之中。她放弃了远程对轰，直接扑了上来。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "我赌赢了第一步。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "但她身上挂着《火焰护盾》，近战等于找死。她的速度很快，匕首离我的眼睛只有不到两步的距离。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "我必须在刀尖碰着我之前做出反应。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "《法术反制》？"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜的声音不再轻快，反而透着一丝被触怒的沙哑。匕首的寒光映在她的眼睛里。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "好，很好……米沙，但我看你怎么反制这把刀！"
+    },
+    {
+      "type": "choice",
+      "text": "伊莉雅娜持刀近身，烈焰护盾包裹着她。你的反应是？",
+      "options": [
+        {
+          "text": "迎面撞击，用力推开她持刀的手腕。",
+          "jump": "BE_A3"
+        },
+        {
+          "text": "张开双手，施展《雷鸣波》。",
+          "jump": "BE_A4"
+        },
+        {
+          "text": "瞬发《迷踪步》。",
+          "jump": "A11"
+        },
+        {
+          "text": "举起双手大喊：“等等！地下室的禁制只有我能开！”",
+          "jump": "BE_A4"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "A03"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“嗡——！”半透明的力场壁垒在《强酸箭》即将触碰你鼻尖的瞬间轰然展开。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "绿色的酸液撞在《护盾术》上，像暴雨打在玻璃上一样炸碎，四溅的强酸在周围的石砖上腐蚀出令人牙酸的白烟。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "我挡下来了。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "但调用防御法术的魔力反冲，像一柄大锤狠狠砸在你的胸口。你喉咙一甜，咽下涌上来的血沫。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "双腿像灌了铅一样沉重，耳边全是心脏狂跳的轰鸣。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "我活下来了！力场护盾完美克制了这发塑能法术。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "虽然身体沉得可怕，呼吸也像拉破风箱一样刺痛，但这只是魔力激荡后的正常虚弱。我还站着，我还有反击的能力。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "她失算了。法术被挡下的那一刻，她的动作出现了极其微小的停顿。这是我的回合。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "《护盾术》？……"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜脸上的笑容消失了，取而代之的是冰冷的杀意。空气周围的温度骤降，她周身的魔网再次开始编织，冰霜在她指尖凝结。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "casting",
+      "text": "我看你能挡几次！"
+    },
+    {
+      "type": "jump",
+      "target": "A04"
+    },
+    {
+      "type": "label",
+      "name": "A03B"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "反应过慢, 酸液已经成形, 半边身体被腐蚀灼伤"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A0"
+    },
+    {
+      "type": "label",
+      "name": "A03C"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "年幼身体施法前摇太长, 强酸箭先一步命中"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A04"
+    },
+    {
+      "type": "choice",
+      "text": "你挡下了第一击，但身体已经开始透支。下一步怎么办？",
+      "options": [
+        {
+          "text": "强忍剧痛，施展《魔法飞弹》对轰。",
+          "jump": "A05"
+        },
+        {
+          "text": "掀翻沉重的橡木桌，遮蔽视线。",
+          "jump": "A06"
+        },
+        {
+          "text": "立刻转身，向房间深处后撤。",
+          "jump": "BE_A2"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "BE_A0"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你试图结印。但高阶女巫的施法速度远远超出了八岁孩童的生理极限。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "惨绿色的光芒撕裂了空气。你连第一个音节都没能完全吐出，《强酸箭》就已经精准地贯穿了你的右肩。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "pained",
+      "text": "太快了。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "collapse",
+      "text": "这是我脑海里闪过的最后一个战术念头。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "cold",
+      "text": "真遗憾，太慢了。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜甚至没有拔出匕首。她厌恶地甩了甩指尖的残余酸液，看着你在地上翻滚、惨叫，肉体被一点点溶解。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "smirk",
+      "text": "肮脏的血脉，连一发戏法都接不住。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：酸蚀残躯。一步踏错，满盘皆输。法术对决中，抢不到先手，就只能迎接死亡。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A05"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“嗖！嗖！嗖！”三发幽蓝色的魔法飞弹从你指尖呼啸而出，以不可思议的角度绕过伊莉雅娜的防线，狠狠砸在她的肩膀和侧脸上。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "wounded",
+      "text": "啊——！"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "女巫发出一声痛呼，施法被打断。几滴鲜血从她的嘴角溢出，滴落在她引以为傲的高阶法袍上。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "打中了！"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "连高阶女巫也无法躲避力场伤害，她的专注断裂了！"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "pained",
+      "text": "赢了。只要我现在把体内剩下的最后一点魔力全部压榨出来，直接贴脸释放一次大范围的破坏法术，她绝无可能还手。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "你……这个杂碎……"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜捂住脸，眼中第一次闪过了名为“慌乱”的情绪。她踉跄着后退了半步。"
+    },
+    {
+      "type": "choice",
+      "text": "她的防线出现了破绽。你要继续压上吗？",
+      "options": [
+        {
+          "text": "爆发，贴脸释放《雷鸣波》或《燃烧之手》。",
+          "jump": "BE_A1"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "A06"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你没有选择施法，而是将残存的魔力灌注在双臂，猛地掀翻了面前那张沉重的橡木桌。"
+    },
+    {
+      "type": "effect",
+      "name": "dialogue-shake",
+      "duration": 260
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "桌子竖起的瞬间，《致冷射线》在桌面炸开一大片冰花。你借着桌子的掩护，顺势滚入了书架后的阴影中。视线被完美切断。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "完美。法术失去了目标，她现在是个瞎子了。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "冥想室深处的挂毯后面，就是通往地下室的密道。只要我悄无声息地溜过去，我就能活下来。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "躲起来了？你以为这能救你？出来！"
+    },
+    {
+      "type": "choice",
+      "text": "桌子挡住了她的视线。你要怎么利用这段空隙？",
+      "options": [
+        {
+          "text": "沿着阴影，悄悄向密道口爬去。",
+          "jump": "BE_A2"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "A06B"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "三级力竭导致速度减半, 你后撤得太慢"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A2"
+    },
+    {
+      "type": "label",
+      "name": "A07"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "绝望降临 - 因三级力竭, 你的体质豁免失败, 施法动作彻底变形"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A1"
+    },
+    {
+      "type": "label",
+      "name": "A08"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "绝望降临 - 三级力竭导致移动速度减半, 倒在密道口"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "BE_A2"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你做出了最理智的判断：拉开距离，或者逃向密道。你转过身，大脑向双腿下达了冲刺的指令。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "但是，什么都没有发生。之前施展《护盾术》所带来的魔力反冲，不仅震伤了你的内脏，更让你的躯体陷入了深度的力竭。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你的双腿神经已经彻底麻木，引以为傲的速度被强行削减了一半。你像一个在梦魇中奔跑的人，动作慢得令人绝望。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "pained",
+      "text": "动啊……为什么不动？！"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "cold",
+      "text": "莱瑟曼的男人，就只会像虫子一样爬吗？"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "冰冷的靴子踩在了你的背上，伴随着骨骼断裂的脆响。法术贴着你的后脑勺爆发。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "冰霜顺着你的脊椎蔓延，连同你眼底的不甘一起，彻底冻结。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：门缝里的绝望。延迟的死刑。你以为你挡住了致命一击，实际上，你只是透支了逃跑的双腿。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "BE_A1"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你深吸一口气，双手结印，准备释放最后的近战爆发法术。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "但是，魔网并没有回应你。取而代之的，是你体内如同超载锅炉般的疯狂轰鸣。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "力竭的负面状态在这一刻彻底引爆了你的体质豁免。你甚至没能念出半个音节，经脉中狂暴的奥术能量就失去了控制。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "pained",
+      "text": "不……怎么会这样？"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "collapse",
+      "text": "明明就差一点，明明她已经破防了。"
+    },
+    {
+      "type": "effect",
+      "name": "screen-shake",
+      "duration": 420
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "不是法术，而是你体内的魔力核心发生了殉爆。狂暴的奥术乱流瞬间吞没了整个房间。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜惊恐的尖叫声在爆炸中戛然而止。她死了，被你失控的魔力撕成了碎片。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "但你也死了，连同你的野心和绝顶的天赋，一起化作了冥想室里最艳丽的血肉烟花。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：镜花水月。你与她同归于尽。但死人是无法享受胜利的。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A09"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "触碰《火焰护盾》, 小臂被火焰反噬, 受2d8反伤"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A3"
+    },
+    {
+      "type": "label",
+      "name": "A10"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "V/S成分太长, 被女巫反应动作借机打断"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A4"
+    },
+    {
+      "type": "label",
+      "name": "A11"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“唰！”匕首划破了你留在原地的残影。伊莉雅娜刺空了。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伴随着一阵银色的奥术薄雾，你凭空出现在了房间对角的药架边缘。空气中还残留着魔力折跃的臭氧气味。距离被拉开了。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "活下来了。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "但我现在的魔力极其亏空。她绝不会再给我喘息的机会，下一次法术交锋马上就会到来。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜猛地转过身，死死盯着角落里的你。她用法术护盾包裹自己，又手持利刃，却被一个八岁小孩像耍猴一样甩开。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "《法术反制》，再加上《迷踪步》……"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "可笑的小手段，米沙，你今天必须死在这儿。谁也救不了你！"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她抬起左手，指尖没有光芒。"
+    },
+    {
+      "type": "jump",
+      "target": "A12"
+    },
+    {
+      "type": "label",
+      "name": "A10B"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她已经进入灭口状态, 语言无法争取行动轮"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "BE_A3"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你矮下身，像一只敏捷的猫一样撞向她的手腕。但你忘记了那层炽热的护盾。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“嗤——！”你的双手刚接触到她的法袍，剧烈的高温瞬间将你的小臂皮肤烧穿。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "烤肉的焦味伴随着无法忍受的剧痛，让你发出一声凄厉的惨叫。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "pained",
+      "text": "火……好烫！"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "collapse",
+      "text": "我的手臂废了，力气全被抽干了。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "cold",
+      "text": "蠢货。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜怜悯地看着你。你甚至没能推偏她分毫。她手腕顺势一翻，淬毒的匕首精准地刺入了你的心脏。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：飞蛾扑火。用肉体去触碰高阶施法者的《火焰护盾》，和主动跳进火炉没有任何区别。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "BE_A4"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜根本没有停顿。进入灭口状态的女巫，不会给猎物留下任何动作的窗口。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "terrified",
+      "text": "太长了。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "cold",
+      "text": "闭嘴吧。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她冷酷的声音在你耳边响起。淬毒的刀刃在空中划过一道极其利落的弧线。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你感觉到喉咙一凉，随后便是滚烫的鲜血喷涌而出，堵住了你所有的声音。你捂住脖子，无力地倒在地上。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：施法扼杀。刀锋永远比舌头快。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A12"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜抬起左手。只有一句极短、极其晦涩的古语。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "空气突然变得黏稠。你感觉有无数根看不见的铁钉正根根刺入你的关节，强行锁死你的肌肉。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "terrified",
+      "text": "是《定身术》。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "精神系法术！她知道我位移快，所以放弃了物理层面的攻击，直接从魔网层面禁锢我的身体。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "法术正在生效，我的四肢正在迅速失去知觉。我必须在被彻底冻结前做出反制！"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "smirk",
+      "text": "跑啊。怎么不跑了，小耗子？"
+    },
+    {
+      "type": "choice",
+      "text": "无形的束缚正在锁死你的身体。你要怎么反制？",
+      "options": [
+        {
+          "text": "咬紧牙关，调动全部精神力硬抗。",
+          "jump": "BE_A5"
+        },
+        {
+          "text": "张开手指，再次施展《护盾术》。",
+          "jump": "BE_A5"
+        },
+        {
+          "text": "放弃防御，强行瞬发《魔法飞弹》。",
+          "jump": "A15"
+        },
+        {
+          "text": "将残余魔力压向脚底，试图再次《迷踪步》。",
+          "jump": "BE_A5"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "A13"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "孩童感知薄弱, 感知豁免必定失败"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A5"
+    },
+    {
+      "type": "label",
+      "name": "A14"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "护盾术无法提供精神豁免加成"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A15"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你没有去抵抗那股精神束缚，而是在身体彻底僵死前的最后一瞬，用尽全力抬起了右手。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“嗖！嗖！嗖！”三发幽蓝的《魔法飞弹》呼啸而出。力场能量无视了她的走位，精准无误地砸在她的胸口和侧脸上！"
+    },
+    {
+      "type": "effect",
+      "name": "dialogue-shake",
+      "duration": 260
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜被打得向后踉跄了一步，发出痛苦的闷哼。伴随着她的退步，那股锁死你全身的无形力量瞬间土崩瓦解。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "赌对了！"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "《定身术》是极度消耗精力的控制法术。被必中的《魔法飞弹》连续击中，她承受不住痛楚，体质豁免失败了。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "她的专注断裂了！"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "wounded",
+      "text": "啊——！"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜捂住侧脸，鲜血顺着指缝流下。她的面容因为剧痛和狂怒而彻底扭曲，连身上那层《火焰护盾》都因魔力紊乱而忽明忽暗。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "你这该死的杂碎！我要把你切成肉泥！！！"
+    },
+    {
+      "type": "jump",
+      "target": "A16"
+    },
+    {
+      "type": "label",
+      "name": "A14B"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "定身术已经生效, 你无法完成位移"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "BE_A5"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你试图挣脱，或是施法防御。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“咔。”你听到自己颈椎发出一声微响。你被彻底定在了原地，连一根小指都无法弯曲。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "collapse",
+      "text": "动不了。连眨眼都做不到。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜维持着施法手势，踩着悠闲的步子走到你面前。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "smirk",
+      "text": "真安静。我更喜欢你现在这副乖巧的样子。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "cold",
+      "text": "你母亲当年死的时候，也像你一样动弹不得呢。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她轻抚着你的脸颊，淬毒的刀锋贴上你的颈动脉。刀锋一抹。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：待宰羔羊。《定身术》直击精神感知，也许你的选择错误了。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A16"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜被你的《魔法飞弹》狠狠砸退。法术反噬与力场伤害的双重打击让她彻底破防。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她没有再尝试吟唱下一个咒语，因为狂怒与剧痛已经烧毁了她的理智。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她像一头被逼入绝境的野兽，双眼通红，手臂肌肉绷紧，将那把淬毒的匕首用尽全身力气，径直掷向你的心窝。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "focused",
+      "text": "没有魔力波动，不是法术。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "这是纯粹的物理投掷。距离太近，刀锋上闪烁着致命的绿光。我必须用最正确的方式挡下这块纯粹的钢铁。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "angry",
+      "text": "给我去死！！！"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "她凄厉的尖叫声几乎要刺破耳膜，伴随着利刃割裂空气的尖啸。"
+    },
+    {
+      "type": "choice",
+      "text": "淬毒匕首直奔心窝。你要如何应对？",
+      "options": [
+        {
+          "text": "向侧边飞扑躲闪。",
+          "jump": "BE_A6"
+        },
+        {
+          "text": "试图再次施展《法术反制》。",
+          "jump": "BE_A6"
+        },
+        {
+          "text": "施展《护盾术》。",
+          "jump": "A18"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "A17"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "孩童敏捷劣势, 物理闪避不及"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A6"
+    },
+    {
+      "type": "label",
+      "name": "A17B"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "这是投掷武器, 不是法术, 法术反制无效"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A18"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“当——！”刺耳的金属碰撞声在冥想室里回荡。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你没有移动半步，半透明的力场壁垒在千钧一发之际展开。淬毒匕首狠狠撞在《护盾术》上，迸发出几点火星，随后无力地弹开，当啷落地。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜彻底僵住了。她手无寸铁，专注断裂，底牌尽出。她的胸口剧烈起伏，眼神中终于流露出了真正的恐惧。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你没有给她求饶的窗口。你抬起右手，指尖跃动起火光。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "一发最基础的《火焰箭》戏法脱手而出，精准无误地射入了她因惊恐而微张的嘴里。火焰瞬间烧穿了她的喉管。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜抽搐了一下，直挺挺地向后倒去。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "我活下来了。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "thinking",
+      "text": "但这间屋子不对劲。伊莉雅娜死了，但她死前紊乱的魔力加上我越阶施法的残余能量，正在整个房间里形成可怕的魔网坍缩。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "死人不会说话。只有空气中越来越密集的“劈啪”声在警告你，时间不多了。"
+    },
+    {
+      "type": "jump",
+      "target": "A19"
+    },
+    {
+      "type": "label",
+      "name": "BE_A6"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你试图做出反应。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“噗嗤。”你甚至还没完全偏过身体，淬毒的刀刃就已经齐根没入你的胸口。巨大的冲击力带着你向后仰倒，将你死死钉在石砖上。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "collapse",
+      "text": "好冷。脑子跟上了，但身体根本跟不上。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "伊莉雅娜大口喘着粗气，看着你胸口涌出的黑血，突然爆发出一阵扭曲的狂笑。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "smirk",
+      "text": "法术？在绝对的物理速度面前都是笑话！"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：物理短板。你被匕首捅了个对穿。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "A19"
+    },
+    {
+      "type": "choice",
+      "text": "伊莉雅娜倒下了，但魔网坍缩正在成型。你要怎么处理残局？",
+      "options": [
+        {
+          "text": "贪心搜身，试图拿走她的法器。",
+          "jump": "A20"
+        },
+        {
+          "text": "立刻切断她与法阵的魔力连接。",
+          "jump": "A21"
+        },
+        {
+          "text": "直接逃走。",
+          "jump": "A22"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "name": "A20"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A7"
+    },
+    {
+      "type": "label",
+      "name": "A21"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你忍着随时可能昏厥的剧痛，目光锁定了冥想室中央那块绘制着符文的石砖——那是整个房间魔力法阵的核心枢纽。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你抬起右手，用尽最后一丝力气，释放了一个最简单的《酸液飞溅》戏法。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“嗤——”酸液精准地落在了核心枢纽上，腐蚀掉了最关键的一环符文。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "我赌对了。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "房间里只剩下酸液腐蚀地面的轻微声响，以及你风箱般粗重的喘息。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你脱力地靠在冰冷的墙壁上，看着地上伊莉雅娜焦黑的尸体。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "resolved",
+      "text": "你输了。"
+    },
+    {
+      "type": "jump",
+      "target": "TE"
+    },
+    {
+      "type": "label",
+      "name": "A22"
+    },
+    {
+      "type": "jump",
+      "target": "BE_A8"
+    },
+    {
+      "type": "label",
+      "name": "BE_A7"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你走到伊莉雅娜的尸体旁。她胸前那枚作为法器的红宝石护符还在微微发亮，散发着诱人的魔法波动。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你伸出满是血污的小手，一把扯下了它。就在你指尖触碰宝石的瞬间，宝石里的红光猛地变成了死寂的灰黑色。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "“嗡——”一股极其阴寒的死灵系能量顺着你的手指，像毒蛇一样瞬间窜入你的心脉。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "pained",
+      "text": "烫！不，是冷！"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "collapse",
+      "text": "死灵学派的临死反噬诅咒……我怎么会犯这种低级错误？"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "空荡荡的房间里，仿佛响起了伊莉雅娜那带着恶意的虚弱回声。"
+    },
+    {
+      "type": "say",
+      "speaker": "伊莉雅娜",
+      "character": "iliyana",
+      "emotion": "cold",
+      "text": "脏手……别碰……"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "死灵能量瞬间抽干了你体内仅存的一丝生命力。你重重地栽倒在她的尸体上，双眼大睁，彻底停止了呼吸。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：贪婪的代价。在残血状态下越级拾取未解除绑定的魔法物品，是施法者最愚蠢的死法。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "BE_A8"
+    },
+    {
+      "type": "flash",
+      "color": "black",
+      "duration": 360
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你什么都没管，推开那扇沉重的铁门，一瘸一拐地逃进了莱瑟曼的风雪中。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "冥想室在你身后发出一声沉闷的轰响。失控的魔网发生坍缩，幽蓝色的奥术光芒炸碎了玻璃，将屋子里的一切搅得粉碎。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你藏进风雪里，以为自己成功活了下来。但在三天后，几名戴着面具的高阶女巫踢开了你躲藏的地窖。"
+    },
+    {
+      "type": "say",
+      "speaker": "米沙",
+      "character": "misha",
+      "emotion": "terrified",
+      "text": "我跑得够快了，现场也被炸毁了，为什么她们还能找到我？"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "带头的女巫声音冷得像冰。"
+    },
+    {
+      "type": "say",
+      "speaker": "高阶女巫",
+      "text": "八岁的男性施法者，居然能杀掉伊莉雅娜。天赋确实惊人。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "一发炽热的火球照亮了地窖。"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成结局：迟来的追索。魔法会留下脚印。杀人只是一半，处理现场才是施法者的必修课。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "TE"
+    },
+    {
+      "type": "flash",
+      "color": "white",
+      "duration": 320
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "达成真结局：莱瑟曼的怪物。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "现场没有高阶奥术对轰的残痕，一切看起来就像是伊莉雅娜在进行某种危险实验时，法阵核心老化断裂，遭到了魔法反噬。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "你用衣服擦掉自己手指上的血迹，将头发弄乱，挤出几滴眼泪，推开了冥想室的门。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "几个被异响吸引来的女巫学徒正匆匆赶来。你跌跌撞撞地扑进雪地里，像一个受尽惊吓、侥幸逃生的可怜孩童。"
+    },
+    {
+      "type": "say",
+      "speaker": "旁白",
+      "narration": true,
+      "text": "莱瑟曼的雪很冷，但怪物已经学会了如何在这片土地上狩猎。"
+    },
+    {
+      "type": "jump",
+      "target": "END_OF_STORY"
+    },
+    {
+      "type": "label",
+      "name": "END_OF_STORY"
+    },
+    {
+      "type": "overlay",
+      "name": "clear"
+    },
+    {
+      "type": "say",
+      "speaker": "系统",
+      "text": "这个分支骨架到此结束。后续可以继续补充具体对白、演出和结算。"
+    }
+  ],
+  "assetBase": "assets/stories/misha-meditation-room-1484-07"
+}
