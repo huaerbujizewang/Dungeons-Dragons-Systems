@@ -178,14 +178,17 @@
                 return;
             }
 
-            grid.innerHTML = visibleStories.map(story => `
-                <article class="story-card" onclick="location.href='play-story.html?id=${encodeURIComponent(story.id)}${localDev ? '&dev=1' : ''}'">
+            grid.innerHTML = visibleStories.map(story => {
+                const href = story.url || `play-story.html?id=${encodeURIComponent(story.id)}${localDev ? '&dev=1' : ''}`;
+                return `
+                <article class="story-card" onclick="location.href='${escapeAttribute(href)}'">
                     <div class="time-tag">${escapeHTML(story.date || '')}</div>
                     <div class="story-title">${escapeHTML(story.title || '未命名故事')}</div>
                     <p class="story-desc">${escapeHTML(story.description || '')}</p>
                     <div class="owner-tag">持有者：${escapeHTML(story.owner || 'unknown')}</div>
                 </article>
-            `).join('');
+            `;
+            }).join('');
         }
 
         function escapeHTML(value) {
@@ -196,6 +199,10 @@
                 '"': '&quot;',
                 "'": '&#39;'
             }[char]));
+        }
+
+        function escapeAttribute(value) {
+            return String(value).replace(/["'<>]/g, '');
         }
 
         function getStoryList() {
