@@ -96,5 +96,13 @@ const storyList = [
         owner: "master@almorel.com",
         tags: "景阳",
         date: "DR1491 - 8月"
+    },
+    {
+        id: "klaus-devill-sparring-1494-07",
+        title: "克劳斯·德维尔",
+        description: "第十七号生态演武区的抗击打测试。",
+        owner: "master@almorel.com",
+        tags: "克劳斯·德维尔",
+        date: "DR1494 - 7月"
     }
 ];
