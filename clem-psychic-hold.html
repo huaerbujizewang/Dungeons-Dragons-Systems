@@ -121,6 +121,120 @@
             animation: staticDrift 0.42s steps(2) infinite;
         }
 
+        .mirror-presence {
+            position: absolute;
+            right: calc(6vw + var(--safe-right));
+            bottom: 7vh;
+            z-index: 26;
+            width: min(24vw, 360px);
+            height: 72vh;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateX(26px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            background: url("assets/games/clem_psychic_hold/mirror/mirror_guest.png") right bottom / contain no-repeat;
+            filter: drop-shadow(0 0 24px rgba(248, 250, 252, 0.22));
+        }
+
+        body.mirror-active .mirror-presence {
+            opacity: 0.92;
+            transform: translateX(0);
+        }
+
+        .menu-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 120;
+            display: grid;
+            place-items: center;
+            padding: calc(24px + var(--safe-top)) calc(18px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(18px + var(--safe-left));
+            background:
+                radial-gradient(circle at 50% 28%, rgba(232, 197, 111, 0.12), transparent 26%),
+                linear-gradient(180deg, rgba(3, 5, 7, 0.78), rgba(3, 5, 7, 0.95));
+            backdrop-filter: blur(8px);
+        }
+
+        .menu-overlay.hidden {
+            display: none;
+        }
+
+        .menu-card {
+            width: min(880px, 100%);
+            max-height: calc(100dvh - 48px - var(--safe-top) - var(--safe-bottom));
+            overflow: auto;
+            display: grid;
+            gap: 18px;
+            padding: 24px;
+            border: 1px solid rgba(232, 197, 111, 0.34);
+            background: rgba(5, 8, 12, 0.9);
+            box-shadow: 0 26px 70px rgba(0, 0, 0, 0.52);
+        }
+
+        .menu-title {
+            color: var(--accent);
+            font-size: clamp(28px, 5vw, 54px);
+            font-weight: 900;
+        }
+
+        .menu-meta {
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .night-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .night-btn {
+            min-height: 92px;
+            display: grid;
+            align-content: center;
+            gap: 6px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.06);
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .night-btn strong {
+            color: #f8fafc;
+            font-size: 18px;
+        }
+
+        .night-btn span {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .night-btn.active {
+            border-color: rgba(232, 197, 111, 0.84);
+            background: rgba(232, 197, 111, 0.13);
+            box-shadow: 0 0 18px rgba(232, 197, 111, 0.18);
+        }
+
+        .night-btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        .menu-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .menu-actions button {
+            min-height: 44px;
+            min-width: 132px;
+            border: 1px solid rgba(232, 197, 111, 0.34);
+            background: rgba(232, 197, 111, 0.12);
+            cursor: pointer;
+            font-weight: 800;
+        }
+
         .hud {
             position: absolute;
             top: calc(14px + var(--safe-top));
@@ -359,6 +473,23 @@
                 0 0 34px rgba(15, 23, 42, 0.96);
         }
 
+        .mirror-dot,
+        .mirror-fake-dot {
+            background:
+                radial-gradient(circle at 38% 35%, rgba(255, 255, 255, 0.95), transparent 18%),
+                radial-gradient(circle, #ffffff 0 28%, #cbd5e1 64%, #64748b 100%);
+            border-color: rgba(255, 255, 255, 0.96);
+            box-shadow:
+                0 0 0 6px rgba(255, 255, 255, 0.14),
+                0 0 22px rgba(255, 255, 255, 0.95),
+                0 0 44px rgba(148, 163, 184, 0.72);
+        }
+
+        .mirror-fake-dot {
+            opacity: 0.72;
+            filter: blur(0.4px);
+        }
+
         .plant-dot {
             position: absolute;
             z-index: 6;
@@ -434,6 +565,18 @@
             line-height: 1.35;
         }
 
+        .ability-cooldown {
+            display: none;
+            margin-top: 6px;
+            color: #fca5a5;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .ability-btn.cooling .ability-cooldown {
+            display: block;
+        }
+
         #log {
             display: grid;
             gap: 6px;
@@ -461,6 +604,11 @@
 
         body.dm-mode .dm-panel { display: block; }
 
+        .dm-panel.collapsed {
+            width: min(240px, calc(100vw - 32px));
+            overflow: hidden;
+        }
+
         .dm-title {
             display: flex;
             justify-content: space-between;
@@ -469,6 +617,30 @@
             margin-bottom: 10px;
             color: #fca5a5;
             font-weight: 900;
+        }
+
+        .dm-title-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dm-toggle {
+            min-width: 42px;
+            height: 28px;
+            border: 1px solid rgba(248, 113, 113, 0.38);
+            background: rgba(127, 29, 29, 0.28);
+            color: #fecaca;
+            cursor: pointer;
+            font-weight: 800;
+        }
+
+        .dm-toggle:hover {
+            background: rgba(185, 28, 28, 0.42);
+        }
+
+        .dm-panel.collapsed .dm-body {
+            display: none;
         }
 
         .dm-monster {
@@ -656,6 +828,10 @@
         }
 
         @media (max-width: 980px) {
+            .night-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .hud {
                 grid-template-columns: 1fr;
                 right: auto;
@@ -683,6 +859,22 @@
         <div id="panorama"></div>
         <div id="room-vignette"></div>
         <div id="static-layer"></div>
+        <div class="mirror-presence" id="mirror-presence" aria-hidden="true"></div>
+    </section>
+
+    <section class="menu-overlay" id="main-menu">
+        <div class="menu-card">
+            <div>
+                <div class="menu-title">闭锁之夜</div>
+                <div class="menu-meta" id="save-status">正在读取进度...</div>
+            </div>
+            <div class="night-grid" id="night-grid"></div>
+            <div class="menu-actions">
+                <button id="start-night-btn" type="button">开始</button>
+                <button type="button" onclick="location.href='lore.html'">返回列表</button>
+            </div>
+            <div class="menu-meta">第二夜开始，镜厅会出现“镜中客”。第三夜之后暂未开放，但进度会继续记录。</div>
+        </div>
     </section>
 
     <header class="hud">
@@ -747,7 +939,7 @@
             <div class="result-title">你死了</div>
             <div id="fail-reason">精神稳定度归零。</div>
             <div class="result-actions">
-                <button onclick="location.reload()">重来</button>
+                <button id="retry-btn" type="button">重来</button>
                 <button onclick="location.href='lore.html'">返回列表</button>
             </div>
         </div>
@@ -758,34 +950,40 @@
             <div class="result-title">幸存</div>
             <div>六分钟过去了，门外的声音终于退入墙缝。</div>
             <div class="result-actions">
-                <button onclick="location.reload()">再来一局</button>
-                <button onclick="location.href='lore.html'">返回列表</button>
+                <button id="next-night-btn" type="button">继续</button>
+                <button id="victory-menu-btn" type="button">返回菜单</button>
             </div>
         </div>
     </section>
 
     <aside class="dm-panel" id="dm-panel">
         <div class="dm-title">
-            <span>DM 视角</span>
+            <div class="dm-title-main">
+                <span>DM 视角</span>
+                <button class="dm-toggle" id="dm-toggle" type="button">收起</button>
+            </div>
             <span id="dm-clock">--</span>
         </div>
-        <div class="dm-monster">
-            行动逻辑：怪物每次行动前预先决定下一步；可通行相邻房间按“更接近目标”加权随机，闭锁房间不可进入，可能原地停顿。引诱只影响相邻怪物，无抗性时下一步必定进入引诱房间。
-        </div>
-        <div id="dm-monsters"></div>
-        <div class="dm-controls">
-            <button class="dm-btn" data-dm-action="win">当场胜利</button>
-            <button class="dm-btn" data-dm-action="sludge-jumpscare">测试污泥跳杀</button>
-            <button class="dm-btn" data-dm-action="plant-jumpscare">测试植物跳杀</button>
-            <button class="dm-btn" data-dm-action="collapse">测试精神崩溃</button>
-            <button class="dm-btn" data-dm-action="psi-plus">心能 +10</button>
-            <button class="dm-btn" data-dm-action="psi-minus">心能 -10</button>
-            <button class="dm-btn" data-dm-action="stable-plus">稳定 +10</button>
-            <button class="dm-btn" data-dm-action="stable-minus">稳定 -10</button>
-            <button class="dm-btn" data-dm-action="plant-plus">饥饿 +10</button>
-            <button class="dm-btn" data-dm-action="plant-minus">饥饿 -10</button>
-            <button class="dm-btn" data-dm-action="spawn">追加怪物</button>
-            <button class="dm-btn" data-dm-action="replan">重算行动</button>
+        <div class="dm-body" id="dm-body">
+            <div class="dm-monster">
+                行动逻辑：怪物每次行动前预先决定下一步；可通行相邻房间按“更接近目标”加权随机，闭锁房间不可进入，可能原地停顿。引诱只影响相邻怪物，无抗性时下一步必定进入引诱房间。
+            </div>
+            <div id="dm-monsters"></div>
+            <div class="dm-controls">
+                <button class="dm-btn" data-dm-action="win">当场胜利</button>
+                <button class="dm-btn" data-dm-action="sludge-jumpscare">测试污泥跳杀</button>
+                <button class="dm-btn" data-dm-action="plant-jumpscare">测试植物跳杀</button>
+                <button class="dm-btn" data-dm-action="collapse">测试精神崩溃</button>
+                <button class="dm-btn" data-dm-action="psi-plus">心能 +10</button>
+                <button class="dm-btn" data-dm-action="psi-minus">心能 -10</button>
+                <button class="dm-btn" data-dm-action="stable-plus">稳定 +10</button>
+                <button class="dm-btn" data-dm-action="stable-minus">稳定 -10</button>
+                <button class="dm-btn" data-dm-action="plant-plus">饥饿 +10</button>
+                <button class="dm-btn" data-dm-action="plant-minus">饥饿 -10</button>
+                <button class="dm-btn" data-dm-action="spawn">追加污泥</button>
+                <button class="dm-btn" data-dm-action="spawn-mirror">追加镜中客</button>
+                <button class="dm-btn" data-dm-action="replan">重算行动</button>
+            </div>
         </div>
     </aside>
 </main>
@@ -798,11 +996,16 @@
 
 <script>
     const PLAYER_ROOM = "F2-02";
+    const GAME_ID = "clem_psychic_hold";
     const GAME_SECONDS = 360;
+    const MAX_NIGHT = 7;
+    const IMPLEMENTED_NIGHTS = 2;
     const PSI_DRAIN = 0.15;
+    const MIRROR_DRAIN = 1;
     const FIRST_DAY_MONSTER_COUNT = 1;
     const MONSTER_MOVE_MIN = 26000;
     const MONSTER_MOVE_SPREAD = 12000;
+    const MIRROR_MOVE_FLOOR = 8000;
     const GREENHOUSE_ROOM = "F1-08";
     const PLANT_HUNGER_SECONDS = 240;
     const PLANT_RUSH_MS = 30000;
@@ -840,14 +1043,24 @@
 
     const floorNames = { F1: "一层", F2: "二层", V: "管道层" };
     const abilityCosts = { lock: 8, shock: 12, anchor: 10, lure: 6 };
+    const abilityCooldowns = { lock: 8000, shock: 20000, anchor: 14000, lure: 10000 };
+    const localSaveKey = `${GAME_ID}_progress_v1`;
 
     const state = {
-        active: true,
+        active: false,
+        night: 1,
+        selectedNight: 1,
+        unlockedNight: 1,
+        saveReady: false,
+        saveMode: "local",
+        userId: null,
+        userEmail: "",
         started: performance.now(),
         lastFrame: performance.now(),
         timeLeft: GAME_SECONDS,
         stability: 100,
         psi: 100,
+        mirrorInRoom: false,
         plantHunger: 100,
         plantAttack: false,
         plantAttackStart: 0,
@@ -861,11 +1074,17 @@
         lureRoom: null,
         lureUntil: 0,
         dmMode: false,
+        dmCollapsed: false,
+        abilityCooldownUntil: { lock: 0, shock: 0, anchor: 0, lure: 0 },
         reliableUntil: 0,
         monsterSeed: 0
     };
 
     const els = {
+        mainMenu: document.getElementById("main-menu"),
+        nightGrid: document.getElementById("night-grid"),
+        saveStatus: document.getElementById("save-status"),
+        startNightBtn: document.getElementById("start-night-btn"),
         timer: document.getElementById("timer"),
         stabilityValue: document.getElementById("stability-value"),
         stabilityFill: document.getElementById("stability-fill"),
@@ -875,6 +1094,7 @@
         plantFill: document.getElementById("plant-fill"),
         staticLayer: document.getElementById("static-layer"),
         panorama: document.getElementById("panorama"),
+        mirrorPresence: document.getElementById("mirror-presence"),
         playArea: document.getElementById("play-area"),
         monitorToggle: document.getElementById("monitor-toggle"),
         tabs: document.getElementById("floor-tabs"),
@@ -884,11 +1104,15 @@
         selectedRoom: document.getElementById("selected-room"),
         log: document.getElementById("log"),
         dmPanel: document.getElementById("dm-panel"),
+        dmToggle: document.getElementById("dm-toggle"),
         dmClock: document.getElementById("dm-clock"),
         dmMonsters: document.getElementById("dm-monsters"),
         fail: document.getElementById("jumpscare"),
         failReason: document.getElementById("fail-reason"),
         victory: document.getElementById("victory"),
+        retryBtn: document.getElementById("retry-btn"),
+        nextNightBtn: document.getElementById("next-night-btn"),
+        victoryMenuBtn: document.getElementById("victory-menu-btn"),
         ambience: document.getElementById("ambience"),
         moveSfx: document.getElementById("move-sfx"),
         castSfx: document.getElementById("cast-sfx"),
@@ -898,12 +1122,12 @@
 
     async function init() {
         await detectDmMode();
-        for (let i = 0; i < FIRST_DAY_MONSTER_COUNT; i += 1) spawnMonster();
+        await loadProgress();
         renderTabs();
         renderMap();
         bindControls();
-        addLog("心灵感应展开。");
-        requestAnimationFrame(loop);
+        renderMainMenu();
+        renderHud();
     }
 
     async function detectDmMode() {
@@ -920,6 +1144,8 @@
             const { data: { user } } = await supabaseClient.auth.getUser();
             const email = String(user?.email || "").trim().toLowerCase();
             const userId = String(user?.id || "");
+            state.userId = user?.id || null;
+            state.userEmail = email;
             state.dmMode = DM_EMAILS.includes(email) || email.startsWith("739477825") || userId.includes("739477825");
             document.body.classList.toggle("dm-mode", state.dmMode);
         } catch (_) {
@@ -927,7 +1153,163 @@
         }
     }
 
+    async function loadProgress() {
+        state.unlockedNight = readLocalProgress();
+        state.saveMode = "local";
+
+        if (supabaseClient && state.userId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from("story_game_progress")
+                    .select("unlocked_night")
+                    .eq("user_id", state.userId)
+                    .eq("game_id", GAME_ID)
+                    .maybeSingle();
+                if (error) throw error;
+                state.unlockedNight = clampProgress(Math.max(state.unlockedNight, Number(data?.unlocked_night) || 1));
+                state.saveMode = "supabase";
+                writeLocalProgress(state.unlockedNight);
+            } catch (error) {
+                console.warn("Progress table unavailable, using local cache.", error);
+            }
+        }
+
+        state.saveReady = true;
+        state.selectedNight = Math.min(state.unlockedNight, IMPLEMENTED_NIGHTS);
+    }
+
+    async function saveProgress(unlockedNight) {
+        state.unlockedNight = clampProgress(Math.max(state.unlockedNight, unlockedNight));
+        writeLocalProgress(state.unlockedNight);
+
+        if (!supabaseClient || !state.userId) {
+            state.saveMode = "local";
+            return;
+        }
+
+        try {
+            const payload = {
+                user_id: state.userId,
+                game_id: GAME_ID,
+                unlocked_night: state.unlockedNight,
+                updated_at: new Date().toISOString()
+            };
+            const { error } = await supabaseClient
+                .from("story_game_progress")
+                .upsert(payload, { onConflict: "user_id,game_id" });
+            if (error) throw error;
+            state.saveMode = "supabase";
+        } catch (error) {
+            state.saveMode = "local";
+            console.warn("Could not save cloud progress, kept local cache.", error);
+        }
+    }
+
+    function readLocalProgress() {
+        return clampProgress(Number(localStorage.getItem(localSaveKey)) || 1);
+    }
+
+    function writeLocalProgress(value) {
+        localStorage.setItem(localSaveKey, String(clampProgress(value)));
+    }
+
+    function clampProgress(value) {
+        return Math.max(1, Math.min(MAX_NIGHT, Math.floor(value) || 1));
+    }
+
+    function renderMainMenu() {
+        els.mainMenu.classList.remove("hidden");
+        document.body.classList.remove("mirror-active", "monitor-open");
+        els.fail.classList.remove("visible", "sludge", "plant", "collapse");
+        els.victory.classList.remove("visible");
+        const playableLimit = state.dmMode ? IMPLEMENTED_NIGHTS : Math.min(state.unlockedNight, IMPLEMENTED_NIGHTS);
+        if (state.selectedNight > playableLimit) state.selectedNight = playableLimit || 1;
+        els.saveStatus.textContent = `${state.saveMode === "supabase" ? "Supabase 档案已连接" : "本机缓存模式"} · 已抵达第 ${state.unlockedNight} 夜`;
+        els.nightGrid.innerHTML = Array.from({ length: MAX_NIGHT }, (_, index) => {
+            const night = index + 1;
+            const implemented = night <= IMPLEMENTED_NIGHTS;
+            const unlocked = state.dmMode || night <= state.unlockedNight;
+            const disabled = !implemented || !unlocked;
+            const status = !implemented ? "未开放" : unlocked ? "可进入" : "未解锁";
+            return `<button class="night-btn ${night === state.selectedNight ? "active" : ""}" data-night="${night}" ${disabled ? "disabled" : ""}>
+                <strong>第 ${night} 夜</strong>
+                <span>${status}</span>
+            </button>`;
+        }).join("");
+
+        els.startNightBtn.disabled = state.selectedNight > playableLimit;
+        els.nightGrid.querySelectorAll(".night-btn:not(:disabled)").forEach(button => {
+            button.addEventListener("click", () => {
+                state.selectedNight = Number(button.dataset.night);
+                renderMainMenu();
+            });
+        });
+    }
+
+    function renderMainMenuProgressOnly() {
+        els.saveStatus.textContent = `${state.saveMode === "supabase" ? "Supabase 档案已连接" : "本机缓存模式"} · 已抵达第 ${state.unlockedNight} 夜`;
+    }
+
+    function startNight(night) {
+        const playableLimit = state.dmMode ? IMPLEMENTED_NIGHTS : Math.min(state.unlockedNight, IMPLEMENTED_NIGHTS);
+        if (night > playableLimit) return;
+
+        state.night = night;
+        state.active = true;
+        state.started = performance.now();
+        state.lastFrame = state.started;
+        state.timeLeft = GAME_SECONDS;
+        state.stability = 100;
+        state.psi = 100;
+        state.mirrorInRoom = false;
+        state.plantHunger = 100;
+        state.plantAttack = false;
+        state.plantAttackStart = 0;
+        state.plantAttackPath = [];
+        state.floor = "F2";
+        state.selectedRoom = PLAYER_ROOM;
+        state.look = 0;
+        state.monitorOpen = false;
+        state.monsters = [];
+        state.lockedUntil = new Map();
+        state.lureRoom = null;
+        state.lureUntil = 0;
+        state.abilityCooldownUntil = { lock: 0, shock: 0, anchor: 0, lure: 0 };
+        state.reliableUntil = 0;
+        state.monsterSeed = 0;
+        els.log.innerHTML = "";
+        els.mainMenu.classList.add("hidden");
+        els.fail.classList.remove("visible", "sludge", "plant", "collapse");
+        els.victory.classList.remove("visible");
+        document.body.classList.remove("mirror-active", "monitor-open");
+        els.playArea.classList.add("closed");
+        els.monitorToggle.textContent = "打开监控";
+        setLook(0);
+
+        for (let i = 0; i < FIRST_DAY_MONSTER_COUNT; i += 1) spawnSludge();
+        if (night >= 2) spawnMirrorGuest();
+
+        renderTabs();
+        renderMap();
+        renderHud();
+        updateDmPanel();
+        addLog(`第 ${night} 夜开始。`);
+        requestAnimationFrame(loop);
+    }
+
     function bindControls() {
+        els.startNightBtn.addEventListener("click", () => startNight(state.selectedNight));
+        els.retryBtn.addEventListener("click", () => startNight(state.night));
+        els.nextNightBtn.addEventListener("click", () => {
+            const next = Math.min(state.night + 1, IMPLEMENTED_NIGHTS);
+            if (next > state.night && next <= state.unlockedNight) {
+                state.selectedNight = next;
+                startNight(next);
+            } else {
+                renderMainMenu();
+            }
+        });
+        els.victoryMenuBtn.addEventListener("click", renderMainMenu);
         document.getElementById("look-left").addEventListener("click", () => setLook(-1));
         document.getElementById("look-center").addEventListener("click", () => setLook(0));
         document.getElementById("look-right").addEventListener("click", () => setLook(1));
@@ -937,6 +1319,7 @@
         document.querySelectorAll(".dm-btn").forEach(button => {
             button.addEventListener("click", () => runDmAction(button.dataset.dmAction));
         });
+        els.dmToggle.addEventListener("click", toggleDmPanel);
         els.monitorToggle.addEventListener("click", toggleMonitor);
         window.addEventListener("keydown", event => {
             if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") setLook(-1);
@@ -952,7 +1335,8 @@
         const dt = Math.min(0.08, (now - state.lastFrame) / 1000);
         state.lastFrame = now;
         state.timeLeft = Math.max(0, GAME_SECONDS - (now - state.started) / 1000);
-        state.psi = Math.max(0, state.psi - PSI_DRAIN * dt);
+        const psiDrain = PSI_DRAIN + (state.mirrorInRoom ? MIRROR_DRAIN : 0);
+        state.psi = Math.max(0, state.psi - psiDrain * dt);
 
         cleanExpired(now);
         updateMonsters(now);
@@ -1006,6 +1390,7 @@
             const next = monster.plannedRoom;
             if (next) {
                 monster.room = next;
+                if (monster.kind === "mirror" && !monster.fakeCleared) monster.fakeRooms = pickMirrorFakeRooms(monster.room);
                 moved = true;
             }
             clearLureLock(monster);
@@ -1014,8 +1399,15 @@
                 moved = true;
                 continue;
             }
-            monster.nextMove = now + MONSTER_MOVE_MIN + Math.random() * MONSTER_MOVE_SPREAD;
-            if (monster.room === PLAYER_ROOM) return fail("污泥漫游者进入长女卧室。", "sludge");
+            if (monster.room === PLAYER_ROOM) {
+                if (monster.kind === "mirror") {
+                    activateMirrorIntrusion();
+                    moved = true;
+                    continue;
+                }
+                return fail("污泥漫游者进入长女卧室。", "sludge");
+            }
+            monster.nextMove = now + getMoveDelay(monster);
             planMonster(monster);
             nextMonsters.push(monster);
         }
@@ -1072,7 +1464,14 @@
                 <div>路径：${state.plantAttackPath.length ? state.plantAttackPath.join(" → ") : "未启动"}</div>
             </div>
         `;
-        els.dmMonsters.innerHTML = plantLine + state.monsters.map(monster => {
+        const mirrorLine = `
+            <div class="dm-monster">
+                <strong>卧室镜面</strong>
+                <div>状态：${state.mirrorInRoom ? "已摆放，每秒额外消耗 1 心能" : "未出现"}</div>
+                <div>夜晚：第 ${state.night} 夜 / 解锁：第 ${state.unlockedNight} 夜</div>
+            </div>
+        `;
+        els.dmMonsters.innerHTML = plantLine + mirrorLine + state.monsters.map(monster => {
             const current = roomLabel(monster.room);
             const target = roomLabel(monster.plannedTarget || PLAYER_ROOM);
             const next = monster.plannedRoom ? roomLabel(monster.plannedRoom) : "原地停顿";
@@ -1080,11 +1479,12 @@
             const weights = formatWeights(monster.plannedWeights || []);
             return `
                 <div class="dm-monster">
-                    <strong>${escapeHTML(monster.id)}</strong>
+                    <strong>${escapeHTML(monster.id)} · ${escapeHTML(monster.type)}</strong>
                     <div>当前位置：${escapeHTML(current)}</div>
                     <div>行动目标：${escapeHTML(target)}</div>
                     <div>下一步：${escapeHTML(next)}（${seconds}s 后）</div>
                     <div>锁定：${escapeHTML(monster.lureLockedRoom ? `引诱 -> ${monster.lureLockedRoom}` : "无")}</div>
+                    <div>假点：${escapeHTML(monster.kind === "mirror" ? (monster.fakeCleared ? "已清除" : monster.fakeRooms.join(" / ")) : "无")}</div>
                     <div>出生点：${escapeHTML(roomLabel(monster.spawnRoom))}；引诱抗性 ${Number(monster.lureResist || 0)}；震慑抗性 ${Number(monster.shockResist || 0)}</div>
                     <div>逻辑：${escapeHTML(monster.planReason || "未计算")}</div>
                     <div>权重：${escapeHTML(weights || "无可用出口")}</div>
@@ -1126,6 +1526,7 @@
             if (state.plantHunger <= 0 && !state.plantAttack) startPlantAttack(performance.now());
         }
         if (action === "spawn") spawnMonster();
+        if (action === "spawn-mirror") spawnMirrorGuest();
         if (action === "replan") replanMonsters();
         renderMap();
         renderHud();
@@ -1137,14 +1538,27 @@
     }
 
     function spawnMonster() {
-        const candidates = Object.keys(rooms).filter(id => rooms[id].floor === "F1" && !["F1-09", GREENHOUSE_ROOM].includes(id));
-        const room = candidates[Math.floor(Math.random() * candidates.length)];
-        state.monsters.push(createMonster(room));
+        return spawnSludge();
     }
 
-    function createMonster(room, spawnRoom = room) {
+    function spawnSludge() {
+        const candidates = Object.keys(rooms).filter(id => rooms[id].floor === "F1" && !["F1-09", GREENHOUSE_ROOM].includes(id));
+        const room = candidates[Math.floor(Math.random() * candidates.length)];
+        const monster = createSludge(room);
+        state.monsters.push(monster);
+        return monster;
+    }
+
+    function spawnMirrorGuest() {
+        const monster = createMirrorGuest("F2-06");
+        state.monsters.push(monster);
+        return monster;
+    }
+
+    function createSludge(room, spawnRoom = room) {
         const monster = {
             id: `sludge-${++state.monsterSeed}`,
+            kind: "sludge",
             type: "污泥漫游者",
             lureResist: 0,
             shockResist: 0,
@@ -1156,14 +1570,65 @@
         return monster;
     }
 
+    function createMirrorGuest(room) {
+        const monster = {
+            id: `mirror-${++state.monsterSeed}`,
+            kind: "mirror",
+            type: "镜中客",
+            lureResist: 0.3,
+            shockResist: 0,
+            spawnRoom: room,
+            room,
+            fakeRooms: pickMirrorFakeRooms(room),
+            fakeCleared: false,
+            nextMove: performance.now() + getMoveDelay({ kind: "mirror" })
+        };
+        planMonster(monster);
+        return monster;
+    }
+
+    function getMoveDelay(monster) {
+        if (monster.kind === "mirror") {
+            return Math.max(MIRROR_MOVE_FLOOR, (27 - 3 * state.night) * 1000);
+        }
+        return MONSTER_MOVE_MIN + Math.random() * MONSTER_MOVE_SPREAD;
+    }
+
+    function pickMirrorFakeRooms(realRoom) {
+        const pool = Object.keys(rooms).filter(id => rooms[id].floor === "F2" && id !== realRoom && id !== PLAYER_ROOM);
+        const picked = [];
+        while (picked.length < 2 && pool.length) {
+            const index = Math.floor(Math.random() * pool.length);
+            picked.push(pool.splice(index, 1)[0]);
+        }
+        return picked;
+    }
+
+    function activateMirrorIntrusion() {
+        if (state.mirrorInRoom) return;
+        state.mirrorInRoom = true;
+        document.body.classList.add("mirror-active");
+        addLog("镜中客在卧室右侧摆下了一面镜子，心能正在被持续抽走。");
+    }
+
     function feedPlant(monster) {
+        if (monster.kind === "mirror") {
+            state.plantHunger = clamp(state.plantHunger + 12, 0, 100);
+            if (state.plantHunger > 0) {
+                state.plantAttack = false;
+                state.plantAttackPath = [];
+            }
+            addLog("温室植物吞掉了镜中客，只回升了一点饥饿。");
+            return [];
+        }
+
         state.plantHunger = 100;
         state.plantAttack = false;
         state.plantAttackPath = [];
         addLog("温室植物吞食了污泥漫游者。新的污泥在出生点分裂。");
         const spawn = monster.spawnRoom || monster.room;
-        const first = createMonster(spawn, spawn);
-        const second = createMonster(spawn, spawn);
+        const first = createSludge(spawn, spawn);
+        const second = createSludge(spawn, spawn);
         first.nextMove = performance.now() + 22000 + Math.random() * 9000;
         second.nextMove = performance.now() + 32000 + Math.random() * 12000;
         planMonster(first);
@@ -1295,13 +1760,24 @@
         return [from, target];
     }
 
+    function getAbilityCooldownLeft(ability, now = performance.now()) {
+        return Math.max(0, (state.abilityCooldownUntil[ability] || 0) - now);
+    }
+
+    function startAbilityCooldown(ability) {
+        state.abilityCooldownUntil[ability] = performance.now() + (abilityCooldowns[ability] || 0);
+    }
+
     function useAbility(ability) {
         const cost = abilityCosts[ability];
         if (state.psi < cost) return addLog("心能不足。");
+        const cooldownLeft = getAbilityCooldownLeft(ability);
+        if (cooldownLeft > 0) return addLog(`技能冷却中：${Math.ceil(cooldownLeft / 1000)} 秒。`);
         if (["lock", "lure"].includes(ability) && !state.selectedRoom) return addLog("未选择房间。");
 
         if (ability === "lock") {
             state.psi -= cost;
+            startAbilityCooldown("lock");
             state.lockedUntil.set(state.selectedRoom, performance.now() + 5000);
             replanMonsters();
             addLog(`闭锁 ${state.selectedRoom}。`);
@@ -1312,6 +1788,7 @@
             const targets = state.monsters.filter(monster => distanceToPlayer(monster.room) <= 1);
             if (!targets.length) return addLog("没有靠近卧室的可震慑目标。");
             state.psi -= cost;
+            startAbilityCooldown("shock");
 
             let repelled = 0;
             let resisted = 0;
@@ -1334,17 +1811,28 @@
 
         if (ability === "anchor") {
             state.psi -= cost;
+            startAbilityCooldown("anchor");
             state.reliableUntil = performance.now() + 8500;
-            addLog("锚定完成。");
+            let cleared = 0;
+            state.monsters.forEach(monster => {
+                if (monster.kind === "mirror" && !monster.fakeCleared) {
+                    monster.fakeCleared = true;
+                    monster.fakeRooms = [];
+                    cleared += 1;
+                }
+            });
+            addLog(cleared ? "锚定完成。镜中客的假点消失了。" : "锚定完成。");
             playAudio(els.castSfx, 0.62);
         }
 
         if (ability === "lure") {
             state.psi -= cost;
+            startAbilityCooldown("lure");
             state.lureRoom = state.selectedRoom;
             state.lureUntil = performance.now() + 20000;
             state.monsters.forEach(monster => {
-                if (!applyActiveLure(monster)) planMonster(monster);
+                clearLureLock(monster);
+                planMonster(monster);
             });
             updateDmPanel();
             addLog(`引诱指向 ${state.selectedRoom}。`);
@@ -1417,7 +1905,15 @@
         realDots.forEach(monster => {
             const index = roomDotCounts.get(monster.room) || 0;
             roomDotCounts.set(monster.room, index + 1);
-            addDot("monster-dot", rooms[monster.room], index);
+            addDot(monster.kind === "mirror" ? "monster-dot mirror-dot" : "monster-dot sludge-dot", rooms[monster.room], index);
+            if (monster.kind === "mirror" && !monster.fakeCleared) {
+                monster.fakeRooms.forEach(roomId => {
+                    if (!rooms[roomId] || rooms[roomId].floor !== state.floor) return;
+                    const fakeIndex = roomDotCounts.get(roomId) || 0;
+                    roomDotCounts.set(roomId, fakeIndex + 1);
+                    addDot("monster-dot mirror-fake-dot", rooms[roomId], fakeIndex);
+                });
+            }
         });
         renderPlantDot();
         updateSelectedRoom();
@@ -1490,10 +1986,21 @@
     }
 
     function updateAbilityButtons() {
+        const now = performance.now();
         document.querySelectorAll(".ability-btn").forEach(button => {
             const ability = button.dataset.ability;
             const needsRoom = ["lock", "lure"].includes(ability);
-            button.disabled = state.psi < abilityCosts[ability] || (needsRoom && !state.selectedRoom);
+            let cooldown = button.querySelector(".ability-cooldown");
+            if (!cooldown) {
+                cooldown = document.createElement("span");
+                cooldown.className = "ability-cooldown";
+                button.appendChild(cooldown);
+            }
+            const cooldownLeft = getAbilityCooldownLeft(ability, now);
+            const cooling = cooldownLeft > 0;
+            cooldown.textContent = cooling ? `冷却 ${Math.ceil(cooldownLeft / 1000)}s` : "";
+            button.classList.toggle("cooling", cooling);
+            button.disabled = state.psi < abilityCosts[ability] || cooling || (needsRoom && !state.selectedRoom) || !state.active;
         });
     }
 
@@ -1508,6 +2015,12 @@
         document.body.classList.toggle("monitor-open", state.monitorOpen);
         els.monitorToggle.textContent = state.monitorOpen ? "关闭监控" : "打开监控";
         if (state.monitorOpen) renderMap();
+    }
+
+    function toggleDmPanel() {
+        state.dmCollapsed = !state.dmCollapsed;
+        els.dmPanel.classList.toggle("collapsed", state.dmCollapsed);
+        els.dmToggle.textContent = state.dmCollapsed ? "展开" : "收起";
     }
 
     function addLog(text) {
@@ -1553,9 +2066,13 @@
         if (kind !== "collapse") playAudio(els.jumpscareSfx, 0.9);
     }
 
-    function win() {
+    async function win() {
         if (!state.active) return;
         state.active = false;
+        const nextUnlocked = Math.min(MAX_NIGHT, state.night + 1);
+        saveProgress(nextUnlocked).then(renderMainMenuProgressOnly).catch(() => {});
+        state.selectedNight = Math.min(nextUnlocked, IMPLEMENTED_NIGHTS);
+        els.nextNightBtn.textContent = state.night < IMPLEMENTED_NIGHTS ? "继续" : "返回菜单";
         els.victory.classList.add("visible");
         playAudio(els.victorySfx, 0.72);
     }
