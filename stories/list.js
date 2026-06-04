@@ -65,6 +65,14 @@ const storyList = [
         date: "2026-01-06"
     },
     {
+        id: "misha-meditation-room-1484-07",
+        title: "米沙",
+        description: "冥想室杀机",
+        owner: "master@almorel.com",
+        tags: "米沙",
+        date: "DR1484 - 7月"
+    },
+    {
         id: "estella-magic-seed-1364-07-19",
         title: "艾斯特拉",
         description: "某个夏天的午后。",
