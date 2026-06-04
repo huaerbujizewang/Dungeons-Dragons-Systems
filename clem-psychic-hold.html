@@ -189,6 +189,7 @@
 
         #stability-fill { background: linear-gradient(90deg, #047857, var(--stability)); }
         #psi-fill { background: linear-gradient(90deg, #1d4ed8, var(--psi)); }
+        #plant-fill { background: linear-gradient(90deg, #166534, #84cc16); }
 
         .exit-btn {
             justify-self: end;
@@ -209,6 +210,10 @@
             grid-template-columns: minmax(520px, 1fr) 320px;
             gap: 14px;
             align-items: end;
+        }
+
+        .play-area.closed {
+            display: none;
         }
 
         .map-panel {
@@ -349,6 +354,19 @@
             box-shadow: 0 0 14px rgba(0, 0, 0, 0.98);
         }
 
+        .plant-dot {
+            position: absolute;
+            z-index: 6;
+            width: 17px;
+            height: 17px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            background: #65a30d;
+            border: 1px solid rgba(236, 252, 203, 0.8);
+            box-shadow: 0 0 18px rgba(132, 204, 22, 0.88), 0 0 34px rgba(101, 163, 13, 0.54);
+        }
+
         .side-stack {
             display: grid;
             gap: 12px;
@@ -477,11 +495,30 @@
         .look-controls {
             position: absolute;
             left: 50%;
-            bottom: calc(464px + var(--safe-bottom));
+            bottom: calc(72px + var(--safe-bottom));
             z-index: 34;
             display: flex;
             gap: 10px;
             transform: translateX(-50%);
+        }
+
+        body.monitor-open .look-controls {
+            bottom: calc(464px + var(--safe-bottom));
+        }
+
+        .monitor-toggle {
+            position: absolute;
+            left: 50%;
+            bottom: calc(16px + var(--safe-bottom));
+            z-index: 38;
+            min-width: 120px;
+            height: 42px;
+            transform: translateX(-50%);
+            border: 1px solid rgba(96, 165, 250, 0.42);
+            background: rgba(3, 7, 18, 0.72);
+            color: #dbeafe;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
         }
 
         .look-btn {
@@ -510,6 +547,25 @@
                 url("assets/games/clem_psychic_hold/jumpscare/sludge_jumpscare.png");
             background-size: cover;
             background-position: center;
+        }
+
+        #jumpscare.plant {
+            background-image:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.58)),
+                url("assets/games/clem_psychic_hold/jumpscare/plant_jumpscare.png");
+        }
+
+        #jumpscare.collapse {
+            background-image: none;
+            background:
+                radial-gradient(circle at 50% 12%, rgba(248, 250, 252, 0.16), transparent 18%),
+                linear-gradient(180deg, rgba(3, 7, 18, 0.88), #030507 68%, #000);
+            animation: collapseFall 1.1s cubic-bezier(0.55, 0.04, 0.28, 1) both;
+        }
+
+        #jumpscare.collapse .result-card {
+            transform: translateY(22vh) rotateX(58deg) scale(0.92);
+            opacity: 0.86;
         }
 
         .result-card {
@@ -546,6 +602,12 @@
         @keyframes staticDrift {
             0% { background-position: 0 0, 0 0; }
             100% { background-position: 19px -17px, -31px 29px; }
+        }
+
+        @keyframes collapseFall {
+            0% { transform: perspective(900px) rotateX(0deg) translateY(0); filter: blur(0) brightness(1); }
+            55% { transform: perspective(900px) rotateX(38deg) translateY(10vh); filter: blur(1px) brightness(0.72); }
+            100% { transform: perspective(900px) rotateX(68deg) translateY(22vh); filter: blur(2px) brightness(0.42); }
         }
 
         @media (max-width: 980px) {
@@ -592,6 +654,10 @@
                 <div class="resource-head"><span>心能</span><strong id="psi-value">100</strong></div>
                 <div class="bar"><div id="psi-fill"></div></div>
             </div>
+            <div class="resource">
+                <div class="resource-head"><span>温室饥饿</span><strong id="plant-value">100%</strong></div>
+                <div class="bar"><div id="plant-fill"></div></div>
+            </div>
         </section>
         <button class="exit-btn" onclick="location.href='lore.html'">返回</button>
     </header>
@@ -602,7 +668,9 @@
         <button class="look-btn" id="look-right">→</button>
     </div>
 
-    <section class="play-area">
+    <button class="monitor-toggle" id="monitor-toggle">打开监控</button>
+
+    <section class="play-area closed" id="play-area">
         <section class="map-panel">
             <div class="panel-head">
                 <div class="tabs" id="floor-tabs"></div>
@@ -620,7 +688,7 @@
                     <button class="ability-btn" data-ability="lock"><span class="ability-icon">🔒</span><span class="ability-name">闭锁</span><span class="ability-cost">8 心能</span><span class="ability-desc">封住选中房间入口 5 秒；闭锁房间红框。</span></button>
                     <button class="ability-btn" data-ability="shock"><span class="ability-icon">💥</span><span class="ability-name">震慑</span><span class="ability-cost">12 心能</span><span class="ability-desc">击退所有靠近卧室的无抗性怪物，送回出生点。</span></button>
                     <button class="ability-btn" data-ability="anchor"><span class="ability-icon">⚓</span><span class="ability-name">锚定</span><span class="ability-cost">10 心能</span><span class="ability-desc">清除假点，短暂恢复地图可靠性。</span></button>
-                    <button class="ability-btn" data-ability="lure"><span class="ability-icon">🕯️</span><span class="ability-name">引诱</span><span class="ability-cost">6 心能</span><span class="ability-desc">指定房间吸引怪物移动；引诱房间绿框。</span></button>
+                    <button class="ability-btn" data-ability="lure"><span class="ability-icon">🕯️</span><span class="ability-name">引诱</span><span class="ability-cost">6 心能</span><span class="ability-desc">指定房间；只影响相邻怪物，无抗性时必定进入。引诱房间绿框。</span></button>
                 </div>
             </section>
             <section class="log-panel">
@@ -657,7 +725,7 @@
             <span id="dm-clock">--</span>
         </div>
         <div class="dm-monster">
-            行动逻辑：怪物每次行动前预先决定下一步；可通行相邻房间按“更接近目标”加权随机，闭锁房间不可进入，可能原地停顿。目标通常是长女卧室，引诱期间有较高概率改为引诱房间。
+            行动逻辑：怪物每次行动前预先决定下一步；可通行相邻房间按“更接近目标”加权随机，闭锁房间不可进入，可能原地停顿。引诱只影响相邻怪物，无抗性时下一步必定进入引诱房间。
         </div>
         <div id="dm-monsters"></div>
         <div class="dm-controls">
@@ -686,6 +754,9 @@
     const FIRST_DAY_MONSTER_COUNT = 1;
     const MONSTER_MOVE_MIN = 26000;
     const MONSTER_MOVE_SPREAD = 12000;
+    const GREENHOUSE_ROOM = "F1-08";
+    const PLANT_HUNGER_SECONDS = 240;
+    const PLANT_RUSH_MS = 30000;
     const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw";
     const DM_EMAILS = ["739477825@qq.com"];
@@ -728,9 +799,14 @@
         timeLeft: GAME_SECONDS,
         stability: 100,
         psi: 100,
+        plantHunger: 100,
+        plantAttack: false,
+        plantAttackStart: 0,
+        plantAttackPath: [],
         floor: "F2",
         selectedRoom: PLAYER_ROOM,
         look: 0,
+        monitorOpen: false,
         monsters: [],
         lockedUntil: new Map(),
         lureRoom: null,
@@ -746,8 +822,12 @@
         stabilityFill: document.getElementById("stability-fill"),
         psiValue: document.getElementById("psi-value"),
         psiFill: document.getElementById("psi-fill"),
+        plantValue: document.getElementById("plant-value"),
+        plantFill: document.getElementById("plant-fill"),
         staticLayer: document.getElementById("static-layer"),
         panorama: document.getElementById("panorama"),
+        playArea: document.getElementById("play-area"),
+        monitorToggle: document.getElementById("monitor-toggle"),
         tabs: document.getElementById("floor-tabs"),
         map: document.getElementById("map"),
         links: document.getElementById("links"),
@@ -808,6 +888,7 @@
         document.querySelectorAll(".dm-btn").forEach(button => {
             button.addEventListener("click", () => runDmAction(button.dataset.dmAction));
         });
+        els.monitorToggle.addEventListener("click", toggleMonitor);
         window.addEventListener("keydown", event => {
             if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") setLook(-1);
             if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") setLook(1);
@@ -826,14 +907,16 @@
 
         cleanExpired(now);
         updateMonsters(now);
+        updatePlant(dt, now);
         updateThreat(dt);
         updateNoise(now);
         renderHud();
         updateAbilityButtons();
+        renderPlantDot();
         updateDmPanel(now);
 
         if (state.timeLeft <= 0) return win();
-        if (state.stability <= 0) return fail("精神稳定度归零。");
+        if (state.stability <= 0) return fail("精神稳定度归零。", "collapse");
 
         requestAnimationFrame(loop);
     }
@@ -859,18 +942,33 @@
 
     function updateMonsters(now) {
         let moved = false;
+        const nextMonsters = [];
+
         for (const monster of state.monsters) {
-            if (monster.nextMove > now) continue;
+            if (monster.nextMove > now) {
+                nextMonsters.push(monster);
+                continue;
+            }
+
             if (monster.plannedRoom && state.lockedUntil.has(monster.plannedRoom)) planMonster(monster);
             const next = monster.plannedRoom;
             if (next) {
                 monster.room = next;
                 moved = true;
             }
+            if (monster.room === GREENHOUSE_ROOM) {
+                nextMonsters.push(...feedPlant(monster));
+                moved = true;
+                continue;
+            }
             monster.nextMove = now + MONSTER_MOVE_MIN + Math.random() * MONSTER_MOVE_SPREAD;
-            if (monster.room === PLAYER_ROOM) return fail("污泥漫游者进入长女卧室。");
+            if (monster.room === PLAYER_ROOM) return fail("污泥漫游者进入长女卧室。", "sludge");
             planMonster(monster);
+            nextMonsters.push(monster);
         }
+
+        state.monsters = nextMonsters;
+
         if (moved) {
             playAudio(els.moveSfx, 0.5);
             renderMap();
@@ -891,10 +989,37 @@
         els.mapStatus.textContent = reliable ? "可靠" : "轻微干扰";
     }
 
+    function updatePlant(dt, now) {
+        if (!state.plantAttack) {
+            state.plantHunger = Math.max(0, state.plantHunger - (100 / PLANT_HUNGER_SECONDS) * dt);
+            if (state.plantHunger <= 0) startPlantAttack(now);
+            return;
+        }
+
+        const progress = (now - state.plantAttackStart) / PLANT_RUSH_MS;
+        if (progress >= 1) fail("温室植物冲入长女卧室。", "plant");
+    }
+
+    function startPlantAttack(now) {
+        state.plantAttack = true;
+        state.plantAttackStart = now;
+        state.plantAttackPath = shortestPath(GREENHOUSE_ROOM, PLAYER_ROOM);
+        addLog("温室植物饥饿归零，正在沿宅邸结构冲向卧室。");
+        renderMap();
+    }
+
     function updateDmPanel(now = performance.now()) {
         if (!state.dmMode) return;
         els.dmClock.textContent = formatTime(state.timeLeft);
-        els.dmMonsters.innerHTML = state.monsters.map(monster => {
+        const plantLine = `
+            <div class="dm-monster">
+                <strong>温室植物</strong>
+                <div>饥饿：${Math.ceil(state.plantHunger)}%</div>
+                <div>状态：${state.plantAttack ? "突袭中" : "潜伏"}</div>
+                <div>路径：${state.plantAttackPath.length ? state.plantAttackPath.join(" → ") : "未启动"}</div>
+            </div>
+        `;
+        els.dmMonsters.innerHTML = plantLine + state.monsters.map(monster => {
             const current = roomLabel(monster.room);
             const target = roomLabel(monster.plannedTarget || PLAYER_ROOM);
             const next = monster.plannedRoom ? roomLabel(monster.plannedRoom) : "原地停顿";
@@ -925,13 +1050,13 @@
     function runDmAction(action) {
         if (!state.dmMode) return;
         if (action === "win") return win();
-        if (action === "jumpscare") return fail("DM 触发跳杀。");
+        if (action === "jumpscare") return fail("DM 触发跳杀。", "sludge");
         if (action === "psi-plus") state.psi = clamp(state.psi + 10, 0, 100);
         if (action === "psi-minus") state.psi = clamp(state.psi - 10, 0, 100);
         if (action === "stable-plus") state.stability = clamp(state.stability + 10, 0, 100);
         if (action === "stable-minus") {
             state.stability = clamp(state.stability - 10, 0, 100);
-            if (state.stability <= 0) return fail("DM 将精神稳定度归零。");
+            if (state.stability <= 0) return fail("DM 将精神稳定度归零。", "collapse");
         }
         if (action === "spawn") spawnMonster();
         if (action === "replan") replanMonsters();
@@ -945,19 +1070,38 @@
     }
 
     function spawnMonster() {
-        const candidates = Object.keys(rooms).filter(id => rooms[id].floor === "F1" && id !== "F1-09");
+        const candidates = Object.keys(rooms).filter(id => rooms[id].floor === "F1" && !["F1-09", GREENHOUSE_ROOM].includes(id));
         const room = candidates[Math.floor(Math.random() * candidates.length)];
+        state.monsters.push(createMonster(room));
+    }
+
+    function createMonster(room, spawnRoom = room) {
         const monster = {
             id: `sludge-${++state.monsterSeed}`,
             type: "污泥漫游者",
             lureResist: 0,
             shockResist: 0,
-            spawnRoom: room,
+            spawnRoom,
             room,
             nextMove: performance.now() + 30000 + Math.random() * 14000
         };
         planMonster(monster);
-        state.monsters.push(monster);
+        return monster;
+    }
+
+    function feedPlant(monster) {
+        state.plantHunger = 100;
+        state.plantAttack = false;
+        state.plantAttackPath = [];
+        addLog("温室植物吞食了污泥漫游者。新的污泥在出生点分裂。");
+        const spawn = monster.spawnRoom || monster.room;
+        const first = createMonster(spawn, spawn);
+        const second = createMonster(spawn, spawn);
+        first.nextMove = performance.now() + 22000 + Math.random() * 9000;
+        second.nextMove = performance.now() + 32000 + Math.random() * 12000;
+        planMonster(first);
+        planMonster(second);
+        return [first, second];
     }
 
     function nextStep(from, target) {
@@ -996,20 +1140,29 @@
     }
 
     function planMonster(monster) {
-        const target = resolveMonsterTarget(monster);
+        if (
+            state.lureRoom &&
+            rooms[monster.room].links.includes(state.lureRoom) &&
+            !state.lockedUntil.has(state.lureRoom)
+        ) {
+            const resist = Number(monster.lureResist || 0);
+            if (resist <= 0 || Math.random() >= resist) {
+                monster.plannedTarget = state.lureRoom;
+                monster.plannedRoom = state.lureRoom;
+                monster.plannedWeights = [{ id: state.lureRoom, weight: 1 }];
+                monster.planReason = `相邻引诱：进入 ${state.lureRoom}`;
+                monster.planAt = performance.now();
+                return;
+            }
+        }
+
+        const target = PLAYER_ROOM;
         const plan = chooseNextStep(monster.room, target);
         monster.plannedTarget = target;
         monster.plannedRoom = plan.next;
         monster.plannedWeights = plan.weights;
         monster.planReason = plan.reason;
         monster.planAt = performance.now();
-    }
-
-    function resolveMonsterTarget(monster) {
-        if (!state.lureRoom) return PLAYER_ROOM;
-        const resist = Number(monster.lureResist || 0);
-        if (resist <= 0) return state.lureRoom;
-        return Math.random() >= resist ? state.lureRoom : PLAYER_ROOM;
     }
 
     function replanMonsters() {
@@ -1036,6 +1189,23 @@
             }
         }
         return 99;
+    }
+
+    function shortestPath(from, target) {
+        if (from === target) return [from];
+        const queue = [[from, [from]]];
+        const seen = new Set([from]);
+        while (queue.length) {
+            const [room, path] = queue.shift();
+            for (const next of rooms[room].links) {
+                if (seen.has(next)) continue;
+                const nextPath = [...path, next];
+                if (next === target) return nextPath;
+                seen.add(next);
+                queue.push([next, nextPath]);
+            }
+        }
+        return [from, target];
     }
 
     function useAbility(ability) {
@@ -1109,7 +1279,7 @@
 
     function renderMap() {
         els.links.innerHTML = "";
-        [...els.map.querySelectorAll(".room-node,.monster-dot")].forEach(node => node.remove());
+        [...els.map.querySelectorAll(".room-node,.monster-dot,.plant-dot")].forEach(node => node.remove());
         const visibleRooms = Object.entries(rooms).filter(([, room]) => room.floor === state.floor);
         for (const [id, room] of visibleRooms) {
             for (const linked of room.links) {
@@ -1153,6 +1323,7 @@
 
         const realDots = state.monsters.filter(monster => rooms[monster.room].floor === state.floor);
         realDots.forEach((monster, index) => addDot("monster-dot", rooms[monster.room], index));
+        renderPlantDot();
         updateSelectedRoom();
         updateAbilityButtons();
     }
@@ -1166,12 +1337,43 @@
         els.map.appendChild(dot);
     }
 
+    function renderPlantDot() {
+        els.map.querySelectorAll(".plant-dot").forEach(node => node.remove());
+        const point = getPlantPoint();
+        if (!point || point.floor !== state.floor) return;
+        addDot("plant-dot", point, 1);
+    }
+
+    function getPlantPoint(now = performance.now()) {
+        if (!state.plantAttack || state.plantAttackPath.length < 2) return null;
+        const progress = clamp((now - state.plantAttackStart) / PLANT_RUSH_MS, 0, 1);
+        const segments = state.plantAttackPath.length - 1;
+        const scaled = progress * segments;
+        const index = Math.min(segments - 1, Math.floor(scaled));
+        const local = scaled - index;
+        const from = rooms[state.plantAttackPath[index]];
+        const to = rooms[state.plantAttackPath[index + 1]];
+        if (!from || !to) return null;
+
+        if (from.floor !== to.floor) {
+            return local < 0.5 ? { ...from } : { ...to };
+        }
+
+        return {
+            floor: from.floor,
+            x: from.x + (to.x - from.x) * local,
+            y: from.y + (to.y - from.y) * local
+        };
+    }
+
     function renderHud() {
         els.timer.textContent = formatTime(state.timeLeft);
         els.stabilityValue.textContent = Math.ceil(state.stability);
         els.psiValue.textContent = Math.floor(state.psi);
+        els.plantValue.textContent = `${Math.ceil(state.plantHunger)}%`;
         els.stabilityFill.style.width = `${state.stability}%`;
         els.psiFill.style.width = `${state.psi}%`;
+        els.plantFill.style.width = `${state.plantHunger}%`;
     }
 
     function updateSelectedRoom() {
@@ -1190,6 +1392,14 @@
     function setLook(value) {
         state.look = value;
         els.panorama.style.setProperty("--look-x", `${value * -18}vw`);
+    }
+
+    function toggleMonitor() {
+        state.monitorOpen = !state.monitorOpen;
+        els.playArea.classList.toggle("closed", !state.monitorOpen);
+        document.body.classList.toggle("monitor-open", state.monitorOpen);
+        els.monitorToggle.textContent = state.monitorOpen ? "关闭监控" : "打开监控";
+        if (state.monitorOpen) renderMap();
     }
 
     function addLog(text) {
@@ -1225,12 +1435,14 @@
         return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
     }
 
-    function fail(reason) {
+    function fail(reason, kind = "sludge") {
         if (!state.active) return;
         state.active = false;
         els.failReason.textContent = reason;
+        els.fail.classList.remove("sludge", "plant", "collapse");
+        els.fail.classList.add(kind);
         els.fail.classList.add("visible");
-        playAudio(els.jumpscareSfx, 0.9);
+        if (kind !== "collapse") playAudio(els.jumpscareSfx, 0.9);
     }
 
     function win() {
