@@ -1071,8 +1071,7 @@
         monitorOpen: false,
         monsters: [],
         lockedUntil: new Map(),
-        lureRoom: null,
-        lureUntil: 0,
+        lureUntilByRoom: new Map(),
         dmMode: false,
         dmCollapsed: false,
         abilityCooldownUntil: { lock: 0, shock: 0, anchor: 0, lure: 0 },
@@ -1272,8 +1271,7 @@
         state.monitorOpen = false;
         state.monsters = [];
         state.lockedUntil = new Map();
-        state.lureRoom = null;
-        state.lureUntil = 0;
+        state.lureUntilByRoom = new Map();
         state.abilityCooldownUntil = { lock: 0, shock: 0, anchor: 0, lure: 0 };
         state.reliableUntil = 0;
         state.monsterSeed = 0;
@@ -1366,8 +1364,14 @@
             replanMonsters();
             renderMap();
         }
-        if (state.lureRoom && state.lureUntil <= now) {
-            state.lureRoom = null;
+        let lureChanged = false;
+        for (const [room, until] of state.lureUntilByRoom.entries()) {
+            if (until <= now) {
+                state.lureUntilByRoom.delete(room);
+                lureChanged = true;
+            }
+        }
+        if (lureChanged) {
             renderMap();
         }
     }
@@ -1469,6 +1473,7 @@
                 <strong>卧室镜面</strong>
                 <div>状态：${state.mirrorInRoom ? "已摆放，每秒额外消耗 1 心能" : "未出现"}</div>
                 <div>夜晚：第 ${state.night} 夜 / 解锁：第 ${state.unlockedNight} 夜</div>
+                <div>引诱：${formatActiveLures(now) || "无"}</div>
             </div>
         `;
         els.dmMonsters.innerHTML = plantLine + mirrorLine + state.monsters.map(monster => {
@@ -1498,6 +1503,13 @@
         if (!total) return "";
         return weights
             .map(item => `${item.id === state.monsters.find(monster => monster.plannedWeights === weights)?.room ? "原地" : item.id}:${Math.round(item.weight / total * 100)}%`)
+            .join(" / ");
+    }
+
+    function formatActiveLures(now = performance.now()) {
+        return [...state.lureUntilByRoom.entries()]
+            .filter(([, until]) => until > now)
+            .map(([room, until]) => `${roomLabel(room)} ${Math.ceil((until - now) / 1000)}s`)
             .join(" / ");
     }
 
@@ -1693,24 +1705,35 @@
     }
 
     function applyActiveLure(monster) {
-        if (!state.lureRoom || state.lureUntil <= performance.now()) return false;
-        if (!rooms[monster.room].links.includes(state.lureRoom)) return false;
-        if (state.lockedUntil.has(state.lureRoom)) return false;
+        const lureRooms = getActiveAdjacentLures(monster);
+        if (!lureRooms.length) return false;
 
         const resist = Number(monster.lureResist || 0);
         if (resist > 0 && Math.random() < resist) {
-            monster.planReason = `抵抗引诱：${state.lureRoom}`;
+            monster.planReason = `抵抗引诱：${lureRooms.join(" / ")}`;
             monster.planAt = performance.now();
             return false;
         }
 
-        monster.plannedTarget = state.lureRoom;
-        monster.plannedRoom = state.lureRoom;
-        monster.plannedWeights = [{ id: state.lureRoom, weight: 1 }];
-        monster.lureLockedRoom = state.lureRoom;
-        monster.planReason = `相邻引诱强制：进入 ${state.lureRoom}`;
+        const lureRoom = lureRooms[Math.floor(Math.random() * lureRooms.length)];
+        monster.plannedTarget = lureRoom;
+        monster.plannedRoom = lureRoom;
+        monster.plannedWeights = lureRooms.map(id => ({ id, weight: 1 }));
+        monster.lureLockedRoom = lureRoom;
+        monster.planReason = `相邻引诱强制：进入 ${lureRoom}`;
         monster.planAt = performance.now();
         return true;
+    }
+
+    function getActiveAdjacentLures(monster, now = performance.now()) {
+        if (!rooms[monster.room]) return [];
+        return [...state.lureUntilByRoom.entries()]
+            .filter(([room, until]) =>
+                until > now &&
+                rooms[monster.room].links.includes(room) &&
+                !state.lockedUntil.has(room)
+            )
+            .map(([room]) => room);
     }
 
     function clearLureLock(monster) {
@@ -1828,8 +1851,7 @@
         if (ability === "lure") {
             state.psi -= cost;
             startAbilityCooldown("lure");
-            state.lureRoom = state.selectedRoom;
-            state.lureUntil = performance.now() + 20000;
+            state.lureUntilByRoom.set(state.selectedRoom, performance.now() + 20000);
             state.monsters.forEach(monster => {
                 clearLureLock(monster);
                 planMonster(monster);
@@ -1882,7 +1904,7 @@
                 id === state.selectedRoom ? "selected" : "",
                 id === PLAYER_ROOM ? "player" : "",
                 state.lockedUntil.has(id) ? "locked" : "",
-                state.lureRoom === id ? "lured" : ""
+                state.lureUntilByRoom.has(id) ? "lured" : ""
             ].filter(Boolean).join(" ");
             button.style.left = `${room.x}%`;
             button.style.top = `${room.y}%`;
