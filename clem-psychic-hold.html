@@ -299,8 +299,20 @@
         }
 
         .room-node.locked {
-            background: rgba(39, 31, 15, 0.94);
-            border-color: rgba(232, 197, 111, 0.78);
+            background: rgba(45, 12, 12, 0.94);
+            border-color: rgba(248, 113, 113, 0.92);
+            box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.2), 0 0 18px rgba(185, 28, 28, 0.28);
+        }
+
+        .room-node.lured {
+            background: rgba(9, 45, 31, 0.94);
+            border-color: rgba(52, 211, 153, 0.94);
+            box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.22), 0 0 18px rgba(16, 185, 129, 0.28);
+        }
+
+        .room-node.locked.lured {
+            border-color: rgba(248, 113, 113, 0.96);
+            box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.24), inset 0 0 0 2px rgba(52, 211, 153, 0.48);
         }
 
         .room-id {
@@ -384,6 +396,14 @@
             margin-top: 6px;
             color: var(--muted);
             font-size: 12px;
+        }
+
+        .ability-desc {
+            display: block;
+            margin-top: 5px;
+            color: #cbd5e1;
+            font-size: 11px;
+            line-height: 1.35;
         }
 
         #log {
@@ -597,10 +617,10 @@
             <section class="ability-panel">
                 <div class="selected-room" id="selected-room">未选择房间</div>
                 <div class="ability-grid">
-                    <button class="ability-btn" data-ability="lock"><span class="ability-icon">🔒</span><span class="ability-name">闭锁</span><span class="ability-cost">8 心能</span></button>
-                    <button class="ability-btn" data-ability="shock"><span class="ability-icon">💥</span><span class="ability-name">震慑</span><span class="ability-cost">12 心能</span></button>
-                    <button class="ability-btn" data-ability="anchor"><span class="ability-icon">⚓</span><span class="ability-name">锚定</span><span class="ability-cost">10 心能</span></button>
-                    <button class="ability-btn" data-ability="lure"><span class="ability-icon">🕯️</span><span class="ability-name">引诱</span><span class="ability-cost">6 心能</span></button>
+                    <button class="ability-btn" data-ability="lock"><span class="ability-icon">🔒</span><span class="ability-name">闭锁</span><span class="ability-cost">8 心能</span><span class="ability-desc">封住选中房间入口 5 秒；闭锁房间红框。</span></button>
+                    <button class="ability-btn" data-ability="shock"><span class="ability-icon">💥</span><span class="ability-name">震慑</span><span class="ability-cost">12 心能</span><span class="ability-desc">击退所有靠近卧室的无抗性怪物，送回出生点。</span></button>
+                    <button class="ability-btn" data-ability="anchor"><span class="ability-icon">⚓</span><span class="ability-name">锚定</span><span class="ability-cost">10 心能</span><span class="ability-desc">清除假点，短暂恢复地图可靠性。</span></button>
+                    <button class="ability-btn" data-ability="lure"><span class="ability-icon">🕯️</span><span class="ability-name">引诱</span><span class="ability-cost">6 心能</span><span class="ability-desc">指定房间吸引怪物移动；引诱房间绿框。</span></button>
                 </div>
             </section>
             <section class="log-panel">
@@ -819,10 +839,22 @@
     }
 
     function cleanExpired(now) {
+        let lockChanged = false;
         for (const [room, until] of state.lockedUntil.entries()) {
-            if (until <= now) state.lockedUntil.delete(room);
+            if (until <= now) {
+                state.lockedUntil.delete(room);
+                lockChanged = true;
+            }
         }
-        if (state.lureUntil <= now) state.lureRoom = null;
+        if (lockChanged) {
+            replanMonsters();
+            renderMap();
+        }
+        if (state.lureRoom && state.lureUntil <= now) {
+            state.lureRoom = null;
+            replanMonsters();
+            renderMap();
+        }
     }
 
     function updateMonsters(now) {
@@ -874,6 +906,7 @@
                     <div>当前位置：${escapeHTML(current)}</div>
                     <div>行动目标：${escapeHTML(target)}</div>
                     <div>下一步：${escapeHTML(next)}（${seconds}s 后）</div>
+                    <div>出生点：${escapeHTML(roomLabel(monster.spawnRoom))}；引诱抗性 ${Number(monster.lureResist || 0)}；震慑抗性 ${Number(monster.shockResist || 0)}</div>
                     <div>逻辑：${escapeHTML(monster.planReason || "未计算")}</div>
                     <div>权重：${escapeHTML(weights || "无可用出口")}</div>
                 </div>
@@ -916,6 +949,10 @@
         const room = candidates[Math.floor(Math.random() * candidates.length)];
         const monster = {
             id: `sludge-${++state.monsterSeed}`,
+            type: "污泥漫游者",
+            lureResist: 0,
+            shockResist: 0,
+            spawnRoom: room,
             room,
             nextMove: performance.now() + 30000 + Math.random() * 14000
         };
@@ -959,13 +996,20 @@
     }
 
     function planMonster(monster) {
-        const target = state.lureRoom && Math.random() < 0.62 ? state.lureRoom : PLAYER_ROOM;
+        const target = resolveMonsterTarget(monster);
         const plan = chooseNextStep(monster.room, target);
         monster.plannedTarget = target;
         monster.plannedRoom = plan.next;
         monster.plannedWeights = plan.weights;
         monster.planReason = plan.reason;
         monster.planAt = performance.now();
+    }
+
+    function resolveMonsterTarget(monster) {
+        if (!state.lureRoom) return PLAYER_ROOM;
+        const resist = Number(monster.lureResist || 0);
+        if (resist <= 0) return state.lureRoom;
+        return Math.random() >= resist ? state.lureRoom : PLAYER_ROOM;
     }
 
     function replanMonsters() {
@@ -997,7 +1041,7 @@
     function useAbility(ability) {
         const cost = abilityCosts[ability];
         if (state.psi < cost) return addLog("心能不足。");
-        if (ability !== "anchor" && !state.selectedRoom) return addLog("未选择房间。");
+        if (["lock", "lure"].includes(ability) && !state.selectedRoom) return addLog("未选择房间。");
 
         if (ability === "lock") {
             state.psi -= cost;
@@ -1008,16 +1052,25 @@
         }
 
         if (ability === "shock") {
-            const monster = state.monsters.find(item => item.room === state.selectedRoom);
-            if (!monster) return addLog("没有定位到可震慑目标。");
+            const targets = state.monsters.filter(monster => distanceToPlayer(monster.room) <= 1);
+            if (!targets.length) return addLog("没有靠近卧室的可震慑目标。");
             state.psi -= cost;
-            const choices = rooms[monster.room].links
-                .filter(id => !state.lockedUntil.has(id))
-                .sort((a, b) => distanceToPlayer(b) - distanceToPlayer(a));
-            if (choices[0]) monster.room = choices[0];
-            monster.nextMove = performance.now() + 20000 + Math.random() * 8000;
-            planMonster(monster);
-            addLog("震慑命中。");
+
+            let repelled = 0;
+            let resisted = 0;
+            targets.forEach(monster => {
+                const resist = Number(monster.shockResist || 0);
+                if (resist > 0 && Math.random() < resist) {
+                    resisted += 1;
+                    return;
+                }
+                monster.room = monster.spawnRoom || monster.room;
+                monster.nextMove = performance.now() + 26000 + Math.random() * 10000;
+                planMonster(monster);
+                repelled += 1;
+            });
+
+            addLog(`震慑展开：${repelled} 个目标被送回出生点${resisted ? `，${resisted} 个抵抗` : ""}。`);
             playAudio(els.castSfx, 0.62);
         }
 
@@ -1079,7 +1132,8 @@
                 "room-node",
                 id === state.selectedRoom ? "selected" : "",
                 id === PLAYER_ROOM ? "player" : "",
-                state.lockedUntil.has(id) ? "locked" : ""
+                state.lockedUntil.has(id) ? "locked" : "",
+                state.lureRoom === id ? "lured" : ""
             ].filter(Boolean).join(" ");
             button.style.left = `${room.x}%`;
             button.style.top = `${room.y}%`;
@@ -1128,7 +1182,7 @@
     function updateAbilityButtons() {
         document.querySelectorAll(".ability-btn").forEach(button => {
             const ability = button.dataset.ability;
-            const needsRoom = ability !== "anchor";
+            const needsRoom = ["lock", "lure"].includes(ability);
             button.disabled = state.psi < abilityCosts[ability] || (needsRoom && !state.selectedRoom);
         });
     }
