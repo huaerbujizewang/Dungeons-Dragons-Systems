@@ -709,6 +709,11 @@
             return;
         }
 
+        if (storyId === 'clem_psychic_hold') {
+            location.replace('clem-psychic-hold.html');
+            return;
+        }
+
         if (!localDev) {
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
