@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>闭锁之夜</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --text: #f8fafc;
@@ -313,8 +314,14 @@
             margin-top: 2px;
         }
 
-        .monster-dot,
-        .fake-dot {
+        .cross-link {
+            display: block;
+            margin-top: 4px;
+            color: #f5d27a;
+            font-size: 11px;
+        }
+
+        .monster-dot {
             position: absolute;
             z-index: 5;
             width: 13px;
@@ -328,12 +335,6 @@
             background: #020202;
             border: 1px solid rgba(255, 255, 255, 0.22);
             box-shadow: 0 0 14px rgba(0, 0, 0, 0.98);
-        }
-
-        .fake-dot {
-            background: rgba(185, 28, 28, 0.66);
-            border: 1px solid rgba(248, 113, 113, 0.48);
-            opacity: 0.72;
         }
 
         .side-stack {
@@ -392,6 +393,65 @@
             overflow: auto;
             color: #cbd5e1;
             font-size: 13px;
+        }
+
+        .dm-panel {
+            position: absolute;
+            top: calc(126px + var(--safe-top));
+            right: calc(16px + var(--safe-right));
+            z-index: 70;
+            display: none;
+            width: min(420px, calc(100vw - 32px));
+            max-height: calc(100dvh - 150px - var(--safe-top) - var(--safe-bottom));
+            overflow: auto;
+            padding: 12px;
+            border: 1px solid rgba(248, 113, 113, 0.42);
+            background: rgba(10, 10, 14, 0.92);
+            box-shadow: 0 18px 46px rgba(0, 0, 0, 0.48);
+            backdrop-filter: blur(12px);
+        }
+
+        body.dm-mode .dm-panel { display: block; }
+
+        .dm-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            color: #fca5a5;
+            font-weight: 900;
+        }
+
+        .dm-monster {
+            display: grid;
+            gap: 4px;
+            padding: 9px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        .dm-monster strong { color: #f8fafc; }
+
+        .dm-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .dm-btn {
+            min-height: 34px;
+            border: 1px solid rgba(248, 113, 113, 0.34);
+            background: rgba(127, 29, 29, 0.22);
+            cursor: pointer;
+        }
+
+        .dm-btn:hover {
+            background: rgba(185, 28, 28, 0.42);
         }
 
         .look-controls {
@@ -570,6 +630,27 @@
             </div>
         </div>
     </section>
+
+    <aside class="dm-panel" id="dm-panel">
+        <div class="dm-title">
+            <span>DM 视角</span>
+            <span id="dm-clock">--</span>
+        </div>
+        <div class="dm-monster">
+            行动逻辑：怪物每次行动前预先决定下一步；可通行相邻房间按“更接近目标”加权随机，闭锁房间不可进入，可能原地停顿。目标通常是长女卧室，引诱期间有较高概率改为引诱房间。
+        </div>
+        <div id="dm-monsters"></div>
+        <div class="dm-controls">
+            <button class="dm-btn" data-dm-action="win">当场胜利</button>
+            <button class="dm-btn" data-dm-action="jumpscare">触发跳杀</button>
+            <button class="dm-btn" data-dm-action="psi-plus">心能 +10</button>
+            <button class="dm-btn" data-dm-action="psi-minus">心能 -10</button>
+            <button class="dm-btn" data-dm-action="stable-plus">稳定 +10</button>
+            <button class="dm-btn" data-dm-action="stable-minus">稳定 -10</button>
+            <button class="dm-btn" data-dm-action="spawn">追加怪物</button>
+            <button class="dm-btn" data-dm-action="replan">重算行动</button>
+        </div>
+    </aside>
 </main>
 
 <audio id="ambience" src="assets/games/clem_psychic_hold/audio/ambience_room.mp3" loop></audio>
@@ -582,6 +663,13 @@
     const PLAYER_ROOM = "F2-02";
     const GAME_SECONDS = 360;
     const PSI_DRAIN = 0.15;
+    const FIRST_DAY_MONSTER_COUNT = 1;
+    const MONSTER_MOVE_MIN = 26000;
+    const MONSTER_MOVE_SPREAD = 12000;
+    const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw";
+    const DM_EMAILS = ["739477825@qq.com"];
+    const supabaseClient = window.supabase ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
     const rooms = {
         "F1-01": { floor: "F1", name: "迎宾厅", x: 50, y: 18, links: ["F1-02", "F1-03", "F1-04"] },
@@ -627,10 +715,8 @@
         lockedUntil: new Map(),
         lureRoom: null,
         lureUntil: 0,
+        dmMode: false,
         reliableUntil: 0,
-        fakePoints: [],
-        nextFakeAt: 0,
-        nextSpawnAt: 72,
         monsterSeed: 0
     };
 
@@ -648,6 +734,9 @@
         mapStatus: document.getElementById("map-status"),
         selectedRoom: document.getElementById("selected-room"),
         log: document.getElementById("log"),
+        dmPanel: document.getElementById("dm-panel"),
+        dmClock: document.getElementById("dm-clock"),
+        dmMonsters: document.getElementById("dm-monsters"),
         fail: document.getElementById("jumpscare"),
         failReason: document.getElementById("fail-reason"),
         victory: document.getElementById("victory"),
@@ -658,15 +747,35 @@
         victorySfx: document.getElementById("victory-sfx")
     };
 
-    function init() {
-        spawnMonster();
-        spawnMonster();
-        spawnMonster();
+    async function init() {
+        await detectDmMode();
+        for (let i = 0; i < FIRST_DAY_MONSTER_COUNT; i += 1) spawnMonster();
         renderTabs();
         renderMap();
         bindControls();
         addLog("心灵感应展开。");
         requestAnimationFrame(loop);
+    }
+
+    async function detectDmMode() {
+        const params = new URLSearchParams(location.search);
+        const localDev = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
+        if (localDev && params.get("dm") === "1") {
+            state.dmMode = true;
+            document.body.classList.add("dm-mode");
+            return;
+        }
+
+        if (!supabaseClient) return;
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const email = String(user?.email || "").trim().toLowerCase();
+            const userId = String(user?.id || "");
+            state.dmMode = DM_EMAILS.includes(email) || email.startsWith("739477825") || userId.includes("739477825");
+            document.body.classList.toggle("dm-mode", state.dmMode);
+        } catch (_) {
+            state.dmMode = false;
+        }
     }
 
     function bindControls() {
@@ -675,6 +784,9 @@
         document.getElementById("look-right").addEventListener("click", () => setLook(1));
         document.querySelectorAll(".ability-btn").forEach(button => {
             button.addEventListener("click", () => useAbility(button.dataset.ability));
+        });
+        document.querySelectorAll(".dm-btn").forEach(button => {
+            button.addEventListener("click", () => runDmAction(button.dataset.dmAction));
         });
         window.addEventListener("keydown", event => {
             if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") setLook(-1);
@@ -698,6 +810,7 @@
         updateNoise(now);
         renderHud();
         updateAbilityButtons();
+        updateDmPanel(now);
 
         if (state.timeLeft <= 0) return win();
         if (state.stability <= 0) return fail("精神稳定度归零。");
@@ -713,23 +826,18 @@
     }
 
     function updateMonsters(now) {
-        if (state.nextSpawnAt <= GAME_SECONDS - state.timeLeft) {
-            spawnMonster();
-            state.nextSpawnAt += 70 + Math.random() * 26;
-            addLog("新的污泥漫游者进入宅邸。");
-        }
-
         let moved = false;
         for (const monster of state.monsters) {
             if (monster.nextMove > now) continue;
-            const target = state.lureRoom && Math.random() < 0.62 ? state.lureRoom : PLAYER_ROOM;
-            const next = nextStep(monster.room, target);
+            if (monster.plannedRoom && state.lockedUntil.has(monster.plannedRoom)) planMonster(monster);
+            const next = monster.plannedRoom;
             if (next) {
                 monster.room = next;
                 moved = true;
             }
-            monster.nextMove = now + (12000 + Math.random() * 4000);
+            monster.nextMove = now + MONSTER_MOVE_MIN + Math.random() * MONSTER_MOVE_SPREAD;
             if (monster.room === PLAYER_ROOM) return fail("污泥漫游者进入长女卧室。");
+            planMonster(monster);
         }
         if (moved) {
             playAudio(els.moveSfx, 0.5);
@@ -746,15 +854,57 @@
 
     function updateNoise(now) {
         const reliable = isReliable(now);
-        const noise = reliable ? 0.03 : 0.09 + Math.max(0, 1 - state.psi / 100) * 0.16;
+        const noise = reliable ? 0.025 : 0.055 + Math.max(0, 1 - state.psi / 100) * 0.06;
         document.documentElement.style.setProperty("--static-opacity", noise.toFixed(3));
-        els.mapStatus.textContent = reliable ? "可靠" : "干扰";
+        els.mapStatus.textContent = reliable ? "可靠" : "轻微干扰";
+    }
 
-        if (!reliable && now >= state.nextFakeAt) {
-            buildFakePoints();
-            state.nextFakeAt = now + 5200 + Math.random() * 4200;
-            renderMap();
+    function updateDmPanel(now = performance.now()) {
+        if (!state.dmMode) return;
+        els.dmClock.textContent = formatTime(state.timeLeft);
+        els.dmMonsters.innerHTML = state.monsters.map(monster => {
+            const current = roomLabel(monster.room);
+            const target = roomLabel(monster.plannedTarget || PLAYER_ROOM);
+            const next = monster.plannedRoom ? roomLabel(monster.plannedRoom) : "原地停顿";
+            const seconds = Math.max(0, Math.ceil((monster.nextMove - now) / 1000));
+            const weights = formatWeights(monster.plannedWeights || []);
+            return `
+                <div class="dm-monster">
+                    <strong>${escapeHTML(monster.id)}</strong>
+                    <div>当前位置：${escapeHTML(current)}</div>
+                    <div>行动目标：${escapeHTML(target)}</div>
+                    <div>下一步：${escapeHTML(next)}（${seconds}s 后）</div>
+                    <div>逻辑：${escapeHTML(monster.planReason || "未计算")}</div>
+                    <div>权重：${escapeHTML(weights || "无可用出口")}</div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function formatWeights(weights) {
+        const total = weights.reduce((sum, item) => sum + item.weight, 0);
+        if (!total) return "";
+        return weights
+            .map(item => `${item.id === state.monsters.find(monster => monster.plannedWeights === weights)?.room ? "原地" : item.id}:${Math.round(item.weight / total * 100)}%`)
+            .join(" / ");
+    }
+
+    function runDmAction(action) {
+        if (!state.dmMode) return;
+        if (action === "win") return win();
+        if (action === "jumpscare") return fail("DM 触发跳杀。");
+        if (action === "psi-plus") state.psi = clamp(state.psi + 10, 0, 100);
+        if (action === "psi-minus") state.psi = clamp(state.psi - 10, 0, 100);
+        if (action === "stable-plus") state.stability = clamp(state.stability + 10, 0, 100);
+        if (action === "stable-minus") {
+            state.stability = clamp(state.stability - 10, 0, 100);
+            if (state.stability <= 0) return fail("DM 将精神稳定度归零。");
         }
+        if (action === "spawn") spawnMonster();
+        if (action === "replan") replanMonsters();
+        renderMap();
+        renderHud();
+        updateDmPanel();
     }
 
     function isReliable(now = performance.now()) {
@@ -764,39 +914,77 @@
     function spawnMonster() {
         const candidates = Object.keys(rooms).filter(id => rooms[id].floor === "F1" && id !== "F1-09");
         const room = candidates[Math.floor(Math.random() * candidates.length)];
-        state.monsters.push({
+        const monster = {
             id: `sludge-${++state.monsterSeed}`,
             room,
-            nextMove: performance.now() + 8000 + Math.random() * 6000
-        });
+            nextMove: performance.now() + 30000 + Math.random() * 14000
+        };
+        planMonster(monster);
+        state.monsters.push(monster);
     }
 
     function nextStep(from, target) {
-        if (from === target) return null;
-        const queue = [[from, []]];
-        const seen = new Set([from]);
-        while (queue.length) {
-            const [room, path] = queue.shift();
-            for (const next of rooms[room].links) {
-                if (seen.has(next)) continue;
-                if (state.lockedUntil.has(next)) continue;
-                const nextPath = [...path, next];
-                if (next === target) return nextPath[0];
-                seen.add(next);
-                queue.push([next, nextPath]);
-            }
+        return chooseNextStep(from, target).next;
+    }
+
+    function chooseNextStep(from, target) {
+        if (from === target) return { next: null, weights: [], reason: "已经抵达目标" };
+        const choices = rooms[from].links.filter(id => !state.lockedUntil.has(id));
+        if (!choices.length) return { next: null, weights: [], reason: "所有出口被闭锁" };
+
+        const weighted = choices.map(id => {
+            const distance = distanceBetween(id, target);
+            const bias = Math.pow(0.62, distance);
+            const jitter = 0.45 + Math.random() * 0.85;
+            const backtrack = distanceBetween(from, target) < distance ? 0.42 : 1;
+            return { id, weight: Math.max(0.05, bias * jitter * backtrack) };
+        });
+
+        weighted.push({ id: from, weight: 0.18 });
+        const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+        let roll = Math.random() * total;
+        for (const item of weighted) {
+            roll -= item.weight;
+            if (roll <= 0) return {
+                next: item.id === from ? null : item.id,
+                weights: weighted,
+                reason: item.id === from ? "停顿观察" : `倾向 ${target}`
+            };
         }
-        return null;
+        return {
+            next: weighted[0].id === from ? null : weighted[0].id,
+            weights: weighted,
+            reason: "权重兜底"
+        };
+    }
+
+    function planMonster(monster) {
+        const target = state.lureRoom && Math.random() < 0.62 ? state.lureRoom : PLAYER_ROOM;
+        const plan = chooseNextStep(monster.room, target);
+        monster.plannedTarget = target;
+        monster.plannedRoom = plan.next;
+        monster.plannedWeights = plan.weights;
+        monster.planReason = plan.reason;
+        monster.planAt = performance.now();
+    }
+
+    function replanMonsters() {
+        state.monsters.forEach(monster => planMonster(monster));
+        updateDmPanel();
     }
 
     function distanceToPlayer(roomId) {
-        if (roomId === PLAYER_ROOM) return 0;
-        const queue = [[roomId, 0]];
-        const seen = new Set([roomId]);
+        return distanceBetween(roomId, PLAYER_ROOM);
+    }
+
+    function distanceBetween(from, target) {
+        if (from === target) return 0;
+        const queue = [[from, 0]];
+        const seen = new Set([from]);
         while (queue.length) {
             const [room, distance] = queue.shift();
             for (const next of rooms[room].links) {
-                if (next === PLAYER_ROOM) return distance + 1;
+                if (next === target) return distance + 1;
                 if (!seen.has(next)) {
                     seen.add(next);
                     queue.push([next, distance + 1]);
@@ -814,6 +1002,7 @@
         if (ability === "lock") {
             state.psi -= cost;
             state.lockedUntil.set(state.selectedRoom, performance.now() + 5000);
+            replanMonsters();
             addLog(`闭锁 ${state.selectedRoom}。`);
             playAudio(els.castSfx, 0.56);
         }
@@ -826,14 +1015,14 @@
                 .filter(id => !state.lockedUntil.has(id))
                 .sort((a, b) => distanceToPlayer(b) - distanceToPlayer(a));
             if (choices[0]) monster.room = choices[0];
-            monster.nextMove = performance.now() + 9000 + Math.random() * 3000;
+            monster.nextMove = performance.now() + 20000 + Math.random() * 8000;
+            planMonster(monster);
             addLog("震慑命中。");
             playAudio(els.castSfx, 0.62);
         }
 
         if (ability === "anchor") {
             state.psi -= cost;
-            state.fakePoints = [];
             state.reliableUntil = performance.now() + 8500;
             addLog("锚定完成。");
             playAudio(els.castSfx, 0.62);
@@ -843,6 +1032,7 @@
             state.psi -= cost;
             state.lureRoom = state.selectedRoom;
             state.lureUntil = performance.now() + 20000;
+            replanMonsters();
             addLog(`引诱指向 ${state.selectedRoom}。`);
             playAudio(els.castSfx, 0.52);
         }
@@ -866,7 +1056,7 @@
 
     function renderMap() {
         els.links.innerHTML = "";
-        [...els.map.querySelectorAll(".room-node,.monster-dot,.fake-dot")].forEach(node => node.remove());
+        [...els.map.querySelectorAll(".room-node,.monster-dot")].forEach(node => node.remove());
         const visibleRooms = Object.entries(rooms).filter(([, room]) => room.floor === state.floor);
         for (const [id, room] of visibleRooms) {
             for (const linked of room.links) {
@@ -893,7 +1083,11 @@
             ].filter(Boolean).join(" ");
             button.style.left = `${room.x}%`;
             button.style.top = `${room.y}%`;
-            button.innerHTML = `<span class="room-id">${id}</span><span class="room-name">${room.name}</span>`;
+            const crossLinks = room.links
+                .filter(linked => rooms[linked] && rooms[linked].floor !== room.floor)
+                .map(linked => `${linked} ${rooms[linked].name}`);
+            const crossText = crossLinks.length ? `<span class="cross-link">连到 ${crossLinks.join(" / ")}</span>` : "";
+            button.innerHTML = `<span class="room-id">${id}</span><span class="room-name">${room.name}</span>${crossText}`;
             button.addEventListener("click", () => {
                 state.selectedRoom = id;
                 renderMap();
@@ -905,7 +1099,6 @@
 
         const realDots = state.monsters.filter(monster => rooms[monster.room].floor === state.floor);
         realDots.forEach((monster, index) => addDot("monster-dot", rooms[monster.room], index));
-        state.fakePoints.filter(point => point.floor === state.floor).forEach((point, index) => addDot("fake-dot", point, index));
         updateSelectedRoom();
         updateAbilityButtons();
     }
@@ -917,19 +1110,6 @@
         dot.style.left = `${point.x + offset}%`;
         dot.style.top = `${point.y + Math.floor(index / 3) * 3}%`;
         els.map.appendChild(dot);
-    }
-
-    function buildFakePoints() {
-        const count = 2 + Math.floor(Math.random() * 3);
-        const ids = Object.keys(rooms);
-        state.fakePoints = Array.from({ length: count }, () => {
-            const room = rooms[ids[Math.floor(Math.random() * ids.length)]];
-            return {
-                floor: room.floor,
-                x: room.x + (Math.random() * 12 - 6),
-                y: room.y + (Math.random() * 10 - 5)
-            };
-        });
     }
 
     function renderHud() {
@@ -963,6 +1143,25 @@
         line.textContent = text;
         els.log.prepend(line);
         while (els.log.children.length > 8) els.log.lastElementChild.remove();
+    }
+
+    function roomLabel(id) {
+        if (!id || !rooms[id]) return id || "无";
+        return `${id} ${rooms[id].name}`;
+    }
+
+    function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+
+    function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[char]));
     }
 
     function formatTime(seconds) {
