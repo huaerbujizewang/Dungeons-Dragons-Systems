@@ -1,0 +1,326 @@
+{
+    "title": "抗击打测试",
+    "date": "DR1494 - 7月",
+    "typeSpeed": 24,
+    "autoDelay": 820,
+    "bg": "training_field_normal",
+    "assets": {
+        "training_field_normal": "assets/stories/klaus-devill-sparring-1494-07/backgrounds/bg_training_field_normal.png",
+        "klaus_suspended": "assets/stories/klaus-devill-sparring-1494-07/backgrounds/bg_klaus_suspended.png",
+        "klaus_launched": "assets/stories/klaus-devill-sparring-1494-07/backgrounds/bg_klaus_launched.png",
+        "klaus_avatar_battered": "assets/stories/klaus-devill-sparring-1494-07/characters/klaus_avatar_battered.png",
+        "klaus_avatar_fierce": "assets/stories/klaus-devill-sparring-1494-07/characters/klaus_avatar_fierce.png",
+        "klaus_avatar_unconscious": "assets/stories/klaus-devill-sparring-1494-07/characters/klaus_avatar_unconscious.png",
+        "frexia_avatar_calm": "assets/stories/klaus-devill-sparring-1494-07/characters/frexia_avatar_calm.png",
+        "frexia_avatar_serious": "assets/stories/klaus-devill-sparring-1494-07/characters/frexia_avatar_serious.png",
+        "frexia_avatar_commander": "assets/stories/klaus-devill-sparring-1494-07/characters/frexia_avatar_commander.png"
+    },
+    "characters": {
+        "klaus": {
+            "name": "克劳斯·德维尔",
+            "sprites": {
+                "battered": "klaus_avatar_battered",
+                "fierce": "klaus_avatar_fierce",
+                "unconscious": "klaus_avatar_unconscious"
+            }
+        },
+        "frexia": {
+            "name": "芙雷希雅",
+            "sprites": {
+                "calm": "frexia_avatar_calm",
+                "serious": "frexia_avatar_serious",
+                "commander": "frexia_avatar_commander"
+            }
+        }
+    },
+    "script": [
+        {
+            "type": "scene",
+            "bg": "training_field_normal",
+            "duration": 0
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "洛萨维亚帝国第十七号生态演武区，原本是一片广袤平坦的天然草坪。现在，这里看起来像刚刚经历过一轮密集的小行星撞击。"
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 380
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "轰——！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "一道魁梧的身影如出膛的攻城炮弹般倒飞出去，在草坪上犁出了一道深达数米、长达数百米的沟壑。泥土和草皮像海啸般向两侧翻滚。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "克劳斯·德维尔准将在一片狼藉的尽头停住。他大口喘着粗气，吐出一口带血的唾沫，双脚猛地踩碎了身下的岩层，借力再次暴起冲锋。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "音障被瞬间撞破，空气中爆开一圈白色的激波。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "calm",
+            "text": "太慢了，克劳斯。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "芙雷希雅微微偏了偏头。拳风擦过她的脸颊，将她身后数公里外的云层直接切开了一道巨大的裂隙。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "就在克劳斯招式用老、旧力刚去新力未生的刹那，芙雷希雅抬腿了。长筒靴精准地踢在了克劳斯的手腕关节处。"
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 260
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "咔嚓一声令人牙酸的闷响，克劳斯的右臂被巨大的反作用力震得向后扬起，中门大开。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "calm",
+            "text": "费伦的重力环境是标准单位的0.96倍，你就是在那里打了多次败仗？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她一边说，一边欺身而上。动作快得只剩下一道残影，拳头如雨点般砸在克劳斯的胸膛和腹部。"
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 360
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "砰！砰！砰！砰！每一拳落下的声音，都如同重型锻锤砸在钛合金钢板上。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "克劳斯的内脏在翻江倒海，但他强忍剧痛，左臂横扫，试图用最擅长的缠斗技巧锁住对方的脖颈。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "calm",
+            "text": "耐久力确实值得称赞。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "serious",
+            "text": "但耐久力不等于站着挨打的容错率。"
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 280
+        },
+        {
+            "type": "say",
+            "speaker": "克劳斯·德维尔",
+            "character": "klaus",
+            "emotion": "battered",
+            "text": "呃啊——！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "高大的身躯不受控制地佝偻下去。但他咬紧牙关，双手化拳为掌，死死扣住了芙雷希雅的双肩。"
+        },
+        {
+            "type": "say",
+            "speaker": "克劳斯·德维尔",
+            "character": "klaus",
+            "emotion": "fierce",
+            "text": "抓到你了，长官！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "克劳斯怒吼，肌肉纤维爆发出嘎吱嘎吱的声响，试图用绝对的肉体力量将她过肩摔砸向地面。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "芙雷希雅没有挣脱。她甚至任由克劳斯扣住自己的肩膀，嘴角勾起一抹极淡的弧度。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "calm",
+            "text": "哼。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她以不可思议的柔韧性在空中拧转身体，双腿反向上扬，直接锁住了克劳斯的脖子。魅魔恐怖的核心力量瞬间爆发，在空中完成了一个完美的倒挂绞杀。"
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 420
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "轰！克劳斯不仅没能摔出对方，反而被芙雷希雅带着在空中转了三百六十度，以头下脚上的姿态狠狠砸进了地底。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "大地剧烈震颤，一个直径几十米的陨石坑凭空出现。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "calm",
+            "text": "如果你在费伦遇到的是懂得利用杠杆原理的传奇武僧，你刚才的举动等同于自杀。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "芙雷希雅轻盈地落在大坑边缘，拍了拍披风上的灰尘。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "深坑底部，克劳斯艰难地把自己从岩层里拔了出来。视线已经因为脑震荡而出现重影，浑身的骨骼仿佛都在悲鸣。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "但他没有说话，只是重新摆出了格斗架势，深吸一口气，如同野兽般再次弹射起步。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "serious",
+            "text": "还不错，意志力没有退化。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "serious",
+            "text": "最后测试一次你的抗击打极限。注意防御，克劳斯。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "克劳斯的瞳孔猛地收缩。他本能地交叉双臂，将全身的力量和防御力集中在胸前。"
+        },
+        {
+            "type": "bg",
+            "src": "klaus_suspended",
+            "duration": 360
+        },
+        {
+            "type": "flash",
+            "color": "white"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "芙雷希雅从原地消失了。当她再次出现时，已经悬停在克劳斯的正前方。然后向前轰出了一记直拳。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "克劳斯感觉到双臂失去了知觉，一股无法抵抗的毁灭性力量直接穿透肌肉防御，轰进了大脑深处。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "他的身体在半空中猛地僵住，双眼翻白，意识在瞬间被彻底切断。庞大的身躯像断了线的风筝一样，陷入滞空状态。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "芙雷希雅看着已经失去意识的徒弟，没有丝毫怜悯。她在空中旋身，一记标准的高段踢，正中克劳斯的侧腹。"
+        },
+        {
+            "type": "bg",
+            "src": "klaus_launched",
+            "duration": 220
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 460
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "砰——嗖！克劳斯的身体化作一颗流星，突破了演武区的边界，消失在天际。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "芙雷希雅放下腿，理了理有些凌乱的裙摆，按下了耳边的帝国军务通讯器。"
+        },
+        {
+            "type": "say",
+            "speaker": "芙雷希雅",
+            "character": "frexia",
+            "emotion": "commander",
+            "text": "医疗部，准备高强度复苏舱。去C4区域把克劳斯准将捡回来。"
+        }
+    ]
+}
