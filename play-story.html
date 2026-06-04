@@ -284,6 +284,7 @@
             content: "";
             position: absolute;
             inset: 0;
+            pointer-events: none;
             background:
                 radial-gradient(circle at 50% 42%, rgba(126, 0, 0, 0.22), transparent 42%),
                 linear-gradient(180deg, rgba(0, 0, 0, 0.36), rgba(26, 0, 0, 0.92));
@@ -295,17 +296,19 @@
             inset: -18px;
             border: 26px solid rgba(126, 0, 0, 0.22);
             filter: blur(18px);
+            pointer-events: none;
         }
 
         .death-content {
             position: relative;
-            z-index: 1;
+            z-index: 2;
             width: min(92vw, 760px);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 24px;
             text-align: center;
+            pointer-events: auto;
         }
 
         #death-title {
@@ -1145,7 +1148,7 @@
         deathMode = true;
         autoMode = false;
         els.autoBtn.classList.remove('active');
-        activeChoice = false;
+        activeChoice = true;
 
         hideAllCharacters();
         els.dialogue.classList.add('hidden');
@@ -1168,6 +1171,12 @@
 
         const duration = Number(line.duration || 900);
         if (duration > 0) await sleep(duration);
+
+        els.deathActions.innerHTML = `
+            <button class="death-btn" onclick="location.reload(); event.stopPropagation();">\u91cd\u8bfb\u4e00\u904d</button>
+            <button class="death-btn" onclick="location.href='lore.html'; event.stopPropagation();">\u8fd4\u56de\u5217\u8868</button>
+        `;
+        els.deathActions.classList.add('visible');
     }
 
     function playAudio(channel, value, line = {}) {
