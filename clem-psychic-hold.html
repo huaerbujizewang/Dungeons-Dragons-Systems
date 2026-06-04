@@ -2,6 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>闭锁之夜</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -124,9 +127,9 @@
         .mirror-presence {
             position: absolute;
             right: calc(6vw + var(--safe-right));
-            bottom: 7vh;
+            bottom: 6vh;
             z-index: 26;
-            width: min(24vw, 360px);
+            width: min(22vw, 340px);
             height: 72vh;
             pointer-events: none;
             opacity: 0;
@@ -136,7 +139,7 @@
             filter: drop-shadow(0 0 24px rgba(248, 250, 252, 0.22));
         }
 
-        body.mirror-active .mirror-presence {
+        body.mirror-active.look-right .mirror-presence {
             opacity: 0.92;
             transform: translateX(0);
         }
@@ -486,8 +489,8 @@
         }
 
         .mirror-fake-dot {
-            opacity: 0.72;
-            filter: blur(0.4px);
+            opacity: 1;
+            filter: none;
         }
 
         .plant-dot {
@@ -684,11 +687,11 @@
             transform: translateX(-50%);
         }
 
-        body.monitor-open .look-controls {
+        body.psychic-open .look-controls {
             bottom: calc(464px + var(--safe-bottom));
         }
 
-        .monitor-toggle {
+        .psychic-toggle {
             position: absolute;
             left: 50%;
             bottom: calc(16px + var(--safe-bottom));
@@ -873,14 +876,14 @@
                 <button id="start-night-btn" type="button">开始</button>
                 <button type="button" onclick="location.href='lore.html'">返回列表</button>
             </div>
-            <div class="menu-meta">第三夜之后暂未开放。</div>
+            <div class="menu-meta">第二夜开始，镜厅会出现“镜中客”。第三夜之后暂未开放，但进度会继续记录。</div>
         </div>
     </section>
 
     <header class="hud">
         <section class="hud-panel">
             <div class="game-title">闭锁之夜</div>
-            <div class="timer" id="timer">06:00</div>
+            <div class="timer" id="timer">00:00</div>
         </section>
         <section class="hud-panel">
             <div class="resource">
@@ -905,7 +908,7 @@
         <button class="look-btn" id="look-right">→</button>
     </div>
 
-    <button class="monitor-toggle" id="monitor-toggle">打开监控</button>
+    <button class="psychic-toggle" id="psychic-toggle">开启心能</button>
 
     <section class="play-area closed" id="play-area">
         <section class="map-panel">
@@ -1002,6 +1005,8 @@
     const IMPLEMENTED_NIGHTS = 2;
     const PSI_DRAIN = 0.15;
     const MIRROR_DRAIN = 1;
+    const MIRROR_FAKE_REGEN_MS = 12000;
+    const ANCHOR_RELIABLE_MS = 30000;
     const FIRST_DAY_MONSTER_COUNT = 1;
     const MONSTER_MOVE_MIN = 26000;
     const MONSTER_MOVE_SPREAD = 12000;
@@ -1068,7 +1073,7 @@
         floor: "F2",
         selectedRoom: PLAYER_ROOM,
         look: 0,
-        monitorOpen: false,
+        psychicOpen: false,
         monsters: [],
         lockedUntil: new Map(),
         lureUntilByRoom: new Map(),
@@ -1095,7 +1100,7 @@
         panorama: document.getElementById("panorama"),
         mirrorPresence: document.getElementById("mirror-presence"),
         playArea: document.getElementById("play-area"),
-        monitorToggle: document.getElementById("monitor-toggle"),
+        psychicToggle: document.getElementById("psychic-toggle"),
         tabs: document.getElementById("floor-tabs"),
         map: document.getElementById("map"),
         links: document.getElementById("links"),
@@ -1218,7 +1223,7 @@
 
     function renderMainMenu() {
         els.mainMenu.classList.remove("hidden");
-        document.body.classList.remove("mirror-active", "monitor-open");
+        document.body.classList.remove("mirror-active", "psychic-open");
         els.fail.classList.remove("visible", "sludge", "plant", "collapse");
         els.victory.classList.remove("visible");
         const playableLimit = state.dmMode ? IMPLEMENTED_NIGHTS : Math.min(state.unlockedNight, IMPLEMENTED_NIGHTS);
@@ -1268,7 +1273,7 @@
         state.floor = "F2";
         state.selectedRoom = PLAYER_ROOM;
         state.look = 0;
-        state.monitorOpen = false;
+        state.psychicOpen = false;
         state.monsters = [];
         state.lockedUntil = new Map();
         state.lureUntilByRoom = new Map();
@@ -1279,9 +1284,9 @@
         els.mainMenu.classList.add("hidden");
         els.fail.classList.remove("visible", "sludge", "plant", "collapse");
         els.victory.classList.remove("visible");
-        document.body.classList.remove("mirror-active", "monitor-open");
+        document.body.classList.remove("mirror-active", "psychic-open");
         els.playArea.classList.add("closed");
-        els.monitorToggle.textContent = "打开监控";
+        els.psychicToggle.textContent = "开启心能";
         setLook(0);
 
         for (let i = 0; i < FIRST_DAY_MONSTER_COUNT; i += 1) spawnSludge();
@@ -1318,7 +1323,7 @@
             button.addEventListener("click", () => runDmAction(button.dataset.dmAction));
         });
         els.dmToggle.addEventListener("click", toggleDmPanel);
-        els.monitorToggle.addEventListener("click", toggleMonitor);
+        els.psychicToggle.addEventListener("click", togglePsychic);
         window.addEventListener("keydown", event => {
             if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") setLook(-1);
             if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") setLook(1);
@@ -1337,6 +1342,7 @@
         state.psi = Math.max(0, state.psi - psiDrain * dt);
 
         cleanExpired(now);
+        updateMirrorFakes(now);
         updateMonsters(now);
         updatePlant(dt, now);
         updateThreat(dt);
@@ -1424,6 +1430,24 @@
         }
     }
 
+    function updateMirrorFakes(now) {
+        let changed = false;
+        state.monsters.forEach(monster => {
+            if (monster.kind !== "mirror" || !monster.fakeCleared) return;
+            if (!monster.fakeRegenAt || monster.fakeRegenAt > now) return;
+            monster.fakeRooms = pickMirrorFakeRooms(monster.room);
+            monster.fakeCleared = false;
+            monster.fakeRegenAt = 0;
+            monster.planReason = "镜中客重新投影假点";
+            changed = true;
+        });
+        if (changed) {
+            addLog("镜中客重新投影了假点。");
+            renderMap();
+            updateDmPanel(now);
+        }
+    }
+
     function updateThreat(dt) {
         const adjacentThreats = state.monsters.filter(monster => rooms[monster.room].links.includes(PLAYER_ROOM)).length;
         if (adjacentThreats) state.stability -= adjacentThreats * 1.8 * dt;
@@ -1459,7 +1483,7 @@
 
     function updateDmPanel(now = performance.now()) {
         if (!state.dmMode) return;
-        els.dmClock.textContent = formatTime(state.timeLeft);
+        els.dmClock.textContent = formatSecondsRemaining(state.timeLeft);
         const plantLine = `
             <div class="dm-monster">
                 <strong>温室植物</strong>
@@ -1489,7 +1513,7 @@
                     <div>行动目标：${escapeHTML(target)}</div>
                     <div>下一步：${escapeHTML(next)}（${seconds}s 后）</div>
                     <div>锁定：${escapeHTML(monster.lureLockedRoom ? `引诱 -> ${monster.lureLockedRoom}` : "无")}</div>
-                    <div>假点：${escapeHTML(monster.kind === "mirror" ? (monster.fakeCleared ? "已清除" : monster.fakeRooms.join(" / ")) : "无")}</div>
+                    <div>假点：${escapeHTML(monster.kind === "mirror" ? mirrorFakeLabel(monster, now) : "无")}</div>
                     <div>出生点：${escapeHTML(roomLabel(monster.spawnRoom))}；引诱抗性 ${Number(monster.lureResist || 0)}；震慑抗性 ${Number(monster.shockResist || 0)}</div>
                     <div>逻辑：${escapeHTML(monster.planReason || "未计算")}</div>
                     <div>权重：${escapeHTML(weights || "无可用出口")}</div>
@@ -1511,6 +1535,12 @@
             .filter(([, until]) => until > now)
             .map(([room, until]) => `${roomLabel(room)} ${Math.ceil((until - now) / 1000)}s`)
             .join(" / ");
+    }
+
+    function mirrorFakeLabel(monster, now = performance.now()) {
+        if (!monster.fakeCleared) return monster.fakeRooms.join(" / ");
+        const seconds = Math.max(0, Math.ceil(((monster.fakeRegenAt || now) - now) / 1000));
+        return seconds ? `已清除，${seconds}s 后重生` : "正在重生";
     }
 
     function runDmAction(action) {
@@ -1593,6 +1623,7 @@
             room,
             fakeRooms: pickMirrorFakeRooms(room),
             fakeCleared: false,
+            fakeRegenAt: 0,
             nextMove: performance.now() + getMoveDelay({ kind: "mirror" })
         };
         planMonster(monster);
@@ -1835,12 +1866,13 @@
         if (ability === "anchor") {
             state.psi -= cost;
             startAbilityCooldown("anchor");
-            state.reliableUntil = performance.now() + 8500;
+            state.reliableUntil = performance.now() + ANCHOR_RELIABLE_MS;
             let cleared = 0;
             state.monsters.forEach(monster => {
                 if (monster.kind === "mirror" && !monster.fakeCleared) {
                     monster.fakeCleared = true;
                     monster.fakeRooms = [];
+                    monster.fakeRegenAt = performance.now() + MIRROR_FAKE_REGEN_MS;
                     cleared += 1;
                 }
             });
@@ -1993,7 +2025,7 @@
     }
 
     function renderHud() {
-        els.timer.textContent = formatTime(state.timeLeft);
+        els.timer.textContent = formatPlayerClock();
         els.stabilityValue.textContent = Math.ceil(state.stability);
         els.psiValue.textContent = Math.floor(state.psi);
         els.plantValue.textContent = `${Math.ceil(state.plantHunger)}%`;
@@ -2029,14 +2061,17 @@
     function setLook(value) {
         state.look = value;
         els.panorama.style.setProperty("--look-x", `${value * -18}vw`);
+        document.body.classList.toggle("look-left", value < 0);
+        document.body.classList.toggle("look-center", value === 0);
+        document.body.classList.toggle("look-right", value > 0);
     }
 
-    function toggleMonitor() {
-        state.monitorOpen = !state.monitorOpen;
-        els.playArea.classList.toggle("closed", !state.monitorOpen);
-        document.body.classList.toggle("monitor-open", state.monitorOpen);
-        els.monitorToggle.textContent = state.monitorOpen ? "关闭监控" : "打开监控";
-        if (state.monitorOpen) renderMap();
+    function togglePsychic() {
+        state.psychicOpen = !state.psychicOpen;
+        els.playArea.classList.toggle("closed", !state.psychicOpen);
+        document.body.classList.toggle("psychic-open", state.psychicOpen);
+        els.psychicToggle.textContent = state.psychicOpen ? "关闭心能" : "开启心能";
+        if (state.psychicOpen) renderMap();
     }
 
     function toggleDmPanel() {
@@ -2071,11 +2106,14 @@
         }[char]));
     }
 
-    function formatTime(seconds) {
-        const total = Math.max(0, Math.ceil(seconds));
-        const minutes = Math.floor(total / 60);
-        const rest = total % 60;
-        return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
+    function formatPlayerClock() {
+        const elapsed = GAME_SECONDS - state.timeLeft;
+        const hour = clamp(Math.floor(elapsed / 60), 0, 6);
+        return `${String(hour).padStart(2, "0")}:00`;
+    }
+
+    function formatSecondsRemaining(seconds) {
+        return `剩余 ${Math.max(0, Math.ceil(seconds))} 秒`;
     }
 
     function fail(reason, kind = "sludge") {
