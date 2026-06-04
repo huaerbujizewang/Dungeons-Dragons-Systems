@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>闭锁之夜</title>
+    <style>
+        :root {
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --panel: rgba(8, 12, 18, 0.78);
+            --panel-strong: rgba(5, 8, 12, 0.94);
+            --line: rgba(255, 255, 255, 0.16);
+            --accent: #e8c56f;
+            --danger: #b91c1c;
+            --psi: #60a5fa;
+            --stability: #34d399;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+        }
+
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #030507;
+            color: var(--text);
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button {
+            font: inherit;
+            color: inherit;
+        }
+
+        #game {
+            position: relative;
+            width: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background: #030507;
+        }
+
+        #room-view {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            background:
+                linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 22%, transparent 78%, rgba(0, 0, 0, 0.72)),
+                radial-gradient(circle at 50% 64%, rgba(65, 20, 20, 0.28), transparent 46%),
+                #06080b;
+        }
+
+        #panorama {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 142vw;
+            height: 100%;
+            transform: translateX(calc(-50% + var(--look-x, 0px)));
+            background-image:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.58)),
+                url("assets/games/clem_psychic_hold/room/room_panorama_21x9.png");
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.28s ease;
+            filter: brightness(0.78) saturate(0.86);
+        }
+
+        #panorama::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(90deg, rgba(10, 12, 17, 0.92) 0 12%, transparent 26% 74%, rgba(10, 12, 17, 0.92) 88%),
+                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 180px),
+                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 160px);
+            opacity: 0.68;
+        }
+
+        #panorama::after {
+            content: "";
+            position: absolute;
+            left: 18%;
+            right: 18%;
+            bottom: 0;
+            height: 34%;
+            background:
+                linear-gradient(90deg, transparent, rgba(120, 88, 58, 0.16), transparent),
+                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 90px);
+            transform: perspective(480px) rotateX(58deg);
+            transform-origin: bottom;
+        }
+
+        #room-vignette {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 50% 50%, transparent 34%, rgba(0, 0, 0, 0.54) 100%),
+                linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 48%, rgba(0, 0, 0, 0.7));
+        }
+
+        #static-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: var(--static-opacity, 0.08);
+            mix-blend-mode: screen;
+            background-image:
+                radial-gradient(circle, rgba(255,255,255,0.55) 0 1px, transparent 1px),
+                radial-gradient(circle, rgba(255,0,0,0.18) 0 1px, transparent 1px);
+            background-size: 19px 17px, 31px 29px;
+            animation: staticDrift 0.42s steps(2) infinite;
+        }
+
+        .hud {
+            position: absolute;
+            top: calc(14px + var(--safe-top));
+            left: calc(16px + var(--safe-left));
+            right: calc(16px + var(--safe-right));
+            z-index: 40;
+            display: grid;
+            grid-template-columns: 210px minmax(260px, 520px) auto;
+            gap: 12px;
+            align-items: start;
+        }
+
+        .hud-panel,
+        .map-panel,
+        .ability-panel,
+        .log-panel {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
+        }
+
+        .hud-panel {
+            min-height: 94px;
+            padding: 12px;
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .timer {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 0;
+        }
+
+        .resource {
+            display: grid;
+            gap: 6px;
+            margin-bottom: 9px;
+        }
+
+        .resource-head {
+            display: flex;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .bar {
+            height: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(0, 0, 0, 0.38);
+        }
+
+        .bar > div {
+            height: 100%;
+            width: 100%;
+            transition: width 0.16s linear;
+        }
+
+        #stability-fill { background: linear-gradient(90deg, #047857, var(--stability)); }
+        #psi-fill { background: linear-gradient(90deg, #1d4ed8, var(--psi)); }
+
+        .exit-btn {
+            justify-self: end;
+            min-width: 84px;
+            height: 38px;
+            border: 1px solid var(--line);
+            background: rgba(0, 0, 0, 0.48);
+            cursor: pointer;
+        }
+
+        .play-area {
+            position: absolute;
+            left: calc(16px + var(--safe-left));
+            right: calc(16px + var(--safe-right));
+            bottom: calc(16px + var(--safe-bottom));
+            z-index: 35;
+            display: grid;
+            grid-template-columns: minmax(520px, 1fr) 320px;
+            gap: 14px;
+            align-items: end;
+        }
+
+        .map-panel {
+            min-height: 420px;
+            padding: 14px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-btn,
+        .look-btn,
+        .ability-btn {
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+        }
+
+        .tab-btn {
+            min-height: 34px;
+            padding: 0 12px;
+        }
+
+        .tab-btn.active,
+        .ability-btn.active {
+            background: rgba(232, 197, 111, 0.18);
+            border-color: rgba(232, 197, 111, 0.58);
+        }
+
+        .map-status {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        #map {
+            position: relative;
+            height: 330px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background:
+                linear-gradient(rgba(96, 165, 250, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(96, 165, 250, 0.05) 1px, transparent 1px),
+                rgba(3, 7, 12, 0.76);
+            background-size: 28px 28px;
+        }
+
+        #links {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .room-node {
+            position: absolute;
+            width: 96px;
+            min-height: 44px;
+            padding: 6px 8px;
+            border: 1px solid rgba(148, 163, 184, 0.42);
+            background: rgba(15, 23, 42, 0.9);
+            color: #dbeafe;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .room-node.selected {
+            border-color: rgba(232, 197, 111, 0.9);
+            box-shadow: 0 0 0 2px rgba(232, 197, 111, 0.18);
+        }
+
+        .room-node.player {
+            border-color: rgba(52, 211, 153, 0.9);
+            color: #bbf7d0;
+        }
+
+        .room-node.locked {
+            background: rgba(39, 31, 15, 0.94);
+            border-color: rgba(232, 197, 111, 0.78);
+        }
+
+        .room-id {
+            display: block;
+            font-weight: 800;
+        }
+
+        .room-name {
+            display: block;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .monster-dot,
+        .fake-dot {
+            position: absolute;
+            z-index: 5;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .monster-dot {
+            background: #020202;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 0 14px rgba(0, 0, 0, 0.98);
+        }
+
+        .fake-dot {
+            background: rgba(185, 28, 28, 0.66);
+            border: 1px solid rgba(248, 113, 113, 0.48);
+            opacity: 0.72;
+        }
+
+        .side-stack {
+            display: grid;
+            gap: 12px;
+        }
+
+        .ability-panel,
+        .log-panel {
+            padding: 12px;
+        }
+
+        .selected-room {
+            min-height: 42px;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .ability-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .ability-btn {
+            min-height: 74px;
+            padding: 9px;
+            text-align: left;
+        }
+
+        .ability-btn:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+        }
+
+        .ability-icon {
+            font-size: 22px;
+            margin-right: 4px;
+        }
+
+        .ability-name {
+            font-weight: 800;
+        }
+
+        .ability-cost {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        #log {
+            display: grid;
+            gap: 6px;
+            max-height: 120px;
+            overflow: auto;
+            color: #cbd5e1;
+            font-size: 13px;
+        }
+
+        .look-controls {
+            position: absolute;
+            left: 50%;
+            bottom: calc(464px + var(--safe-bottom));
+            z-index: 34;
+            display: flex;
+            gap: 10px;
+            transform: translateX(-50%);
+        }
+
+        .look-btn {
+            width: 48px;
+            height: 42px;
+            background: rgba(0, 0, 0, 0.42);
+        }
+
+        .result-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 80;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.86);
+        }
+
+        .result-overlay.visible { display: flex; }
+
+        #jumpscare {
+            background-color: #030000;
+            background-image:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.62)),
+                url("assets/games/clem_psychic_hold/jumpscare/sludge_jumpscare.png");
+            background-size: cover;
+            background-position: center;
+        }
+
+        .result-card {
+            width: min(92vw, 560px);
+            display: grid;
+            gap: 16px;
+            padding: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(5, 8, 12, 0.84);
+        }
+
+        .result-title {
+            font-size: clamp(42px, 8vw, 88px);
+            font-weight: 900;
+            color: #8b0000;
+            text-shadow: 0 0 24px rgba(185, 28, 28, 0.78);
+        }
+
+        #victory .result-title { color: #f5d27a; text-shadow: 0 0 24px rgba(245, 210, 122, 0.34); }
+
+        .result-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .result-actions button {
+            min-height: 44px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+        }
+
+        @keyframes staticDrift {
+            0% { background-position: 0 0, 0 0; }
+            100% { background-position: 19px -17px, -31px 29px; }
+        }
+
+        @media (max-width: 980px) {
+            .hud {
+                grid-template-columns: 1fr;
+                right: auto;
+                width: min(420px, calc(100vw - 32px - var(--safe-left) - var(--safe-right)));
+            }
+
+            .play-area {
+                grid-template-columns: 1fr;
+                max-height: 64dvh;
+                overflow: auto;
+            }
+
+            .map-panel { min-height: 360px; }
+            #map { height: 280px; }
+
+            .look-controls {
+                bottom: calc(66dvh + var(--safe-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+<main id="game">
+    <section id="room-view" aria-label="长女卧室">
+        <div id="panorama"></div>
+        <div id="room-vignette"></div>
+        <div id="static-layer"></div>
+    </section>
+
+    <header class="hud">
+        <section class="hud-panel">
+            <div class="game-title">闭锁之夜</div>
+            <div class="timer" id="timer">06:00</div>
+        </section>
+        <section class="hud-panel">
+            <div class="resource">
+                <div class="resource-head"><span>精神稳定度</span><strong id="stability-value">100</strong></div>
+                <div class="bar"><div id="stability-fill"></div></div>
+            </div>
+            <div class="resource">
+                <div class="resource-head"><span>心能</span><strong id="psi-value">100</strong></div>
+                <div class="bar"><div id="psi-fill"></div></div>
+            </div>
+        </section>
+        <button class="exit-btn" onclick="location.href='lore.html'">返回</button>
+    </header>
+
+    <div class="look-controls">
+        <button class="look-btn" id="look-left">←</button>
+        <button class="look-btn" id="look-center">◎</button>
+        <button class="look-btn" id="look-right">→</button>
+    </div>
+
+    <section class="play-area">
+        <section class="map-panel">
+            <div class="panel-head">
+                <div class="tabs" id="floor-tabs"></div>
+                <div class="map-status" id="map-status">可靠</div>
+            </div>
+            <div id="map">
+                <svg id="links" viewBox="0 0 1000 600" preserveAspectRatio="none"></svg>
+            </div>
+        </section>
+
+        <aside class="side-stack">
+            <section class="ability-panel">
+                <div class="selected-room" id="selected-room">未选择房间</div>
+                <div class="ability-grid">
+                    <button class="ability-btn" data-ability="lock"><span class="ability-icon">🔒</span><span class="ability-name">闭锁</span><span class="ability-cost">8 心能</span></button>
+                    <button class="ability-btn" data-ability="shock"><span class="ability-icon">💥</span><span class="ability-name">震慑</span><span class="ability-cost">12 心能</span></button>
+                    <button class="ability-btn" data-ability="anchor"><span class="ability-icon">⚓</span><span class="ability-name">锚定</span><span class="ability-cost">10 心能</span></button>
+                    <button class="ability-btn" data-ability="lure"><span class="ability-icon">🕯️</span><span class="ability-name">引诱</span><span class="ability-cost">6 心能</span></button>
+                </div>
+            </section>
+            <section class="log-panel">
+                <div id="log"></div>
+            </section>
+        </aside>
+    </section>
+
+    <section class="result-overlay" id="jumpscare">
+        <div class="result-card">
+            <div class="result-title">你死了</div>
+            <div id="fail-reason">精神稳定度归零。</div>
+            <div class="result-actions">
+                <button onclick="location.reload()">重来</button>
+                <button onclick="location.href='lore.html'">返回列表</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="result-overlay" id="victory">
+        <div class="result-card">
+            <div class="result-title">幸存</div>
+            <div>六分钟过去了，门外的声音终于退入墙缝。</div>
+            <div class="result-actions">
+                <button onclick="location.reload()">再来一局</button>
+                <button onclick="location.href='lore.html'">返回列表</button>
+            </div>
+        </div>
+    </section>
+</main>
+
+<audio id="ambience" src="assets/games/clem_psychic_hold/audio/ambience_room.mp3" loop></audio>
+<audio id="move-sfx" src="assets/games/clem_psychic_hold/audio/sludge_move.mp3"></audio>
+<audio id="cast-sfx" src="assets/games/clem_psychic_hold/audio/ability_cast.wav"></audio>
+<audio id="jumpscare-sfx" src="assets/games/clem_psychic_hold/audio/jumpscare.mp3"></audio>
+<audio id="victory-sfx" src="assets/games/clem_psychic_hold/audio/victory.wav"></audio>
+
+<script>
+    const PLAYER_ROOM = "F2-02";
+    const GAME_SECONDS = 360;
+    const PSI_DRAIN = 0.15;
+
+    const rooms = {
+        "F1-01": { floor: "F1", name: "迎宾厅", x: 50, y: 18, links: ["F1-02", "F1-03", "F1-04"] },
+        "F1-02": { floor: "F1", name: "东走廊", x: 76, y: 34, links: ["F1-01", "F1-06", "F1-09"] },
+        "F1-03": { floor: "F1", name: "西走廊", x: 24, y: 34, links: ["F1-01", "F1-05", "F1-08"] },
+        "F1-04": { floor: "F1", name: "宴会厅", x: 50, y: 38, links: ["F1-01", "F1-05", "F1-06"] },
+        "F1-05": { floor: "F1", name: "画像廊", x: 31, y: 62, links: ["F1-03", "F1-04", "F1-07", "V-03"] },
+        "F1-06": { floor: "F1", name: "厨房", x: 69, y: 62, links: ["F1-02", "F1-04", "F1-07", "V-02"] },
+        "F1-07": { floor: "F1", name: "仆役间", x: 50, y: 77, links: ["F1-05", "F1-06", "F1-09"] },
+        "F1-08": { floor: "F1", name: "温室", x: 16, y: 82, links: ["F1-03", "F1-09", "V-01"] },
+        "F1-09": { floor: "F1", name: "下层楼梯", x: 78, y: 84, links: ["F1-02", "F1-07", "F1-08", "F2-01"] },
+
+        "F2-01": { floor: "F2", name: "上层楼梯", x: 24, y: 22, links: ["F1-09", "F2-03", "F2-04"] },
+        "F2-02": { floor: "F2", name: "长女卧室", x: 50, y: 80, links: ["F2-03", "F2-05", "V-05"] },
+        "F2-03": { floor: "F2", name: "会客室", x: 42, y: 42, links: ["F2-01", "F2-02", "F2-06"] },
+        "F2-04": { floor: "F2", name: "书房", x: 64, y: 28, links: ["F2-01", "F2-06", "F2-07"] },
+        "F2-05": { floor: "F2", name: "衣帽间", x: 73, y: 80, links: ["F2-02", "F2-06"] },
+        "F2-06": { floor: "F2", name: "镜厅", x: 66, y: 56, links: ["F2-03", "F2-04", "F2-05", "F2-07", "V-04"] },
+        "F2-07": { floor: "F2", name: "旧儿童房", x: 84, y: 36, links: ["F2-04", "F2-06", "V-06"] },
+
+        "V-01": { floor: "V", name: "西夹层", x: 16, y: 30, links: ["F1-08", "V-03"] },
+        "V-02": { floor: "V", name: "厨房暗道", x: 22, y: 74, links: ["F1-06", "V-03", "V-06"] },
+        "V-03": { floor: "V", name: "画像后通道", x: 40, y: 48, links: ["F1-05", "V-01", "V-02", "V-04"] },
+        "V-04": { floor: "V", name: "镜后裂隙", x: 62, y: 48, links: ["F2-06", "V-03", "V-05"] },
+        "V-05": { floor: "V", name: "卧室墙缝", x: 82, y: 32, links: ["F2-02", "V-04", "V-06"] },
+        "V-06": { floor: "V", name: "儿童房下方", x: 76, y: 76, links: ["F2-07", "V-02", "V-05"] }
+    };
+
+    const floorNames = { F1: "一层", F2: "二层", V: "管道层" };
+    const abilityCosts = { lock: 8, shock: 12, anchor: 10, lure: 6 };
+
+    const state = {
+        active: true,
+        started: performance.now(),
+        lastFrame: performance.now(),
+        timeLeft: GAME_SECONDS,
+        stability: 100,
+        psi: 100,
+        floor: "F2",
+        selectedRoom: PLAYER_ROOM,
+        look: 0,
+        monsters: [],
+        lockedUntil: new Map(),
+        lureRoom: null,
+        lureUntil: 0,
+        reliableUntil: 0,
+        fakePoints: [],
+        nextFakeAt: 0,
+        nextSpawnAt: 72,
+        monsterSeed: 0
+    };
+
+    const els = {
+        timer: document.getElementById("timer"),
+        stabilityValue: document.getElementById("stability-value"),
+        stabilityFill: document.getElementById("stability-fill"),
+        psiValue: document.getElementById("psi-value"),
+        psiFill: document.getElementById("psi-fill"),
+        staticLayer: document.getElementById("static-layer"),
+        panorama: document.getElementById("panorama"),
+        tabs: document.getElementById("floor-tabs"),
+        map: document.getElementById("map"),
+        links: document.getElementById("links"),
+        mapStatus: document.getElementById("map-status"),
+        selectedRoom: document.getElementById("selected-room"),
+        log: document.getElementById("log"),
+        fail: document.getElementById("jumpscare"),
+        failReason: document.getElementById("fail-reason"),
+        victory: document.getElementById("victory"),
+        ambience: document.getElementById("ambience"),
+        moveSfx: document.getElementById("move-sfx"),
+        castSfx: document.getElementById("cast-sfx"),
+        jumpscareSfx: document.getElementById("jumpscare-sfx"),
+        victorySfx: document.getElementById("victory-sfx")
+    };
+
+    function init() {
+        spawnMonster();
+        spawnMonster();
+        spawnMonster();
+        renderTabs();
+        renderMap();
+        bindControls();
+        addLog("心灵感应展开。");
+        requestAnimationFrame(loop);
+    }
+
+    function bindControls() {
+        document.getElementById("look-left").addEventListener("click", () => setLook(-1));
+        document.getElementById("look-center").addEventListener("click", () => setLook(0));
+        document.getElementById("look-right").addEventListener("click", () => setLook(1));
+        document.querySelectorAll(".ability-btn").forEach(button => {
+            button.addEventListener("click", () => useAbility(button.dataset.ability));
+        });
+        window.addEventListener("keydown", event => {
+            if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") setLook(-1);
+            if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") setLook(1);
+            if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") setLook(0);
+        });
+        window.addEventListener("pointerdown", () => playAudio(els.ambience, 0.28), { once: true });
+    }
+
+    function loop(now) {
+        if (!state.active) return;
+
+        const dt = Math.min(0.08, (now - state.lastFrame) / 1000);
+        state.lastFrame = now;
+        state.timeLeft = Math.max(0, GAME_SECONDS - (now - state.started) / 1000);
+        state.psi = Math.max(0, state.psi - PSI_DRAIN * dt);
+
+        cleanExpired(now);
+        updateMonsters(now);
+        updateThreat(dt);
+        updateNoise(now);
+        renderHud();
+        updateAbilityButtons();
+
+        if (state.timeLeft <= 0) return win();
+        if (state.stability <= 0) return fail("精神稳定度归零。");
+
+        requestAnimationFrame(loop);
+    }
+
+    function cleanExpired(now) {
+        for (const [room, until] of state.lockedUntil.entries()) {
+            if (until <= now) state.lockedUntil.delete(room);
+        }
+        if (state.lureUntil <= now) state.lureRoom = null;
+    }
+
+    function updateMonsters(now) {
+        if (state.nextSpawnAt <= GAME_SECONDS - state.timeLeft) {
+            spawnMonster();
+            state.nextSpawnAt += 70 + Math.random() * 26;
+            addLog("新的污泥漫游者进入宅邸。");
+        }
+
+        let moved = false;
+        for (const monster of state.monsters) {
+            if (monster.nextMove > now) continue;
+            const target = state.lureRoom && Math.random() < 0.62 ? state.lureRoom : PLAYER_ROOM;
+            const next = nextStep(monster.room, target);
+            if (next) {
+                monster.room = next;
+                moved = true;
+            }
+            monster.nextMove = now + (12000 + Math.random() * 4000);
+            if (monster.room === PLAYER_ROOM) return fail("污泥漫游者进入长女卧室。");
+        }
+        if (moved) {
+            playAudio(els.moveSfx, 0.5);
+            renderMap();
+        }
+    }
+
+    function updateThreat(dt) {
+        const adjacentThreats = state.monsters.filter(monster => rooms[monster.room].links.includes(PLAYER_ROOM)).length;
+        if (adjacentThreats) state.stability -= adjacentThreats * 1.8 * dt;
+        if (state.psi <= 0) state.stability -= 0.25 * dt;
+        state.stability = Math.max(0, state.stability);
+    }
+
+    function updateNoise(now) {
+        const reliable = isReliable(now);
+        const noise = reliable ? 0.03 : 0.09 + Math.max(0, 1 - state.psi / 100) * 0.16;
+        document.documentElement.style.setProperty("--static-opacity", noise.toFixed(3));
+        els.mapStatus.textContent = reliable ? "可靠" : "干扰";
+
+        if (!reliable && now >= state.nextFakeAt) {
+            buildFakePoints();
+            state.nextFakeAt = now + 5200 + Math.random() * 4200;
+            renderMap();
+        }
+    }
+
+    function isReliable(now = performance.now()) {
+        return now < state.reliableUntil;
+    }
+
+    function spawnMonster() {
+        const candidates = Object.keys(rooms).filter(id => rooms[id].floor === "F1" && id !== "F1-09");
+        const room = candidates[Math.floor(Math.random() * candidates.length)];
+        state.monsters.push({
+            id: `sludge-${++state.monsterSeed}`,
+            room,
+            nextMove: performance.now() + 8000 + Math.random() * 6000
+        });
+    }
+
+    function nextStep(from, target) {
+        if (from === target) return null;
+        const queue = [[from, []]];
+        const seen = new Set([from]);
+        while (queue.length) {
+            const [room, path] = queue.shift();
+            for (const next of rooms[room].links) {
+                if (seen.has(next)) continue;
+                if (state.lockedUntil.has(next)) continue;
+                const nextPath = [...path, next];
+                if (next === target) return nextPath[0];
+                seen.add(next);
+                queue.push([next, nextPath]);
+            }
+        }
+        return null;
+    }
+
+    function distanceToPlayer(roomId) {
+        if (roomId === PLAYER_ROOM) return 0;
+        const queue = [[roomId, 0]];
+        const seen = new Set([roomId]);
+        while (queue.length) {
+            const [room, distance] = queue.shift();
+            for (const next of rooms[room].links) {
+                if (next === PLAYER_ROOM) return distance + 1;
+                if (!seen.has(next)) {
+                    seen.add(next);
+                    queue.push([next, distance + 1]);
+                }
+            }
+        }
+        return 99;
+    }
+
+    function useAbility(ability) {
+        const cost = abilityCosts[ability];
+        if (state.psi < cost) return addLog("心能不足。");
+        if (ability !== "anchor" && !state.selectedRoom) return addLog("未选择房间。");
+
+        if (ability === "lock") {
+            state.psi -= cost;
+            state.lockedUntil.set(state.selectedRoom, performance.now() + 5000);
+            addLog(`闭锁 ${state.selectedRoom}。`);
+            playAudio(els.castSfx, 0.56);
+        }
+
+        if (ability === "shock") {
+            const monster = state.monsters.find(item => item.room === state.selectedRoom);
+            if (!monster) return addLog("没有定位到可震慑目标。");
+            state.psi -= cost;
+            const choices = rooms[monster.room].links
+                .filter(id => !state.lockedUntil.has(id))
+                .sort((a, b) => distanceToPlayer(b) - distanceToPlayer(a));
+            if (choices[0]) monster.room = choices[0];
+            monster.nextMove = performance.now() + 9000 + Math.random() * 3000;
+            addLog("震慑命中。");
+            playAudio(els.castSfx, 0.62);
+        }
+
+        if (ability === "anchor") {
+            state.psi -= cost;
+            state.fakePoints = [];
+            state.reliableUntil = performance.now() + 8500;
+            addLog("锚定完成。");
+            playAudio(els.castSfx, 0.62);
+        }
+
+        if (ability === "lure") {
+            state.psi -= cost;
+            state.lureRoom = state.selectedRoom;
+            state.lureUntil = performance.now() + 20000;
+            addLog(`引诱指向 ${state.selectedRoom}。`);
+            playAudio(els.castSfx, 0.52);
+        }
+
+        renderMap();
+        renderHud();
+    }
+
+    function renderTabs() {
+        els.tabs.innerHTML = Object.entries(floorNames).map(([id, label]) =>
+            `<button class="tab-btn ${state.floor === id ? "active" : ""}" data-floor="${id}">${label}</button>`
+        ).join("");
+        els.tabs.querySelectorAll(".tab-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                state.floor = button.dataset.floor;
+                renderTabs();
+                renderMap();
+            });
+        });
+    }
+
+    function renderMap() {
+        els.links.innerHTML = "";
+        [...els.map.querySelectorAll(".room-node,.monster-dot,.fake-dot")].forEach(node => node.remove());
+        const visibleRooms = Object.entries(rooms).filter(([, room]) => room.floor === state.floor);
+        for (const [id, room] of visibleRooms) {
+            for (const linked of room.links) {
+                if (!rooms[linked] || rooms[linked].floor !== state.floor || id > linked) continue;
+                const other = rooms[linked];
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", room.x * 10);
+                line.setAttribute("y1", room.y * 6);
+                line.setAttribute("x2", other.x * 10);
+                line.setAttribute("y2", other.y * 6);
+                line.setAttribute("stroke", "rgba(148, 163, 184, 0.34)");
+                line.setAttribute("stroke-width", "2");
+                els.links.appendChild(line);
+            }
+        }
+
+        for (const [id, room] of visibleRooms) {
+            const button = document.createElement("button");
+            button.className = [
+                "room-node",
+                id === state.selectedRoom ? "selected" : "",
+                id === PLAYER_ROOM ? "player" : "",
+                state.lockedUntil.has(id) ? "locked" : ""
+            ].filter(Boolean).join(" ");
+            button.style.left = `${room.x}%`;
+            button.style.top = `${room.y}%`;
+            button.innerHTML = `<span class="room-id">${id}</span><span class="room-name">${room.name}</span>`;
+            button.addEventListener("click", () => {
+                state.selectedRoom = id;
+                renderMap();
+                updateSelectedRoom();
+                updateAbilityButtons();
+            });
+            els.map.appendChild(button);
+        }
+
+        const realDots = state.monsters.filter(monster => rooms[monster.room].floor === state.floor);
+        realDots.forEach((monster, index) => addDot("monster-dot", rooms[monster.room], index));
+        state.fakePoints.filter(point => point.floor === state.floor).forEach((point, index) => addDot("fake-dot", point, index));
+        updateSelectedRoom();
+        updateAbilityButtons();
+    }
+
+    function addDot(className, point, index) {
+        const dot = document.createElement("div");
+        dot.className = className;
+        const offset = (index % 3 - 1) * 3;
+        dot.style.left = `${point.x + offset}%`;
+        dot.style.top = `${point.y + Math.floor(index / 3) * 3}%`;
+        els.map.appendChild(dot);
+    }
+
+    function buildFakePoints() {
+        const count = 2 + Math.floor(Math.random() * 3);
+        const ids = Object.keys(rooms);
+        state.fakePoints = Array.from({ length: count }, () => {
+            const room = rooms[ids[Math.floor(Math.random() * ids.length)]];
+            return {
+                floor: room.floor,
+                x: room.x + (Math.random() * 12 - 6),
+                y: room.y + (Math.random() * 10 - 5)
+            };
+        });
+    }
+
+    function renderHud() {
+        els.timer.textContent = formatTime(state.timeLeft);
+        els.stabilityValue.textContent = Math.ceil(state.stability);
+        els.psiValue.textContent = Math.floor(state.psi);
+        els.stabilityFill.style.width = `${state.stability}%`;
+        els.psiFill.style.width = `${state.psi}%`;
+    }
+
+    function updateSelectedRoom() {
+        const room = rooms[state.selectedRoom];
+        els.selectedRoom.textContent = room ? `${state.selectedRoom} ${room.name}` : "未选择房间";
+    }
+
+    function updateAbilityButtons() {
+        document.querySelectorAll(".ability-btn").forEach(button => {
+            const ability = button.dataset.ability;
+            const needsRoom = ability !== "anchor";
+            button.disabled = state.psi < abilityCosts[ability] || (needsRoom && !state.selectedRoom);
+        });
+    }
+
+    function setLook(value) {
+        state.look = value;
+        els.panorama.style.setProperty("--look-x", `${value * -18}vw`);
+    }
+
+    function addLog(text) {
+        const line = document.createElement("div");
+        line.textContent = text;
+        els.log.prepend(line);
+        while (els.log.children.length > 8) els.log.lastElementChild.remove();
+    }
+
+    function formatTime(seconds) {
+        const total = Math.max(0, Math.ceil(seconds));
+        const minutes = Math.floor(total / 60);
+        const rest = total % 60;
+        return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
+    }
+
+    function fail(reason) {
+        if (!state.active) return;
+        state.active = false;
+        els.failReason.textContent = reason;
+        els.fail.classList.add("visible");
+        playAudio(els.jumpscareSfx, 0.9);
+    }
+
+    function win() {
+        if (!state.active) return;
+        state.active = false;
+        els.victory.classList.add("visible");
+        playAudio(els.victorySfx, 0.72);
+    }
+
+    function playAudio(audio, volume) {
+        if (!audio) return;
+        audio.volume = volume;
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+    }
+
+    init();
+</script>
+</body>
+</html>
