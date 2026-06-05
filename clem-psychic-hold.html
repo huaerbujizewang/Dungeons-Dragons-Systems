@@ -77,6 +77,12 @@
             filter: brightness(0.78) saturate(0.86);
         }
 
+        body.mirror-active #panorama {
+            background-image:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.58)),
+                url("assets/games/clem_psychic_hold/room/room_panorama_mirror_21x9.png");
+        }
+
         #panorama::before {
             content: "";
             position: absolute;
@@ -122,26 +128,6 @@
                 radial-gradient(circle, rgba(255,0,0,0.18) 0 1px, transparent 1px);
             background-size: 19px 17px, 31px 29px;
             animation: staticDrift 0.42s steps(2) infinite;
-        }
-
-        .mirror-presence {
-            position: absolute;
-            right: calc(6vw + var(--safe-right));
-            bottom: 6vh;
-            z-index: 26;
-            width: min(22vw, 340px);
-            height: 72vh;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateX(26px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
-            background: url("assets/games/clem_psychic_hold/mirror/mirror_guest.png") right bottom / contain no-repeat;
-            filter: drop-shadow(0 0 24px rgba(248, 250, 252, 0.22));
-        }
-
-        body.mirror-active.look-right .mirror-presence {
-            opacity: 0.92;
-            transform: translateX(0);
         }
 
         .menu-overlay {
@@ -493,6 +479,17 @@
             filter: none;
         }
 
+        .pipe-dot {
+            background:
+                radial-gradient(circle at 38% 35%, rgba(255, 255, 255, 0.86), transparent 18%),
+                radial-gradient(circle, #7dd3fc 0 26%, #2563eb 62%, #0f172a 100%);
+            border-color: rgba(191, 219, 254, 0.96);
+            box-shadow:
+                0 0 0 6px rgba(96, 165, 250, 0.16),
+                0 0 22px rgba(96, 165, 250, 0.96),
+                0 0 44px rgba(37, 99, 235, 0.76);
+        }
+
         .plant-dot {
             position: absolute;
             z-index: 6;
@@ -740,6 +737,12 @@
                 url("assets/games/clem_psychic_hold/jumpscare/plant_jumpscare.png");
         }
 
+        #jumpscare.pipe {
+            background-image:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.58)),
+                url("assets/games/clem_psychic_hold/jumpscare/pipe_jumpscare.png");
+        }
+
         #jumpscare.collapse {
             background-image: none;
             background: #000;
@@ -862,7 +865,6 @@
         <div id="panorama"></div>
         <div id="room-vignette"></div>
         <div id="static-layer"></div>
-        <div class="mirror-presence" id="mirror-presence" aria-hidden="true"></div>
     </section>
 
     <section class="menu-overlay" id="main-menu">
@@ -876,7 +878,7 @@
                 <button id="start-night-btn" type="button">开始</button>
                 <button type="button" onclick="location.href='lore.html'">返回列表</button>
             </div>
-            <div class="menu-meta">第三夜之后暂未开放。</div>
+            <div class="menu-meta">第二夜开始出现镜中客。第三夜开始出现管中胎音。第四夜之后暂未开放。</div>
         </div>
     </section>
 
@@ -976,6 +978,7 @@
                 <button class="dm-btn" data-dm-action="win">当场胜利</button>
                 <button class="dm-btn" data-dm-action="sludge-jumpscare">测试污泥跳杀</button>
                 <button class="dm-btn" data-dm-action="plant-jumpscare">测试植物跳杀</button>
+                <button class="dm-btn" data-dm-action="pipe-jumpscare">测试胎音跳杀</button>
                 <button class="dm-btn" data-dm-action="collapse">测试精神崩溃</button>
                 <button class="dm-btn" data-dm-action="psi-plus">心能 +10</button>
                 <button class="dm-btn" data-dm-action="psi-minus">心能 -10</button>
@@ -985,6 +988,7 @@
                 <button class="dm-btn" data-dm-action="plant-minus">饥饿 -10</button>
                 <button class="dm-btn" data-dm-action="spawn">追加污泥</button>
                 <button class="dm-btn" data-dm-action="spawn-mirror">追加镜中客</button>
+                <button class="dm-btn" data-dm-action="spawn-pipe">追加胎音</button>
                 <button class="dm-btn" data-dm-action="replan">重算行动</button>
             </div>
         </div>
@@ -993,6 +997,7 @@
 
 <audio id="ambience" src="assets/games/clem_psychic_hold/audio/ambience_room.mp3" loop></audio>
 <audio id="move-sfx" src="assets/games/clem_psychic_hold/audio/sludge_move.mp3"></audio>
+<audio id="pipe-sfx" src="assets/games/clem_psychic_hold/audio/pipe_thump.wav"></audio>
 <audio id="cast-sfx" src="assets/games/clem_psychic_hold/audio/ability_cast.wav"></audio>
 <audio id="jumpscare-sfx" src="assets/games/clem_psychic_hold/audio/jumpscare.mp3"></audio>
 <audio id="victory-sfx" src="assets/games/clem_psychic_hold/audio/victory.wav"></audio>
@@ -1002,15 +1007,18 @@
     const GAME_ID = "clem_psychic_hold";
     const GAME_SECONDS = 360;
     const MAX_NIGHT = 7;
-    const IMPLEMENTED_NIGHTS = 2;
+    const IMPLEMENTED_NIGHTS = 3;
     const PSI_DRAIN = 0.15;
     const MIRROR_DRAIN = 1;
     const MIRROR_FAKE_REGEN_MS = 12000;
     const ANCHOR_RELIABLE_MS = 30000;
     const FIRST_DAY_MONSTER_COUNT = 1;
-    const MONSTER_MOVE_MIN = 26000;
-    const MONSTER_MOVE_SPREAD = 12000;
+    const SLUDGE_MOVE_FLOOR = 8000;
     const MIRROR_MOVE_FLOOR = 8000;
+    const PIPE_MOVE_FLOOR = 8000;
+    const PIPE_ANCHOR_PAUSE_MS = 15000;
+    const PIPE_SPAWN_ROOM = "V-02";
+    const PIPE_ATTACK_ROOM = "V-05";
     const GREENHOUSE_ROOM = "F1-08";
     const PLANT_HUNGER_SECONDS = 240;
     const PLANT_RUSH_MS = 30000;
@@ -1098,7 +1106,6 @@
         plantFill: document.getElementById("plant-fill"),
         staticLayer: document.getElementById("static-layer"),
         panorama: document.getElementById("panorama"),
-        mirrorPresence: document.getElementById("mirror-presence"),
         playArea: document.getElementById("play-area"),
         psychicToggle: document.getElementById("psychic-toggle"),
         tabs: document.getElementById("floor-tabs"),
@@ -1119,6 +1126,7 @@
         victoryMenuBtn: document.getElementById("victory-menu-btn"),
         ambience: document.getElementById("ambience"),
         moveSfx: document.getElementById("move-sfx"),
+        pipeSfx: document.getElementById("pipe-sfx"),
         castSfx: document.getElementById("cast-sfx"),
         jumpscareSfx: document.getElementById("jumpscare-sfx"),
         victorySfx: document.getElementById("victory-sfx")
@@ -1224,7 +1232,7 @@
     function renderMainMenu() {
         els.mainMenu.classList.remove("hidden");
         document.body.classList.remove("mirror-active", "psychic-open");
-        els.fail.classList.remove("visible", "sludge", "plant", "collapse");
+        els.fail.classList.remove("visible", "sludge", "plant", "pipe", "collapse");
         els.victory.classList.remove("visible");
         const playableLimit = state.dmMode ? IMPLEMENTED_NIGHTS : Math.min(state.unlockedNight, IMPLEMENTED_NIGHTS);
         if (state.selectedNight > playableLimit) state.selectedNight = playableLimit || 1;
@@ -1282,7 +1290,7 @@
         state.monsterSeed = 0;
         els.log.innerHTML = "";
         els.mainMenu.classList.add("hidden");
-        els.fail.classList.remove("visible", "sludge", "plant", "collapse");
+        els.fail.classList.remove("visible", "sludge", "plant", "pipe", "collapse");
         els.victory.classList.remove("visible");
         document.body.classList.remove("mirror-active", "psychic-open");
         els.playArea.classList.add("closed");
@@ -1291,6 +1299,7 @@
 
         for (let i = 0; i < FIRST_DAY_MONSTER_COUNT; i += 1) spawnSludge();
         if (night >= 2) spawnMirrorGuest();
+        if (night >= 3) spawnPipeFetus();
 
         renderTabs();
         renderMap();
@@ -1383,10 +1392,18 @@
     }
 
     function updateMonsters(now) {
-        let moved = false;
+        const movedMonsters = [];
         const nextMonsters = [];
 
         for (const monster of state.monsters) {
+            if (monster.kind === "pipe" && handlePipeAttack(monster, now)) {
+                nextMonsters.push(monster);
+                continue;
+            }
+            if (monster.pausedUntil && monster.pausedUntil > now) {
+                nextMonsters.push(monster);
+                continue;
+            }
             if (monster.nextMove > now) {
                 nextMonsters.push(monster);
                 continue;
@@ -1401,18 +1418,21 @@
             if (next) {
                 monster.room = next;
                 if (monster.kind === "mirror" && !monster.fakeCleared) monster.fakeRooms = pickMirrorFakeRooms(monster.room);
-                moved = true;
+                movedMonsters.push(monster);
             }
             clearLureLock(monster);
             if (monster.room === GREENHOUSE_ROOM) {
                 nextMonsters.push(...feedPlant(monster));
-                moved = true;
+                continue;
+            }
+            if (monster.kind === "pipe" && monster.room === PIPE_ATTACK_ROOM) {
+                armPipeAttack(monster, now);
+                nextMonsters.push(monster);
                 continue;
             }
             if (monster.room === PLAYER_ROOM) {
                 if (monster.kind === "mirror") {
                     activateMirrorIntrusion();
-                    moved = true;
                     continue;
                 }
                 return fail("污泥漫游者进入长女卧室。", "sludge");
@@ -1424,8 +1444,8 @@
 
         state.monsters = nextMonsters;
 
-        if (moved) {
-            playAudio(els.moveSfx, 0.5);
+        if (movedMonsters.length) {
+            playMoveSounds(movedMonsters);
             renderMap();
         }
     }
@@ -1446,6 +1466,79 @@
             renderMap();
             updateDmPanel(now);
         }
+    }
+
+    function armPipeAttack(monster, now = performance.now()) {
+        monster.attackAt = now + getMoveDelay(monster);
+        monster.nextMove = Number.POSITIVE_INFINITY;
+        monster.plannedTarget = PLAYER_ROOM;
+        monster.plannedRoom = null;
+        monster.plannedWeights = [];
+        monster.planReason = "抵达 V-05，正在从卧室墙缝蓄势";
+        addLog("管中胎音抵达卧室墙缝，墙内传来急促的咚咚声。");
+    }
+
+    function handlePipeAttack(monster, now = performance.now()) {
+        if (monster.kind !== "pipe" || !monster.attackAt) return false;
+        if (monster.pausedUntil && monster.pausedUntil > now) return true;
+        if (monster.attackAt > now) return true;
+        if (state.lockedUntil.has(PLAYER_ROOM)) {
+            repelMonster(monster, now);
+            addLog("长女卧室被闭锁，管中胎音被压回了暗道。");
+            return false;
+        }
+        fail("管中胎音从卧室墙缝里爬了出来。", "pipe");
+        return true;
+    }
+
+    function repelMonster(monster, now = performance.now()) {
+        clearLureLock(monster);
+        monster.room = monster.spawnRoom || monster.room;
+        monster.attackAt = 0;
+        monster.pausedUntil = 0;
+        monster.nextMove = now + getMoveDelay(monster);
+        planMonster(monster);
+    }
+
+    function pausePipeMonsters(now = performance.now()) {
+        let paused = 0;
+        state.monsters.forEach(monster => {
+            if (monster.kind !== "pipe") return;
+            monster.pausedUntil = Math.max(monster.pausedUntil || 0, now + PIPE_ANCHOR_PAUSE_MS);
+            if (monster.attackAt) monster.attackAt += PIPE_ANCHOR_PAUSE_MS;
+            else monster.nextMove += PIPE_ANCHOR_PAUSE_MS;
+            monster.planReason = "锚定干扰，管中胎音暂停";
+            paused += 1;
+        });
+        return paused;
+    }
+
+    function handleBedroomLockResponse(now = performance.now()) {
+        let repelled = 0;
+        state.monsters.forEach(monster => {
+            if (monster.kind === "pipe" && monster.attackAt) {
+                repelMonster(monster, now);
+                repelled += 1;
+            }
+        });
+        if (repelled) addLog(`闭锁长女卧室，压回 ${repelled} 个墙缝威胁。`);
+    }
+
+    function playMoveSounds(monsters) {
+        const sludgeVolume = strongestMoveVolume(monsters.filter(monster => monster.kind === "sludge"));
+        if (sludgeVolume > 0) playAudio(els.moveSfx, sludgeVolume);
+
+        const pipeVolume = strongestMoveVolume(monsters.filter(monster => monster.kind === "pipe"));
+        if (pipeVolume > 0) playAudio(els.pipeSfx, pipeVolume);
+    }
+
+    function strongestMoveVolume(monsters) {
+        if (!monsters.length) return 0;
+        return monsters.reduce((best, monster) => {
+            const distance = distanceBetween(monster.room, PLAYER_ROOM);
+            const volume = clamp(0.62 * Math.pow(0.68, distance), 0.05, 0.62);
+            return Math.max(best, volume);
+        }, 0);
     }
 
     function updateThreat(dt) {
@@ -1503,15 +1596,14 @@
         els.dmMonsters.innerHTML = plantLine + mirrorLine + state.monsters.map(monster => {
             const current = roomLabel(monster.room);
             const target = roomLabel(monster.plannedTarget || PLAYER_ROOM);
-            const next = monster.plannedRoom ? roomLabel(monster.plannedRoom) : "原地停顿";
-            const seconds = Math.max(0, Math.ceil((monster.nextMove - now) / 1000));
+            const nextStatus = monsterNextStatus(monster, now);
             const weights = formatWeights(monster.plannedWeights || []);
             return `
                 <div class="dm-monster">
                     <strong>${escapeHTML(monster.id)} · ${escapeHTML(monster.type)}</strong>
                     <div>当前位置：${escapeHTML(current)}</div>
                     <div>行动目标：${escapeHTML(target)}</div>
-                    <div>下一步：${escapeHTML(next)}（${seconds}s 后）</div>
+                    <div>下一步：${escapeHTML(nextStatus)}</div>
                     <div>锁定：${escapeHTML(monster.lureLockedRoom ? `引诱 -> ${monster.lureLockedRoom}` : "无")}</div>
                     <div>假点：${escapeHTML(monster.kind === "mirror" ? mirrorFakeLabel(monster, now) : "无")}</div>
                     <div>出生点：${escapeHTML(roomLabel(monster.spawnRoom))}；引诱抗性 ${Number(monster.lureResist || 0)}；震慑抗性 ${Number(monster.shockResist || 0)}</div>
@@ -1528,6 +1620,18 @@
         return weights
             .map(item => `${item.id === state.monsters.find(monster => monster.plannedWeights === weights)?.room ? "原地" : item.id}:${Math.round(item.weight / total * 100)}%`)
             .join(" / ");
+    }
+
+    function monsterNextStatus(monster, now = performance.now()) {
+        if (monster.pausedUntil && monster.pausedUntil > now) {
+            return `暂停中（${Math.ceil((monster.pausedUntil - now) / 1000)}s）`;
+        }
+        if (monster.kind === "pipe" && monster.attackAt) {
+            return `墙缝突袭倒计时（${Math.max(0, Math.ceil((monster.attackAt - now) / 1000))}s）`;
+        }
+        const next = monster.plannedRoom ? roomLabel(monster.plannedRoom) : "原地停顿";
+        const seconds = Number.isFinite(monster.nextMove) ? Math.max(0, Math.ceil((monster.nextMove - now) / 1000)) : 0;
+        return `${next}（${seconds}s 后）`;
     }
 
     function formatActiveLures(now = performance.now()) {
@@ -1548,6 +1652,7 @@
         if (action === "win") return win();
         if (action === "jumpscare" || action === "sludge-jumpscare") return fail("DM 测试污泥跳杀。", "sludge");
         if (action === "plant-jumpscare") return fail("DM 测试植物跳杀。", "plant");
+        if (action === "pipe-jumpscare") return fail("DM 测试管中胎音跳杀。", "pipe");
         if (action === "collapse") return fail("DM 测试精神崩溃。", "collapse");
         if (action === "psi-plus") state.psi = clamp(state.psi + 10, 0, 100);
         if (action === "psi-minus") state.psi = clamp(state.psi - 10, 0, 100);
@@ -1569,6 +1674,7 @@
         }
         if (action === "spawn") spawnMonster();
         if (action === "spawn-mirror") spawnMirrorGuest();
+        if (action === "spawn-pipe") spawnPipeFetus();
         if (action === "replan") replanMonsters();
         renderMap();
         renderHud();
@@ -1597,6 +1703,12 @@
         return monster;
     }
 
+    function spawnPipeFetus() {
+        const monster = createPipeFetus(PIPE_SPAWN_ROOM);
+        state.monsters.push(monster);
+        return monster;
+    }
+
     function createSludge(room, spawnRoom = room) {
         const monster = {
             id: `sludge-${++state.monsterSeed}`,
@@ -1606,7 +1718,7 @@
             shockResist: 0,
             spawnRoom,
             room,
-            nextMove: performance.now() + 30000 + Math.random() * 14000
+            nextMove: performance.now() + getMoveDelay({ kind: "sludge" })
         };
         planMonster(monster);
         return monster;
@@ -1630,11 +1742,31 @@
         return monster;
     }
 
+    function createPipeFetus(room) {
+        const monster = {
+            id: `pipe-${++state.monsterSeed}`,
+            kind: "pipe",
+            type: "管中胎音",
+            lureResist: 0,
+            shockResist: 0,
+            spawnRoom: room,
+            room,
+            nextMove: performance.now() + getMoveDelay({ kind: "pipe" }),
+            attackAt: 0,
+            pausedUntil: 0
+        };
+        planMonster(monster);
+        return monster;
+    }
+
     function getMoveDelay(monster) {
         if (monster.kind === "mirror") {
             return Math.max(MIRROR_MOVE_FLOOR, (27 - 3 * state.night) * 1000);
         }
-        return MONSTER_MOVE_MIN + Math.random() * MONSTER_MOVE_SPREAD;
+        if (monster.kind === "pipe") {
+            return Math.max(PIPE_MOVE_FLOOR, (31 - 2 * state.night) * 1000);
+        }
+        return Math.max(SLUDGE_MOVE_FLOOR, (27 - state.night) * 1000);
     }
 
     function pickMirrorFakeRooms(realRoom) {
@@ -1672,8 +1804,8 @@
         const spawn = monster.spawnRoom || monster.room;
         const first = createSludge(spawn, spawn);
         const second = createSludge(spawn, spawn);
-        first.nextMove = performance.now() + 22000 + Math.random() * 9000;
-        second.nextMove = performance.now() + 32000 + Math.random() * 12000;
+        first.nextMove = performance.now() + getMoveDelay(first);
+        second.nextMove = performance.now() + getMoveDelay(second);
         planMonster(first);
         planMonster(second);
         return [first, second];
@@ -1714,6 +1846,38 @@
         };
     }
 
+    function choosePipeStep(from) {
+        if (from === PIPE_ATTACK_ROOM) return { next: null, weights: [], reason: "抵达卧室墙缝" };
+        const choices = rooms[from].links
+            .filter(id => rooms[id] && rooms[id].floor === "V" && !state.lockedUntil.has(id));
+        if (!choices.length) return { next: null, weights: [], reason: "管道出口被封死" };
+
+        const weighted = choices.map(id => {
+            const distance = distanceBetween(id, PIPE_ATTACK_ROOM);
+            const bias = Math.pow(0.76, distance);
+            const jitter = 0.75 + Math.random() * 0.75;
+            return { id, weight: Math.max(0.08, bias * jitter) };
+        });
+        weighted.push({ id: from, weight: 0.24 });
+
+        const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+        let roll = Math.random() * total;
+        for (const item of weighted) {
+            roll -= item.weight;
+            if (roll <= 0) return {
+                next: item.id === from ? null : item.id,
+                weights: weighted,
+                reason: item.id === from ? "管壁内停顿" : `管道乱爬，偏向 ${PIPE_ATTACK_ROOM}`
+            };
+        }
+
+        return {
+            next: weighted[0].id === from ? null : weighted[0].id,
+            weights: weighted,
+            reason: "管道权重兜底"
+        };
+    }
+
     function planMonster(monster) {
         if (monster.lureLockedRoom) {
             monster.plannedTarget = monster.lureLockedRoom;
@@ -1725,6 +1889,16 @@
         }
 
         if (applyActiveLure(monster)) return;
+
+        if (monster.kind === "pipe") {
+            const plan = choosePipeStep(monster.room);
+            monster.plannedTarget = PIPE_ATTACK_ROOM;
+            monster.plannedRoom = plan.next;
+            monster.plannedWeights = plan.weights;
+            monster.planReason = plan.reason;
+            monster.planAt = performance.now();
+            return;
+        }
 
         const target = PLAYER_ROOM;
         const plan = chooseNextStep(monster.room, target);
@@ -1762,6 +1936,7 @@
             .filter(([room, until]) =>
                 until > now &&
                 rooms[monster.room].links.includes(room) &&
+                (monster.kind !== "pipe" || rooms[room].floor === "V") &&
                 !state.lockedUntil.has(room)
             )
             .map(([room]) => room);
@@ -1833,6 +2008,7 @@
             state.psi -= cost;
             startAbilityCooldown("lock");
             state.lockedUntil.set(state.selectedRoom, performance.now() + 5000);
+            if (state.selectedRoom === PLAYER_ROOM) handleBedroomLockResponse();
             replanMonsters();
             addLog(`闭锁 ${state.selectedRoom}。`);
             playAudio(els.castSfx, 0.56);
@@ -1852,10 +2028,7 @@
                     resisted += 1;
                     return;
                 }
-                clearLureLock(monster);
-                monster.room = monster.spawnRoom || monster.room;
-                monster.nextMove = performance.now() + 26000 + Math.random() * 10000;
-                planMonster(monster);
+                repelMonster(monster);
                 repelled += 1;
             });
 
@@ -1868,6 +2041,7 @@
             startAbilityCooldown("anchor");
             state.reliableUntil = performance.now() + ANCHOR_RELIABLE_MS;
             let cleared = 0;
+            const pausedPipes = pausePipeMonsters();
             state.monsters.forEach(monster => {
                 if (monster.kind === "mirror" && !monster.fakeCleared) {
                     monster.fakeCleared = true;
@@ -1876,7 +2050,7 @@
                     cleared += 1;
                 }
             });
-            addLog(cleared ? "锚定完成。镜中客的假点消失了。" : "锚定完成。");
+            addLog(cleared || pausedPipes ? `锚定完成。${cleared ? "镜中客的假点消失了。" : ""}${pausedPipes ? `管中胎音暂停 ${Math.ceil(PIPE_ANCHOR_PAUSE_MS / 1000)} 秒。` : ""}` : "锚定完成。");
             playAudio(els.castSfx, 0.62);
         }
 
@@ -1959,7 +2133,7 @@
         realDots.forEach(monster => {
             const index = roomDotCounts.get(monster.room) || 0;
             roomDotCounts.set(monster.room, index + 1);
-            addDot(monster.kind === "mirror" ? "monster-dot mirror-dot" : "monster-dot sludge-dot", rooms[monster.room], index);
+            addDot(monsterDotClass(monster), rooms[monster.room], index);
             if (monster.kind === "mirror" && !monster.fakeCleared) {
                 monster.fakeRooms.forEach(roomId => {
                     if (!rooms[roomId] || rooms[roomId].floor !== state.floor) return;
@@ -1972,6 +2146,12 @@
         renderPlantDot();
         updateSelectedRoom();
         updateAbilityButtons();
+    }
+
+    function monsterDotClass(monster) {
+        if (monster.kind === "mirror") return "monster-dot mirror-dot";
+        if (monster.kind === "pipe") return "monster-dot pipe-dot";
+        return "monster-dot sludge-dot";
     }
 
     function addDot(className, point, index) {
@@ -2120,7 +2300,7 @@
         if (!state.active) return;
         state.active = false;
         els.failReason.textContent = reason;
-        els.fail.classList.remove("sludge", "plant", "collapse");
+        els.fail.classList.remove("sludge", "plant", "pipe", "collapse");
         els.fail.classList.add(kind);
         els.fail.classList.add("visible");
         if (kind !== "collapse") playAudio(els.jumpscareSfx, 0.9);
