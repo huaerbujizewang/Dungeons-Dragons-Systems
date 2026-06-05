@@ -838,6 +838,7 @@
         }
 
         await runCommand(type, line);
+        if (line.waitForClick || line.clickToContinue || line.manualAdvance) return;
         if (!activeChoice) renderNext();
     }
 
