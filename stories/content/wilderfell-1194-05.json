@@ -1,0 +1,761 @@
+{
+    "title": "?????",
+    "date": "DR1194 - 5月",
+    "typeSpeed": 24,
+    "autoDelay": 820,
+    "bg": "sighing_wilds_normal",
+    "assets": {
+        "sighing_wilds_normal": "assets/stories/wilderfell-1194-05/backgrounds/bg_sighing_wilds_normal.png",
+        "dark_red_fire_sea": "assets/stories/wilderfell-1194-05/backgrounds/bg_dark_red_fire_sea.png",
+        "divine_fire_beam": "assets/stories/wilderfell-1194-05/backgrounds/bg_divine_fire_beam.png",
+        "isabella_picks_dirt": "assets/stories/wilderfell-1194-05/backgrounds/bg_isabella_picks_dirt.png",
+        "isabella_ready_throw": "assets/stories/wilderfell-1194-05/backgrounds/bg_isabella_ready_throw.png",
+        "isabella_dirt_released": "assets/stories/wilderfell-1194-05/backgrounds/bg_isabella_dirt_released.png",
+        "isabella_throws_dirt": "assets/stories/wilderfell-1194-05/backgrounds/bg_isabella_throws_dirt.png",
+        "wilderfell_avatar_calm": "assets/stories/wilderfell-1194-05/characters/wilderfell_avatar_calm.png",
+        "wilderfell_avatar_smirk": "assets/stories/wilderfell-1194-05/characters/wilderfell_avatar_smirk.png",
+        "wilderfell_avatar_shocked": "assets/stories/wilderfell-1194-05/characters/wilderfell_avatar_shocked.png",
+        "wilderfell_avatar_wounded": "assets/stories/wilderfell-1194-05/characters/wilderfell_avatar_wounded.png",
+        "wilderfell_avatar_desperate": "assets/stories/wilderfell-1194-05/characters/wilderfell_avatar_desperate.png",
+        "wilderfell_avatar_broken": "assets/stories/wilderfell-1194-05/characters/wilderfell_avatar_broken.png",
+        "isabella_avatar_calm": "assets/stories/wilderfell-1194-05/characters/isabella_avatar_calm.png",
+        "isabella_avatar_disappointed": "assets/stories/wilderfell-1194-05/characters/isabella_avatar_disappointed.png",
+        "isabella_avatar_mocking": "assets/stories/wilderfell-1194-05/characters/isabella_avatar_mocking.png",
+        "isabella_avatar_violent": "assets/stories/wilderfell-1194-05/characters/isabella_avatar_violent.png",
+        "isabella_avatar_annoyed": "assets/stories/wilderfell-1194-05/characters/isabella_avatar_annoyed.png"
+    },
+    "characters": {
+        "wilderfell": {
+            "name": "威尔德菲尔",
+            "sprites": {
+                "calm": "wilderfell_avatar_calm",
+                "smirk": "wilderfell_avatar_smirk",
+                "shocked": "wilderfell_avatar_shocked",
+                "wounded": "wilderfell_avatar_wounded",
+                "desperate": "wilderfell_avatar_desperate",
+                "broken": "wilderfell_avatar_broken"
+            }
+        },
+        "isabella": {
+            "name": "?????????",
+            "sprites": {
+                "calm": "isabella_avatar_calm",
+                "disappointed": "isabella_avatar_disappointed",
+                "mocking": "isabella_avatar_mocking",
+                "violent": "isabella_avatar_violent",
+                "annoyed": "isabella_avatar_annoyed"
+            }
+        }
+    },
+    "script": [
+        {
+            "type": "scene",
+            "bg": "sighing_wilds_normal",
+            "duration": 0
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "帝国历792年，秋。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "帝都白城以西，一百四十公里外的叹息荒野。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔站在一处隆起的岩脊上，考究的黑色西装在狂风中纹丝不动。他推了推鼻梁上的单片眼镜。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "在他的指尖，一缕暗红色的火苗正在安静地燃烧。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "站在他前方不到三十步距离的，是伊莎贝拉·洛萨维亚。帝国的最高统治穿着一套极其贴身的军服。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她有着一头象征着帝国纯正皇室血统的翠绿色长发，被一根简单的发带束在脑后。她甚至没有佩戴任何武器。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "calm",
+            "text": "在这个距离上停下，是出于对知识的尊重，还是出于对未知力量的警惕？"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "calm",
+            "text": "陛下，您比我计算的到达时间，晚了四分二十二秒。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "calm",
+            "text": "晚到是因为我刚才顺路去处理了一下你的那些小同志。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "calm",
+            "text": "我把他们全数收押了。出于骑士精神，我认为在这种荒野里解决我们之间的分歧，不会波及到无辜的平民。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "smirk",
+            "text": "分歧？不，陛下，这是历史的必然。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "smirk",
+            "text": "您建立的帝国，其底层逻辑已经僵化。阶级的固化、资源的垄断，这些都不是靠您那至高无上的武力就能压制的。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "smirk",
+            "text": "我所资助的革命，是将帝国的权力结构重新洗牌的唯一方程。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "伊莎贝拉那双绿色的眼眸里闪过一丝毫不掩饰的失望。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "disappointed",
+            "text": "博士，我本以为你那颗聪明的大脑能提出什么惊世骇俗的理论。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "disappointed",
+            "text": "你所谓的革命，不过是一群掌握了初步资本的野心家，试图从旧贵族手里抢夺生产资料的把戏罢了。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "disappointed",
+            "text": "这是一场彻头彻尾的资产阶级革命。你把权力从皇室和军务部的手里夺过来，交给那些满身铜臭味的工厂主和投机者……然后呢？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔的眼神微微一凝。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "smirk",
+            "text": "权力的更迭是文明进化的阵痛。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "周围空气的温度开始以一种恐怖的速度指数级飙升。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "smirk",
+            "text": "只要能将您这尊挡在时代前方的神明推翻，哪怕是由资本接手，也比这种一眼望到头的一潭死水要强。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "calm",
+            "text": "这就是学者最大的傲慢——只管推翻，不管建设。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "calm",
+            "text": "让我看看，你所谓的能烧穿神格的火焰，到底有多亮。"
+        },
+        {
+            "type": "bg",
+            "src": "dark_red_fire_sea",
+            "duration": 360
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 360
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "话音落下的瞬间，威尔德菲尔身后的空间彻底崩塌了。没有吟唱，没有手势。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "以他为中心，方圆数百米的荒野瞬间被一片黑红色的火海吞没。这是概念上的“焚毁”。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "空气、光线、甚至脚下岩石的分子结构，都在接触到这火焰的瞬间被强行剥夺了存在的意义。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "smirk",
+            "text": "结束了，旧时代的幻影。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔抬起右手，一团压缩到极致的炎能爆在掌心成型。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "这股力量，曾经在短短两秒内，将一头免疫一切高温的远古红龙烧成了漫天飞舞的碳粉。"
+        },
+        {
+            "type": "bg",
+            "src": "divine_fire_beam",
+            "duration": 220
+        },
+        {
+            "type": "flash",
+            "color": "red"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "轰——！一道直径超过十米的黑红色光柱贯穿了天地，带着连神明都能融化的恐怖高温，直逼伊莎贝拉的面门。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "伊莎贝拉没有动。她没有开启任何魔法屏障，也没有吟唱任何防御法术。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "她只是弯下腰，在脚边的戈壁滩上，随意地抓起了一把带着泥土的石头。"
+        },
+        {
+            "type": "bg",
+            "src": "isabella_picks_dirt",
+            "duration": 220
+        },
+        {
+            "type": "bg",
+            "src": "isabella_ready_throw",
+            "duration": 220
+        },
+        {
+            "type": "bg",
+            "src": "isabella_dirt_released",
+            "duration": 180
+        },
+        {
+            "type": "bg",
+            "src": "isabella_throws_dirt",
+            "duration": 240
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 260
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "面对足以摧毁城邦的毁灭光柱，女皇像驱赶苍蝇一样，随手将那把石头扬了出去。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "那把普普通通的石头，在脱离女皇手掌的瞬间，笔直地穿透了那道足以焚毁神格的光柱。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "shocked",
+            "text": "这不可能……"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔的瞳孔猛地收缩。他本能地想要发动“灰烬重组”，让肉体化为无形的火元素逃逸。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "但太迟了。"
+        },
+        {
+            "type": "bg",
+            "src": "sighing_wilds_normal",
+            "duration": 260
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 320
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "那些看起来轻飘飘的石头和泥土，无视了他所有的空间转移和元素化防御，毫无阻碍地砸在了他的身上。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "噗！噗！噗！没有巨大的爆炸声，只有极其沉闷的肉体被贯穿的声响。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔考究的西装瞬间多出了几十个透明的窟窿。碎石轻易地打碎了他的肋骨，贯穿了他的肺叶。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "甚至有一颗擦着他的脸颊飞过，将那枚精致的单片眼镜击得粉碎。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "wounded",
+            "text": "咳——哇！"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔仰面喷出一大口鲜血，身体像断了线的破布娃娃一样向后飞出，重重地砸在身后被烧成岩浆的焦土上。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "原本席卷荒野的黑红色火海，因为施法者的重创而瞬间萎靡。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "伊莎贝拉从被一分为二的火焰残迹中缓缓走出。她的军服上甚至没有沾染一丝烟火气。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "就这？"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "你的理论听起来像个划时代的先知，怎么打起来，软得像一块在温水里泡过的饼干？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔倒在岩浆里，剧痛让他几乎无法呼吸。他死死盯着缓步走来的女皇，染血的嘴唇微微颤抖着。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "wounded",
+            "text": "那……到底是什么魔法……"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "魔法？博士，你的脑子是被你自己的火烤熟了吗？"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "我哪有空去学那些花里胡哨的法术。刚才那把土，就只是路边的土而已。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "wounded",
+            "text": "只是……路边的土……"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "他试图用强大的精神力去修复被贯穿的内脏，但伤口处残留着某种无法解析的“静止感”，阻止了细胞的愈合。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "无法理解……对吧？"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "这就是你们这些所谓学者的通病。总以为掌握了几个复杂的公式，就能解析整个世界的运转逻辑。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "遇到超出认知的东西，大脑就直接宕机了。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "desperate",
+            "text": "狂妄……"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔猛地咬破舌尖，瞳孔瞬间被猩红的火焰填满。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "desperate",
+            "text": "原初点燃！"
+        },
+        {
+            "type": "flash",
+            "color": "red"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "他死死盯住近在咫尺的女皇。这是他防不胜防的杀招，直接让目标体内的血液和水分在瞬间沸腾至数万度。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "calm",
+            "text": "你是不是觉得我在配合你表演？"
+        },
+        {
+            "type": "bg",
+            "src": "sighing_wilds_normal",
+            "duration": 260
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 320
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "伊莎贝拉叹了口气，突然伸出手，一把攥住了威尔德菲尔西装的领口。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔试图化作灰烬散开，但女皇的手指像铁钳一样，硬生生抓住了他即将虚无化的实体。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "desperate",
+            "text": "超新星——"
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 260
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "砰！没等他把话说完，伊莎贝拉的左拳已经狠狠砸在了他的脸颊上。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "violent",
+            "text": "别躲啊，大专学者。"
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 360
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "又是一记沉闷的勾拳，狠狠砸在威尔德菲尔的胃部。博士猛地弓起身体，大口大口地呕吐出混杂着内脏碎片的鲜血。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "violent",
+            "text": "你不是要推翻旧世界吗？"
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 240
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "violent",
+            "text": "你的资产阶级方程式去哪了？"
+        },
+        {
+            "type": "effect",
+            "name": "dialogue-shake",
+            "duration": 240
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "右拳重重地砸在博士的左眼眶上，眉骨碎裂的清脆声在空旷的荒野上清晰可闻。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "violent",
+            "text": "算啊！继续算！"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "violent",
+            "text": "用你那能烧穿神格的火来烧我啊！怎么不烧了？是没魔力了吗？"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "broken",
+            "text": "呃啊——放开……"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "威尔德菲尔的双手死死抓住女皇的手腕，试图挣脱。但那只看似纤细的手腕却像被焊死在空间中的钢柱，纹丝不动。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "就这种程度，也敢在帝都搞串联？"
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 420
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "伊莎贝拉终于松开了攥着领口的手。就在威尔德菲尔以为折磨终于结束的瞬间，女皇的右腿如同鞭子一般自下而上扬起。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "轰！战术军靴狠狠踢在博士的下巴上。威尔德菲尔那残破不堪的躯体如同被全垒打击中的棒球，直接被踢上了数十米的高空。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "伊莎贝拉站在下方，仰头看着那个正在做自由落体的“大学者”，拍了拍手腕上的褶皱，清了清嗓子。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "热身运动结束，她准备开始她最喜欢的环节了。"
+        },
+        {
+            "type": "effect",
+            "name": "screen-shake",
+            "duration": 420
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "轰隆！威尔德菲尔重重地砸在几百米外的戈壁上，砸出一个巨大的深坑。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "他浑身的骨头断了七成，内脏大出血，魔力枯竭。如果不是那超出常理的体质，换作任何一个人类，现在都已经是一滩烂泥。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "怎么不说话了？"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "我还以为你资助那些革命党，是有什么了不起的后手。结果呢？你引以为傲的火焰，连给我点烟都不够格。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "你所谓的理论，不过是把书本上的名词东拼西凑，包装出来的精美垃圾。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "你看看你现在的样子。西装破得像个要饭的，单片眼镜也碎了。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "mocking",
+            "text": "你连“力量的本质是不讲道理”这个最基础的常识都不懂。你的那些魔法，就像是在巨龙面前炫耀数学题的三岁小孩……"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "女皇正骂得兴起，准备从他的穿搭品味一路批评到他的发型。坑底的威尔德菲尔猛地睁大了眼睛。"
+        },
+        {
+            "type": "say",
+            "speaker": "威尔德菲尔",
+            "character": "wilderfell",
+            "emotion": "broken",
+            "text": "就是现在……"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "这是他一生中唯一一次，没有为了造成杀伤、没有为了华丽的排场，而是将体内最后一丝压榨出来的本源魔力，全部灌注进了身下的岩层。"
+        },
+        {
+            "type": "flash",
+            "color": "black"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "一道极其微小、极其隐蔽的黑色空间裂缝在威尔德菲尔的身下瞬间裂开，这会通往一个完全未知的低维坐标。"
+        },
+        {
+            "type": "say",
+            "speaker": "?????????",
+            "character": "isabella",
+            "emotion": "annoyed",
+            "text": "……所以说，你们这些搞学术的反贼，就应该老老实实待在象牙塔里——嗯？"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "伊莎贝拉的话音戛然而止。她眼睁睁地看着坑底那个被打得半死不活的男人，像被抽水马桶吸走一样，瞬间跌入了那道黑色的裂缝中。"
+        },
+        {
+            "type": "say",
+            "speaker": "旁白",
+            "narration": true,
+            "text": "紧接着，裂缝迅速闭合，连一丝魔力残渣都没留下。"
+        }
+    ]
+}
