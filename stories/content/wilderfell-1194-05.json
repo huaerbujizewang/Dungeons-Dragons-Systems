@@ -1,5 +1,5 @@
 {
-    "title": "?????",
+    "title": "威尔德菲尔",
     "date": "DR1194 - 5月",
     "typeSpeed": 24,
     "autoDelay": 820,
@@ -37,7 +37,7 @@
             }
         },
         "isabella": {
-            "name": "?????????",
+            "name": "伊莎贝拉·洛萨维亚",
             "sprites": {
                 "calm": "isabella_avatar_calm",
                 "disappointed": "isabella_avatar_disappointed",
@@ -105,14 +105,14 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "calm",
             "text": "晚到是因为我刚才顺路去处理了一下你的那些小同志。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "calm",
             "text": "我把他们全数收押了。出于骑士精神，我认为在这种荒野里解决我们之间的分歧，不会波及到无辜的平民。"
@@ -146,21 +146,21 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "disappointed",
             "text": "博士，我本以为你那颗聪明的大脑能提出什么惊世骇俗的理论。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "disappointed",
             "text": "你所谓的革命，不过是一群掌握了初步资本的野心家，试图从旧贵族手里抢夺生产资料的把戏罢了。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "disappointed",
             "text": "这是一场彻头彻尾的资产阶级革命。你把权力从皇室和军务部的手里夺过来，交给那些满身铜臭味的工厂主和投机者……然后呢？"
@@ -193,14 +193,14 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "calm",
             "text": "这就是学者最大的傲慢——只管推翻，不管建设。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "calm",
             "text": "让我看看，你所谓的能烧穿神格的火焰，到底有多亮。"
@@ -277,7 +277,7 @@
             "type": "say",
             "speaker": "旁白",
             "narration": true,
-            "text": "她只是弯下腰，在脚边的戈壁滩上，随意地抓起了一把带着泥土的石头。"
+            "text": "她只是弯下腰，在脚边的戈壁滩上，随意地抓起了一块带着泥土的石头。"
         },
         {
             "type": "bg",
@@ -349,7 +349,7 @@
             "type": "say",
             "speaker": "旁白",
             "narration": true,
-            "text": "那些看起来轻飘飘的石头和泥土，无视了他所有的空间转移和元素化防御，毫无阻碍地砸在了他的身上。"
+            "text": "那块看起来轻飘飘的石头，无视了他所有的空间转移和元素化防御，毫无阻碍地砸在了他的身上。"
         },
         {
             "type": "say",
@@ -396,14 +396,14 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "就这？"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "你的理论听起来像个划时代的先知，怎么打起来，软得像一块在温水里泡过的饼干？"
@@ -423,24 +423,24 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "魔法？博士，你的脑子是被你自己的火烤熟了吗？"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
-            "text": "我哪有空去学那些花里胡哨的法术。刚才那把土，就只是路边的土而已。"
+            "text": "我哪有空去学那些花里胡哨的法术。刚才那颗石头，就只是路边的石头而已。"
         },
         {
             "type": "say",
             "speaker": "威尔德菲尔",
             "character": "wilderfell",
             "emotion": "wounded",
-            "text": "只是……路边的土……"
+            "text": "只是……路边的石头……"
         },
         {
             "type": "say",
@@ -450,21 +450,21 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "无法理解……对吧？"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "这就是你们这些所谓学者的通病。总以为掌握了几个复杂的公式，就能解析整个世界的运转逻辑。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "遇到超出认知的东西，大脑就直接宕机了。"
@@ -501,7 +501,7 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "calm",
             "text": "你是不是觉得我在配合你表演？"
@@ -548,7 +548,7 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "violent",
             "text": "别躲啊，大专学者。"
@@ -566,7 +566,7 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "violent",
             "text": "你不是要推翻旧世界吗？"
@@ -578,7 +578,7 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "violent",
             "text": "你的资产阶级方程式去哪了？"
@@ -596,14 +596,14 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "violent",
             "text": "算啊！继续算！"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "violent",
             "text": "用你那能烧穿神格的火来烧我啊！怎么不烧了？是没魔力了吗？"
@@ -623,7 +623,7 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "就这种程度，也敢在帝都搞串联？"
@@ -676,35 +676,35 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "怎么不说话了？"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "我还以为你资助那些革命党，是有什么了不起的后手。结果呢？你引以为傲的火焰，连给我点烟都不够格。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "你所谓的理论，不过是把书本上的名词东拼西凑，包装出来的精美垃圾。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "你看看你现在的样子。西装破得像个要饭的，单片眼镜也碎了。"
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "mocking",
             "text": "你连“力量的本质是不讲道理”这个最基础的常识都不懂。你的那些魔法，就像是在巨龙面前炫耀数学题的三岁小孩……"
@@ -740,7 +740,7 @@
         },
         {
             "type": "say",
-            "speaker": "?????????",
+            "speaker": "伊莎贝拉·洛萨维亚",
             "character": "isabella",
             "emotion": "annoyed",
             "text": "……所以说，你们这些搞学术的反贼，就应该老老实实待在象牙塔里——嗯？"
