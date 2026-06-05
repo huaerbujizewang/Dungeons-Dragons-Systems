@@ -282,22 +282,26 @@
         {
             "type": "bg",
             "src": "isabella_picks_dirt",
-            "duration": 220
+            "duration": 220,
+            "waitForClick": true
         },
         {
             "type": "bg",
             "src": "isabella_ready_throw",
-            "duration": 220
+            "duration": 220,
+            "waitForClick": true
         },
         {
             "type": "bg",
             "src": "isabella_dirt_released",
-            "duration": 180
+            "duration": 180,
+            "waitForClick": true
         },
         {
             "type": "bg",
             "src": "isabella_throws_dirt",
-            "duration": 240
+            "duration": 240,
+            "waitForClick": true
         },
         {
             "type": "effect",
