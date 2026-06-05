@@ -117,6 +117,47 @@
                 linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 48%, rgba(0, 0, 0, 0.7));
         }
 
+        #flashlight-layer {
+            --flashlight-x: 50%;
+            position: absolute;
+            inset: 0;
+            z-index: 18;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 34vw 48vh at var(--flashlight-x) 52%,
+                    rgba(255, 251, 221, 0.1) 0,
+                    rgba(255, 251, 221, 0.08) 18%,
+                    rgba(0, 0, 0, 0.26) 38%,
+                    rgba(0, 0, 0, 0.86) 72%,
+                    rgba(0, 0, 0, 0.96) 100%);
+            mix-blend-mode: normal;
+            transition: --flashlight-x 0.36s ease;
+        }
+
+        @property --flashlight-x {
+            syntax: "<percentage>";
+            inherits: true;
+            initial-value: 50%;
+        }
+
+        body.look-left #flashlight-layer { --flashlight-x: 20%; }
+        body.look-center #flashlight-layer { --flashlight-x: 50%; }
+        body.look-right #flashlight-layer { --flashlight-x: 80%; }
+
+        #flashlight-layer::after {
+            content: "";
+            position: absolute;
+            left: calc(var(--flashlight-x) - 13vw);
+            top: 27%;
+            width: 26vw;
+            height: 34vh;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle, rgba(255, 247, 188, 0.22), rgba(255, 247, 188, 0.08) 42%, transparent 70%);
+            filter: blur(8px);
+            transition: left 0.36s ease;
+        }
+
         #static-layer {
             position: absolute;
             inset: 0;
@@ -863,6 +904,7 @@
 <main id="game">
     <section id="room-view" aria-label="长女卧室">
         <div id="panorama"></div>
+        <div id="flashlight-layer"></div>
         <div id="room-vignette"></div>
         <div id="static-layer"></div>
     </section>
@@ -1852,29 +1894,23 @@
             .filter(id => rooms[id] && rooms[id].floor === "V" && !state.lockedUntil.has(id));
         if (!choices.length) return { next: null, weights: [], reason: "管道出口被封死" };
 
-        const weighted = choices.map(id => {
-            const distance = distanceBetween(id, PIPE_ATTACK_ROOM);
-            const bias = Math.pow(0.76, distance);
-            const jitter = 0.75 + Math.random() * 0.75;
-            return { id, weight: Math.max(0.08, bias * jitter) };
-        });
-        weighted.push({ id: from, weight: 0.24 });
+        const weighted = choices.map(id => ({ id, weight: 1 }));
 
         const total = weighted.reduce((sum, item) => sum + item.weight, 0);
         let roll = Math.random() * total;
         for (const item of weighted) {
             roll -= item.weight;
             if (roll <= 0) return {
-                next: item.id === from ? null : item.id,
+                next: item.id,
                 weights: weighted,
-                reason: item.id === from ? "管壁内停顿" : `管道乱爬，偏向 ${PIPE_ATTACK_ROOM}`
+                reason: "管道随机乱爬"
             };
         }
 
         return {
-            next: weighted[0].id === from ? null : weighted[0].id,
+            next: weighted[0].id,
             weights: weighted,
-            reason: "管道权重兜底"
+            reason: "管道随机兜底"
         };
     }
 
