@@ -124,11 +124,11 @@
             z-index: 18;
             pointer-events: none;
             background:
-                radial-gradient(ellipse 34vw 48vh at var(--flashlight-x) 52%,
-                    rgba(255, 251, 221, 0.1) 0,
-                    rgba(255, 251, 221, 0.08) 18%,
-                    rgba(0, 0, 0, 0.26) 38%,
-                    rgba(0, 0, 0, 0.86) 72%,
+                radial-gradient(ellipse 52vw 64vh at var(--flashlight-x) 52%,
+                    rgba(255, 251, 221, 0.12) 0,
+                    rgba(255, 251, 221, 0.08) 16%,
+                    rgba(0, 0, 0, 0.12) 34%,
+                    rgba(0, 0, 0, 0.74) 72%,
                     rgba(0, 0, 0, 0.96) 100%);
             mix-blend-mode: normal;
             transition: --flashlight-x 0.36s ease;
@@ -143,20 +143,6 @@
         body.look-left #flashlight-layer { --flashlight-x: 20%; }
         body.look-center #flashlight-layer { --flashlight-x: 50%; }
         body.look-right #flashlight-layer { --flashlight-x: 80%; }
-
-        #flashlight-layer::after {
-            content: "";
-            position: absolute;
-            left: calc(var(--flashlight-x) - 13vw);
-            top: 27%;
-            width: 26vw;
-            height: 34vh;
-            border-radius: 50%;
-            background:
-                radial-gradient(circle, rgba(255, 247, 188, 0.22), rgba(255, 247, 188, 0.08) 42%, transparent 70%);
-            filter: blur(8px);
-            transition: left 0.36s ease;
-        }
 
         #static-layer {
             position: absolute;
