@@ -1267,7 +1267,16 @@
         ];
 
         const state = {
-            current: { nodeId: "home", name: "首页", path: "首页", type: "目录", asset: "optional", children: archive }
+            current: {
+                nodeId: "home",
+                name: "首页",
+                path: "首页",
+                type: "目录",
+                asset: "optional",
+                children: archive,
+                image: "assets/helios/封面.png",
+                imageAspect: "1103 / 1426"
+            }
         };
 
         const tree = document.getElementById("tree");
@@ -1320,7 +1329,16 @@
 
         function selectNode(nodeId) {
             if (nodeId === "home") {
-                state.current = { nodeId, name: "首页", path: "首页", type: "目录", asset: "optional", children: archive };
+                state.current = {
+                    nodeId,
+                    name: "首页",
+                    path: "首页",
+                    type: "目录",
+                    asset: "optional",
+                    children: archive,
+                    image: "assets/helios/封面.png",
+                    imageAspect: "1103 / 1426"
+                };
             } else if (!nodeId.includes(":")) {
                 const section = archive.find(item => item.id === nodeId);
                 state.current = {
@@ -1572,7 +1590,7 @@
                 return;
             }
 
-            assetTitle.textContent = "可选图片";
+            assetTitle.textContent = state.current.nodeId === "home" ? "封面" : "可选图片";
             if (state.current.image) {
                 assetSlot.classList.add("has-image");
                 if (state.current.imageAspect) assetSlot.style.aspectRatio = state.current.imageAspect;
