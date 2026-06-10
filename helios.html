@@ -299,8 +299,33 @@
             border-radius: 8px;
             background:
                 linear-gradient(transparent 31px, rgba(222, 214, 200, 0.46) 32px),
-                var(--paper-soft);
+            var(--paper-soft);
             background-size: 100% 32px;
+        }
+
+        .intro-copy {
+            max-width: 820px;
+            color: #2f3844;
+            font-size: 17px;
+            line-height: 2;
+        }
+
+        .intro-copy p {
+            margin: 0 0 20px;
+        }
+
+        .intro-copy p:first-child {
+            color: var(--wine);
+            font-size: 20px;
+            font-weight: 900;
+        }
+
+        .intro-copy .fact-heading {
+            margin-top: 30px;
+            color: var(--ink);
+            font-size: 19px;
+            font-weight: 900;
+            line-height: 1.6;
         }
 
         .asset-panel {
@@ -457,9 +482,66 @@
     <script>
         const archive = [
             {
+                id: "intro",
+                name: "欢迎来到赫里奥斯",
+                type: "开头",
+                content: [
+                    "欢迎来到赫里奥斯",
+                    "在东蒂尔兰王国的王帐之中，一位年轻的继承人正等待黎明。诸侯的旗帜在城外连成海洋，教会的钟声尚未响起，刺客却已经穿过回廊。若她在天亮前倒下，一个王朝将被撕成数块；若她撑到日出，整个大陆的历史都将被迫记住她的名字。",
+                    "在大齐的古老关隘上，一队行商正护送着装满丝绸、药材与铜镜的车队穿过雾气。山神庙的灯火在雨中摇晃，守关的将军却认出了箱底暗藏的兵符。若他当场揭穿，边境诸国将在今夜开战；若他放车队过去，一场足以改写东方格局的叛乱便会在千里之外点燃。",
+                    "在普罗维登斯边境修道院里，一名圣武士跪在风雪中祈祷。她不知道神是否真的注视着自己，也从未听见过来自天上的声音。可是当亡者爬上墙垣、士兵们在绝望中后退时，她仍然拔剑向前；剑锋上亮起的光，既可能是神迹，也可能只是凡人不肯屈服的证明。",
+                    "赫里奥斯是一个年轻而广阔的世界。它没有古老的神祇，也没有被永恒的帝国。王国正在扩张，城市正在升起，航路正在被发现，新的民族、新的军队、新的信仰与新的野心一同登上历史舞台。",
+                    "在这里，神术真实存在，却不能证明神的面容；强者足以改变战场，却未必能改变时代；王冠、血统、誓言、商路与刀剑共同决定国家的命运。神学只能被定义，不能被解释；奇迹可以被目击，却无法被还原。一个人可以因信仰举起圣光，也可以因野心踏碎王座，而后世未必能分清哪一种力量更加危险。",
+                    "赫里奥斯拥抱英雄史诗，也容纳现实的阴影。这里有初生帝国的朝气，有边疆城市的喧嚣，有教堂穹顶下的祈祷，有宫廷长桌旁的背叛，也有战场泥泞中仍然闪耀的理想。它是一个正在奔跑、正在燃烧、正在决定自己将成为什么的世界。",
+                    "无论你追随王旗，守护圣坛，横渡未知海域，潜入敌国宫廷，还是只想在一个动荡年代为自己夺得一席之地，赫里奥斯都会回应你的选择。这里的未来尚未完成，而每一次冒险，都可能成为新世界最初的传说。"
+                ]
+            },
+            {
                 id: "consensus",
                 name: "世界共识",
-                children: ["基础地理", "时代说明", "战力坐标", "神学与神术", "种族总览", "年表总览"]
+                children: [
+                    {
+                        name: "你应该知道的五件事",
+                        content: [
+                            "你应该知道的五件事",
+                            "1. 这是一个战力体系克制而谨慎的世界",
+                            "蒂尔兰历 528 年，赫里奥斯并不是强者满地走的时代。",
+                            "普通人仍然脆弱，军队仍然重要，王权、城墙、粮食、骑兵、法师、神术者和贵族政治仍然决定大多数国家的命运。",
+                            "1-5 级的角色并不罕见，只要接受训练、经历战斗或拥有一定天赋，就有机会达到这个层次。但越往上，数量会迅速崩塌。",
+                            "一般来说：",
+                            "一千万个人类中，才可能出现一个 20 级角色。",
+                            "而在蒂尔兰历 528 年，全世界拥有 CR30 战力的各种存在，加起来不超过 100 个。",
+                            "这意味着，高端强者存在，但他们不是日常背景板。每一个真正顶级人物都足以被国家、教会、王室和史书认真记录。",
+                            "2. 神明不可知，神术真实存在",
+                            "赫里奥斯有宗教，也有神术。",
+                            "圣武士可以行神圣之击，牧师可以施展奇迹，虔诚者确实更容易成为神术者。但这并不意味着神明会显现、会说话、会下达命令，或像某个高位存在一样管理信徒。",
+                            "在赫里奥斯，神学只能被定义，不能被解释。",
+                            "神是否存在，无法证实。神是否有意志，无法证实。神术的力量究竟来自神、信仰、誓言、灵魂，还是某种无法命名的东西，同样无法证实。",
+                            "神术可以被看见，可以被使用，可以被传承。但它的源头不可测，不可还原，不可验证。",
+                            "3. 赫里奥斯是一颗年轻而广阔的星球",
+                            "赫里奥斯不是传统多元宇宙，也不是无数位面拼接出来的世界。",
+                            "它首先是一颗星球。它的表面积按地球尺度计算，世界辽阔，表面积与地球大致相同，海洋占比68%，陆地占比32%。",
+                            "蒂尔兰历 528 年的赫里奥斯仍然年轻，许多秩序还没有定型。王国正在扩张，边境仍在开拓，航路尚未完全固定，许多民族和国家还在寻找自己的位置。",
+                            "这是一个朝气蓬勃的时代。个人、家族、教会、军队和王朝仍然能以强烈的方式改变历史。",
+                            "4. 这个世界没有阵营",
+                            "赫里奥斯不使用阵营。",
+                            "没有“守序善良”“混乱邪恶”，也没有一种可以被法术直接读取的道德标签。",
+                            "一个人可以虔诚而残忍。一个国家可以文明而暴虐。一个圣武士可以行奇迹，也可以犯下错误。一个异端可以被教会诅咒，却仍然拯救一座城市。",
+                            "道德不是属性栏，而是行为、立场、利益、信仰和历史处境共同构成的结果。",
+                            "因此，赫里奥斯的冲突不会简单归结为善恶阵营的对抗。更多时候，它是王权与王权、信仰与信仰、秩序与野心、理想与现实之间的碰撞。",
+                            "5. 没有外层位面，天堂与地狱都在星球表面",
+                            "赫里奥斯没有传统意义上的外层位面。",
+                            "没有独立于物质世界之外的天堂、地狱、深渊或九狱。世界只剩下物质位面。",
+                            "但这不意味着天堂与地狱不存在。",
+                            "在赫里奥斯，所谓天堂与地狱，都位于星球表面。它们不是遥远位面，而是这个世界本身的一部分。"
+                        ]
+                    },
+                    "时代说明",
+                    "战力坐标",
+                    "神学与神术",
+                    "种族总览",
+                    "年表总览"
+                ]
             },
             {
                 id: "countries",
@@ -513,19 +595,26 @@
 
         function buildTree() {
             const homeButton = `<button class="tree-leaf active" data-node="home">首页</button>`;
-            const sections = archive.map(section => `
-                <div class="tree-section">
-                    <button class="tree-toggle" data-node="${section.id}">
-                        <span>${section.name}</span>
-                        <span class="toggle-mark">展开</span>
-                    </button>
-                    <div class="tree-children">
-                        ${section.children.map(child => `
-                            <button class="tree-leaf" data-node="${section.id}:${child}">${child}</button>
-                        `).join("")}
+            const sections = archive.map(section => {
+                const children = section.children || [];
+                if (!children.length) {
+                    return `<button class="tree-leaf" data-node="${section.id}">${section.name}</button>`;
+                }
+
+                return `
+                    <div class="tree-section">
+                        <button class="tree-toggle" data-node="${section.id}">
+                            <span>${section.name}</span>
+                            <span class="toggle-mark">展开</span>
+                        </button>
+                        <div class="tree-children">
+                            ${children.map(child => `
+                                <button class="tree-leaf" data-node="${section.id}:${childName(child)}">${childName(child)}</button>
+                            `).join("")}
+                        </div>
                     </div>
-                </div>
-            `).join("");
+                `;
+            }).join("");
 
             tree.innerHTML = homeButton + sections;
             tree.addEventListener("click", event => {
@@ -550,20 +639,23 @@
                     nodeId,
                     name: section.name,
                     path: `首页 / ${section.name}`,
-                    type: "分类",
+                    type: section.type || "分类",
                     asset: section.asset || "optional",
-                    children: section.children
+                    children: section.children || [],
+                    content: section.content || []
                 };
             } else {
-                const [sectionId, childName] = nodeId.split(":");
+                const [sectionId, childLabel] = nodeId.split(":");
                 const section = archive.find(item => item.id === sectionId);
+                const child = (section.children || []).find(item => childName(item) === childLabel);
                 state.current = {
                     nodeId,
-                    name: childName,
-                    path: `首页 / ${section.name} / ${childName}`,
+                    name: childName(child),
+                    path: `首页 / ${section.name} / ${childName(child)}`,
                     type: section.name,
                     asset: section.asset || "optional",
-                    children: []
+                    children: [],
+                    content: child && typeof child === "object" ? child.content || [] : []
                 };
             }
 
@@ -583,12 +675,18 @@
             panelType.className = `type-pill ${assetClass(state.current.asset)}`;
             workspace.classList.toggle("country-layout", state.current.asset === "country");
 
-            if (state.current.children.length) {
+            if (state.current.content && state.current.content.length) {
+                panelBody.innerHTML = `
+                    <div class="intro-copy">
+                        ${state.current.content.map(renderContentParagraph).join("")}
+                    </div>
+                `;
+            } else if (state.current.children.length) {
                 panelBody.innerHTML = `
                     <div class="section-grid">
                         ${state.current.children.map(name => `
                             <button class="section-card" data-target="${targetForChild(name)}">
-                                <div class="section-name">${name}</div>
+                                <div class="section-name">${childName(name)}</div>
                                 <div class="section-meta">未填充</div>
                             </button>
                         `).join("")}
@@ -603,11 +701,30 @@
 
         function targetForChild(name) {
             if (state.current.nodeId === "home") {
-                const section = archive.find(item => item.name === name);
+                const section = archive.find(item => item.name === childName(name));
                 return section ? section.id : "home";
             }
 
-            return `${state.current.nodeId}:${name}`;
+            return `${state.current.nodeId}:${childName(name)}`;
+        }
+
+        function childName(child) {
+            return typeof child === "object" ? child.name : child;
+        }
+
+        function renderContentParagraph(paragraph, index) {
+            const className = index > 0 && /^\d+\.\s/.test(paragraph) ? ' class="fact-heading"' : "";
+            return `<p${className}>${escapeHTML(paragraph)}</p>`;
+        }
+
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            }[char]));
         }
 
         function renderAssetSlot(assetType) {
