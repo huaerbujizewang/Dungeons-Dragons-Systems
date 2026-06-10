@@ -869,9 +869,41 @@
                             "528年的赫里奥斯没有强者满地走，高端战力必须谨慎使用。"
                         ]
                     },
-                    "神学与神术",
-                    "种族总览",
-                    "年表总览"
+                    {
+                        name: "神学与神术",
+                        content: [
+                            "神学与神术",
+                            "神术真实存在，但神明不可知。",
+                            "牧师可以施展奇迹，圣武士可以以誓言点燃剑锋，虔诚者也确实更容易成为神术者。信仰、戒律、祈祷、修会生活与神术能力之间存在明确关联；但这种关联无法证明神明本身的形态、意志或存在方式。",
+                            "赫里奥斯的神不会像凡人君主一样发布命令，也不会以可验证的方式与信徒交流。没有人能确认神是否拥有面容、声音、人格、情绪或明确意志。神术可以被目击，可以被使用，可以被传承，但其源头不可测、不可还原、不可证实，也不可证伪。",
+                            "因此，赫里奥斯的神学只能被定义，不能被解释。",
+                            "不同宗教可以定义自己的神：一神教可以宣称唯一神，多神教可以祭祀诸神，泛灵论可以承认万物有灵，无神论者也可以否认神明具有政治与真理上的权威。",
+                            "神职者不会因为某个高位存在“撤回授权”而失去神术。世界上不存在明确的人格神管理法术权限。一个神术者是否还能行奇迹，更多表现为信仰、誓言、修行、身份与个人状态的复杂结果；但这种结果同样无法被彻底解释。",
+                            "在赫里奥斯，神术是真实的，神是否存在则永远悬而未决。"
+                        ]
+                    },
+                    {
+                        name: "这会对游戏造成什么影响",
+                        content: [
+                            "这会对游戏造成什么影响",
+                            "赫里奥斯不使用传统DND的多位面结构、阵营系统与伟大轮环宇宙观。因此，在实际游戏中，需要做出以下规则调整。",
+                            "1. 位面转移法术不可用",
+                            "所有以“前往其他位面”为核心效果的法术、能力与道具均不可用。",
+                            "例如：位面转移、星界投射、异界传送、进入外层位面的相关能力。",
+                            "赫里奥斯只存在物质位面。",
+                            "2. 绑定阵营或改变阵营的效应不可用",
+                            "赫里奥斯没有阵营系统。",
+                            "因此，所有依赖阵营判断、改变阵营、侦测阵营或惩罚特定阵营的效果均不可用。",
+                            "角色不会拥有“守序善良”“混乱邪恶”等阵营标签，也不会因为法术、诅咒或物品效果改变阵营。",
+                            "3. 怪物图鉴中的阵营不可用",
+                            "怪物图鉴中写明的阵营不适用于赫里奥斯。",
+                            "怪物、种族、国家和个人的行为由文化、利益、处境、信仰、历史和个体选择决定，而不是由阵营栏决定。",
+                            "因此，不能因为某个怪物在原规则中标注为邪恶，就默认它在赫里奥斯必然邪恶。",
+                            "4. 伟大轮环结构不可用",
+                            "赫里奥斯不使用伟大轮环宇宙观。",
+                            "九狱、深渊、天堂山、机械境、混沌海等传统外层位面结构均不作为世界真实结构存在。"
+                        ]
+                    }
                 ]
             },
             {
@@ -940,7 +972,7 @@
         ];
 
         const state = {
-            current: { nodeId: "home", name: "首页", path: "首页", type: "目录", asset: "optional", children: archive.map(section => section.name) }
+            current: { nodeId: "home", name: "首页", path: "首页", type: "目录", asset: "optional", children: archive }
         };
 
         const tree = document.getElementById("tree");
@@ -993,7 +1025,7 @@
 
         function selectNode(nodeId) {
             if (nodeId === "home") {
-                state.current = { nodeId, name: "首页", path: "首页", type: "目录", asset: "optional", children: archive.map(section => section.name) };
+                state.current = { nodeId, name: "首页", path: "首页", type: "目录", asset: "optional", children: archive };
             } else if (!nodeId.includes(":")) {
                 const section = archive.find(item => item.id === nodeId);
                 state.current = {
@@ -1074,7 +1106,10 @@
         }
 
         function childMeta(child) {
-            return typeof child === "object" && child.content && child.content.length ? "已记录" : "未填充";
+            if (typeof child !== "object") return "未填充";
+            if (child.content && child.content.length) return "已记录";
+            if (child.children && child.children.length) return `含 ${child.children.length} 项`;
+            return "未填充";
         }
 
         function renderContentParagraph(paragraph, index) {
