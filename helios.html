@@ -424,6 +424,24 @@
             width: calc(100% - 40px);
         }
 
+        .asset-slot.has-image {
+            border-style: solid;
+            padding: 0;
+            overflow: hidden;
+            background: #0f1419;
+        }
+
+        .asset-slot img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .asset-slot.map img {
+            object-fit: contain;
+        }
+
         .asset-label {
             font-weight: 900;
             color: #344050;
@@ -772,6 +790,9 @@
             {
                 id: "consensus",
                 name: "世界共识",
+                asset: "country",
+                image: "assets/helios/countries/世界地图网站.png",
+                imageAspect: "4096 / 2355",
                 children: [
                     {
                         name: "你应该知道的五件事",
@@ -910,7 +931,282 @@
                 id: "countries",
                 name: "国家",
                 asset: "country",
-                children: ["国家A", "国家B", "国家C", "国家D"]
+                children: [
+                    {
+                        name: "温顿公国",
+                        image: "assets/helios/countries/温顿公国.png",
+                        imageAspect: "1997 / 1482",
+                        content: [
+                            "温顿公国",
+                            { type: "heading", level: 2, text: "概述" },
+                            "温顿公国位于奥斯坎大陆西北部，是由史莱姆族与软泥怪类智慧体建立的封闭国家。它的国土辽阔，生态复杂，政治结构与多数人形种族国家差异极大。温顿缺乏强烈对外扩张欲，长期保持自给自足、低外交频率和高度内部循环。",
+                            "外界通常认为温顿难以理解、难以征服、难以谈判。对史莱姆族而言，这种状态只是自然生活方式的延伸。",
+                            { type: "heading", level: 2, text: "基础信息" },
+                            {
+                                type: "table",
+                                headers: ["项目", "内容"],
+                                rows: [
+                                    ["国名", "温顿公国"],
+                                    ["首都", "碧透城"],
+                                    ["统治者", "“大大公”哔波"],
+                                    ["政体", "溶合公社体制"],
+                                    ["主要种族", "史莱姆族、软泥怪类智慧体"],
+                                    ["领土面积", "4,410,337 平方公里"]
+                                ]
+                            },
+                            { type: "heading", level: 2, text: "地理" },
+                            "温顿位于奥斯坎大陆西北角，横跨寒冷北境、温带森林、草原、山地与少量干旱地带。其大致范围为西经107°至72°、北纬51°至28°。",
+                            "温顿境内包含针叶林、草原、温带落叶阔叶林、高山河谷与西南侧的小型沙漠。北部寒冷，南部温暖，西南沙漠面积有限，源于局部地形与气候异常。",
+                            "境内最高山脉称为凝脊山脉，主峰常年积雪，最高海拔约5962米。主要河流称为碧流河，发源于凝脊山脉，先由南向北穿过山谷与森林，再折向东流，最终注入外海。",
+                            "复杂气候为史莱姆族提供了极丰富的生态位。不同湿度、温度、矿物、水质与植被环境，会孕育出不同质地、颜色、习性和社会功能的史莱姆公社。",
+                            { type: "heading", level: 2, text: "政治" },
+                            "温顿实行溶合公社体制。",
+                            "史莱姆族个体可以融合、分裂、重组，个体边界经常变化。家庭、户籍、继承、贵族血统等概念在温顿很难直接套用。一个公社可以被视为村镇、家族、议会、宗教共同体与生态群落的混合形态。",
+                            "温顿的最高统治者是“大大公”哔波。",
+                            "哔波是一个庞大的高阶融合体，拥有极高凝聚力，可以在必要时将多个公社意志临时整合为国家意志。平时，温顿的治理更依赖各地公社自行循环；遇到外敌、灾害、迁徙或重大环境变化时，哔波会进行全国性协调。",
+                            { type: "heading", level: 2, text: "社会" },
+                            "温顿社会以公社为基础。公民的生活围绕栖息环境、营养循环、矿物吸收、水源维护、记忆传递与群体稳定展开。",
+                            "史莱姆族对“个人”的理解较为弹性。一个今天负责谈判的史莱姆，明天可能分裂为数个意见不同的小团体；一个边境公社也可能在雨季融合成更大的集体意识。外族外交官常因此感到崩溃。",
+                            "温顿使用金币与银币，主要用于贸易、边境交换、雇佣外族工匠、购买稀有矿物与记录长期契约。",
+                            { type: "heading", level: 2, text: "经济" },
+                            "温顿经济以自给为主，依靠森林、草原、河流、矿物、水生资源和特殊黏液产物维持内部循环。",
+                            "主要产出包括：稀有胶质；药用黏液；净水软泥；矿物溶剂；特殊玻璃与凝胶材料；森林与草原副产品；少量金银、宝石与山地矿产。",
+                            "温顿对大规模商业兴趣有限，但并不拒绝交易。外商可以在碧透城和少数边境交换点使用金币、银币完成贸易。真正困难的是理解温顿的谈判对象、交货周期和责任归属。",
+                            { type: "heading", level: 2, text: "军事" },
+                            "温顿缺少传统意义上的贵族骑士、封臣军和人形步兵体系。它的防御建立在地形、生态、融合体、腐蚀能力与再生能力之上。",
+                            "温顿军力特点包括：难以斩首；难以占领；难以通过饥荒摧毁；对毒素、疾病和常规士气战抗性极高；在湿地、森林、河谷和地下环境中极难对付；可以通过融合形成临时高阶战斗体。",
+                            "虫族从不主动进攻温顿。史莱姆族缺乏传统可食人口，领土占领成本很高，湿润复杂地形也不利于常规侵略。对多数敌人而言，温顿是一个收益低、代价高、战后治理困难的目标。",
+                            { type: "heading", level: 2, text: "外交" },
+                            "温顿外交频率低，态度平和而迟钝。它对领土扩张、王朝婚姻、边境荣誉和宫廷礼仪兴趣有限，更重视内部稳定、栖息环境和生态循环。",
+                            "温顿不喜欢被迫卷入外部战争，但会认真回应污染水源、破坏栖息地、猎杀智慧软泥体、盗取史莱姆样本等行为。",
+                            { type: "heading", level: 2, text: "当前局势" },
+                            "温顿公国总体封闭稳定。它远离大陆核心战争，内部生态良好，公社循环顺畅。外部国家很难判断温顿的真实人口、军力和政治意志，也很少有人愿意深入干涉这个史莱姆国家的内部事务。"
+                        ]
+                    },
+                    {
+                        name: "黄金王国",
+                        image: "assets/helios/countries/黄金王国.png",
+                        imageAspect: "1099 / 1472",
+                        markdown: String.raw`
+# 黄金王国
+
+## 概述
+
+黄金王国是奥斯坎西部的大型强国，首府为阿卡迪亚。它拥有漫长海岸线、大片内陆、南部港湾与富庶河谷，领土面积为 **5,754,861 平方公里**，人口约为1.3亿。
+黄金王国位于奥斯坎大陆西侧，拥有温带森林、草原、山地，亚热带森林，雨林与干旱地带。其大致范围为西经110°至76°、北纬30°至南纬13°。
+外界常称黄金王国为“金色少女之国”。这个称呼来自哥伦比亚人的外貌特征：金发、精致、年轻感强，公共视觉上高度女性化。外族常将黄金王国想象成纤弱、华丽、宫廷化的国家；实际上的黄金王国拥有成熟行政、强大军队、稳定治安、优良城市建设和强烈区域霸权意识。
+
+## 基础信息
+
+| 项目 | 内容 |
+| ---- | ---- |
+| 国号 | 黄金王国 |
+| 外称 | 金色少女之国 |
+| 首府 | 阿卡迪亚 |
+| 君主 | 哥伦比娅三世 |
+| 主体民族 | 哥伦比亚人 |
+| 政治形态 | 封建君主制 |
+| 继承原则 | 女性优先继承 |
+| 核心制度 | 金衣律、封臣契约、剑咏法师团 |
+| 领土面积 | 5,754,861 平方公里 |
+
+## 哥伦比亚人与社会底色
+
+哥伦比亚人由自称的神明遗骸与特殊魔力环境影响形成。所有哥伦比亚人拥有金发、浅蓝色眼瞳、细腻五官和偏柔美的体态。哥伦比亚人的公共外貌高度趋同，外族经常误判其性别，也常将整个国家浪漫化、异域化。
+
+哥伦比亚社会依靠一套细密的身份识别系统维持秩序。服饰、发型、佩饰、剑饰、纹章、鞋履、香料气味、礼仪姿态和魔力波动，都能传达身份信息。
+
+由于外貌趋同，阶级、家族、职业、婚姻状态和政治身份都需要外部符号确认。于是，服装成为法律，礼仪成为行政，审美成为权力。
+
+## 王权结构
+
+黄金王国由哥伦比娅三世统治。王室采用女性优先继承原则，女性继承顺位通常高于同辈男性。男性王族依然拥有继承权、封地权、婚姻政治价值和军职资格。
+
+王室权力来源包括：
+
+* 王室直属领；
+* 王都财政；
+* 王室港口税；
+* 剑咏法师团核心番号；
+* 宫廷官僚系统；
+* 金衣律解释权；
+* 贵族册封与婚姻确认权；
+* 最高司法裁断权。
+
+黄金王国的王权属于“宫廷强、地方复杂”的类型。王令在王都、直属领、港口、军镇和主要城市执行很快；进入深层封地后，王令会遭遇地方贵族法、封臣誓约、家族特许状、旧婚约、旧税权和教会地产的层层解释。
+
+## 分封体系
+
+黄金王国的分封制度非常古老，许多封地可以追溯到王国早期扩张、海岸征服、山地平定和王族婚姻。
+
+常见领地类型包括：
+
+| 类型 | 说明 |
+| ---- | ---- |
+| 王室直属领 | 由王室官员治理，财政直接进入王库。王都、重要港口、部分矿区和剑咏军校多属此类。 |
+| 大贵族封土 | 由红衣大贵族统治，拥有地方司法、征税、家兵、城堡与附庸骑士。 |
+| 王族采邑 | 授予王族旁支，用于安置未继承王位的王女、王子和王室寡居成员。 |
+| 骑士领 | 面积较小，通常承担军事义务，可能直属王室，也可能直属大贵族。 |
+| 自治城市 | 拥有商税特许、城墙自卫权和市议会，向王室或地方贵族缴纳固定贡金。 |
+| 特许商会区 | 由大型商会经营港口、仓储、造船、纺织或奢侈品贸易，法律地位复杂。 |
+| 教会与圣遗地产 | 负责神遗崇拜、王族血统礼仪、婚姻登记、服饰圣化和公共救济。 |
+
+封臣关系混乱是黄金王国改革长期受阻的主因。一个小贵族可能在军事上向大公效忠，在司法上接受王室法院审判，在税务上向自治城市借款，在婚姻上受另一家族契约约束。王室改革税制、兵制、道路法时，经常会牵动大量古老誓约。
+
+## 金衣律
+
+金衣律是黄金王国最具代表性的法律。它规定不同阶层、血统、职务、婚姻状态、军功和司法身份应当使用的服色、材质、纹样、鞋履、发饰、剑饰与外套形制。
+
+金衣律既维持身份秩序，也约束所有阶层。皇室成员必须穿金，大贵族必须穿红，官僚穿白，商人穿蓝，军官使用规定式样。王室成员在正式场合穿错，同样会被处罚。金衣律高于个人喜好，也高于临时政治需要。
+
+| 服色 | 对应身份 |
+| ---- | ---- |
+| 金 | 王族与神血直系。 |
+| 红 | 大贵族与封土血权。 |
+| 紫 | 王族旁支、高等宫廷成员、中小贵族高阶者。 |
+| 白 | 王室官僚、法官、书记官、礼法官。 |
+| 蓝 | 商人、金融行会、海贸特许者。 |
+| 黑 | 军官、禁卫、战斗单位。 |
+| 绿、青、土黄、灰 | 自由民、手工业者、农户、仆役。 |
+
+主要重罪包括僭金、伪红、乱纹、遮籍、污白和误礼。相关案件常牵连裁缝、染坊、证人和材料提供者。黄金王国的裁缝行业受到官方监管，宫廷裁缝拥有接近官员的地位。
+
+## 服装文化
+
+黄金王国的服装设计位居奥斯坎大陆前列，在女装领域尤其强势。
+
+常见元素包括丝袜、长靴、高筒礼靴、细腰礼服、短披肩、金属腰封、剑带与裙装结合、不对称外套、宫廷手套、轻薄披纱、纹章发饰和便于佩剑的女式骑装。
+
+黄金王国服装具有高度制度化、仪式化和身份化特征。裙摆长度、靴筒高度、丝袜纹样、袖口金线、披肩角度和剑带位置都能传达身份。
+
+服装产业是黄金王国重要出口产业。王都、南部港口和贵族城市拥有大量织坊、染坊、靴匠、刺绣工坊、珠宝匠和法术纤维师。黄金王国服装在外大陆被视为奢侈品，也被贵族阶层大量模仿。
+
+## 城市规划
+
+黄金王国城市极其漂亮，规划讲究轴线、广场、喷泉、花园、彩色石材、宫廷街区、商业廊道与服饰展示空间。
+
+常见城市分区包括：
+
+| 分区 | 功能 |
+| ---- | ---- |
+| 金轴区 | 王宫、王室法院、祭仪广场、王族纪念建筑。 |
+| 红环区 | 大贵族宅邸、纹章厅、骑士会馆、宫廷舞会建筑。 |
+| 白厅区 | 官僚机关、档案馆、税务所、法院、服饰登记所。 |
+| 蓝廊区 | 商会、交易所、银行、港口办事处、奢侈品市场。 |
+| 工坊区 | 纺织、染色、制靴、珠宝、剑饰、魔法材料加工。 |
+| 自由民城区 | 住宅、市场、小教堂、学校、公共浴场。 |
+
+黄金王国城市喜欢用宽街连接广场，让不同阶层在公共场合按照服色自然分流。许多城市广场在节日时会形成金、红、白、蓝、青等色块，被外族旅行者形容为“活着的纹章”。
+
+城市治安很好。街道照明、夜巡、服饰查验、行会保甲和剑咏巡逻共同构成城市秩序。王都夜间安全，礼法也很压抑。
+
+## 商业阶层
+
+黄金王国商人富有，主要集中在服装、港口、金融、染料、珠宝、法术材料和奢侈品行业。商人属于蓝衣阶层，可以拥有巨额财富、船队、工坊、银行和城市议席。许多商人通过借贷控制贵族财政，部分大商会已经能影响王室政策。
+
+商人主要追求：
+
+* 统一国内关税；
+* 简化通行许可；
+* 废除贵族私设桥税；
+* 保护工厂产权；
+* 扩大城市自治；
+* 建立全国商法法院；
+* 推动统一货币与度量衡。
+
+贵族对商人态度复杂。贵族需要商人的钱，也厌恶商人的上升。商人可以穿极其昂贵的蓝衣，依然不能触碰红衣贵族的服色与纹章。这种视觉羞辱长期积累了强烈不满。
+
+## 剑咏法师团
+
+剑咏法师团是黄金王国最重要的成建制魔法军。它们以剑为施法核心，通过剑势、咏唱、阵列和魔力共振发动法术。
+
+黄金王国常备剑咏法师团共有 **48个团**，每团 **2500人**。
+
+剑咏法师团起源于贵族剑术、王室礼仪和军用咏唱法。许多团拥有古老番号，王室直属团地位最高，贵族封地团传统最重，边境机动团实战经验最丰富。
+
+## 军队结构
+
+黄金王国军队由四类力量构成。
+
+| 类型 | 说明 |
+| ---- | ---- |
+| 王室军 | 由王室财政供养，包括禁卫、剑咏直属团、王家骑兵、港口守备和首都卫戍军。忠诚度高，装备精良。 |
+| 贵族军 | 大贵族根据封臣义务出兵，包括骑士、家兵、地方弩手、附庸剑咏队和城堡守军。战斗力差距很大。 |
+| 自由军 | 由自治城市和商会维持，负责城墙、仓库、港口和商路护卫。富裕商会能雇佣高阶施法者和魔法弩兵。 |
+| 边境军 | 负责荒野、山口、边境森林和邪教高发区。纪律严厉，实战经验丰富，经常和冒险者、佣兵、地方猎团合作。 |
+
+## 宫廷政治
+
+王国宫廷华丽、细密、危险。服饰礼仪决定政治距离，宴会座次决定派系强弱。
+
+主要派系包括：
+
+| 派系 | 组成 | 主张 |
+| ---- | ---- | ---- |
+| 金宫派 | 王室近臣、直属官僚、王室军、部分改革派贵族 | 强化王权，推动税制、军制和工业改革。 |
+| 红衣派 | 大贵族集团 | 维护封地权、家族法庭、私兵权和传统礼仪。 |
+| 蓝廊派 | 大商会、金融家、港口城市、市民精英 | 统一市场、降低贵族关卡、扩大城市自治。 |
+| 白厅派 | 官僚、法官、礼法官、财政书记 | 法律统一和行政效率。 |
+| 剑庭派 | 剑咏法师团军官、军校贵族、边境将领 | 军制现代化、邪教清剿、边境安全和法术军备。 |
+
+## 法律与司法
+
+黄金王国拥有多层法律体系：
+
+| 法律类型 | 适用范围 |
+| ---- | ---- |
+| 王室法 | 王室直属领、国家重罪、外交、军队和最高司法。 |
+| 贵族法 | 封地继承、家族纠纷、封臣义务和荣誉审判。 |
+| 城市法 | 自治城市、市民、商会、工坊、契约和港口贸易。 |
+| 金衣律 | 贯穿所有阶层，拥有极高象征权威。 |
+| 教会与圣遗法 | 婚姻、血统、王族祭仪、丧葬、神遗崇拜和誓言。 |
+
+法律多层叠加导致司法繁琐。一件土地纠纷可能同时涉及王室法、贵族法、婚姻法、纹章权和服饰权。黄金王国律师、礼法官和谱系学家地位很高，收入丰厚。
+
+## 宗教与神遗观念
+
+黄金王国的宗教围绕神明遗骸、王族血统、金色审美和秩序礼仪展开。其主神为**哥伦比娅**。王族被视为神遗影响最强的一支，女性优先继承也被解释为神遗回响在女性血脉中更加稳定。
+
+主要宗教机构负责：
+
+* 王室加冕；
+* 血统确认；
+* 婚姻登记；
+* 服饰圣化；
+* 葬礼礼色；
+* 神遗节庆；
+* 对邪教污染的鉴别。
+
+宗教与服装联系很深。某些礼服需要经过教会祝圣，王室金衣更被视作半圣物。乱穿衣服既是法律问题，也是宗教问题。
+
+## 外交
+
+### 与威斯特丽亚帝国
+
+黄金王国与威斯特丽亚帝国关系友好，属于西部旧秩序强权互相承认。黄金王国欣赏威斯特丽亚骑士传统，威斯特丽亚尊重黄金王国的财富、剑咏法师团和王室礼法。
+
+双方贸易密切。黄金王国出口奢侈服饰、丝袜、长靴、细剑、织物、珠宝、法术材料和剑咏顾问；威斯特丽亚出口矿石、重甲、战马、骑士教官和军用金属。
+
+### 与周边小国
+
+黄金王国对周边小国常用债务控制、商会渗透、边境驻军和文化影响。它的扩张节奏通常很优雅，结果相当现实。
+
+### 与失控地区
+
+对邪教、叛乱和边境混乱地区，黄金王国会派遣剑咏团、边境军和特许冒险者清剿。王国很重视边境治安，因为混乱会影响贸易、服装产业材料来源和贵族庄园安全。
+
+## 当前局势
+
+黄金王国强盛、富庶、华丽，也深陷旧制度与新经济之间的拉扯。
+
+王室足够强大，贵族体系同样根深蒂固。商人和工坊正在推动国家走向更高效率，封臣契约和金衣律仍然牢牢束缚改革。剑咏法师团让黄金王国拥有强大战争能力，复杂分封体系又削弱了长期统一指挥。
+
+黄金王国已经站在新时代门口，但它每向前一步，都必须踩过旧礼法、旧纹章和旧誓约铺成的地面。
+`
+                    },
+                    "国家C",
+                    "国家D"
+                ]
             },
             {
                 id: "religion",
@@ -1035,7 +1331,10 @@
                     type: section.type || "分类",
                     asset: section.asset || "optional",
                     children: section.children || [],
-                    content: section.content || []
+                    content: section.content || [],
+                    image: section.image || "",
+                    imageAspect: section.imageAspect || "",
+                    markdown: section.markdown || ""
                 };
             } else {
                 const [sectionId, childLabel] = nodeId.split(":");
@@ -1048,7 +1347,10 @@
                     type: section.name,
                     asset: section.asset || "optional",
                     children: [],
-                    content: child && typeof child === "object" ? child.content || [] : []
+                    content: child && typeof child === "object" ? child.content || [] : [],
+                    image: child && typeof child === "object" ? child.image || "" : "",
+                    imageAspect: child && typeof child === "object" ? child.imageAspect || "" : "",
+                    markdown: child && typeof child === "object" ? child.markdown || "" : ""
                 };
             }
 
@@ -1068,7 +1370,9 @@
             panelType.className = `type-pill ${assetClass(state.current.asset)}`;
             workspace.classList.toggle("country-layout", state.current.asset === "country");
 
-            if (state.current.content && state.current.content.length) {
+            if (state.current.markdown) {
+                panelBody.innerHTML = `<div class="intro-copy">${renderMarkdown(state.current.markdown)}</div>`;
+            } else if (state.current.content && state.current.content.length) {
                 panelBody.innerHTML = `
                     <div class="intro-copy">
                         ${state.current.content.map(renderContentParagraph).join("")}
@@ -1108,8 +1412,85 @@
         function childMeta(child) {
             if (typeof child !== "object") return "未填充";
             if (child.content && child.content.length) return "已记录";
+            if (child.markdown) return "已记录";
             if (child.children && child.children.length) return `含 ${child.children.length} 项`;
             return "未填充";
+        }
+
+        function renderMarkdown(markdown) {
+            const lines = markdown.trim().split(/\r?\n/);
+            const html = [];
+
+            for (let index = 0; index < lines.length; index += 1) {
+                const line = lines[index].trim();
+                if (!line || line === "---") continue;
+
+                if (line.startsWith("|")) {
+                    const tableLines = [];
+                    while (index < lines.length && lines[index].trim().startsWith("|")) {
+                        tableLines.push(lines[index].trim());
+                        index += 1;
+                    }
+                    index -= 1;
+                    html.push(renderMarkdownTable(tableLines));
+                    continue;
+                }
+
+                if (line.startsWith("* ")) {
+                    const items = [];
+                    while (index < lines.length && lines[index].trim().startsWith("* ")) {
+                        items.push(lines[index].trim().slice(2));
+                        index += 1;
+                    }
+                    index -= 1;
+                    html.push(`<ul>${items.map(item => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+                    continue;
+                }
+
+                if (line.startsWith("### ")) {
+                    html.push(`<div class="sub-heading">${renderInlineMarkdown(line.slice(4))}</div>`);
+                    continue;
+                }
+
+                if (line.startsWith("## ")) {
+                    html.push(`<div class="section-heading">${renderInlineMarkdown(line.slice(3))}</div>`);
+                    continue;
+                }
+
+                if (line.startsWith("# ")) {
+                    html.push(`<p>${renderInlineMarkdown(line.slice(2))}</p>`);
+                    continue;
+                }
+
+                html.push(`<p>${renderInlineMarkdown(line)}</p>`);
+            }
+
+            return html.join("");
+        }
+
+        function renderMarkdownTable(lines) {
+            const rows = lines
+                .filter(line => !/^\|\s*-/.test(line))
+                .map(line => line.split("|").slice(1, -1).map(cell => cell.trim()));
+
+            if (!rows.length) return "";
+            const headers = rows[0].map(header => `<th>${renderInlineMarkdown(header)}</th>`).join("");
+            const body = rows.slice(1).map(row => `
+                <tr>${row.map(cell => `<td>${renderInlineMarkdown(cell)}</td>`).join("")}</tr>
+            `).join("");
+
+            return `
+                <div class="content-table-wrap">
+                    <table class="content-table">
+                        <thead><tr>${headers}</tr></thead>
+                        <tbody>${body}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderInlineMarkdown(value) {
+            return escapeHTML(value).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
         }
 
         function renderContentParagraph(paragraph, index) {
@@ -1166,24 +1547,51 @@
 
         function renderAssetSlot(assetType) {
             assetSlot.className = `asset-slot ${assetClass(assetType)}`;
+            assetSlot.style.aspectRatio = "";
+            assetSlot.innerHTML = `
+                <div>
+                    <div class="asset-label" id="asset-label">图片位</div>
+                    <div class="asset-note" id="asset-note">留空</div>
+                </div>
+            `;
 
             if (assetType === "country") {
                 assetTitle.textContent = "地理图";
-                assetLabel.textContent = "国家地理图";
-                assetNote.textContent = "留空";
+                if (state.current.image) {
+                    assetSlot.classList.add("has-image");
+                    if (state.current.imageAspect) assetSlot.style.aspectRatio = state.current.imageAspect;
+                    assetSlot.innerHTML = `<img src="${escapeAttribute(state.current.image)}" alt="${escapeAttribute(state.current.name)}地理图">`;
+                } else {
+                    updateAssetText("国家地理图", "留空");
+                }
                 return;
             }
 
             if (assetType === "person" || assetType === "race") {
                 assetTitle.textContent = "头像";
-                assetLabel.textContent = assetType === "person" ? "人物头像" : "种族头像";
-                assetNote.textContent = "留空";
+                updateAssetText(assetType === "person" ? "人物头像" : "种族头像", "留空");
                 return;
             }
 
             assetTitle.textContent = "可选图片";
-            assetLabel.textContent = "图片位";
-            assetNote.textContent = "留空";
+            if (state.current.image) {
+                assetSlot.classList.add("has-image");
+                if (state.current.imageAspect) assetSlot.style.aspectRatio = state.current.imageAspect;
+                assetSlot.innerHTML = `<img src="${escapeAttribute(state.current.image)}" alt="${escapeAttribute(state.current.name)}图片">`;
+            } else {
+                updateAssetText("图片位", "留空");
+            }
+        }
+
+        function updateAssetText(label, note) {
+            const currentAssetLabel = assetSlot.querySelector(".asset-label");
+            const currentAssetNote = assetSlot.querySelector(".asset-note");
+            if (currentAssetLabel) currentAssetLabel.textContent = label;
+            if (currentAssetNote) currentAssetNote.textContent = note;
+        }
+
+        function escapeAttribute(value) {
+            return String(value).replace(/["'<>]/g, "");
         }
 
         function assetClass(assetType) {
