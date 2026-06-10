@@ -200,6 +200,14 @@
             order: -1;
         }
 
+        .workspace.home-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .workspace.home-layout .asset-panel {
+            display: none;
+        }
+
         .main-panel,
         .asset-panel {
             border: 1px solid var(--line);
@@ -260,6 +268,20 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 14px;
+        }
+
+        .home-cover {
+            width: min(640px, 100%);
+            margin: 0 auto 28px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #0f1419;
+        }
+
+        .home-cover img {
+            width: 100%;
+            display: block;
         }
 
         .section-card {
@@ -1386,6 +1408,7 @@
             panelType.textContent = state.current.type;
             panelType.className = `type-pill ${assetClass(state.current.asset)}`;
             workspace.classList.toggle("country-layout", state.current.asset === "country");
+            workspace.classList.toggle("home-layout", state.current.nodeId === "home");
 
             if (state.current.markdown) {
                 panelBody.innerHTML = `<div class="intro-copy">${renderMarkdown(state.current.markdown)}</div>`;
@@ -1397,6 +1420,7 @@
                 `;
             } else if (state.current.children.length) {
                 panelBody.innerHTML = `
+                    ${state.current.nodeId === "home" ? renderHomeCover() : ""}
                     <div class="section-grid">
                         ${state.current.children.map(name => `
                             <button class="section-card" data-target="${targetForChild(name)}">
@@ -1411,6 +1435,15 @@
             }
 
             renderAssetSlot(state.current.asset);
+        }
+
+        function renderHomeCover() {
+            if (!state.current.image) return "";
+            return `
+                <div class="home-cover">
+                    <img src="${escapeAttribute(state.current.image)}" alt="赫里奥斯封面">
+                </div>
+            `;
         }
 
         function targetForChild(name) {
