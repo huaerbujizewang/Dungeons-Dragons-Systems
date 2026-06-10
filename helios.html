@@ -534,14 +534,14 @@
 
     <script>
         const religionOverviewContent = [
-            "宗教总览",
+            "基本前提",
             "赫里奥斯的宗教并不建立在“神明现身说法”之上。神术真实存在，但神明不可知；宗教可以定义神，却不能解释神。",
             "因此，不同文明对神、世界、灵魂、秩序和死亡形成了各自的解释体系。它们既是信仰，也是法律、身份、共同体和国家合法性的来源。",
             { type: "heading", level: 2, text: "奥斯坎大陆宗教" },
             { type: "heading", level: 3, text: "1. 纳希德教" },
             "类型：一神教",
             "主神：拉赫曼",
-            "主要分布：奥斯坎大陆南部、西南部及沙漠商路地区",
+            "主要分布：奥斯坎大陆南部、西南部及苔原商路地区",
             "纳希德教是一种严格的一神教，主张世间只有唯一至高的神——拉赫曼。",
             "拉赫曼不可见、不可像、不可被凡人完全理解。信徒认为，世界由拉赫曼创造，人的一生是对信仰、纪律、仁慈与服从的考验。",
             "纳希德教禁止偶像崇拜，重视祈祷、斋戒、施舍、巡礼和经文学习。它在苔原、冻土、商路城市和边境公国中影响很深，尤其适合形成跨部族、跨城邦的共同体认同。",
@@ -557,7 +557,7 @@
             { type: "heading", level: 3, text: "3. 哥伦比娅信仰" },
             "类型：一神教",
             "主神：哥伦比娅",
-            "主要分布：黄金王国 / 哥伦比亚",
+            "主要分布：黄金王国",
             "黄金王国信奉唯一神哥伦比娅。",
             "在黄金王国传统中，哥伦比娅既是创造者，也是黄金、光、王权、民族命运与神圣美的象征。",
             "哥伦比娅接近一种被国家、族群与神学共同定义的至高神圣原则。黄金王国认为自身民族与哥伦比娅有特殊关系，因此哥伦比娅信仰天然带有强烈的国家性和族群性。",
@@ -694,6 +694,21 @@
             "城市理性派常常被保守教会视为危险的怀疑论者，也被阿拉贡拉斯无神论者认为不够彻底。"
         ];
 
+        function religionIntroContent() {
+            return religionOverviewContent.slice(0, 3);
+        }
+
+        function religionSectionContent(sectionTitle, nextSectionTitle) {
+            const start = religionOverviewContent.findIndex(item => item && item.type === "heading" && item.text === sectionTitle);
+            if (start < 0) return [];
+
+            const end = nextSectionTitle
+                ? religionOverviewContent.findIndex((item, index) => index > start && item && item.type === "heading" && item.text === nextSectionTitle)
+                : religionOverviewContent.length;
+
+            return religionOverviewContent.slice(start, end < 0 ? religionOverviewContent.length : end);
+        }
+
         const archive = [
             {
                 id: "intro",
@@ -826,8 +841,24 @@
                 name: "宗教",
                 children: [
                     {
-                        name: "宗教总览",
-                        content: religionOverviewContent
+                        name: "基本前提",
+                        content: religionIntroContent()
+                    },
+                    {
+                        name: "奥斯坎大陆宗教",
+                        content: religionSectionContent("奥斯坎大陆宗教", "盘古大陆宗教")
+                    },
+                    {
+                        name: "盘古大陆宗教",
+                        content: religionSectionContent("盘古大陆宗教", "环曦大陆宗教")
+                    },
+                    {
+                        name: "环曦大陆宗教",
+                        content: religionSectionContent("环曦大陆宗教", "其他区域宗教")
+                    },
+                    {
+                        name: "其他区域宗教",
+                        content: religionSectionContent("其他区域宗教")
                     }
                 ]
             },
