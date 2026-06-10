@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赫里奥斯</title>
+    <style>
+        :root {
+            --bg: #f4f1ea;
+            --paper: #fffdf8;
+            --paper-soft: #f8f5ed;
+            --ink: #1f2933;
+            --muted: #68717d;
+            --line: #ded6c8;
+            --line-strong: #bfae96;
+            --gold: #a36f2c;
+            --wine: #733a3a;
+            --teal: #2f6f67;
+            --shadow: 0 16px 40px rgba(31, 41, 51, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                linear-gradient(120deg, rgba(115, 58, 58, 0.08), transparent 34%),
+                linear-gradient(300deg, rgba(47, 111, 103, 0.1), transparent 38%),
+                var(--bg);
+            color: var(--ink);
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .page-shell {
+            width: min(1440px, calc(100% - 48px));
+            min-height: calc(100vh - 48px);
+            margin: 24px auto;
+            display: grid;
+            grid-template-columns: 304px minmax(0, 1fr);
+            border: 1px solid var(--line);
+            background: rgba(255, 253, 248, 0.82);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar {
+            border-right: 1px solid var(--line);
+            background: rgba(248, 245, 237, 0.92);
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 48px);
+        }
+
+        .brand {
+            padding: 24px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 22px;
+            color: var(--muted);
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--wine);
+        }
+
+        .brand-title {
+            margin: 0;
+            font-size: 30px;
+            line-height: 1.1;
+            letter-spacing: 0;
+        }
+
+        .brand-subtitle {
+            margin: 10px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .tree {
+            padding: 18px 14px 28px;
+            overflow-y: auto;
+        }
+
+        .tree-section {
+            margin-bottom: 8px;
+        }
+
+        .tree-toggle,
+        .tree-leaf {
+            width: 100%;
+            min-height: 38px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--ink);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 9px 10px;
+            font: inherit;
+            text-align: left;
+            letter-spacing: 0;
+        }
+
+        .tree-toggle {
+            font-weight: 800;
+        }
+
+        .tree-leaf {
+            color: #394553;
+            font-size: 14px;
+        }
+
+        .tree-toggle:hover,
+        .tree-leaf:hover {
+            background: rgba(163, 111, 44, 0.09);
+        }
+
+        .tree-toggle.active {
+            background: rgba(115, 58, 58, 0.1);
+            color: var(--wine);
+        }
+
+        .tree-leaf.active {
+            background: #232b35;
+            color: #fff;
+        }
+
+        .tree-children {
+            margin: 2px 0 10px 14px;
+            padding-left: 10px;
+            border-left: 1px solid var(--line);
+        }
+
+        .toggle-mark {
+            flex: 0 0 auto;
+            color: var(--gold);
+            font-size: 12px;
+        }
+
+        .content {
+            min-width: 0;
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+        .content-top {
+            padding: 28px 34px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            background: rgba(255, 253, 248, 0.72);
+        }
+
+        .kicker {
+            color: var(--gold);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .page-title {
+            margin: 8px 0 0;
+            font-size: clamp(28px, 4vw, 46px);
+            line-height: 1.1;
+            letter-spacing: 0;
+        }
+
+        .map-link {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0 16px;
+            border: 1px solid var(--line-strong);
+            border-radius: 6px;
+            background: var(--paper);
+            color: var(--wine);
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+        .map-link:hover {
+            border-color: var(--wine);
+        }
+
+        .workspace {
+            padding: 34px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .main-panel,
+        .asset-panel {
+            border: 1px solid var(--line);
+            background: var(--paper);
+        }
+
+        .main-panel {
+            min-height: 620px;
+        }
+
+        .panel-header {
+            padding: 22px 24px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
+        .panel-eyebrow {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+        }
+
+        .panel-title {
+            margin: 6px 0 0;
+            font-size: 28px;
+            line-height: 1.2;
+            letter-spacing: 0;
+        }
+
+        .type-pill {
+            flex: 0 0 auto;
+            border-radius: 999px;
+            padding: 7px 12px;
+            color: #fff;
+            background: var(--teal);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .type-pill.country {
+            background: var(--wine);
+        }
+
+        .type-pill.person,
+        .type-pill.race {
+            background: var(--teal);
+        }
+
+        .panel-body {
+            padding: 24px;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .section-card {
+            width: 100%;
+            min-height: 116px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--paper-soft);
+            color: inherit;
+            cursor: pointer;
+            font: inherit;
+            padding: 16px;
+            text-align: left;
+            transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+        }
+
+        .section-card:hover {
+            border-color: var(--line-strong);
+            background: #fffaf0;
+            transform: translateY(-1px);
+        }
+
+        .section-name {
+            font-weight: 900;
+            font-size: 17px;
+        }
+
+        .section-meta {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .empty-editor {
+            min-height: 368px;
+            border: 1px dashed var(--line-strong);
+            border-radius: 8px;
+            background:
+                linear-gradient(transparent 31px, rgba(222, 214, 200, 0.46) 32px),
+                var(--paper-soft);
+            background-size: 100% 32px;
+        }
+
+        .asset-panel {
+            position: sticky;
+            top: 24px;
+        }
+
+        .asset-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .asset-title {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 0;
+        }
+
+        .asset-slot {
+            margin: 20px;
+            min-height: 260px;
+            border: 1px dashed var(--line-strong);
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            color: var(--muted);
+            background: var(--paper-soft);
+            text-align: center;
+            padding: 18px;
+        }
+
+        .asset-slot.avatar {
+            min-height: 220px;
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            margin-inline: auto;
+            width: min(220px, calc(100% - 40px));
+        }
+
+        .asset-slot.map {
+            aspect-ratio: 4 / 3;
+        }
+
+        .asset-label {
+            font-weight: 900;
+            color: #344050;
+        }
+
+        .asset-note {
+            margin-top: 8px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 980px) {
+            .page-shell {
+                width: 100%;
+                min-height: 100vh;
+                margin: 0;
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                min-height: 0;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .tree {
+                max-height: 340px;
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+                padding: 22px;
+            }
+
+            .asset-panel {
+                position: static;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .content-top,
+            .panel-header {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .content-top,
+            .workspace {
+                padding-inline: 16px;
+            }
+
+            .brand {
+                padding-inline: 16px;
+            }
+
+            .map-link {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <a id="back-link" class="back-link" href="index.html">← 返回主界面</a>
+                <h1 class="brand-title">赫里奥斯</h1>
+                <p class="brand-subtitle">世界档案目录</p>
+            </div>
+            <nav class="tree" id="tree" aria-label="赫里奥斯目录"></nav>
+        </aside>
+
+        <main class="content">
+            <header class="content-top">
+                <div>
+                    <div class="kicker">Helios Archive</div>
+                    <h2 class="page-title">赫里奥斯</h2>
+                </div>
+                <a class="map-link" href="maps/helios.html">打开地理图</a>
+            </header>
+
+            <section class="workspace">
+                <article class="main-panel">
+                    <header class="panel-header">
+                        <div>
+                            <div class="panel-eyebrow" id="panel-path">首页</div>
+                            <h3 class="panel-title" id="panel-title">首页</h3>
+                        </div>
+                        <span class="type-pill" id="panel-type">目录</span>
+                    </header>
+                    <div class="panel-body" id="panel-body"></div>
+                </article>
+
+                <aside class="asset-panel">
+                    <header class="asset-header">
+                        <h3 class="asset-title" id="asset-title">可选图片</h3>
+                    </header>
+                    <div class="asset-slot" id="asset-slot">
+                        <div>
+                            <div class="asset-label" id="asset-label">图片位</div>
+                            <div class="asset-note" id="asset-note">留空</div>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const archive = [
+            {
+                id: "consensus",
+                name: "世界共识",
+                children: ["基础地理", "时代说明", "战力坐标", "神学与神术", "种族总览", "年表总览"]
+            },
+            {
+                id: "countries",
+                name: "国家",
+                asset: "country",
+                children: ["国家A", "国家B", "国家C", "国家D"]
+            },
+            {
+                id: "people",
+                name: "人物",
+                asset: "person",
+                children: ["统治者", "军事人物", "宗教人物", "学者/法师", "其他重要人物"]
+            },
+            {
+                id: "organizations",
+                name: "组织",
+                children: ["政府机构", "军事组织", "宗教组织", "秘密组织", "学术/魔法组织"]
+            },
+            {
+                id: "races",
+                name: "种族",
+                asset: "race",
+                children: ["种族A", "种族B", "种族C"]
+            },
+            {
+                id: "history",
+                name: "历史",
+                children: ["总年表", "重大事件", "战争", "王朝/政权更替"]
+            },
+            {
+                id: "glossary",
+                name: "术语表",
+                children: ["政治术语", "军事术语", "宗教术语", "魔法术语", "地理术语"]
+            }
+        ];
+
+        const state = {
+            current: { nodeId: "home", name: "首页", path: "首页", type: "目录", asset: "optional", children: archive.map(section => section.name) }
+        };
+
+        const tree = document.getElementById("tree");
+        const panelPath = document.getElementById("panel-path");
+        const panelTitle = document.getElementById("panel-title");
+        const panelType = document.getElementById("panel-type");
+        const panelBody = document.getElementById("panel-body");
+        const assetTitle = document.getElementById("asset-title");
+        const assetSlot = document.getElementById("asset-slot");
+        const assetLabel = document.getElementById("asset-label");
+        const assetNote = document.getElementById("asset-note");
+
+        function buildTree() {
+            const homeButton = `<button class="tree-leaf active" data-node="home">首页</button>`;
+            const sections = archive.map(section => `
+                <div class="tree-section">
+                    <button class="tree-toggle" data-node="${section.id}">
+                        <span>${section.name}</span>
+                        <span class="toggle-mark">展开</span>
+                    </button>
+                    <div class="tree-children">
+                        ${section.children.map(child => `
+                            <button class="tree-leaf" data-node="${section.id}:${child}">${child}</button>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+
+            tree.innerHTML = homeButton + sections;
+            tree.addEventListener("click", event => {
+                const button = event.target.closest("button[data-node]");
+                if (!button) return;
+                selectNode(button.dataset.node);
+            });
+
+            panelBody.addEventListener("click", event => {
+                const card = event.target.closest(".section-card[data-target]");
+                if (!card) return;
+                selectNode(card.dataset.target);
+            });
+        }
+
+        function selectNode(nodeId) {
+            if (nodeId === "home") {
+                state.current = { nodeId, name: "首页", path: "首页", type: "目录", asset: "optional", children: archive.map(section => section.name) };
+            } else if (!nodeId.includes(":")) {
+                const section = archive.find(item => item.id === nodeId);
+                state.current = {
+                    nodeId,
+                    name: section.name,
+                    path: `首页 / ${section.name}`,
+                    type: "分类",
+                    asset: section.asset || "optional",
+                    children: section.children
+                };
+            } else {
+                const [sectionId, childName] = nodeId.split(":");
+                const section = archive.find(item => item.id === sectionId);
+                state.current = {
+                    nodeId,
+                    name: childName,
+                    path: `首页 / ${section.name} / ${childName}`,
+                    type: section.name,
+                    asset: section.asset || "optional",
+                    children: []
+                };
+            }
+
+            document.querySelectorAll(".tree-leaf").forEach(button => {
+                button.classList.toggle("active", button.dataset.node === nodeId);
+            });
+            document.querySelectorAll(".tree-toggle").forEach(button => {
+                button.classList.toggle("active", button.dataset.node === nodeId);
+            });
+            renderPanel();
+        }
+
+        function renderPanel() {
+            panelPath.textContent = state.current.path;
+            panelTitle.textContent = state.current.name;
+            panelType.textContent = state.current.type;
+            panelType.className = `type-pill ${assetClass(state.current.asset)}`;
+
+            if (state.current.children.length) {
+                panelBody.innerHTML = `
+                    <div class="section-grid">
+                        ${state.current.children.map(name => `
+                            <button class="section-card" data-target="${targetForChild(name)}">
+                                <div class="section-name">${name}</div>
+                                <div class="section-meta">未填充</div>
+                            </button>
+                        `).join("")}
+                    </div>
+                `;
+            } else {
+                panelBody.innerHTML = `<div class="empty-editor" aria-label="${state.current.name}内容区"></div>`;
+            }
+
+            renderAssetSlot(state.current.asset);
+        }
+
+        function targetForChild(name) {
+            if (state.current.nodeId === "home") {
+                const section = archive.find(item => item.name === name);
+                return section ? section.id : "home";
+            }
+
+            return `${state.current.nodeId}:${name}`;
+        }
+
+        function renderAssetSlot(assetType) {
+            assetSlot.className = `asset-slot ${assetClass(assetType)}`;
+
+            if (assetType === "country") {
+                assetTitle.textContent = "地理图";
+                assetLabel.textContent = "国家地理图";
+                assetNote.textContent = "留空";
+                return;
+            }
+
+            if (assetType === "person" || assetType === "race") {
+                assetTitle.textContent = "头像";
+                assetLabel.textContent = assetType === "person" ? "人物头像" : "种族头像";
+                assetNote.textContent = "留空";
+                return;
+            }
+
+            assetTitle.textContent = "可选图片";
+            assetLabel.textContent = "图片位";
+            assetNote.textContent = "留空";
+        }
+
+        function assetClass(assetType) {
+            if (assetType === "country") return "map country";
+            if (assetType === "person") return "avatar person";
+            if (assetType === "race") return "avatar race";
+            return "optional";
+        }
+
+        function preserveUidLinks() {
+            const params = new URLSearchParams(location.search);
+            const uid = params.get("uid");
+            if (!uid) return;
+
+            document.getElementById("back-link").href = `index.html?uid=${encodeURIComponent(uid)}`;
+            document.querySelector(".map-link").href = `maps/helios.html?uid=${encodeURIComponent(uid)}`;
+        }
+
+        buildTree();
+        preserveUidLinks();
+        renderPanel();
+    </script>
+</body>
+</html>
