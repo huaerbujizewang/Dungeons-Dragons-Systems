@@ -165,8 +165,6 @@
             border-bottom: 1px solid var(--line);
             display: flex;
             align-items: flex-start;
-            justify-content: space-between;
-            gap: 24px;
             background: rgba(255, 253, 248, 0.72);
         }
 
@@ -185,32 +183,21 @@
             letter-spacing: 0;
         }
 
-        .map-link {
-            flex: 0 0 auto;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 40px;
-            padding: 0 16px;
-            border: 1px solid var(--line-strong);
-            border-radius: 6px;
-            background: var(--paper);
-            color: var(--wine);
-            text-decoration: none;
-            font-weight: 800;
-            font-size: 14px;
-        }
-
-        .map-link:hover {
-            border-color: var(--wine);
-        }
-
         .workspace {
             padding: 34px;
             display: grid;
             grid-template-columns: minmax(0, 1fr) 320px;
             gap: 24px;
             align-items: start;
+        }
+
+        .workspace.country-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .workspace.country-layout .asset-panel {
+            position: static;
+            order: -1;
         }
 
         .main-panel,
@@ -354,7 +341,9 @@
         }
 
         .asset-slot.map {
-            aspect-ratio: 4 / 3;
+            min-height: 0;
+            aspect-ratio: 16 / 7;
+            width: calc(100% - 40px);
         }
 
         .asset-label {
@@ -386,7 +375,8 @@
                 max-height: 340px;
             }
 
-            .workspace {
+            .workspace,
+            .workspace.country-layout {
                 grid-template-columns: 1fr;
                 padding: 22px;
             }
@@ -412,8 +402,8 @@
                 padding-inline: 16px;
             }
 
-            .map-link {
-                width: 100%;
+            .asset-slot.map {
+                aspect-ratio: 4 / 3;
             }
         }
     </style>
@@ -435,10 +425,9 @@
                     <div class="kicker">Helios Archive</div>
                     <h2 class="page-title">赫里奥斯</h2>
                 </div>
-                <a class="map-link" href="maps/helios.html">打开地理图</a>
             </header>
 
-            <section class="workspace">
+            <section class="workspace" id="workspace">
                 <article class="main-panel">
                     <header class="panel-header">
                         <div>
@@ -516,6 +505,7 @@
         const panelTitle = document.getElementById("panel-title");
         const panelType = document.getElementById("panel-type");
         const panelBody = document.getElementById("panel-body");
+        const workspace = document.getElementById("workspace");
         const assetTitle = document.getElementById("asset-title");
         const assetSlot = document.getElementById("asset-slot");
         const assetLabel = document.getElementById("asset-label");
@@ -591,6 +581,7 @@
             panelTitle.textContent = state.current.name;
             panelType.textContent = state.current.type;
             panelType.className = `type-pill ${assetClass(state.current.asset)}`;
+            workspace.classList.toggle("country-layout", state.current.asset === "country");
 
             if (state.current.children.length) {
                 panelBody.innerHTML = `
@@ -654,7 +645,6 @@
             if (!uid) return;
 
             document.getElementById("back-link").href = `index.html?uid=${encodeURIComponent(uid)}`;
-            document.querySelector(".map-link").href = `maps/helios.html?uid=${encodeURIComponent(uid)}`;
         }
 
         buildTree();
