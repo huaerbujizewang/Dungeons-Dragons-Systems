@@ -368,6 +368,14 @@
             line-height: 1.45;
         }
 
+        .intro-copy .minor-heading {
+            margin: 22px 0 10px;
+            color: #4a5563;
+            font-size: 17px;
+            font-weight: 900;
+            line-height: 1.45;
+        }
+
         .content-table-wrap {
             max-width: 100%;
             margin: 12px 0 26px;
@@ -3401,6 +3409,11 @@
                     }
                     index -= 1;
                     html.push(`<ul>${items.map(item => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+                    continue;
+                }
+
+                if (line.startsWith("#### ")) {
+                    html.push(`<div class="minor-heading">${renderInlineMarkdown(line.slice(5))}</div>`);
                     continue;
                 }
 
