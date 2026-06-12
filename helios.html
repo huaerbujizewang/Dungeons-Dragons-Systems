@@ -208,6 +208,10 @@
             display: none;
         }
 
+        .workspace.person-layout {
+            grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+        }
+
         .main-panel,
         .asset-panel {
             border: 1px solid var(--line);
@@ -411,6 +415,107 @@
             border-bottom: 0;
         }
 
+        .stat-block-container {
+            margin-top: 28px;
+            border: 1px solid #c9a46a;
+            border-radius: 8px;
+            background: #fbf1dc;
+            color: #58180d;
+            font-family: Georgia, "Times New Roman", "Noto Serif SC", serif;
+            padding: 22px;
+            box-shadow: inset 0 0 0 1px rgba(130, 32, 0, 0.08);
+        }
+
+        .stat-header h2 {
+            margin: 0;
+            color: #822000;
+            font-size: 30px;
+            line-height: 1.2;
+            letter-spacing: 0;
+        }
+
+        .stat-header i {
+            display: block;
+            margin-top: 6px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .tapered-rule {
+            height: 2px;
+            margin: 12px 0;
+            border: 0;
+            background: linear-gradient(to right, transparent, #822000, transparent);
+        }
+
+        .red-rule {
+            height: 2px;
+            margin: 10px 0;
+            border: 0;
+            background: #822000;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(64px, 1fr));
+            gap: 8px;
+            margin: 16px 0;
+            color: #822000;
+            text-align: center;
+        }
+
+        .stat-box {
+            min-width: 0;
+            border: 1px solid rgba(130, 32, 0, 0.18);
+            border-radius: 6px;
+            background: rgba(255, 253, 248, 0.58);
+            padding: 8px 6px;
+        }
+
+        .stat-box strong {
+            display: block;
+            font-size: 12px;
+        }
+
+        .stat-box span {
+            display: block;
+            margin-top: 4px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .property-line {
+            margin: 6px 0;
+            color: #822000;
+            line-height: 1.65;
+        }
+
+        .property-line strong {
+            color: #58180d;
+        }
+
+        .trait-section {
+            margin-top: 14px;
+            color: #2f2a25;
+            line-height: 1.7;
+        }
+
+        .trait-name {
+            color: #1f1b18;
+            font-style: italic;
+            font-weight: 900;
+        }
+
+        .action-header {
+            margin: 24px 0 8px;
+            border-bottom: 1px solid #822000;
+            color: #822000;
+            font-size: 22px;
+            font-variant: small-caps;
+            font-weight: 900;
+            line-height: 1.35;
+        }
+
         .asset-panel {
             position: sticky;
             top: 24px;
@@ -454,6 +559,12 @@
             width: calc(100% - 40px);
         }
 
+        .asset-slot.portrait {
+            min-height: 0;
+            aspect-ratio: 2 / 3;
+            width: calc(100% - 40px);
+        }
+
         .asset-slot.has-image {
             border-style: solid;
             padding: 0;
@@ -470,6 +581,11 @@
 
         .asset-slot.map img {
             object-fit: contain;
+        }
+
+        .asset-slot.portrait img {
+            object-fit: cover;
+            object-position: center top;
         }
 
         .asset-label {
@@ -502,7 +618,8 @@
             }
 
             .workspace,
-            .workspace.country-layout {
+            .workspace.country-layout,
+            .workspace.person-layout {
                 grid-template-columns: 1fr;
                 padding: 22px;
             }
@@ -530,6 +647,10 @@
 
             .asset-slot.map {
                 aspect-ratio: 4 / 3;
+            }
+
+            .stat-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
     </style>
@@ -800,6 +921,78 @@
 
             return religionOverviewContent.slice(start, end < 0 ? religionOverviewContent.length : end);
         }
+
+        const fatimaStatBlock = {
+            ac: "22 (超凡敏捷)",
+            hp: "391 (34d8 + 238)",
+            meta: "中型类人生物 (雪狼族)",
+            name: "法蒂玛·阿尔-扎赫拉",
+            speed: "40 尺，攀爬 30 尺",
+            stats: {
+                str: { score: 12, mod: "+1" },
+                dex: { score: 26, mod: "+8" },
+                con: { score: 24, mod: "+7" },
+                int: { score: 24, mod: "+7" },
+                wis: { score: 22, mod: "+6" },
+                cha: { score: 26, mod: "+8" }
+            },
+            props: [
+                { label: "豁免", value: "敏捷 +17，体质 +15，智力 +15，感知 +14，魅力 +16" },
+                { label: "技能", value: "奥秘 +23，宗教 +23，察觉 +14，洞悉 +14，隐匿 +17，欺瞒 +16，游说 +16，调查 +15" },
+                { label: "抗性", value: "寒冷，火焰，闪电，力场，钝击、穿刺、挥砍" },
+                { label: "免疫", value: "魅惑，恐慌，寒冷环境，睡眠" },
+                { label: "感官", value: "黑暗视觉 120 尺，真实视觉 60 尺，被动察觉 24" },
+                { label: "语言", value: "伊斯玛什语，霍桑语，安塔拉语，哥伦比亚语，蒂尔兰语，天界语，炼狱语，深渊语，心灵感应 120 尺" }
+            ],
+            resume: "你在看着我，对吗？",
+            basic_info: {
+                gender: "女",
+                origin: "雪狼族",
+                height: "168cm",
+                birthday: "未知",
+                tags: ["登神会首领"]
+            },
+            traits: [
+                { name: "异时代武装", desc: "法蒂玛的武器攻击视为魔法攻击。她使用的武器明显超越时代。无法通过普通鉴定、奥秘或炼金工具理解。" },
+                { name: "魔法抗性", desc: "法蒂玛对抗法术和其他魔法效应时的豁免检定具有优势。" },
+                { name: "雪狼血脉", desc: "法蒂玛免疫极寒环境造成的伤害和不利影响。她在冰雪、冻土、薄冰和积雪地形上移动时不会因非魔法困难地形而消耗额外移动力。" },
+                { name: "传奇抗性", desc: "如果法蒂玛豁免失败，她可以将其改为豁免成功（1次/日）。" },
+                { name: "近距处决术", desc: "法蒂玛不会因处于敌方威胁范围内而在远程攻击检定上承受劣势。她对被她的法术影响、被束缚、倒地、目盲、震慑或失去反应的生物进行远程攻击时具有优势。" }
+            ],
+            actions: [
+                { name: "多重攻击", desc: "法蒂玛施展一个法术，或进行四次格洛克射击。她也可以用两次格洛克射击替代其中一次施法。" },
+                { name: "格洛克射击", desc: "远程武器攻击：命中 +17，射程 80/240 尺，单一目标。命中：13（1d10 + 8）点穿刺伤害外加 14（4d6）点力场伤害。如果目标正在维持专注，则该目标进行专注检定时具有劣势。" },
+                { name: "双击中枢", desc: "远程武器攻击：命中 +17，射程 80/240 尺，单一目标。命中：13（1d10 + 8）点穿刺伤害外加 28（8d6）点力场伤害。目标必须进行一次 DC 23 的体质豁免，失败则直到其下一回合结束前无法进行反应。" },
+                { name: "C4定向爆破（充能 5-6）", desc: "法蒂玛在 120 尺内一个她能看见的点设置或引爆一组塑胶炸药。该点 30 尺半径内所有生物必须进行一次 DC 23 的敏捷豁免。豁免失败者受到 72（16d8）点火焰伤害和 36（8d8）点雷鸣伤害，并陷入倒地状态；豁免成功者伤害减半且不会倒地。区域内非魔法物体和建筑结构受到双倍伤害。" },
+                { name: "密教锁定", desc: "法蒂玛选择 90 尺内至多 6 个她能看见的生物。每个目标必须进行一次 DC 23 的感知豁免。豁免失败者受到 45（10d8）点心灵伤害，并直到法蒂玛的下一回合结束前无法借由传送、位面移动或隐形离开当前位置。豁免成功者受到一半伤害，且不受额外效果影响。" }
+            ],
+            bonus_actions: [
+                { name: "战术换位", desc: "法蒂玛移动至多 20 尺，且该移动不会触发借机攻击。移动结束后，她可以装填、切换或部署一个科技装备。" },
+                { name: "激光测距", desc: "法蒂玛标记 120 尺内一个她能看见的生物。直到本回合结束，法蒂玛对该目标的下一次武器攻击具有优势；若命中，额外造成 22（4d10）点力场伤害。" }
+            ],
+            reactions: [
+                { name: "护盾术", desc: "当法蒂玛被攻击命中时，她使自己的 AC 对该次攻击增加 5，可能导致攻击未命中。" },
+                { name: "战术反制", desc: "当 60 尺内一个生物施展法术时，法蒂玛可以施展法术反制。若她本轮已经使用过反应，她可以消耗一个 3 环或更高环阶法术位，再次使用该反应，但每轮至多额外一次。" }
+            ],
+            legendary_actions: [
+                { name: "传奇回合", desc: "法蒂玛拥有 1 个传奇回合。她可以分别投掷两次独立的先攻，以获得额外的一个完整回合；该回合拥有一个动作、一个附赠动作、一次移动和一个反应。" }
+            ],
+            spells: {
+                header: "法蒂玛是一位 20 级施法者。她的施法关键属性是智力（法术豁免 DC 23，法术攻击 +15）。",
+                list: [
+                    { level: "戏法（随意）", spells: "法师之手，传讯术，冷冻射线，火焰箭，次级幻影" },
+                    { level: "1环（4法术位）", spells: "护盾术，侦测魔法，魔法飞弹，易容术" },
+                    { level: "2环（3法术位）", spells: "迷踪步，镜影术，识破隐形" },
+                    { level: "3环（3法术位）", spells: "法术反制，解除魔法，催眠图纹，火球术" },
+                    { level: "4环（3法术位）", spells: "高等隐形术，任意门，冰风暴" },
+                    { level: "5环（3法术位）", spells: "力场墙，支配人类，托梦术，探知术" },
+                    { level: "6环（2法术位）", spells: "解离术，群体暗示术" },
+                    { level: "7环（2法术位）", spells: "传送术" },
+                    { level: "8环（1法术位）", spells: "心灵屏障，迷宫术" },
+                    { level: "9环（1法术位）", spells: "时间停止，祈愿术" }
+                ]
+            }
+        };
 
         const archive = [
             {
@@ -2295,7 +2488,28 @@
                 id: "people",
                 name: "人物",
                 asset: "person",
-                children: ["统治者", "军事人物", "宗教人物", "学者/法师", "其他重要人物"]
+                children: [
+                    {
+                        name: "法蒂玛·阿尔-扎赫拉",
+                        image: "assets/helios/characters/法蒂玛·阿尔-扎赫拉.png",
+                        imageAspect: "2 / 3",
+                        statBlock: fatimaStatBlock,
+                        markdown: String.raw`
+# 法蒂玛·阿尔-扎赫拉
+
+法蒂玛·阿尔-扎赫拉是“登神会”那位从未正式露面的最高首领。她似乎操控着难以想象的财富、禁忌知识和武力，没有人确切知道她何时出现。
+
+关于她的真实身份，流传着几种截然不同的说法。一些神学者坚信，她曾是纳希德教早期某位被迫害的圣女。另一些边境情报商则声称，她根本不是人类，而是一头存活了千年的苔原雪狼王族。某些传闻则提到，她曾被卷入空间裂缝，在某个“没有魔力却能以钢铁飞天的异世界”漂流了三十天。
+
+无论真相如何，她和组织都有一个确定的目标，成神。
+`
+                    },
+                    "统治者",
+                    "军事人物",
+                    "宗教人物",
+                    "学者/法师",
+                    "其他重要人物"
+                ]
             },
             {
                 id: "organizations",
@@ -3288,7 +3502,8 @@
                     content: section.content || [],
                     image: section.image || "",
                     imageAspect: section.imageAspect || "",
-                    markdown: section.markdown || ""
+                    markdown: section.markdown || "",
+                    statBlock: section.statBlock || null
                 };
             } else {
                 const [sectionId, childLabel] = nodeId.split(":");
@@ -3304,7 +3519,8 @@
                     content: child && typeof child === "object" ? child.content || [] : [],
                     image: child && typeof child === "object" ? child.image || "" : "",
                     imageAspect: child && typeof child === "object" ? child.imageAspect || "" : "",
-                    markdown: child && typeof child === "object" ? child.markdown || "" : ""
+                    markdown: child && typeof child === "object" ? child.markdown || "" : "",
+                    statBlock: child && typeof child === "object" ? child.statBlock || null : null
                 };
             }
 
@@ -3324,9 +3540,13 @@
             panelType.className = `type-pill ${assetClass(state.current.asset)}`;
             workspace.classList.toggle("country-layout", state.current.asset === "country");
             workspace.classList.toggle("home-layout", state.current.nodeId === "home");
+            workspace.classList.toggle("person-layout", state.current.asset === "person" && Boolean(state.current.image));
 
-            if (state.current.markdown) {
-                panelBody.innerHTML = `<div class="intro-copy">${renderMarkdown(state.current.markdown)}</div>`;
+            if (state.current.markdown || state.current.statBlock) {
+                panelBody.innerHTML = `
+                    ${state.current.markdown ? `<div class="intro-copy">${renderMarkdown(state.current.markdown)}</div>` : ""}
+                    ${state.current.statBlock ? renderStatBlock(state.current.statBlock) : ""}
+                `;
             } else if (state.current.content && state.current.content.length) {
                 panelBody.innerHTML = `
                     <div class="intro-copy">
@@ -3378,6 +3598,7 @@
             if (typeof child !== "object") return "未填充";
             if (child.content && child.content.length) return "已记录";
             if (child.markdown) return "已记录";
+            if (child.statBlock) return "已记录";
             if (child.children && child.children.length) return `含 ${child.children.length} 项`;
             return "未填充";
         }
@@ -3505,6 +3726,111 @@
             `;
         }
 
+        function renderStatBlock(data) {
+            const statLabels = {
+                str: "STR",
+                dex: "DEX",
+                con: "CON",
+                int: "INT",
+                wis: "WIS",
+                cha: "CHA"
+            };
+            const statKeys = ["str", "dex", "con", "int", "wis", "cha"];
+            const statsHtml = statKeys.map(key => {
+                const stat = data.stats && data.stats[key] ? data.stats[key] : { score: "-", mod: "" };
+                return `
+                    <div class="stat-box">
+                        <strong>${statLabels[key]}</strong>
+                        <span>${escapeHTML(stat.score)} ${stat.mod ? `(${escapeHTML(stat.mod)})` : ""}</span>
+                    </div>
+                `;
+            }).join("");
+
+            const basicInfo = data.basic_info ? [
+                data.basic_info.gender ? { label: "性别", value: data.basic_info.gender } : null,
+                data.basic_info.origin ? { label: "出身", value: data.basic_info.origin } : null,
+                data.basic_info.height ? { label: "身高", value: data.basic_info.height } : null,
+                data.basic_info.birthday ? { label: "生日", value: data.basic_info.birthday } : null,
+                data.basic_info.tags && data.basic_info.tags.length ? { label: "标签", value: data.basic_info.tags.join("，") } : null
+            ].filter(Boolean) : [];
+
+            const propsHtml = [
+                ...basicInfo,
+                ...(data.props || [])
+            ].map(prop => `
+                <div class="property-line"><strong>${escapeHTML(prop.label)}：</strong>${escapeHTML(prop.value)}</div>
+            `).join("");
+
+            const renderTraitList = items => (items || []).map(item => `
+                <div class="trait-section">
+                    <span class="trait-name">${escapeHTML(item.name)}.</span> ${formatStatText(item.desc)}
+                </div>
+            `).join("");
+
+            const actionsHtml = data.actions && data.actions.length ? `
+                <div class="action-header">动作</div>
+                ${renderTraitList(data.actions)}
+            ` : "";
+
+            const bonusHtml = data.bonus_actions && data.bonus_actions.length ? `
+                <div class="action-header">附赠动作</div>
+                ${renderTraitList(data.bonus_actions)}
+            ` : "";
+
+            const reactionsHtml = data.reactions && data.reactions.length ? `
+                <div class="action-header">反应</div>
+                ${renderTraitList(data.reactions)}
+            ` : "";
+
+            const legendaryHtml = data.legendary_actions && data.legendary_actions.length ? `
+                <div class="action-header">传奇动作</div>
+                ${data.legendary_desc ? `<div class="trait-section">${formatStatText(data.legendary_desc)}</div>` : ""}
+                ${renderTraitList(data.legendary_actions)}
+            ` : "";
+
+            const spellsHtml = data.spells ? `
+                <div class="action-header">施法</div>
+                ${data.spells.header ? `<div class="trait-section"><em>${formatStatText(data.spells.header)}</em></div>` : ""}
+                ${Array.isArray(data.spells.list)
+                    ? data.spells.list.map(spell => `
+                        <div class="trait-section">
+                            <span class="trait-name">${escapeHTML(spell.level)}：</span>${escapeHTML(spell.spells)}
+                        </div>
+                    `).join("")
+                    : `<div class="trait-section">${formatStatText(data.spells.list || "")}</div>`
+                }
+            ` : "";
+
+            return `
+                <div class="stat-block-container">
+                    <div class="stat-header">
+                        <h2>${escapeHTML(data.name || state.current.name)}</h2>
+                        <i>${escapeHTML(data.meta || "")}</i>
+                    </div>
+                    <hr class="tapered-rule">
+                    ${data.resume ? `<div class="trait-section"><em>${escapeHTML(data.resume)}</em></div>` : ""}
+                    <div class="property-line"><strong>护甲等级：</strong>${escapeHTML(data.ac || "")}</div>
+                    <div class="property-line"><strong>生命值：</strong>${escapeHTML(data.hp || "")}</div>
+                    <div class="property-line"><strong>速度：</strong>${escapeHTML(data.speed || "")}</div>
+                    <hr class="red-rule">
+                    <div class="stat-grid">${statsHtml}</div>
+                    <hr class="red-rule">
+                    ${propsHtml}
+                    <hr class="tapered-rule">
+                    ${renderTraitList(data.traits)}
+                    ${actionsHtml}
+                    ${bonusHtml}
+                    ${reactionsHtml}
+                    ${legendaryHtml}
+                    ${spellsHtml}
+                </div>
+            `;
+        }
+
+        function formatStatText(value) {
+            return escapeHTML(value || "").replace(/\n/g, "<br>");
+        }
+
         function escapeHTML(value) {
             return String(value).replace(/[&<>"']/g, char => ({
                 "&": "&amp;",
@@ -3516,7 +3842,7 @@
         }
 
         function renderAssetSlot(assetType) {
-            assetSlot.className = `asset-slot ${assetClass(assetType)}`;
+            assetSlot.className = "asset-slot";
             assetSlot.style.aspectRatio = "";
             assetSlot.innerHTML = `
                 <div>
@@ -3526,6 +3852,7 @@
             `;
 
             if (assetType === "country") {
+                assetSlot.classList.add("map", "country");
                 assetTitle.textContent = "地理图";
                 if (state.current.image) {
                     assetSlot.classList.add("has-image");
@@ -3538,11 +3865,20 @@
             }
 
             if (assetType === "person" || assetType === "race") {
-                assetTitle.textContent = "头像";
-                updateAssetText(assetType === "person" ? "人物头像" : "种族头像", "留空");
+                if (state.current.image) {
+                    assetSlot.classList.add("portrait", assetType, "has-image");
+                    assetTitle.textContent = assetType === "person" ? "立绘" : "种族图";
+                    if (state.current.imageAspect) assetSlot.style.aspectRatio = state.current.imageAspect;
+                    assetSlot.innerHTML = `<img src="${escapeAttribute(state.current.image)}" alt="${escapeAttribute(state.current.name)}立绘">`;
+                } else {
+                    assetSlot.classList.add("avatar", assetType);
+                    assetTitle.textContent = "头像";
+                    updateAssetText(assetType === "person" ? "人物头像" : "种族头像", "留空");
+                }
                 return;
             }
 
+            assetSlot.classList.add("optional");
             assetTitle.textContent = state.current.nodeId === "home" ? "封面" : "可选图片";
             if (state.current.image) {
                 assetSlot.classList.add("has-image");
