@@ -158,6 +158,20 @@
             display: none;
         }
 
+        .tree-children .tree-toggle {
+            min-height: 32px;
+            padding: 7px 8px;
+            color: #4b5563;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .tree-children .tree-leaf {
+            min-height: 32px;
+            padding: 7px 8px;
+            font-size: 13px;
+        }
+
         .toggle-mark {
             flex: 0 0 auto;
             color: var(--gold);
@@ -222,6 +236,14 @@
 
         .workspace.person-layout {
             grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+        }
+
+        .workspace.no-asset-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .workspace.no-asset-layout .asset-panel {
+            display: none;
         }
 
         .main-panel,
@@ -5400,6 +5422,133 @@
 `
                                     }
                                 ]
+                            },
+                            {
+                                name: "传说",
+                                children: [
+                                    {
+                                        name: "无光披甲",
+                                        markdown: String.raw`
+# 无光披甲
+
+**护甲（镶钉皮甲），传说（需同调）**
+
+无光披甲看起来像一件贴身的黑色皮甲，甲片薄得近似衣料，边缘却会吞没微弱光线。它常被认为出自索尔卡巴德选帝侯治下的暗影工坊，最初为夜间行军和密道突袭制作。
+
+穿戴者移动时，身体轮廓会变得模糊，仿佛光线在其身旁短暂断开。
+
+## 魔法物品属性
+
+**魔法护甲。** 你穿戴此护甲时，AC获得+3加值。
+
+**无光攀行。** 与无光披甲维持同调期间，你获得等同于你步行速度的攀爬速度。
+
+**高等隐形。** 穿戴此护甲期间，你能够以魔法动作对自己施展高等隐形术。该词条一经使用，直至次日黎明你都无法再次使用。
+`
+                                    },
+                                    {
+                                        name: "乌瑞克黑曜权杖",
+                                        markdown: String.raw`
+# 乌瑞克黑曜权杖
+
+**权杖，传说（需同调）**
+
+乌瑞克黑曜权杖由黑曜石、红铜和深渊兽骨制成，顶端镶着一枚暗红色宝石。宝石内部似乎有缓慢转动的阴影，像一只始终半睁的眼睛。
+
+## 魔法物品属性
+
+**恐慌光环。** 与权杖维持同调期间，你周围10尺内的敌对生物在其回合开始时，必须进行一次DC18感知豁免。豁免失败则陷入恐慌状态，直至其下一回合开始。若一名生物豁免成功，则其在24小时内免疫此词条。
+
+**充能。** 权杖拥有7枚充能，并在每日黎明恢复1d6+1枚已消耗的充能。持握权杖时，你可以消耗充能施展以下法术：
+
+* 黑暗术：0枚充能
+* 枯萎术：1枚充能
+* 死亡一指：3枚充能
+`
+                                    },
+                                    {
+                                        name: "魅血戒",
+                                        markdown: String.raw`
+# 魅血戒
+
+**戒指，传说（需同调）**
+
+魅血戒是一枚纤细的红宝石戒指，宝石内部像有血液缓慢流动。佩戴者说话时，戒面中的红光会随语调轻微明灭。
+
+## 魔法物品属性
+
+**穿透魅惑。** 与魅血戒维持同调期间，当你使一个生物陷入魅惑状态时，你可以忽略该生物对魅惑状态的免疫。若该生物没有魅惑免疫，则它为避免或结束你造成的魅惑状态而进行的豁免具有劣势。
+
+**血色亲和。** 与魅血戒维持同调期间，你在进行欺瞒和游说检定时获得+2加值。
+`
+                                    },
+                                    {
+                                        name: "蒂尔兰王冠",
+                                        markdown: String.raw`
+# 蒂尔兰王冠
+
+**奇物，传说（需同调）**
+
+这顶王冠由银白金属制成，冠环上嵌有深蓝宝石与黑色珐琅纹。它曾属于蒂尔兰旧王室，王冠本身没有夸张的魔法光辉，只有在持有者发号施令时，宝石深处才会浮现出冷色微光。
+
+许多贵族相信，能长期佩戴蒂尔兰王冠而不被其压垮的人，至少拥有承受王权目光的资格。
+
+## 魔法物品属性
+
+**王冠威仪。** 与蒂尔兰王冠维持同调期间，你的魅力提升2，至多提升至22。你免疫恐慌状态。
+
+**王室命令。** 王冠拥有7枚充能，并在每日黎明恢复1d6+1枚已消耗的充能。佩戴王冠时，你可以消耗充能施展以下法术，施法属性为魅力：
+
+* 命令术：1枚充能
+* 强迫术：3枚充能
+* 群体暗示：5枚充能
+
+**承王之重。** 与蒂尔兰王冠维持同调期间，若你作出明显怯懦行为，DM可以要求你进行一次DC18魅力豁免。豁免失败时，你的同调立刻结束，且24小时内无法再次与蒂尔兰王冠同调。
+`
+                                    }
+                                ]
+                            },
+                            {
+                                name: "极珍稀",
+                                children: [
+                                    {
+                                        name: "金露转化药剂",
+                                        markdown: String.raw`
+# 金露转化药剂
+
+**药水，极珍稀**
+
+这种药水来自黄金王国，通常装在细长的白金瓶中，瓶身刻有黄金王国的纹饰。药液呈淡金色，在光下会浮现玫瑰般的细小纹路。它常被用于黄金王国社会内部的永久性身体转化，尤其常见于男性向女性的转化仪式。
+
+饮用金露转化药剂后，饮用者的身体会在24小时内逐渐转化为其种族对应的女性生理形态。该变化是永久性的，不会被解除魔法或类似效果移除。饮用者的种族、等级、职业、记忆、人格、年龄和游戏数据不会因此改变。
+
+若饮用者的种族没有对应的女性生理形态，或饮用者的身体结构无法被该药剂正常转化，则药剂失效。已经处于女性生理形态的生物饮用该药剂时，药剂同样失效。
+
+## 魔法物品属性
+
+**逆转转化。** 祈愿术或同等层级的魔法可以逆转金露转化药剂造成的变化。另一瓶由DM裁定适用的同类药剂也可能重新改变饮用者的身体。
+`
+                                    }
+                                ]
+                            },
+                            {
+                                name: "普通",
+                                children: [
+                                    {
+                                        name: "宠物史莱姆",
+                                        markdown: String.raw`
+# 宠物史莱姆
+
+**奇物，普通**
+
+这是一只拳头大小的小史莱姆，通常被装在玻璃罐、陶罐或小木盒中出售。
+
+宠物史莱姆可以在地面上以5尺速度移动。它不会攻击，不能协助检定，无法携带物品，也不能触发需要有意识操作的机关。它受到任何伤害都会立刻缩成一滩软泥，并在1小时后恢复原状。
+
+宠物史莱姆会记住经常喂养或携带它的生物。它会在该生物靠近时轻微发光、变换颜色或发出气泡声。
+`
+                                    }
+                                ]
                             }
                         ]
                     }
@@ -5439,7 +5588,7 @@
         function buildTree() {
             const homeButton = `<button class="tree-leaf active" data-node="home">首页</button>`;
             const sections = archive.map(section => {
-                return renderTreeNode(section, section.id);
+                return renderTreeNode(section, section.id, 0);
             }).join("");
 
             tree.innerHTML = homeButton + sections;
@@ -5461,21 +5610,23 @@
             });
         }
 
-        function renderTreeNode(node, nodeId) {
+        function renderTreeNode(node, nodeId, depth = 0) {
             const name = childName(node);
             const children = typeof node === "object" ? node.children || [] : [];
             if (!children.length) {
                 return `<button class="tree-leaf" data-node="${escapeAttribute(nodeId)}">${name}</button>`;
             }
 
+            const collapsedClass = depth === 0 ? "" : " collapsed";
+            const toggleText = depth === 0 ? "收起" : "展开";
             return `
-                <div class="tree-section collapsed">
+                <div class="tree-section${collapsedClass}">
                     <button class="tree-toggle" data-node="${escapeAttribute(nodeId)}">
                         <span>${name}</span>
-                        <span class="toggle-mark">展开</span>
+                        <span class="toggle-mark">${toggleText}</span>
                     </button>
                     <div class="tree-children">
-                        ${children.map(child => renderTreeNode(child, `${nodeId}:${childName(child)}`)).join("")}
+                        ${children.map(child => renderTreeNode(child, `${nodeId}:${childName(child)}`, depth + 1)).join("")}
                     </div>
                 </div>
             `;
@@ -5499,12 +5650,15 @@
                 const node = resolved.node;
                 const parent = resolved.parent;
                 const isTopLevel = node === section;
+                const inheritedAsset = section.asset
+                    ? (shouldUseInheritedAsset(section, node) ? section.asset : node && typeof node === "object" && node.asset || "none")
+                    : node && typeof node === "object" && node.asset || "optional";
                 state.current = {
                     nodeId,
                     name: childName(node),
                     path: `首页 / ${resolved.path.map(item => item.name).join(" / ")}`,
                     type: isTopLevel ? section.type || "分类" : childName(parent),
-                    asset: section.asset || "optional",
+                    asset: inheritedAsset,
                     children: node && typeof node === "object" ? node.children || [] : [],
                     content: node && typeof node === "object" ? node.content || [] : [],
                     image: node && typeof node === "object" ? node.image || "" : "",
@@ -5523,6 +5677,15 @@
             });
             expandActivePath(nodeId);
             renderPanel();
+        }
+
+        function shouldUseInheritedAsset(section, node) {
+            if (node === section) return true;
+            if (!section.asset) return false;
+            if (!node || typeof node !== "object") return false;
+            if (node.asset) return false;
+            if (node.children && node.children.length) return false;
+            return true;
         }
 
         function expandActivePath(nodeId) {
@@ -5566,6 +5729,7 @@
             workspace.classList.toggle("country-layout", state.current.asset === "country");
             workspace.classList.toggle("home-layout", state.current.nodeId === "home");
             workspace.classList.toggle("person-layout", state.current.asset === "person" && Boolean(state.current.image));
+            workspace.classList.toggle("no-asset-layout", state.current.asset === "none");
 
             if (state.current.markdown || state.current.statBlock) {
                 panelBody.innerHTML = `
