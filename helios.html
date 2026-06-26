@@ -1992,6 +1992,61 @@
             }
         };
 
+        const aliceDevilleStatBlock = {
+            ac: "18 (变化礼装)",
+            hp: "158 (21d8 + 63)",
+            meta: "中型类人生物 (人类)",
+            name: "爱丽丝·德维尔",
+            speed: "30 尺",
+            stats: {
+                str: { score: 8, mod: "-1" },
+                dex: { score: 20, mod: "+5" },
+                con: { score: 16, mod: "+3" },
+                int: { score: 18, mod: "+4" },
+                wis: { score: 16, mod: "+3" },
+                cha: { score: 20, mod: "+5" }
+            },
+            props: [
+                { label: "挑战等级", value: "13" },
+                { label: "先攻", value: "+10（20）" },
+                { label: "豁免", value: "敏捷 +10，体质 +8，智力 +9，魅力 +10" },
+                { label: "技能", value: "奥秘 +9，欺瞒 +15，洞悉 +8，察觉 +8，表演 +10，游说 +10，巧手 +15，隐匿 +10" },
+                { label: "抗性", value: "心灵" },
+                { label: "免疫", value: "魅惑" },
+                { label: "感官", value: "被动察觉 18" },
+                { label: "语言", value: "蒂尔兰语，哥伦比亚语" }
+            ],
+            resume: "请允许我为这场会面，更换合适的礼服。",
+            basic_info: {
+                gender: "女",
+                origin: "西蒂尔兰王国",
+                height: "162cm",
+                birthday: "4月7日",
+                tags: ["德维尔家族", "亚瑟支持者", "变化系能力者"]
+            },
+            traits: [
+                { name: "传奇抗性（1/日）", desc: "当爱丽丝豁免失败时，她可以选择使该豁免成功。" },
+                { name: "礼装变奏", desc: "爱丽丝可以操控并改变自己周围的布料、丝带、披肩、手套、旗帜、窗帘、纸张和纹章织物。她的相关能力视为魔法效果。她无法直接变化金属、石头、生物肉体或已经燃烧殆尽的物品。" },
+                { name: "织物依存", desc: "若爱丽丝在一轮内受到火焰伤害，她直到自己下一回合开始前无法使用换装步和代礼受击。" },
+                { name: "宫廷步法", desc: "针对爱丽丝的借机攻击具有劣势。爱丽丝在敌对生物威胁范围内进行远程攻击检定时，不因此承受劣势。" },
+                { name: "丝线场", desc: "爱丽丝周围 15 尺内漂浮着细丝、薄纱和礼服碎片。敌对生物第一次进入该区域或在该区域内开始回合时，必须进行一次 DC 18 的敏捷豁免。失败则速度减少 15 尺，并且直到该回合结束前无法进行借机攻击。同一生物每轮只会受此效果影响一次。" },
+                { name: "蒂尔兰礼法", desc: "爱丽丝对抗恐慌、束缚、擒抱和认知干扰类效果的豁免具有优势。" }
+            ],
+            actions: [
+                { name: "多重攻击", desc: "爱丽丝使用礼剑刺击或丝带抽击发动共计三次攻击。" },
+                { name: "礼剑刺击", desc: "近战武器攻击：命中 +10，触及 5 尺，单一目标。命中：14（2d8 + 5）点穿刺伤害，外加 9（2d8）点力场伤害。" },
+                { name: "丝带抽击", desc: "远程法术攻击：命中 +10，射程 60 尺，单一目标。命中：16（2d10 + 5）点挥砍伤害，目标必须进行一次 DC 18 的敏捷豁免。失败则被丝带缠住，直到爱丽丝下一回合结束前速度变为 0，并且无法进行反应。若目标已经因丝带抽击速度变为 0，再次豁免失败时，目标改为陷入束缚状态，持续到爱丽丝下一回合结束。" },
+                { name: "幕布改写（充能 4-6）", desc: "爱丽丝选择 90 尺内一点，使大量丝带、薄纱和礼服布片从四周卷起。该点周围 20 尺半径内的敌对生物必须进行一次 DC 18 的敏捷豁免。失败者受到 36（8d8）点力场伤害，并陷入束缚状态 1 分钟。成功者伤害减半，且不被束缚。被束缚的生物可以在其回合结束时再次进行一次 DC 18 的力量或敏捷豁免，成功则结束该状态。" }
+            ],
+            bonus_actions: [
+                { name: "换装步（4次/日）", desc: "爱丽丝瞬移至 60 尺内一件她能看见的布料、旗帜、披风、窗帘或丝带旁边。她到达的位置必须为空间。" },
+                { name: "丝线牵引", desc: "爱丽丝选择 60 尺内一个正因她的能力而速度变为 0 或陷入束缚状态的生物。目标必须进行一次 DC 18 的力量豁免。失败则被爱丽丝拉动最多 15 尺。该移动不会触发借机攻击。" }
+            ],
+            reactions: [
+                { name: "代礼受击", desc: "当爱丽丝受到伤害时，她让一件礼服替身、披肩或纹章布承受部分冲击。她受到的伤害减少 18（4d8）点。" }
+            ]
+        };
+
         const arthurStatBlock = {
             ac: "20 (精制板甲)",
             hp: "205 (30d8 + 70)",
@@ -3212,7 +3267,7 @@
                             {
                                 name: "乌瑞克自治领",
                                 image: "assets/helios/countries/乌瑞克.png",
-                                imageAspect: "744 / 470",
+                                imageAspect: "596 / 436",
                                 markdown: String.raw`
 # 乌瑞克自治领
 
@@ -3406,7 +3461,7 @@
                             {
                                 name: "埃林多尔共和国",
                                 image: "assets/helios/countries/埃林多尔共和国.png",
-                                imageAspect: "532 / 416",
+                                imageAspect: "392 / 318",
                                 markdown: String.raw`
 # 埃林多尔共和国
 
@@ -3562,7 +3617,7 @@
                             {
                                 name: "韦尔丹蒂娅骑士团",
                                 image: "assets/helios/countries/韦尔丹蒂娅骑士团.png",
-                                imageAspect: "524 / 524",
+                                imageAspect: "442 / 460",
                                 markdown: String.raw`
 # 韦尔丹蒂娅骑士团
 
@@ -3715,7 +3770,7 @@
                             {
                                 name: "班贝伦采邑主教区",
                                 image: "assets/helios/countries/班贝伦采邑主教区.png",
-                                imageAspect: "380 / 394",
+                                imageAspect: "354 / 352",
                                 markdown: String.raw`
 # 班贝伦采邑主教区
 
@@ -3835,7 +3890,7 @@
                             {
                                 name: "穆斯特采邑主教区",
                                 image: "assets/helios/countries/穆斯特采邑主教区.png",
-                                imageAspect: "324 / 342",
+                                imageAspect: "306 / 334",
                                 markdown: String.raw`
 # 穆斯特采邑主教区
 
@@ -3985,7 +4040,7 @@
                             {
                                 name: "卡林迪亚大公国",
                                 image: "assets/helios/countries/卡林迪亚大公国.png",
-                                imageAspect: "274 / 318",
+                                imageAspect: "384 / 482",
                                 markdown: String.raw`
 # 卡林迪亚大公国
 
@@ -4130,7 +4185,7 @@
                             {
                                 name: "伊尔库斯基公国",
                                 image: "assets/helios/countries/伊尔库斯基公国.png",
-                                imageAspect: "370 / 310",
+                                imageAspect: "436 / 392",
                                 markdown: String.raw`
 # 伊尔库斯基公国
 
@@ -4265,7 +4320,7 @@
                             {
                                 name: "瓦拉齐斯坦选帝侯",
                                 image: "assets/helios/countries/瓦拉齐斯坦选帝侯.png",
-                                imageAspect: "504 / 428",
+                                imageAspect: "564 / 454",
                                 markdown: String.raw`
 # 瓦拉齐斯坦选帝侯
 
@@ -4419,7 +4474,7 @@
                             {
                                 name: "奥尔比扎尔选帝侯",
                                 image: "assets/helios/countries/奥尔比扎尔选帝侯.png",
-                                imageAspect: "526 / 670",
+                                imageAspect: "618 / 516",
                                 markdown: String.raw`
 # 奥尔比扎尔选帝侯
 
@@ -4547,7 +4602,7 @@
                             {
                                 name: "帕拉蒂纳选帝侯",
                                 image: "assets/helios/countries/帕拉蒂纳选帝侯.png",
-                                imageAspect: "344 / 202",
+                                imageAspect: "354 / 196",
                                 markdown: String.raw`
 # 帕拉蒂纳选帝侯
 
@@ -4663,7 +4718,7 @@
                             {
                                 name: "索尔卡巴德选帝侯",
                                 image: "assets/helios/countries/索尔卡巴德选帝侯.png",
-                                imageAspect: "454 / 650",
+                                imageAspect: "332 / 510",
                                 markdown: String.raw`
 # 索尔卡巴德选帝侯
 
@@ -4804,7 +4859,7 @@
                             {
                                 name: "克里姆什选帝侯",
                                 image: "assets/helios/countries/克里姆什选帝侯.png",
-                                imageAspect: "526 / 388",
+                                imageAspect: "398 / 282",
                                 markdown: String.raw`
 # 克里姆什选帝侯
 
@@ -7916,6 +7971,21 @@
 她接受过完整的宫廷礼仪、贵族剑术、法师教育与剑咏军官训练。她重视成建制施法、战场机动、反制敌方法术核心，以及用剑歌维持高压突击节奏。
 
 布伦希尔德的职责并不限于决斗。她负责统御剑咏团、训练高阶剑咏军官、护卫王室关键仪式，并在战争中率领黑衣剑咏突破敌方精锐防线。
+`
+                            },
+                            {
+                                name: "爱丽丝·德维尔",
+                                image: "assets/helios/characters/爱丽丝·德维尔.png",
+                                imageAspect: "2 / 3",
+                                statBlock: aliceDevilleStatBlock,
+                                markdown: String.raw`
+# 爱丽丝·德维尔
+
+爱丽丝·德维尔是西蒂尔兰旧贵族德维尔家族的年轻成员，也是亚瑟·洛萨维亚的支持者与随从。
+
+她拥有德维尔家族的蓝发金瞳，外表温柔、礼貌，常以宫廷礼仪官候补、文书随从或贵族侍女的身份出现在亚瑟身边。
+
+她可以操控布料、丝带、礼服、披肩、窗帘、旗帜、手套和纹章织物，将宫廷空间改造成战场。
 `
                             },
                             {
