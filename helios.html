@@ -1627,7 +1627,7 @@
                 { label: "感官", value: "盲视 30 尺，被动察觉 9" },
                 { label: "语言", value: "无" }
             ],
-            resume: "一团会自己挪动的半透明凝胶。",
+            resume: "......",
             basic_info: {
                 gender: "无",
                 origin: "温顿公国",
@@ -1669,7 +1669,7 @@
                 { label: "感官", value: "盲视 60 尺，被动察觉 9" },
                 { label: "语言", value: "无" }
             ],
-            resume: "成熟、稳定、会回应同类的半流体史莱姆。",
+            resume: "咕嘟~",
             basic_info: {
                 gender: "无",
                 origin: "温顿公国",
@@ -1712,7 +1712,7 @@
                 { label: "感官", value: "盲视 90 尺，被动察觉 10" },
                 { label: "语言", value: "无" }
             ],
-            resume: "史莱姆生态中温和而危险的群落中心。",
+            resume: "咕嘟嘟~",
             basic_info: {
                 gender: "无",
                 origin: "温顿公国",
@@ -1759,7 +1759,7 @@
                 { label: "感官", value: "盲视 90 尺，被动察觉 11" },
                 { label: "语言", value: "任意一种" }
             ],
-            resume: "高度自我整合、会思考与施法的巨型史莱姆。",
+            resume: "嗨嗨！",
             basic_info: {
                 gender: "无",
                 origin: "温顿公国",
@@ -10715,16 +10715,18 @@
                         name: "城邦级",
                         children: [
                             {
-                                name: "大史莱姆",
-                                image: "assets/helios/characters/大史莱姆.png",
+                                name: "爱丽丝·德维尔",
+                                image: "assets/helios/characters/爱丽丝·德维尔.png",
                                 imageAspect: "2 / 3",
-                                statBlock: largeSlimeStatBlock,
+                                statBlock: aliceDevilleStatBlock,
                                 markdown: String.raw`
-# 大史莱姆
+# 爱丽丝·德维尔
 
-大史莱姆是温顿公国较高阶的史莱姆个体，体积庞大，元素核心稳定，身体内部常漂浮着大小不一的凝胶泡与魔力团块。
+爱丽丝·德维尔是西蒂尔兰旧贵族德维尔家族的年轻成员，也是亚瑟·洛萨维亚的支持者与随从。
 
-它们通常行动温和缓慢，却能在遭受威胁时爆发出极强的吞没能力。对温顿人而言，大史莱姆既是危险魔法生物，也是史莱姆生态中重要的群落中心。
+她拥有德维尔家族的蓝发金瞳，外表温柔、礼貌，常以宫廷礼仪官候补、文书随从或贵族侍女的身份出现在亚瑟身边。
+
+她可以操控布料、丝带、礼服、披肩、窗帘、旗帜、手套和纹章织物，将宫廷空间改造成战场。
 `
                             },
                             {
@@ -10741,18 +10743,16 @@
 `
                             },
                             {
-                                name: "爱丽丝·德维尔",
-                                image: "assets/helios/characters/爱丽丝·德维尔.png",
+                                name: "大史莱姆",
+                                image: "assets/helios/characters/大史莱姆.png",
                                 imageAspect: "2 / 3",
-                                statBlock: aliceDevilleStatBlock,
+                                statBlock: largeSlimeStatBlock,
                                 markdown: String.raw`
-# 爱丽丝·德维尔
+# 大史莱姆
 
-爱丽丝·德维尔是西蒂尔兰旧贵族德维尔家族的年轻成员，也是亚瑟·洛萨维亚的支持者与随从。
+大史莱姆是温顿公国较高阶的史莱姆个体，体积庞大，元素核心稳定，身体内部常漂浮着大小不一的凝胶泡与魔力团块。
 
-她拥有德维尔家族的蓝发金瞳，外表温柔、礼貌，常以宫廷礼仪官候补、文书随从或贵族侍女的身份出现在亚瑟身边。
-
-她可以操控布料、丝带、礼服、披肩、窗帘、旗帜、手套和纹章织物，将宫廷空间改造成战场。
+它们通常行动温和缓慢，却能在遭受威胁时爆发出极强的吞没能力。对温顿人而言，大史莱姆既是危险魔法生物，也是史莱姆生态中重要的群落中心。
 `
                             },
                             {
@@ -10789,19 +10789,6 @@
                         name: "街区级",
                         children: [
                             {
-                                name: "小史莱姆",
-                                image: "assets/helios/characters/小史莱姆.png",
-                                imageAspect: "2 / 3",
-                                statBlock: smallSlimeStatBlock,
-                                markdown: String.raw`
-# 小史莱姆
-
-小史莱姆是温顿公国最常见的史莱姆个体，体型很小，通常像一团会自己挪动的半透明凝胶。
-
-它们没有复杂意识，依靠本能靠近热源、魔力残留或其他史莱姆群体。不同颜色的小史莱姆拥有不同元素性质，是温顿草地、湿地、溪谷中最常见的生物。
-`
-                            },
-                            {
                                 name: "中史莱姆",
                                 image: "assets/helios/characters/中史莱姆.png",
                                 imageAspect: "2 / 3",
@@ -10812,6 +10799,19 @@
 中史莱姆是温顿公国史莱姆群落中的成熟个体，已经具有稳定的凝胶外壳与清晰的元素核心。
 
 它们可以独立狩猎，也常被大型史莱姆群体吸引，形成缓慢移动的半流体群落。中史莱姆没有语言，却会通过颜色、震动和体内气泡变化回应同类。
+`
+                            },
+                            {
+                                name: "小史莱姆",
+                                image: "assets/helios/characters/小史莱姆.png",
+                                imageAspect: "2 / 3",
+                                statBlock: smallSlimeStatBlock,
+                                markdown: String.raw`
+# 小史莱姆
+
+小史莱姆是温顿公国最常见的史莱姆个体，体型很小，通常像一团会自己挪动的半透明凝胶。
+
+它们没有复杂意识，依靠本能靠近热源、魔力残留或其他史莱姆群体。不同颜色的小史莱姆拥有不同元素性质，是温顿草地、湿地、溪谷中最常见的生物。
 `
                             }
                         ]
