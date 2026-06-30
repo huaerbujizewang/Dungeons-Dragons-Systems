@@ -14331,15 +14331,13 @@
                 const node = resolved.node;
                 const parent = resolved.parent;
                 const isTopLevel = node === section;
-                const inheritedAsset = section.asset
-                    ? (shouldUseInheritedAsset(section, node) ? section.asset : node && typeof node === "object" && node.asset || "none")
-                    : node && typeof node === "object" && node.asset || "optional";
+                const resolvedAsset = resolveNodeAsset(section, node);
                 state.current = {
                     nodeId,
                     name: childName(node),
                     path: `首页 / ${resolved.path.map(item => item.name).join(" / ")}`,
                     type: isTopLevel ? section.type || "分类" : childName(parent),
-                    asset: inheritedAsset,
+                    asset: resolvedAsset,
                     children: node && typeof node === "object" ? node.children || [] : [],
                     content: node && typeof node === "object" ? node.content || [] : [],
                     image: node && typeof node === "object" ? node.image || "" : "",
@@ -14360,13 +14358,35 @@
             renderPanel();
         }
 
-        function shouldUseInheritedAsset(section, node) {
-            if (node === section) return true;
-            if (!section.asset) return false;
+        function resolveNodeAsset(section, node) {
+            if (!node || typeof node !== "object") return "optional";
+            if (node.asset) return node.asset;
+            if (node === section) return section.asset || "optional";
+            if (!section.asset) return "optional";
+            if (["country", "person", "race"].includes(section.asset)) {
+                return hasOwnVisualAsset(node) ? section.asset : "none";
+            }
+            return isDirectoryNode(node) ? "none" : section.asset;
+        }
+
+        function isDirectoryNode(node) {
             if (!node || typeof node !== "object") return false;
-            if (node.asset) return false;
-            if (node.children && node.children.length) return false;
-            return true;
+            return Boolean(node.children && node.children.length) && !hasOwnPageContent(node);
+        }
+
+        function hasOwnPageContent(node) {
+            if (!node || typeof node !== "object") return false;
+            return Boolean(
+                node.markdown ||
+                node.statBlock ||
+                node.content && node.content.length ||
+                hasOwnVisualAsset(node)
+            );
+        }
+
+        function hasOwnVisualAsset(node) {
+            if (!node || typeof node !== "object") return false;
+            return Boolean(node.image || node.images && node.images.length);
         }
 
         function expandActivePath(nodeId) {
