@@ -1619,7 +1619,7 @@
             },
             props: [
                 { label: "先攻", value: "-1（9）" },
-                { label: "挑战等级", value: "1/8" },
+                { label: "挑战等级", value: "1/8（25 XP，熟练加值 +2）" },
                 { label: "豁免", value: "无" },
                 { label: "技能", value: "无" },
                 { label: "抗性", value: "毒素" },
@@ -1662,7 +1662,7 @@
             },
             props: [
                 { label: "先攻", value: "+0（10）" },
-                { label: "挑战等级", value: "2" },
+                { label: "挑战等级", value: "2（450 XP，熟练加值 +2）" },
                 { label: "豁免", value: "无" },
                 { label: "技能", value: "无" },
                 { label: "抗性", value: "毒素" },
@@ -1706,7 +1706,7 @@
             },
             props: [
                 { label: "先攻", value: "-1（9）" },
-                { label: "挑战等级", value: "6" },
+                { label: "挑战等级", value: "6（2,300 XP，熟练加值 +3）" },
                 { label: "豁免", value: "体质 +7" },
                 { label: "技能", value: "无" },
                 { label: "抗性", value: "毒素" },
@@ -1754,7 +1754,7 @@
             },
             props: [
                 { label: "先攻", value: "-1（9）" },
-                { label: "挑战等级", value: "8" },
+                { label: "挑战等级", value: "8（3,900 XP，熟练加值 +3）" },
                 { label: "豁免", value: "体质 +5，智力 +5，感知 +4，魅力 +6" },
                 { label: "技能", value: "奥秘 +5，洞悉 +4，游说 +6" },
                 { label: "抗性", value: "毒素" },
@@ -1791,23 +1791,43 @@
             ],
             spells: {
                 header: "智能史莱姆是一位 7 级施法者。它的施法关键属性为魅力（法术豁免 DC 14，法术攻击 +6）。它施法时无需材料成分。",
-                list: [
-                    { level: "蓝色智能史莱姆：戏法（随意）", spells: "法师之手，次级幻影，冷冻射线，恶毒嘲笑" },
-                    { level: "蓝色智能史莱姆：1环（4法术位）", spells: "护盾术，魔法飞弹，冰刃术，塔莎狂笑术" },
-                    { level: "蓝色智能史莱姆：2环（3法术位）", spells: "镜影术，迷踪步，蛛网术" },
-                    { level: "蓝色智能史莱姆：3环（3法术位）", spells: "催眠图纹，缓慢术，法术反制" },
-                    { level: "红色智能史莱姆：戏法（随意）", spells: "法师之手，次级幻影，火焰箭，恶毒嘲笑" },
-                    { level: "红色智能史莱姆：1环（4法术位）", spells: "护盾术，燃烧之手，魅惑类人，魔法飞弹" },
-                    { level: "红色智能史莱姆：2环（3法术位）", spells: "炽焰法球，灼热射线，镜影术" },
-                    { level: "红色智能史莱姆：3环（3法术位）", spells: "火球术，恐惧术，法术反制" },
-                    { level: "绿色智能史莱姆：戏法（随意）", spells: "法师之手，次级幻影，酸液飞溅，恶毒嘲笑" },
-                    { level: "绿色智能史莱姆：1环（4法术位）", spells: "护盾术，油腻术，致病射线，魔法飞弹" },
-                    { level: "绿色智能史莱姆：2环（3法术位）", spells: "梅尔夫强酸箭，蛛网术，镜影术" },
-                    { level: "绿色智能史莱姆：3环（3法术位）", spells: "臭云术，缓慢术，法术反制" },
-                    { level: "黄色智能史莱姆：戏法（随意）", spells: "法师之手，次级幻影，魔能爆，恶毒嘲笑" },
-                    { level: "黄色智能史莱姆：1环（4法术位）", spells: "护盾术，魔法飞弹，雷鸣波，侦测魔法" },
-                    { level: "黄色智能史莱姆：2环（3法术位）", spells: "迷踪步，镜影术，粉碎音波" },
-                    { level: "黄色智能史莱姆：3环（3法术位）", spells: "法术反制，解除魔法，守卫刻纹" }
+                sections: [
+                    {
+                        name: "蓝色智能史莱姆",
+                        list: [
+                            { level: "戏法（随意）", spells: "法师之手，次级幻影，冷冻射线，恶毒嘲笑" },
+                            { level: "1环（4法术位）", spells: "护盾术，魔法飞弹，冰刃术，塔莎狂笑术" },
+                            { level: "2环（3法术位）", spells: "镜影术，迷踪步，蛛网术" },
+                            { level: "3环（3法术位）", spells: "催眠图纹，缓慢术，法术反制" }
+                        ]
+                    },
+                    {
+                        name: "红色智能史莱姆",
+                        list: [
+                            { level: "戏法（随意）", spells: "法师之手，次级幻影，火焰箭，恶毒嘲笑" },
+                            { level: "1环（4法术位）", spells: "护盾术，燃烧之手，魅惑类人，魔法飞弹" },
+                            { level: "2环（3法术位）", spells: "炽焰法球，灼热射线，镜影术" },
+                            { level: "3环（3法术位）", spells: "火球术，恐惧术，法术反制" }
+                        ]
+                    },
+                    {
+                        name: "绿色智能史莱姆",
+                        list: [
+                            { level: "戏法（随意）", spells: "法师之手，次级幻影，酸液飞溅，恶毒嘲笑" },
+                            { level: "1环（4法术位）", spells: "护盾术，油腻术，致病射线，魔法飞弹" },
+                            { level: "2环（3法术位）", spells: "梅尔夫强酸箭，蛛网术，镜影术" },
+                            { level: "3环（3法术位）", spells: "臭云术，缓慢术，法术反制" }
+                        ]
+                    },
+                    {
+                        name: "黄色智能史莱姆",
+                        list: [
+                            { level: "戏法（随意）", spells: "法师之手，次级幻影，魔能爆，恶毒嘲笑" },
+                            { level: "1环（4法术位）", spells: "护盾术，魔法飞弹，雷鸣波，侦测魔法" },
+                            { level: "2环（3法术位）", spells: "迷踪步，镜影术，粉碎音波" },
+                            { level: "3环（3法术位）", spells: "法术反制，解除魔法，守卫刻纹" }
+                        ]
+                    }
                 ]
             }
         };
@@ -1828,7 +1848,7 @@
             },
             props: [
                 { label: "先攻", value: "-1（9）" },
-                { label: "挑战等级", value: "13" },
+                { label: "挑战等级", value: "13（10,000 XP，熟练加值 +5）" },
                 { label: "豁免", value: "力量 +12，体质 +10，感知 +6" },
                 { label: "技能", value: "察觉 +6" },
                 { label: "抗性", value: "毒素" },
@@ -13695,17 +13715,25 @@
                 ${renderTraitList(data.mythic_actions)}
             ` : "";
 
+            const renderSpellList = list => Array.isArray(list)
+                ? list.map(spell => `
+                    <div class="trait-section">
+                        <span class="trait-name">${escapeHTML(spell.level)}：</span>${escapeHTML(spell.spells)}
+                    </div>
+                `).join("")
+                : `<div class="trait-section">${formatStatText(list || "")}</div>`;
+
+            const spellsBody = data.spells && Array.isArray(data.spells.sections)
+                ? data.spells.sections.map(section => `
+                    <div class="trait-section"><span class="trait-name">${escapeHTML(section.name)}</span></div>
+                    ${renderSpellList(section.list)}
+                `).join("")
+                : data.spells ? renderSpellList(data.spells.list) : "";
+
             const spellsHtml = data.spells ? `
                 <div class="action-header">施法</div>
                 ${data.spells.header ? `<div class="trait-section"><em>${formatStatText(data.spells.header)}</em></div>` : ""}
-                ${Array.isArray(data.spells.list)
-                    ? data.spells.list.map(spell => `
-                        <div class="trait-section">
-                            <span class="trait-name">${escapeHTML(spell.level)}：</span>${escapeHTML(spell.spells)}
-                        </div>
-                    `).join("")
-                    : `<div class="trait-section">${formatStatText(data.spells.list || "")}</div>`
-                }
+                ${spellsBody}
             ` : "";
 
             const companionHtml = data.companion ? `
