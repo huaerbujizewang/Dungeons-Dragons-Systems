@@ -175,7 +175,14 @@
         .toggle-mark {
             flex: 0 0 auto;
             color: var(--gold);
+            border-radius: 999px;
+            padding: 2px 6px;
             font-size: 12px;
+            line-height: 1.2;
+        }
+
+        .toggle-mark:hover {
+            background: rgba(163, 111, 44, 0.12);
         }
 
         .content {
@@ -14696,9 +14703,13 @@
                 const button = event.target.closest("button[data-node]");
                 if (!button) return;
                 if (button.classList.contains("tree-toggle")) {
-                    const section = button.closest(".tree-section");
-                    section.classList.toggle("collapsed");
-                    updateToggleMarks();
+                    const marker = event.target.closest(".toggle-mark");
+                    if (marker && button.contains(marker)) {
+                        const section = button.closest(".tree-section");
+                        section.classList.toggle("collapsed");
+                        updateToggleMarks();
+                        return;
+                    }
                 }
                 selectNode(button.dataset.node);
             });
