@@ -521,8 +521,9 @@
 
         .official-card {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 190px;
+            grid-template-columns: minmax(0, 1fr) auto;
             gap: 22px;
+            align-items: stretch;
             margin: 18px 0 26px;
             padding: 18px;
             border: 1px solid var(--line);
@@ -554,8 +555,9 @@
         }
 
         .official-card-portrait {
-            align-self: start;
-            width: 190px;
+            align-self: stretch;
+            min-width: 190px;
+            height: 100%;
             aspect-ratio: 2 / 3;
             border: 1px solid var(--line);
             border-radius: 8px;
@@ -578,6 +580,7 @@
             .official-card-portrait {
                 max-width: 220px;
                 width: min(220px, 100%);
+                height: auto;
                 aspect-ratio: 2 / 3;
             }
         }
@@ -3839,7 +3842,7 @@
 出身威斯特丽亚哥伦比亚人社群。516 年任商贸译员，长期往来威斯特丽亚、黄金王国与西南诸国商路。521 年进入旧王国驻外随员体系，负责礼法翻译、商会接待与条约文本校订。526 年受白城方面聘为外交顾问。527 年东蒂尔兰成立后，主持外国商会安抚与战时贸易谈判。528 年任外务部部长。
 [[/official-card]]
 
-[[official-card:工务部|部长：罗兰·布莱恩特|assets/helios/characters/罗兰·布莱恩特.png]]
+[[official-card:工务部|部长：罗兰·艾德尔福德|assets/helios/characters/罗兰·艾德尔福德.png]]
 **职能定位：** 负责国家工程、基础设施与工业生产，是东蒂尔兰物质建设部门。
 
 **主要事项：** 道路、桥梁、水利、城市工程、矿业、工坊登记、军工生产、建筑标准、度量衡、灾后重建。
