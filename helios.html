@@ -554,8 +554,9 @@
         }
 
         .official-card-portrait {
-            align-self: stretch;
-            min-height: 250px;
+            align-self: start;
+            width: 190px;
+            aspect-ratio: 2 / 3;
             border: 1px solid var(--line);
             border-radius: 8px;
             overflow: hidden;
@@ -575,8 +576,8 @@
             }
 
             .official-card-portrait {
-                min-height: 0;
                 max-width: 220px;
+                width: min(220px, 100%);
                 aspect-ratio: 2 / 3;
             }
         }
