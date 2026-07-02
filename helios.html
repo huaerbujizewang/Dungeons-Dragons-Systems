@@ -521,9 +521,9 @@
 
         .official-card {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) clamp(180px, 22vw, 220px);
             gap: 22px;
-            align-items: stretch;
+            align-items: center;
             margin: 18px 0 26px;
             padding: 18px;
             border: 1px solid var(--line);
@@ -555,9 +555,7 @@
         }
 
         .official-card-portrait {
-            align-self: stretch;
-            min-width: 190px;
-            height: 100%;
+            width: 100%;
             aspect-ratio: 2 / 3;
             border: 1px solid var(--line);
             border-radius: 8px;
@@ -580,7 +578,6 @@
             .official-card-portrait {
                 max-width: 220px;
                 width: min(220px, 100%);
-                height: auto;
                 aspect-ratio: 2 / 3;
             }
         }
