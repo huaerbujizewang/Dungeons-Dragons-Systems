@@ -135,10 +135,10 @@
 
         .tree-label {
             min-width: 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
         }
 
         .tree-label-text {
@@ -179,7 +179,7 @@
         }
 
         .tree-children .tree-leaf {
-            min-height: 32px;
+            min-height: 42px;
             padding: 7px 8px;
             font-size: 13px;
         }
@@ -395,7 +395,7 @@
 
         .section-card {
             width: 100%;
-            min-height: 116px;
+            min-height: 122px;
             border: 1px solid var(--line);
             border-radius: 8px;
             background: var(--paper-soft);
@@ -415,11 +415,12 @@
 
         .section-name {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 7px;
             font-weight: 900;
             font-size: 17px;
+            line-height: 1.35;
         }
 
         .country-badge {
@@ -435,6 +436,13 @@
             line-height: 1.2;
             white-space: nowrap;
             vertical-align: 0.08em;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+        }
+
+        .tree-label .country-badge {
+            min-height: 18px;
+            padding: 2px 6px;
+            font-size: 10px;
         }
 
         .country-badge.east-tirlan { background: #1f6f8b; }
@@ -2068,7 +2076,7 @@
 
         const lottieStatBlock = {
             ac: "14（女巫礼装），19（护盾术）",
-            hp: "182（28d6 + 84）",
+            hp: "210（28d6 + 112）",
             meta: "中型类人生物（人类）",
             name: "洛蒂·德·米拉蒙特",
             speed: "30 尺",
@@ -2098,6 +2106,7 @@
                 tags: ["宫廷女巫", "米拉蒙特家族", "菲利安之女", "病娇"]
             },
             traits: [
+                { name: "传奇抗性（1次/日）", desc: "如果洛蒂豁免失败，她可以将其改为豁免成功。" },
                 { name: "战地施法者", desc: "洛蒂在进行维持法术专注的体质豁免时具有优势。" },
                 { name: "米拉蒙特女巫之眼", desc: "洛蒂可以看穿 30 尺内的普通黑暗与魔法黑暗，并能自动识破其视线范围内的视觉幻术。" },
                 { name: "危险的占有欲", desc: "当一个敌方生物在洛蒂 60 尺内攻击亚瑟或菲利安时，洛蒂在自己下个回合结束前对该生物施展法术时，法术豁免 DC +2。" }
@@ -16612,7 +16621,7 @@ o	仅在无主荒野、权力真空地带或公会直辖营地内，“公会内
             "赤葬公爵 莉科莱娅": "阿拉贡拉斯",
             "沃伊切赫": "普罗维登斯",
             "《君王》特伦斯蒂诺": "威斯特丽亚帝国",
-            "夜之大公 薇莉安": "桑格里亚",
+            "夜之大公 薇莉安": "桑格里亚大公国",
             "莉莉安娜·阿斯塔洛特": "东蒂尔兰",
             "塞德里克·洛温": "东蒂尔兰",
             "康拉德·冯·罗森塔尔": "东蒂尔兰",
@@ -16644,7 +16653,7 @@ o	仅在无主荒野、权力真空地带或公会直辖营地内，“公会内
             "黄金王国": "golden",
             "威斯特丽亚帝国": "westeria",
             "温顿公国": "winton",
-            "桑格里亚": "sangria",
+            "桑格里亚大公国": "sangria",
             "梅尔吉亚共和国": "mergia",
             "冒险者公会": "guild",
             "盗贼公会": "guild",
