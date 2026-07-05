@@ -21671,6 +21671,64 @@ o	仅在无主荒野、权力真空地带或公会直辖营地内，“公会内
                 ]
             }
         ];
+        const personCountryMap = {
+            "“大大公”哔波": "温顿公国",
+            "伊莎贝拉·洛萨维亚": "东蒂尔兰",
+            "伊莲娜·卡维尔": "东蒂尔兰",
+            "玛蒂尔达·温德尔": "东蒂尔兰",
+            "莉莉安娜·阿斯塔洛特": "东蒂尔兰",
+            "塞德里克·洛温": "东蒂尔兰",
+            "康拉德·冯·罗森塔尔": "东蒂尔兰",
+            "罗兰·艾德尔福德": "东蒂尔兰",
+            "瑟琳娜·艾斯林": "东蒂尔兰",
+            "索尔坎·古贡": "东蒂尔兰",
+            "桐生千鹤": "东蒂尔兰",
+            "莱昂内尔·布莱恩特": "东蒂尔兰",
+            "亚瑟·洛萨维亚": "西蒂尔兰",
+            "薇尔赫蒂娅·德·奥瑞斯塔": "西蒂尔兰",
+            "菲利安·德·米拉蒙特": "西蒂尔兰",
+            "奥古斯汀·德·瓦尔蒙特": "西蒂尔兰",
+            "西尔维娅·德·霜庭": "西蒂尔兰",
+            "贝尔纳德·德·赛维拉克": "西蒂尔兰",
+            "洛蒂·德·米拉蒙特": "西蒂尔兰",
+            "爱丽丝·德维尔": "西蒂尔兰",
+            "“焰冠龙皇”阿尔卡萨雷恩": "阿拉贡拉斯",
+            "“苍岩巨皇”乌尔诺格": "阿拉贡拉斯",
+            "沉壳公爵 巴尔莫格": "阿拉贡拉斯",
+            "金翼公爵 雷奥法恩": "阿拉贡拉斯",
+            "蝶冠公爵 梅莉珊德": "阿拉贡拉斯",
+            "根冠公爵 艾泽洛姆": "阿拉贡拉斯",
+            "赤葬公爵 莉科莱娅": "阿拉贡拉斯",
+            "伊利亚·沃尔科夫": "普罗维登斯",
+            "沃伊切赫": "普罗维登斯",
+            "瓦莲京娜·萨布林娜": "普罗维登斯",
+            "伊琳娜·科瓦奇": "普罗维登斯",
+            "《君王》特伦斯蒂诺": "威斯特丽亚帝国",
+            "艾尔弗丽德·冯·魏斯克朗": "黄金王国",
+            "布伦希尔德·冯·纳赫特克朗": "黄金王国",
+            "弗洛里安·格林瓦尔德": "黄金王国",
+            "夜之大公 薇莉安": "桑格里亚大公国",
+            "伊萨克·维里安": "梅尔吉亚共和国",
+            "马德拉里·希伯": "冒险者公会",
+            "瓦季姆·捷涅夫": "盗贼公会",
+            "法蒂玛·阿尔-扎赫拉": "登神会"
+        };
+
+        const countryBadgeClassMap = {
+            "东蒂尔兰": "east-tirlan",
+            "西蒂尔兰": "west-tirlan",
+            "阿拉贡拉斯": "aragonlas",
+            "普罗维登斯": "providence",
+            "黄金王国": "golden",
+            "威斯特丽亚帝国": "westeria",
+            "温顿公国": "winton",
+            "桑格里亚大公国": "sangria",
+            "梅尔吉亚共和国": "mergia",
+            "冒险者公会": "guild",
+            "盗贼公会": "guild",
+            "登神会": "secret"
+        };
+
         const state = {
             current: {
                 nodeId: "home",
@@ -21757,9 +21815,11 @@ o	仅在无主荒野、权力真空地带或公会直辖营地内，“公会内
 
         function renderPersonCountryBadge(name, nodeId) {
             if (!nodeId || !nodeId.startsWith("people:")) return "";
-            const country = personCountryMap[name];
+            const countryMap = typeof personCountryMap !== "undefined" ? personCountryMap : {};
+            const badgeMap = typeof countryBadgeClassMap !== "undefined" ? countryBadgeClassMap : {};
+            const country = countryMap[name];
             if (!country) return "";
-            const badgeClass = countryBadgeClassMap[country] || "";
+            const badgeClass = badgeMap[country] || "";
             return `<span class="country-badge ${badgeClass}">${escapeHTML(country)}</span>`;
         }
 
