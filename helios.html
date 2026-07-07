@@ -12378,12 +12378,13 @@
             workspace.classList.toggle("no-asset-layout", state.current.asset === "none");
 
             const contentHasPolicies = state.current.content && state.current.content.some(item => item && typeof item === "object" && item.type === "policies");
+            const bodyMarkdown = state.current.markdown ? prepareMarkdownForPolicies(state.current.markdown, state.current.policies && !contentHasPolicies) : "";
 
             if (state.current.markdown || state.current.statBlock || state.current.policies) {
                 panelBody.innerHTML = `
-                    ${state.current.markdown ? `<div class="intro-copy">${renderMarkdown(state.current.markdown)}</div>` : ""}
+                    ${bodyMarkdown ? `<div class="intro-copy">${renderMarkdown(bodyMarkdown)}</div>` : ""}
                     ${state.current.content && state.current.content.length ? `<div class="intro-copy">${state.current.content.map(renderContentParagraph).join("")}</div>` : ""}
-                    ${state.current.policies && !contentHasPolicies && (!state.current.markdown || !state.current.markdown.includes("[[policies]]")) ? `<div class="intro-copy">${renderPolicyPanel(state.current.policies)}</div>` : ""}
+                    ${state.current.policies && !contentHasPolicies && (!bodyMarkdown || !bodyMarkdown.includes("[[policies]]")) ? `<div class="intro-copy">${renderPolicyPanel(state.current.policies)}</div>` : ""}
                     ${state.current.statBlock ? renderStatBlock(state.current.statBlock) : ""}
                     ${state.current.children.length ? renderChildrenGrid() : ""}
                 `;
@@ -12404,6 +12405,24 @@
             }
 
             renderAssetSlot(state.current.asset);
+        }
+
+        function prepareMarkdownForPolicies(markdown, shouldInject) {
+            if (!shouldInject || !markdown || markdown.includes("[[policies]]")) return markdown;
+            const lines = markdown.split("\n");
+            const overviewIndex = lines.findIndex(line => /^#{2,4}\s*概述\s*$/.test(line.trim()));
+            if (overviewIndex >= 0) {
+                lines.splice(overviewIndex, 0, "", "[[policies]]", "");
+                return lines.join("\n");
+            }
+
+            const titleIndex = lines.findIndex(line => /^#\s+/.test(line.trim()));
+            if (titleIndex >= 0) {
+                lines.splice(titleIndex + 1, 0, "", "[[policies]]", "");
+                return lines.join("\n");
+            }
+
+            return `[[policies]]\n\n${markdown}`;
         }
 
         function renderChildrenGrid() {
