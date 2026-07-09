@@ -13973,6 +13973,10 @@
                 const section = resolved.section;
                 const node = resolved.node;
                 const parent = resolved.parent;
+                if (!section || !node) {
+                    console.warn("无法定位节点", nodeId);
+                    return;
+                }
                 const isTopLevel = node === section;
                 const resolvedAsset = resolveNodeAsset(section, node);
                 state.current = {
@@ -14061,6 +14065,7 @@
             for (const label of parts.slice(1)) {
                 parent = node;
                 node = ((parent && parent.children) || []).find(item => childName(item) === label);
+                if (!node) break;
                 path.push({ name: childName(node), node });
             }
 
@@ -14553,9 +14558,44 @@
                 wis: "WIS",
                 cha: "CHA"
             };
+            const normalizeStatBlockStats = stats => {
+                if (Array.isArray(stats)) {
+                    return stats.reduce((normalized, stat) => {
+                        const key = String(stat.key || "").toLowerCase();
+                        if (key) {
+                            normalized[key] = {
+                                score: stat.score || stat.value || "-",
+                                mod: stat.mod || ""
+                            };
+                        }
+                        return normalized;
+                    }, {});
+                }
+                return stats || {};
+            };
+            const normalizeStatBlockBasicInfo = info => {
+                if (Array.isArray(info)) {
+                    return info.reduce((normalized, item) => {
+                        const key = item.key || item.label;
+                        if (key === "性别") normalized.gender = item.value;
+                        if (key === "出身") normalized.origin = item.value;
+                        if (key === "身高") normalized.height = item.value;
+                        if (key === "生日") normalized.birthday = item.value;
+                        if (key === "标签") normalized.tags = String(item.value || "").split(/[，,]/).map(tag => tag.trim()).filter(Boolean);
+                        return normalized;
+                    }, {});
+                }
+                return info || {};
+            };
+            const normalizeProperty = prop => ({
+                label: prop.label || prop.key || "",
+                value: prop.value || ""
+            });
+            const normalizedStats = normalizeStatBlockStats(data.stats);
+            const normalizedBasicInfo = normalizeStatBlockBasicInfo(data.basic_info);
             const statKeys = ["str", "dex", "con", "int", "wis", "cha"];
             const statsHtml = statKeys.map(key => {
-                const stat = data.stats && data.stats[key] ? data.stats[key] : { score: "-", mod: "" };
+                const stat = normalizedStats && normalizedStats[key] ? normalizedStats[key] : { score: "-", mod: "" };
                 return `
                     <div class="stat-box">
                         <strong>${statLabels[key]}</strong>
@@ -14564,17 +14604,17 @@
                 `;
             }).join("");
 
-            const basicInfo = data.basic_info ? [
-                data.basic_info.gender ? { label: "性别", value: data.basic_info.gender } : null,
-                data.basic_info.origin ? { label: "出身", value: data.basic_info.origin } : null,
-                data.basic_info.height ? { label: "身高", value: data.basic_info.height } : null,
-                data.basic_info.birthday ? { label: "生日", value: data.basic_info.birthday } : null,
-                data.basic_info.tags && data.basic_info.tags.length ? { label: "标签", value: data.basic_info.tags.join("，") } : null
+            const basicInfo = normalizedBasicInfo ? [
+                normalizedBasicInfo.gender ? { label: "性别", value: normalizedBasicInfo.gender } : null,
+                normalizedBasicInfo.origin ? { label: "出身", value: normalizedBasicInfo.origin } : null,
+                normalizedBasicInfo.height ? { label: "身高", value: normalizedBasicInfo.height } : null,
+                normalizedBasicInfo.birthday ? { label: "生日", value: normalizedBasicInfo.birthday } : null,
+                normalizedBasicInfo.tags && normalizedBasicInfo.tags.length ? { label: "标签", value: normalizedBasicInfo.tags.join("，") } : null
             ].filter(Boolean) : [];
 
             const propsHtml = [
                 ...basicInfo,
-                ...(data.props || [])
+                ...(data.props || []).map(normalizeProperty)
             ].map(prop => `
                 <div class="property-line"><strong>${escapeHTML(prop.label)}：</strong>${escapeHTML(prop.value)}</div>
             `).join("");
