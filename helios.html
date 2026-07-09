@@ -973,6 +973,7 @@
             line-height: 1.35;
         }
 
+        /* 角色卡防窥区：只遮罩“特性/动作/施法/传奇动作”等下半段细节，不遮导航、正文、立绘或基础面板。 */
         .stat-private-area {
             position: relative;
             margin-top: 10px;
@@ -13750,6 +13751,9 @@
                   "天火会": "secret"
         };
 
+        const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw";
+        const supabaseClient = window.supabase ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
         const HELIOS_FULL_STAT_EMAIL = "739477825@qq.com";
 
         const state = {
@@ -14746,6 +14750,8 @@
             return !state.revealedStatBlocks.has(makeStatRevealKey(data));
         }
 
+        // 防窥只作用于角色卡中“特性/动作/施法/传奇动作”等战斗细节。
+        // 人物节点、正文简介、立绘、头像、AC/HP/六维/语言等基础面板必须始终可见。
         function hasFullStatAccess() {
             return normalizeEmail(state.viewerEmail) === HELIOS_FULL_STAT_EMAIL;
         }
@@ -14890,10 +14896,15 @@
 
             if (typeof supabaseClient !== "undefined" && supabaseClient && supabaseClient.auth) {
                 try {
-                    const { data: { user } } = await supabaseClient.auth.getUser();
-                    if (user && user.email) email = normalizeEmail(user.email);
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (session && session.user && session.user.email) {
+                        email = normalizeEmail(session.user.email);
+                    } else {
+                        const { data: { user } } = await supabaseClient.auth.getUser();
+                        if (user && user.email) email = normalizeEmail(user.email);
+                    }
                 } catch (error) {
-                    // Helios can still be browsed locally; missing auth simply keeps stat cards protected.
+                    // 本页是静态档案页，鉴权失败不能影响浏览；只会让战斗细节保持防窥。
                 }
             }
 
