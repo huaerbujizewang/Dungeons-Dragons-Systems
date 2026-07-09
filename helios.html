@@ -13750,6 +13750,8 @@
                   "天火会": "secret"
         };
 
+        const HELIOS_FULL_STAT_EMAIL = "739477825@qq.com";
+
         const state = {
             current: {
                 nodeId: "home",
@@ -14886,7 +14888,7 @@
         async function resolveHeliosViewerEmail() {
             let email = readStoredViewerEmail();
 
-            if (supabaseClient && supabaseClient.auth) {
+            if (typeof supabaseClient !== "undefined" && supabaseClient && supabaseClient.auth) {
                 try {
                     const { data: { user } } = await supabaseClient.auth.getUser();
                     if (user && user.email) email = normalizeEmail(user.email);
