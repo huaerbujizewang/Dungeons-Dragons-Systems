@@ -78,8 +78,10 @@
         th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
         tr.stock-row { cursor: pointer; }
         tr.stock-row:hover, tr.stock-row.active { background: #eef5fb; }
-        .up { color: var(--green); }
-        .down { color: var(--red); }
+        .up { color: var(--red); }
+        .down { color: var(--green); }
+        .status-open { color: var(--green); }
+        .status-closed { color: var(--red); }
         .muted { color: var(--muted); }
         .message {
             padding: 18px;
@@ -344,7 +346,7 @@
         const openDate = snapshot.openDate;
         if (!snapshot.market.market_enabled) {
             status.textContent = '已关闭';
-            status.className = 'value down';
+            status.className = 'value status-closed';
             message.style.display = 'block';
             message.textContent = '白城证券交易所尚未开放';
             return;
@@ -357,7 +359,7 @@
             return;
         }
         status.textContent = '开放交易';
-        status.className = 'value up';
+        status.className = 'value status-open';
         message.style.display = 'none';
     }
 
