@@ -54,6 +54,14 @@
         return Math.round(toNumber(value) * 1000000) / 1000000;
     }
 
+    function chunkArray(items, size = 500) {
+        const chunks = [];
+        for (let index = 0; index < items.length; index += size) {
+            chunks.push(items.slice(index, index + size));
+        }
+        return chunks;
+    }
+
     function normalizeDate(date) {
         const safe = date || {};
         return {
@@ -89,6 +97,21 @@
 
     function addDays(date, days) {
         return serialToDate(dateToSerial(date) + days);
+    }
+
+    function listMonthsBetween(fromDate, toDate) {
+        const months = [];
+        let year = fromDate.year;
+        let month = fromDate.month;
+        while (year < toDate.year || (year === toDate.year && month <= toDate.month)) {
+            months.push({ year, month });
+            month += 1;
+            if (month > MONTHS_PER_YEAR) {
+                month = 1;
+                year += 1;
+            }
+        }
+        return months;
     }
 
     function pad(value, width) {
@@ -414,31 +437,135 @@
         if (!market?.market_enabled) return;
         const openDate = marketOpenDate(market);
         const stocks = await ensureAccountInitialized(client, accountId, openDate);
-        const preparedMonths = new Set();
+        const stockIds = stocks.map(stock => stock.id);
+        const steps = [];
         let cursor = normalizeDate(fromDate);
+        const fromSerial = dateToSerial(fromDate);
         const targetSerial = dateToSerial(toDate);
         while (dateToSerial(cursor) < targetSerial) {
             const nextDate = addDays(cursor, 1);
             if (isMarketTradable(market, cursor)) {
-                const monthKey = `${cursor.year}-${cursor.month}`;
-                if (!preparedMonths.has(monthKey)) {
-                    await Promise.all(stocks.map(stock =>
-                        ensureDailyReturnsForMonth(client, accountId, stock.id, cursor.year, cursor.month)
-                    ));
-                    preparedMonths.add(monthKey);
-                }
-                await settleOneStockDay({
-                    client,
-                    accountId,
-                    fromDate: cursor,
-                    toDate: nextDate,
-                    market,
-                    stocks,
-                    skipDailyReturnEnsure: true
-                });
+                steps.push({ fromDate: cursor, toDate: nextDate, fromKey: dateKey(cursor) });
             }
             cursor = nextDate;
         }
+        if (!steps.length) return;
+
+        const activeMonths = listMonthsBetween(steps[0].fromDate, steps[steps.length - 1].fromDate);
+        for (const monthInfo of activeMonths) {
+            await Promise.all(stocks.map(stock =>
+                ensureDailyReturnsForMonth(client, accountId, stock.id, monthInfo.year, monthInfo.month)
+            ));
+        }
+
+        const [statesRes, returnsRes, orderRes, dmRes] = await Promise.all([
+            client
+                .from('account_stock_state')
+                .select('*')
+                .eq('account_id', accountId)
+                .in('stock_id', stockIds),
+            client
+                .from('stock_daily_returns')
+                .select('*')
+                .eq('account_id', accountId)
+                .gte('date_serial', fromSerial)
+                .lt('date_serial', targetSerial)
+                .in('stock_id', stockIds),
+            client
+                .from('stock_daily_order_totals')
+                .select('*')
+                .eq('account_id', accountId)
+                .gte('date_serial', fromSerial)
+                .lt('date_serial', targetSerial)
+                .in('stock_id', stockIds),
+            client
+                .from('stock_dm_adjustments')
+                .select('*')
+                .eq('account_id', accountId)
+                .gte('effective_date_serial', fromSerial)
+                .lt('effective_date_serial', targetSerial)
+                .in('stock_id', stockIds)
+        ]);
+        for (const res of [statesRes, returnsRes, orderRes, dmRes]) {
+            if (res.error) throw res.error;
+        }
+
+        const currentPrices = Object.fromEntries(stocks.map(stock => [stock.id, roundMoney(stock.initial_price)]));
+        for (const state of statesRes.data || []) {
+            currentPrices[state.stock_id] = roundMoney(state.current_price);
+        }
+
+        const returnsMap = {};
+        for (const row of returnsRes.data || []) {
+            returnsMap[`${row.date_key}:${row.stock_id}`] = row;
+        }
+        const orderMap = {};
+        for (const row of orderRes.data || []) {
+            orderMap[`${row.date_key}:${row.stock_id}`] = row;
+        }
+        const dmMap = {};
+        for (const row of dmRes.data || []) {
+            dmMap[`${row.effective_date_key}:${row.stock_id}`] = row;
+        }
+
+        const historyRows = [];
+        for (const step of steps) {
+            for (const stock of stocks) {
+                const mapKey = `${step.fromKey}:${stock.id}`;
+                const currentPrice = currentPrices[stock.id] || roundMoney(stock.initial_price);
+                const baseReturn = toNumber(returnsMap[mapKey]?.base_return, 0);
+                const order = orderMap[mapKey] || {};
+                const orderImpact = toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
+                const dmAdjustment = toNumber(dmMap[mapKey]?.percentage, 0);
+                const nextPrice = Math.max(MIN_PRICE, currentPrice * (1 + baseReturn) * (1 + orderImpact) * (1 + dmAdjustment));
+                const cleanPrice = roundMoney(nextPrice);
+                historyRows.push({
+                    account_id: accountId,
+                    stock_id: stock.id,
+                    price: cleanPrice,
+                    base_return: roundRate(baseReturn),
+                    order_impact: roundRate(orderImpact),
+                    dm_adjustment: roundRate(dmAdjustment),
+                    previous_price: currentPrice,
+                    ...datePayload(step.toDate)
+                });
+                currentPrices[stock.id] = cleanPrice;
+            }
+        }
+
+        for (const chunk of chunkArray(historyRows)) {
+            const { error } = await client
+                .from('stock_price_history')
+                .upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
+            if (error) throw error;
+        }
+
+        const stateRows = stocks.map(stock => ({
+            account_id: accountId,
+            stock_id: stock.id,
+            current_price: currentPrices[stock.id] || roundMoney(stock.initial_price),
+            updated_at: new Date().toISOString()
+        }));
+        const { error: stateError } = await client
+            .from('account_stock_state')
+            .upsert(stateRows, { onConflict: 'account_id,stock_id' });
+        if (stateError) throw stateError;
+
+        const { error: clearOrderError } = await client
+            .from('stock_daily_order_totals')
+            .delete()
+            .eq('account_id', accountId)
+            .gte('date_serial', fromSerial)
+            .lt('date_serial', targetSerial);
+        if (clearOrderError) throw clearOrderError;
+
+        const { error: clearDmError } = await client
+            .from('stock_dm_adjustments')
+            .delete()
+            .eq('account_id', accountId)
+            .gte('effective_date_serial', fromSerial)
+            .lt('effective_date_serial', targetSerial);
+        if (clearDmError) throw clearDmError;
     }
 
     async function settleOneStockDay(options) {

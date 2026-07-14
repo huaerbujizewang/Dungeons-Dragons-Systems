@@ -5000,6 +5000,8 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
                 .or('status.eq.研发中,status.eq.进行中');
 
             if (projects && projects.length > 0) {
+                const researchUpdates = [];
+                const researchLogs = [];
                 for (let p of projects) {
                     const spd = Number(p.speed_per_day) || 0;
                     if (spd > 0) {
@@ -5009,14 +5011,17 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
                         if (newProg >= p.max_progress) {
                             newProg = p.max_progress;
                             newStatus = '已完成';
-                            await logAction('科研突破', `[${p.name}] 研发已完成！`);
+                            researchLogs.push(logAction('科研突破', `[${p.name}] 研发已完成！`));
                         }
                         
-                        await supabaseClient.from('research_projects')
-                            .update({ current_progress: newProg, status: newStatus })
-                            .eq('id', p.id);
+                        researchUpdates.push(
+                            supabaseClient.from('research_projects')
+                                .update({ current_progress: newProg, status: newStatus })
+                                .eq('id', p.id)
+                        );
                     }
                 }
+                await Promise.all([...researchUpdates, ...researchLogs]);
             }
 
             await advanceTechTreeResearch(viewingUserId, daysPassed);
@@ -5034,10 +5039,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         updateWarPopulationPanel();
 
         await logAction('时间跃迁', `DM 将时间调整为 ${formatWorldDate(currentDate)}`);
-        await refreshAllData();
-        
-        // 刷新 DM 列表
-        if (typeof loadAdminResearch === 'function') loadAdminResearch();
+        await refreshAfterTimeChange();
         
         alert(`✅ 时空同步完成！\n时间已推进 ${daysPassed} 天，科研进度已按倍率结算。`);
     } catch (e) {
@@ -6082,6 +6084,15 @@ async function buy(id, p, n, c) {
         await Promise.all(activeTasks);
     }
 
+    async function refreshAfterTimeChange() {
+        await Promise.all([
+            loadUserDate(),
+            loadGold()
+        ]);
+        if (typeof loadAdminResearch === 'function') loadAdminResearch();
+        if (typeof loadStockAdminPanel === 'function') loadStockAdminPanel();
+    }
+
     // ================== ：加载日志 ==================
     async function loadLogs() {
         if (!await requireAdminRole(['root'], true)) return;
@@ -6474,6 +6485,8 @@ async function advanceTime() {
                 .or('status.eq.研发中,status.eq.进行中'); // 容错处理：兼容两种写法
 
             if (projects && projects.length > 0) {
+                const researchUpdates = [];
+                const researchLogs = [];
                 for (let p of projects) {
                     // 强制转为数字，防止字符串拼接
                     const currentSpd = Number(p.speed_per_day) || 0;
@@ -6487,15 +6500,17 @@ async function advanceTime() {
                         if (newProg >= maxProg) {
                             newProg = maxProg;
                             newStatus = '已完成';
-                            await logAction('科研突破', `[${p.name}] 研发已完成！`);
+                            researchLogs.push(logAction('科研突破', `[${p.name}] 研发已完成！`));
                         }
             
-                        // 执行更新
-                        await supabaseClient.from('research_projects')
-                            .update({ current_progress: newProg, status: newStatus })
-                            .eq('id', p.id);
+                        researchUpdates.push(
+                            supabaseClient.from('research_projects')
+                                .update({ current_progress: newProg, status: newStatus })
+                                .eq('id', p.id)
+                        );
                     }
                 }
+                await Promise.all([...researchUpdates, ...researchLogs]);
             }
             await advanceTechTreeResearch(viewingUserId, 1);
 // 循环结束后，手动刷新一下 DM 控制台里的科研列表显示
@@ -6514,8 +6529,7 @@ if (typeof loadAdminResearch === 'function') {
             // 4. 刷新
             await logAction('时间推进', `时间变更为 ${formatWorldDate(nextDate)} (User:${viewingUserId})`);
             
-            // 局部刷新即可，不需要 reload 整个页面
-            await refreshAllData(); 
+            await refreshAfterTimeChange();
             
         } catch (e) {
             console.error(e);
