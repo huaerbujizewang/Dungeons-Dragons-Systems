@@ -2214,7 +2214,7 @@
 
             const spellsBody = data.spells && Array.isArray(data.spells.sections)
                 ? data.spells.sections.map(section => `
-                    <div class="trait-section"><span class="trait-name">${escapeHTML(section.name)}</span></div>
+                    ${section.name ? `<div class="trait-section"><span class="trait-name">${escapeHTML(section.name)}</span></div>` : ""}
                     ${renderSpellList(section.list)}
                 `).join("")
                 : data.spells ? renderSpellList(data.spells.list) : "";
