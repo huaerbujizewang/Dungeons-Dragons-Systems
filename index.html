@@ -16,6 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D 小队管理系统</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="stocks.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
@@ -1762,6 +1763,13 @@
             <p style="font-size:0.8em; color:#666;">星系设定、国家、人物、组织与术语目录</p>
         </div>
 
+        <!-- 卡片：白城证券交易所 -->
+        <div class="card emp-card-content" onclick="window.location.href='stocks.html?uid=' + viewingUserId" style="cursor:pointer;">
+            <div style="font-size: 2.5em; margin-bottom:10px; color:#2f6f9f;">▥</div>
+            <div style="font-weight:bold; font-size:1.1em;">白城证券交易所</div>
+            <p style="font-size:0.8em; color:#666;">按当前账号独立结算的股票交易小游戏</p>
+        </div>
+
         <!-- 卡片 3：传记与间章 -->
         <div class="card emp-card-content" onclick="window.location.href='lore.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px;">📜</div>
@@ -2330,6 +2338,31 @@
                     <input type="number" id="time-day" style="width:50px"> 日
                 </div>
                 <button onclick="updateTimeManual()" style="width:100%; padding:10px; background:#34495e; color:white; border:none;">同步时空</button>
+            </div>
+
+            <div class="admin-box" style="border:1px solid #2f6f9f; padding:15px; border-radius:8px; background:#f2f8fc;">
+                <h3 style="margin-top:0; color:#2f6f9f;">▥ 白城证券交易所</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:10px;">先在右侧【玩家资产操控】选择目标玩家；股票日期跟随该玩家当前世界日期。</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:end;">
+                    <label style="font-size:0.85em;">市场状态
+                        <select id="adm-stock-enabled" style="width:100%; padding:6px;">
+                            <option value="true">开启</option>
+                            <option value="false">关闭</option>
+                        </select>
+                    </label>
+                    <button onclick="adminSaveStockMarket()" style="background:#2f6f9f; color:white; border:none; padding:8px; border-radius:4px;">保存市场</button>
+                    <input type="number" id="adm-stock-open-year" placeholder="开启年" style="padding:6px;">
+                    <div style="display:flex; gap:6px;">
+                        <input type="number" id="adm-stock-open-month" min="1" max="12" placeholder="月" style="padding:6px; width:50%;">
+                        <input type="number" id="adm-stock-open-day" min="1" max="30" placeholder="日" style="padding:6px; width:50%;">
+                    </div>
+                    <select id="adm-stock-adjust-stock" style="padding:6px;"></select>
+                    <div style="display:flex; gap:6px;">
+                        <input type="number" id="adm-stock-adjust-percent" step="0.1" placeholder="下次修正 %" style="padding:6px; flex:1;">
+                        <button onclick="adminSetStockAdjustment()" style="background:#8e44ad; color:white; border:none; padding:8px; border-radius:4px;">设置</button>
+                    </div>
+                </div>
+                <div id="adm-stock-intel" style="margin-top:10px; max-height:190px; overflow:auto; background:#fff; border:1px solid #d8e8f3; border-radius:6px; padding:8px; font-size:0.82em; color:#333;">请选择玩家后加载股票情报。</div>
             </div>
 
             <!-- 集市进货 -->
@@ -4989,6 +5022,8 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
             await advanceTechTreeResearch(viewingUserId, daysPassed);
         }
 
+        await applyStockDateChange(currentDate, { year: nY, month: nM, day: nD });
+
         // 4. 更新数据库时间
         await supabaseClient.from('profiles').update({ 
             world_date: { year: nY, month: nM, day: nD } 
@@ -5036,6 +5071,148 @@ async function loadGold() {
         document.getElementById('gold-amount').innerText = profile.gold_gp.toLocaleString();
         const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
         if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
+    }
+
+    async function applyStockDateChange(oldDate, newDate) {
+        if (!window.BaichengStocks || !viewingUserId || !oldDate || !newDate) return;
+        const diff = BaichengStocks.compareDates(newDate, oldDate);
+        if (diff > 0) {
+            await BaichengStocks.settleStocksBetween({
+                client: supabaseClient,
+                accountId: viewingUserId,
+                fromDate: oldDate,
+                toDate: newDate
+            });
+        } else if (diff < 0) {
+            await BaichengStocks.rollbackStocksToDate({
+                client: supabaseClient,
+                accountId: viewingUserId,
+                targetDate: newDate
+            });
+        }
+    }
+
+    function getStockAdminAccountId() {
+        return selectedUserId || viewingUserId || myId;
+    }
+
+    async function loadStockAdminPanel() {
+        if (!isCurrentAdmin() || !window.BaichengStocks) return;
+        const accountId = getStockAdminAccountId();
+        const box = document.getElementById('adm-stock-intel');
+        const stockSelect = document.getElementById('adm-stock-adjust-stock');
+        if (!accountId || !box || !stockSelect) return;
+
+        try {
+            const { data: profile, error: profileError } = await supabaseClient
+                .from('profiles')
+                .select('world_date,email')
+                .eq('id', accountId)
+                .single();
+            if (profileError) throw profileError;
+            const stockDate = profile.world_date || currentDate;
+            const snapshot = await BaichengStocks.loadSnapshot({
+                client: supabaseClient,
+                accountId,
+                currentDate: stockDate,
+                includeFuture: true
+            });
+            const openDate = snapshot.openDate || stockDate;
+            document.getElementById('adm-stock-enabled').value = snapshot.market.market_enabled ? 'true' : 'false';
+            document.getElementById('adm-stock-open-year').value = openDate.year;
+            document.getElementById('adm-stock-open-month').value = openDate.month;
+            document.getElementById('adm-stock-open-day').value = openDate.day;
+            stockSelect.innerHTML = snapshot.stocks
+                .map(stock => `<option value="${escapeHTML(stock.id)}">${escapeHTML(stock.name)} (${escapeHTML(stock.code)})</option>`)
+                .join('');
+
+            const returnsByStock = {};
+            snapshot.dailyReturns.forEach(row => {
+                if (!returnsByStock[row.stock_id]) returnsByStock[row.stock_id] = [];
+                returnsByStock[row.stock_id].push(row);
+            });
+
+            box.innerHTML = `
+                <div style="font-weight:bold; margin-bottom:6px;">${escapeHTML(profile.email || accountId)} · ${BaichengStocks.formatDate(stockDate)}</div>
+                ${snapshot.stocks.map(stock => {
+                    const state = snapshot.states[stock.id] || {};
+                    const trend = snapshot.trends[stock.id];
+                    const returns = (returnsByStock[stock.id] || [])
+                        .map(row => `${row.day}日 ${Number(row.base_return * 100).toFixed(2)}%`)
+                        .join('，');
+                    return `
+                        <div style="border-top:1px solid #edf3f8; padding:6px 0;">
+                            <strong>${escapeHTML(stock.name)}</strong> ${formatCurrency(state.current_price || stock.initial_price)}
+                            <div style="color:#666;">趋势：${escapeHTML(trend?.trend_type || '尚未生成')}</div>
+                            <div style="color:#777;">${returns || '本月每日基础涨跌尚未生成'}</div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        } catch (e) {
+            console.warn('股票 DM 面板加载失败:', e);
+            box.innerHTML = `<span style="color:#c0392b;">股票情报加载失败：${escapeHTML(e.message || e)}</span>`;
+        }
+    }
+
+    async function adminSaveStockMarket() {
+        if (!await requireAdminRole()) return;
+        if (!window.BaichengStocks) return alert('股票模块未加载');
+        const accountId = getStockAdminAccountId();
+        if (!accountId) return alert('请先选择玩家');
+        const openDate = {
+            year: parseInt(document.getElementById('adm-stock-open-year').value, 10),
+            month: parseInt(document.getElementById('adm-stock-open-month').value, 10),
+            day: parseInt(document.getElementById('adm-stock-open-day').value, 10)
+        };
+        const enabled = document.getElementById('adm-stock-enabled').value === 'true';
+        showLoading();
+        try {
+            await BaichengStocks.setMarketConfig({
+                client: supabaseClient,
+                accountId,
+                enabled,
+                openDate,
+                currentDate
+            });
+            await logAction('DM操作', `${enabled ? '开启/更新' : '关闭'}白城证券交易所：User:${accountId}，开启日 ${BaichengStocks.formatDate(openDate)}`);
+            await loadStockAdminPanel();
+            alert('股票市场设置已保存。');
+        } catch (e) {
+            console.error(e);
+            alert('股票市场设置失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function adminSetStockAdjustment() {
+        if (!await requireAdminRole()) return;
+        if (!window.BaichengStocks) return alert('股票模块未加载');
+        const accountId = getStockAdminAccountId();
+        const stockId = document.getElementById('adm-stock-adjust-stock').value;
+        const pct = Number(document.getElementById('adm-stock-adjust-percent').value);
+        if (!accountId || !stockId) return alert('请先选择玩家与股票');
+        if (Number.isNaN(pct)) return alert('修正百分比必须是数字');
+        showLoading();
+        try {
+            await BaichengStocks.setDmAdjustment({
+                client: supabaseClient,
+                accountId,
+                stockId,
+                currentDate,
+                percentage: pct / 100
+            });
+            await logAction('DM操作', `设置股票下一次结算修正：User:${accountId} Stock:${stockId} ${pct}%`);
+            document.getElementById('adm-stock-adjust-percent').value = '';
+            await loadStockAdminPanel();
+            alert('股票结算修正已设置，将在下一次日期推进时生效。');
+        } catch (e) {
+            console.error(e);
+            alert('设置股票修正失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
     }
 
 
@@ -5103,6 +5280,7 @@ async function loadGold() {
 
             loadAdminMonsters(); 
             loadAdminResearch(); 
+            loadStockAdminPanel();
         }
     }
 // --- 集市加载 ---
@@ -5717,6 +5895,7 @@ async function buy(id, p, n, c) {
             if (visibilitySelect) visibilitySelect.innerHTML = '';
             if (visibilityMask) visibilityMask.value = '';
             if (visibilityCheck) visibilityCheck.checked = false;
+            loadStockAdminPanel();
             return;
         }
 
@@ -5799,6 +5978,7 @@ async function buy(id, p, n, c) {
         loadEmpForRole(selectedUserId);
         loadEmpForVisibility(selectedUserId);
         loadAdminResearch();
+        loadStockAdminPanel();
         loadWarPosterStrip();
     }
 
@@ -6322,6 +6502,8 @@ async function advanceTime() {
 if (typeof loadAdminResearch === 'function') {
     loadAdminResearch();
 }
+
+            await applyStockDateChange(currentDate, nextDate);
 
             // 3. 更新数据库 (只更新 viewingUserId 的时间)
             await supabaseClient
