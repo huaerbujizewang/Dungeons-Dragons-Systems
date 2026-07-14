@@ -444,20 +444,58 @@
         ctx.fillText(formatMoney(min), 44, 218);
     }
 
+    function setTradeBusy(isBusy) {
+        const buyBtn = document.getElementById('buy-btn');
+        const sellBtn = document.getElementById('sell-btn');
+        buyBtn.disabled = isBusy || !snapshot?.tradable;
+        sellBtn.disabled = isBusy || !snapshot?.tradable;
+        buyBtn.textContent = isBusy ? '提交中' : '买入';
+        sellBtn.textContent = isBusy ? '提交中' : '卖出';
+    }
+
+    function applyTradeResult(type, result) {
+        if (!snapshot || !selectedStockId || !result) return;
+        if (Number.isFinite(Number(result.gold))) {
+            accountProfile.gold_gp = Number(result.gold);
+            document.getElementById('gold-value').textContent = formatMoney(accountProfile.gold_gp);
+        }
+
+        const holdingQty = Number(result.holdingQuantity);
+        if (type === 'sell' && holdingQty <= 0) {
+            delete snapshot.holdings[selectedStockId];
+        } else if (Number.isFinite(holdingQty)) {
+            const existing = snapshot.holdings[selectedStockId] || { account_id: accountId, stock_id: selectedStockId };
+            snapshot.holdings[selectedStockId] = {
+                ...existing,
+                quantity: holdingQty,
+                average_cost: Number(result.averageCost || existing.average_cost || 0)
+            };
+        }
+
+        renderStocks();
+        renderTradePanel();
+    }
+
     async function tradeStock(type) {
         const quantity = parseInt(document.getElementById('trade-quantity').value, 10);
         const currentDate = accountProfile.world_date;
+        setTradeBusy(true);
         try {
+            let result;
             if (type === 'buy') {
-                const result = await BaichengStocks.buyStock({ client: supabaseClient, accountId, stockId: selectedStockId, quantity, currentDate });
+                result = await BaichengStocks.buyStock({ client: supabaseClient, accountId, stockId: selectedStockId, quantity, currentDate });
+                applyTradeResult(type, result);
                 alert(`买入成功：${result.quantity} 股，成交额 ${formatMoney(result.total)}`);
             } else {
-                const result = await BaichengStocks.sellStock({ client: supabaseClient, accountId, stockId: selectedStockId, quantity, currentDate });
+                result = await BaichengStocks.sellStock({ client: supabaseClient, accountId, stockId: selectedStockId, quantity, currentDate });
+                applyTradeResult(type, result);
                 alert(`卖出成功：${result.quantity} 股，成交额 ${formatMoney(result.total)}`);
             }
-            await refreshPage();
+            refreshPage().catch(console.error);
         } catch (e) {
             alert(e.message || '交易失败');
+        } finally {
+            setTradeBusy(false);
         }
     }
 

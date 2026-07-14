@@ -654,10 +654,41 @@
         return state;
     }
 
+    function isMissingRpcError(error) {
+        const message = String(error?.message || '');
+        return error?.code === 'PGRST202'
+            || /trade_stock/i.test(message) && /schema cache|function|could not find/i.test(message);
+    }
+
+    async function tradeStockRpc(client, accountId, stockId, quantity, currentDate, type) {
+        const { data, error } = await client.rpc('trade_stock', {
+            p_account_id: accountId,
+            p_stock_id: stockId,
+            p_quantity: quantity,
+            p_type: type,
+            p_current_date: normalizeDate(currentDate)
+        });
+        if (error) {
+            if (isMissingRpcError(error)) return null;
+            throw error;
+        }
+        return {
+            price: roundMoney(data?.price),
+            total: roundMoney(data?.total),
+            quantity: parseInt(data?.quantity, 10),
+            gold: roundMoney(data?.gold),
+            holdingQuantity: parseInt(data?.holdingQuantity, 10),
+            averageCost: roundMoney(data?.averageCost)
+        };
+    }
+
     async function buyStock(options) {
         const { client, accountId, stockId, quantity, currentDate } = options;
         const qty = parseInt(quantity, 10);
         if (!Number.isInteger(qty) || qty <= 0) throw new Error('买入数量必须是正整数。');
+        const rpcResult = await tradeStockRpc(client, accountId, stockId, qty, currentDate, 'buy');
+        if (rpcResult) return rpcResult;
+
         const state = await getTradableState(client, accountId, stockId, currentDate);
         const price = roundMoney(state.current_price);
         const total = roundMoney(price * qty);
@@ -703,6 +734,9 @@
         const { client, accountId, stockId, quantity, currentDate } = options;
         const qty = parseInt(quantity, 10);
         if (!Number.isInteger(qty) || qty <= 0) throw new Error('卖出数量必须是正整数。');
+        const rpcResult = await tradeStockRpc(client, accountId, stockId, qty, currentDate, 'sell');
+        if (rpcResult) return rpcResult;
+
         const state = await getTradableState(client, accountId, stockId, currentDate);
         const price = roundMoney(state.current_price);
         const total = roundMoney(price * qty);
