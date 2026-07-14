@@ -517,7 +517,8 @@
                 const order = orderMap[mapKey] || {};
                 const orderImpact = toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
                 const dmAdjustment = toNumber(dmMap[mapKey]?.percentage, 0);
-                const nextPrice = Math.max(MIN_PRICE, currentPrice * (1 + baseReturn) * (1 + orderImpact) * (1 + dmAdjustment));
+                const totalReturn = baseReturn + orderImpact + dmAdjustment;
+                const nextPrice = Math.max(MIN_PRICE, currentPrice * (1 + totalReturn));
                 const cleanPrice = roundMoney(nextPrice);
                 historyRows.push({
                     account_id: accountId,
@@ -627,7 +628,8 @@
             const order = orderMap[stock.id] || {};
             const orderImpact = toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
             const dmAdjustment = toNumber(dmMap[stock.id]?.percentage, 0);
-            const nextPrice = Math.max(MIN_PRICE, currentPrice * (1 + baseReturn) * (1 + orderImpact) * (1 + dmAdjustment));
+            const totalReturn = baseReturn + orderImpact + dmAdjustment;
+            const nextPrice = Math.max(MIN_PRICE, currentPrice * (1 + totalReturn));
             const cleanPrice = roundMoney(nextPrice);
             historyRows.push({
                 account_id: accountId,
