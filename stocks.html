@@ -73,6 +73,22 @@
         }
         .panel { padding: 16px; }
         .panel h2, .panel h3 { margin: 0 0 12px; font-size: 1.05rem; }
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .panel-head h2, .panel-head h3 { margin: 0; }
+        .chart-tools {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+        .chart-tools select { width: auto; min-width: 98px; padding: 6px 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
         th, td { padding: 10px 8px; border-bottom: 1px solid #edf0f5; text-align: right; vertical-align: middle; }
         th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
@@ -125,12 +141,35 @@
             border: 1px solid #edf0f5;
             border-radius: 6px;
         }
+        .comparison-panel { margin-bottom: 16px; }
+        .comparison-chart { height: 260px; }
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            margin-top: 10px;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .legend-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            display: inline-block;
+        }
         .dm-panel { margin-top: 16px; border-color: #c7b37a; background: #fffdf6; }
         .dm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
         .dm-intel { max-height: 260px; overflow: auto; font-size: 0.84rem; background: #fff; border: 1px solid #eee3bb; border-radius: 6px; padding: 8px; }
         .tiny { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
         @media (max-width: 900px) {
             header { flex-direction: column; align-items: flex-start; }
+            .panel-head { align-items: flex-start; flex-direction: column; }
             .status-strip, .layout, .dm-grid { grid-template-columns: 1fr; }
             main { padding: 14px; }
             th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7) { display: none; }
@@ -147,6 +186,23 @@
 </header>
 
 <main>
+    <section class="panel comparison-panel">
+        <div class="panel-head">
+            <h2>八股走势对比</h2>
+            <label class="chart-tools">
+                范围
+                <select id="history-range" onchange="changeHistoryRange()">
+                    <option value="30">1个月</option>
+                    <option value="90">3个月</option>
+                    <option value="180">6个月</option>
+                    <option value="360" selected>12个月</option>
+                </select>
+            </label>
+        </div>
+        <canvas id="comparison-chart" class="comparison-chart" width="1100" height="320"></canvas>
+        <div id="comparison-legend" class="chart-legend"></div>
+    </section>
+
     <section class="status-strip">
         <div class="status-item">
             <div class="label">当前世界日期</div>
@@ -254,6 +310,10 @@
     let accountProfile = null;
     let snapshot = null;
     let selectedStockId = null;
+    let selectedHistoryDays = 360;
+
+    const HISTORY_FETCH_DAYS = 390;
+    const CHART_COLORS = ['#bf3a30', '#178a55', '#2f6f9f', '#a8791c', '#6f4aa8', '#bf6b2d', '#2b7a78', '#4b5563'];
 
     function escapeHTML(value) {
         return String(value ?? '').replace(/[&<>'"]/g, ch => ({
@@ -320,7 +380,8 @@
                 client: supabaseClient,
                 accountId,
                 currentDate,
-                includeFuture: ADMIN_ROLES.includes(currentRole)
+                includeFuture: ADMIN_ROLES.includes(currentRole),
+                historyDays: HISTORY_FETCH_DAYS
             });
         } catch (e) {
             showError(`股票数据加载失败：${e.message || e}`);
@@ -329,6 +390,7 @@
 
         if (!selectedStockId && snapshot.stocks.length) selectedStockId = snapshot.stocks[0].id;
         renderMarketStatus(currentDate);
+        drawComparisonChart();
         renderStocks();
         renderTradePanel();
         renderDmPanel(currentDate);
@@ -396,6 +458,118 @@
         renderTradePanel();
     }
 
+    function changeHistoryRange() {
+        selectedHistoryDays = parseInt(document.getElementById('history-range').value, 10) || 360;
+        drawComparisonChart();
+        if (selectedStockId) drawChart(selectedStockId);
+    }
+
+    function currentDateSerial() {
+        return accountProfile?.world_date ? BaichengStocks.dateToSerial(accountProfile.world_date) : null;
+    }
+
+    function filterHistoryByDays(history, days) {
+        const rows = history || [];
+        const serial = currentDateSerial();
+        if (!Number.isFinite(serial) || !Number.isFinite(days) || days <= 0) return rows;
+        return rows.filter(row => Number(row.date_serial) >= serial - days && Number(row.date_serial) <= serial);
+    }
+
+    function clearChart(canvas, ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fbfcfe';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#d7dde7';
+        ctx.lineWidth = 1;
+    }
+
+    function drawChartFrame(canvas, ctx, left = 44, top = 22, right = 18, bottom = 34) {
+        const width = canvas.width - left - right;
+        const height = canvas.height - top - bottom;
+        ctx.beginPath();
+        ctx.moveTo(left, top);
+        ctx.lineTo(left, top + height);
+        ctx.lineTo(left + width, top + height);
+        ctx.stroke();
+        return { left, top, right, bottom, width, height };
+    }
+
+    function drawNoData(canvas, ctx, text) {
+        ctx.fillStyle = '#667085';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+        ctx.textAlign = 'start';
+    }
+
+    function drawComparisonChart() {
+        const canvas = document.getElementById('comparison-chart');
+        const legend = document.getElementById('comparison-legend');
+        if (!canvas || !legend || !snapshot) return;
+        const ctx = canvas.getContext('2d');
+        clearChart(canvas, ctx);
+        const frame = drawChartFrame(canvas, ctx, 52, 24, 20, 38);
+        const series = snapshot.stocks.map((stock, index) => {
+            const history = filterHistoryByDays(snapshot.historyByStock[stock.id] || [], selectedHistoryDays)
+                .filter(row => Number(row.price) > 0);
+            if (history.length < 2) return null;
+            const first = Number(history[0].price);
+            const points = history.map(row => ({
+                serial: Number(row.date_serial),
+                value: (Number(row.price) / first) - 1
+            }));
+            return {
+                stock,
+                points,
+                color: CHART_COLORS[index % CHART_COLORS.length],
+                last: points[points.length - 1].value
+            };
+        }).filter(Boolean);
+
+        if (!series.length) {
+            legend.innerHTML = '';
+            drawNoData(canvas, ctx, '暂无足够历史');
+            return;
+        }
+
+        const allPoints = series.flatMap(item => item.points);
+        const minSerial = Math.min(...allPoints.map(point => point.serial));
+        const maxSerial = Math.max(...allPoints.map(point => point.serial));
+        const minValue = Math.min(...allPoints.map(point => point.value), 0);
+        const maxValue = Math.max(...allPoints.map(point => point.value), 0);
+        const valueSpan = Math.max(0.01, maxValue - minValue);
+        const serialSpan = Math.max(1, maxSerial - minSerial);
+
+        const zeroY = frame.top + frame.height - ((0 - minValue) / valueSpan) * frame.height;
+        ctx.strokeStyle = '#edf0f5';
+        ctx.beginPath();
+        ctx.moveTo(frame.left, zeroY);
+        ctx.lineTo(frame.left + frame.width, zeroY);
+        ctx.stroke();
+
+        for (const item of series) {
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            item.points.forEach((point, index) => {
+                const x = frame.left + ((point.serial - minSerial) / serialSpan) * frame.width;
+                const y = frame.top + frame.height - ((point.value - minValue) / valueSpan) * frame.height;
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = '#1f2933';
+        ctx.fillText(formatRate(maxValue), frame.left + 4, frame.top + 12);
+        ctx.fillText(formatRate(minValue), frame.left + 4, frame.top + frame.height - 6);
+        legend.innerHTML = series.map(item => `
+            <span class="legend-item">
+                <span class="legend-swatch" style="background:${item.color}"></span>
+                ${escapeHTML(item.stock.code)} ${formatRate(item.last)}
+            </span>
+        `).join('');
+    }
+
     function renderTradePanel() {
         const stock = snapshot.stocks.find(item => item.id === selectedStockId);
         if (!stock) return;
@@ -412,38 +586,34 @@
     function drawChart(stockId) {
         const canvas = document.getElementById('history-chart');
         const ctx = canvas.getContext('2d');
-        const history = (snapshot.historyByStock[stockId] || []).slice(-30);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fbfcfe';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#d7dde7';
-        ctx.beginPath();
-        ctx.moveTo(36, 20);
-        ctx.lineTo(36, 224);
-        ctx.lineTo(620, 224);
-        ctx.stroke();
+        const history = filterHistoryByDays(snapshot.historyByStock[stockId] || [], selectedHistoryDays);
+        clearChart(canvas, ctx);
+        const frame = drawChartFrame(canvas, ctx, 40, 20, 20, 36);
         if (history.length < 2) {
-            ctx.fillStyle = '#667085';
-            ctx.fillText('暂无足够历史', 270, 126);
+            drawNoData(canvas, ctx, '暂无足够历史');
             return;
         }
         const prices = history.map(row => Number(row.price));
+        const serials = history.map(row => Number(row.date_serial));
         const min = Math.min(...prices);
         const max = Math.max(...prices);
         const span = Math.max(0.01, max - min);
+        const minSerial = Math.min(...serials);
+        const maxSerial = Math.max(...serials);
+        const serialSpan = Math.max(1, maxSerial - minSerial);
         ctx.strokeStyle = '#2f6f9f';
         ctx.lineWidth = 3;
         ctx.beginPath();
         history.forEach((row, index) => {
-            const x = 40 + index * (570 / Math.max(1, history.length - 1));
-            const y = 216 - ((Number(row.price) - min) / span) * 180;
+            const x = frame.left + ((Number(row.date_serial) - minSerial) / serialSpan) * frame.width;
+            const y = frame.top + frame.height - ((Number(row.price) - min) / span) * frame.height;
             if (index === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         });
         ctx.stroke();
         ctx.fillStyle = '#1f2933';
-        ctx.fillText(formatMoney(max), 44, 24);
-        ctx.fillText(formatMoney(min), 44, 218);
+        ctx.fillText(formatMoney(max), frame.left + 4, frame.top + 12);
+        ctx.fillText(formatMoney(min), frame.left + 4, frame.top + frame.height - 6);
     }
 
     function setTradeBusy(isBusy) {
