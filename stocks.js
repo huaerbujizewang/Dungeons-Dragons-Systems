@@ -4,15 +4,19 @@
     const MIN_PRICE = 0.01;
 
     const STOCK_DEFINITIONS = [
-        { id: 'BCPH', code: 'BCPH', name: '白城联合港务', initial_price: 120 },
-        { id: 'TLDB', code: 'TLDB', name: '蒂尔兰大陆银行', initial_price: 185 },
-        { id: 'SLRT', code: 'SLRT', name: '银轨交通公司', initial_price: 96 },
-        { id: 'LSMI', code: 'LSMI', name: '洛萨维亚魔导工业', initial_price: 240 },
-        { id: 'OUTC', code: 'OUTC', name: '远洋联合贸易公司', initial_price: 78 },
-        { id: 'WTIT', code: 'WTIT', name: '白塔保险与信托', initial_price: 132 },
-        { id: 'CGFG', code: 'CGFG', name: '王冠粮业集团', initial_price: 64 },
-        { id: 'CTSC', code: 'CTSC', name: '大陆传送服务公司', initial_price: 310 }
+        { id: 'WCHP', code: 'WCHP', name: '白城联合港务', initial_price: 12 },
+        { id: 'CDBK', code: 'CDBK', name: '大陆银行', initial_price: 18.5 },
+        { id: 'SGTC', code: 'SGTC', name: '银轨交通公司', initial_price: 9.6 },
+        { id: 'RKWL', code: 'RKWL', name: '罗克韦尔', initial_price: 24 },
+        { id: 'PRMS', code: 'PRMS', name: '普罗米修斯', initial_price: 7.8 },
+        { id: 'BRKC', code: 'BRKC', name: '巴莱克资本', initial_price: 13.2 },
+        { id: 'CRGN', code: 'CRGN', name: '王冠粮业集团', initial_price: 6.4 },
+        { id: 'CVDU', code: 'CVDU', name: '卡文迪许联合', initial_price: 31 }
     ];
+
+    const STOCK_DEFINITION_CACHE_MS = 60 * 1000;
+    const catchUpPromises = new Map();
+    let stockDefinitionCache = { expiresAt: 0, data: null };
 
     const TREND_CONFIGS = [
         { type: '横盘', weight: 16, min: -0.03, max: 0.03, group: 'flat' },
@@ -218,11 +222,19 @@
         return flatTrendReturns(config, targetReturn);
     }
 
-    async function ensureStockDefinitions(client) {
+    async function ensureStockDefinitions(client, options = {}) {
         assertClient(client);
+        if (!options.force && stockDefinitionCache.data && Date.now() < stockDefinitionCache.expiresAt) {
+            return stockDefinitionCache.data;
+        }
         const { data, error } = await client.from('stocks').select('*').order('code', { ascending: true });
         if (error) throw error;
-        return data && data.length ? data : STOCK_DEFINITIONS;
+        const definitions = data && data.length ? data : STOCK_DEFINITIONS;
+        stockDefinitionCache = {
+            data: definitions,
+            expiresAt: Date.now() + STOCK_DEFINITION_CACHE_MS
+        };
+        return definitions;
     }
 
     async function getMarketConfig(client, accountId) {
@@ -398,25 +410,48 @@
         const { client, accountId, fromDate, toDate } = options;
         assertClient(client);
         if (!accountId || !isValidDate(fromDate) || !isValidDate(toDate)) return;
+        const market = await getMarketConfig(client, accountId);
+        if (!market?.market_enabled) return;
+        const openDate = marketOpenDate(market);
+        const stocks = await ensureAccountInitialized(client, accountId, openDate);
+        const preparedMonths = new Set();
         let cursor = normalizeDate(fromDate);
         const targetSerial = dateToSerial(toDate);
         while (dateToSerial(cursor) < targetSerial) {
             const nextDate = addDays(cursor, 1);
-            await settleOneStockDay({ client, accountId, fromDate: cursor, toDate: nextDate });
+            if (isMarketTradable(market, cursor)) {
+                const monthKey = `${cursor.year}-${cursor.month}`;
+                if (!preparedMonths.has(monthKey)) {
+                    await Promise.all(stocks.map(stock =>
+                        ensureDailyReturnsForMonth(client, accountId, stock.id, cursor.year, cursor.month)
+                    ));
+                    preparedMonths.add(monthKey);
+                }
+                await settleOneStockDay({
+                    client,
+                    accountId,
+                    fromDate: cursor,
+                    toDate: nextDate,
+                    market,
+                    stocks,
+                    skipDailyReturnEnsure: true
+                });
+            }
             cursor = nextDate;
         }
     }
 
     async function settleOneStockDay(options) {
         const { client, accountId, fromDate, toDate } = options;
-        const market = await getMarketConfig(client, accountId);
+        const market = options.market || await getMarketConfig(client, accountId);
         if (!isMarketTradable(market, fromDate)) return;
         const openDate = marketOpenDate(market);
-        await ensureAccountInitialized(client, accountId, openDate);
-        const stocks = await ensureStockDefinitions(client);
+        const stocks = options.stocks || await ensureAccountInitialized(client, accountId, openDate);
 
-        for (const stock of stocks) {
-            await ensureDailyReturnsForMonth(client, accountId, stock.id, fromDate.year, fromDate.month);
+        if (!options.skipDailyReturnEnsure) {
+            await Promise.all(stocks.map(stock =>
+                ensureDailyReturnsForMonth(client, accountId, stock.id, fromDate.year, fromDate.month)
+            ));
         }
 
         const stockIds = stocks.map(stock => stock.id);
@@ -515,7 +550,6 @@
         const market = await getMarketConfig(client, accountId);
         if (!isMarketTradable(market, currentDate)) return;
         const openDate = marketOpenDate(market);
-        await ensureAccountInitialized(client, accountId, openDate);
         const { data: history, error } = await client
             .from('stock_price_history')
             .select('date_value,date_serial')
@@ -526,7 +560,15 @@
         if (error) throw error;
         const startDate = parseDateValue(history?.[0]?.date_value) || openDate;
         if (startDate && compareDates(startDate, currentDate) < 0) {
-            await settleStocksBetween({ client, accountId, fromDate: startDate, toDate: currentDate });
+            const key = `${accountId}:${dateKey(currentDate)}`;
+            if (!catchUpPromises.has(key)) {
+                const promise = settleStocksBetween({ client, accountId, fromDate: startDate, toDate: currentDate })
+                    .finally(() => catchUpPromises.delete(key));
+                catchUpPromises.set(key, promise);
+            }
+            await catchUpPromises.get(key);
+        } else if (!history?.length && openDate) {
+            await ensureAccountInitialized(client, accountId, openDate);
         }
     }
 
@@ -730,7 +772,7 @@
     }
 
     async function loadSnapshot(options) {
-        const { client, accountId, currentDate, includeFuture = false } = options;
+        const { client, accountId, currentDate, includeFuture = false, historyDays = 45 } = options;
         assertClient(client);
         const market = await getMarketConfig(client, accountId);
         if (market.market_enabled && currentDate && isMarketTradable(market, currentDate)) {
@@ -739,10 +781,23 @@
 
         const stocks = await ensureStockDefinitions(client);
         const stockIds = stocks.map(stock => stock.id);
+        let historyQuery = client
+            .from('stock_price_history')
+            .select('*')
+            .eq('account_id', accountId)
+            .in('stock_id', stockIds)
+            .order('date_serial', { ascending: true });
+        if (currentDate) {
+            const currentSerial = dateToSerial(currentDate);
+            if (!includeFuture) historyQuery = historyQuery.lte('date_serial', currentSerial);
+            if (Number.isFinite(historyDays) && historyDays > 0) {
+                historyQuery = historyQuery.gte('date_serial', currentSerial - historyDays);
+            }
+        }
         const [statesRes, holdingsRes, historyRes, trendsRes, returnsRes, dmRes] = await Promise.all([
             client.from('account_stock_state').select('*').eq('account_id', accountId).in('stock_id', stockIds),
             client.from('stock_holdings').select('*').eq('account_id', accountId).in('stock_id', stockIds),
-            client.from('stock_price_history').select('*').eq('account_id', accountId).in('stock_id', stockIds).order('date_serial', { ascending: true }),
+            historyQuery,
             client.from('stock_monthly_trends').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds),
             client.from('stock_daily_returns').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds).order('day', { ascending: true }),
             client.from('stock_dm_adjustments').select('*').eq('account_id', accountId).in('stock_id', stockIds)
