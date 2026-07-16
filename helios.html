@@ -686,6 +686,22 @@
             background: rgba(91, 78, 112, 0.08);
         }
 
+        .policy-chip.diplomacy-positive {
+            background: rgba(45, 128, 84, 0.09);
+        }
+
+        .policy-chip.diplomacy-neutral {
+            background: rgba(91, 100, 112, 0.08);
+        }
+
+        .policy-chip.diplomacy-negative {
+            background: rgba(132, 46, 36, 0.09);
+        }
+
+        .policy-chip.diplomacy-subject {
+            background: rgba(128, 91, 43, 0.1);
+        }
+
         .policy-label {
             color: #73777d;
             font-size: 12px;
@@ -1545,7 +1561,8 @@
                     imageAspect: node && typeof node === "object" ? node.imageAspect || "" : "",
                     markdown: node && typeof node === "object" ? node.markdown || "" : "",
                     statBlock: node && typeof node === "object" ? node.statBlock || null : null,
-                    policies: node && typeof node === "object" ? node.policies || null : null
+                    policies: node && typeof node === "object" ? node.policies || null : null,
+                    relations: node && typeof node === "object" ? node.relations || node.diplomacy || null : null
                 };
             }
 
@@ -1581,6 +1598,8 @@
                 node.markdown ||
                 node.statBlock ||
                 node.policies ||
+                node.relations ||
+                node.diplomacy ||
                 node.content && node.content.length ||
                 hasOwnVisualAsset(node)
             );
@@ -1636,13 +1655,18 @@
             workspace.classList.toggle("no-asset-layout", state.current.asset === "none");
 
             const contentHasPolicies = state.current.content && state.current.content.some(item => item && typeof item === "object" && item.type === "policies");
-            const bodyMarkdown = state.current.markdown ? prepareMarkdownForPolicies(state.current.markdown, state.current.policies && !contentHasPolicies) : "";
+            const contentHasRelations = state.current.content && state.current.content.some(item => item && typeof item === "object" && (item.type === "relations" || item.type === "diplomacy"));
+            const bodyMarkdown = state.current.markdown ? prepareMarkdownForPanels(state.current.markdown, {
+                policies: state.current.policies && !contentHasPolicies,
+                relations: state.current.relations && !contentHasRelations
+            }) : "";
 
-            if (state.current.markdown || state.current.statBlock || state.current.policies) {
+            if (state.current.markdown || state.current.statBlock || state.current.policies || state.current.relations) {
                 panelBody.innerHTML = `
                     ${bodyMarkdown ? `<div class="intro-copy">${renderMarkdown(bodyMarkdown)}</div>` : ""}
                     ${state.current.content && state.current.content.length ? `<div class="intro-copy">${state.current.content.map(renderContentParagraph).join("")}</div>` : ""}
                     ${state.current.policies && !contentHasPolicies && (!bodyMarkdown || !bodyMarkdown.includes("[[policies]]")) ? `<div class="intro-copy">${renderPolicyPanel(state.current.policies)}</div>` : ""}
+                    ${state.current.relations && !contentHasRelations && (!bodyMarkdown || (!bodyMarkdown.includes("[[relations]]") && !bodyMarkdown.includes("[[diplomacy]]"))) ? `<div class="intro-copy">${renderDiplomacyPanel(state.current.relations)}</div>` : ""}
                     ${state.current.statBlock ? renderStatBlock(state.current.statBlock) : ""}
                     ${state.current.children.length ? renderChildrenGrid() : ""}
                 `;
@@ -1665,13 +1689,14 @@
             renderAssetSlot(state.current.asset);
         }
 
-        function prepareMarkdownForPolicies(markdown, shouldInject) {
-            if (!shouldInject || !markdown) return markdown;
+        function prepareMarkdownForPanels(markdown, panels) {
+            const shouldInjectPolicies = panels && panels.policies;
+            if (!shouldInjectPolicies || !markdown) return markdown;
 
             const lines = markdown
                 .split("\n")
                 .filter(line => line.trim() !== "[[policies]]");
-            const overviewIndex = lines.findIndex(line => /^#{2,4}\s*概述\s*$/.test(line.trim()));
+            const overviewIndex = lines.findIndex(line => /^#{2,4}\s*姒傝堪\s*$/.test(line.trim()));
             if (overviewIndex >= 0) {
                 lines.splice(overviewIndex, 0, "", "[[policies]]", "");
                 return lines.join("\n");
@@ -1784,6 +1809,11 @@
 
                 if (line === "[[policies]]") {
                     html.push(renderPolicyPanel(state.current.policies));
+                    continue;
+                }
+
+                if (line === "[[relations]]" || line === "[[diplomacy]]") {
+                    html.push(renderDiplomacyPanel(state.current.relations));
                     continue;
                 }
 
@@ -1970,6 +2000,118 @@
             "法团工会": "工会被纳入国家认可的法团体系，由国家、行业和劳工组织共同管理。"
         };
 
+
+
+        const diplomacyDescriptions = {
+            "保护": "希望保护对方，容易在外交博弈中帮助对方，也可能主动提出让对方成为附属国。",
+            "亲切": "倾向改善关系，寻求防御条约或同盟。",
+            "合作": "愿意接受条约和外交合作。",
+            "和解": "试图改善关系，结束宿敌状态。",
+            "谨慎": "保持观望。",
+            "漠不关心": "对该国缺乏战略兴趣。",
+            "警惕": "拒绝合作，并寻找盟友防范对方。",
+            "对抗": "容易在外交博弈中站到对方的敌人一侧。",
+            "好战": "倾向主动针对对方发动外交博弈。",
+            "支配": "希望征服、附庸或吞并对方。",
+            "忠诚": "愿意服从宗主国要求。",
+            "疏离": "维持现状。",
+            "反抗": "争取更高自治权。",
+            "叛乱": "寻求独立。"
+        };
+
+        const diplomacyPositiveAttitudes = new Set(["保护", "亲切", "合作", "和解"]);
+        const diplomacyNeutralAttitudes = new Set(["谨慎", "漠不关心"]);
+        const diplomacyNegativeAttitudes = new Set(["警惕", "对抗", "好战", "支配"]);
+        const diplomacySubjectAttitudes = new Set(["忠诚", "疏离", "反抗", "叛乱"]);
+
+        function diplomacyChipClass(attitude) {
+            if (diplomacyPositiveAttitudes.has(attitude)) return "diplomacy-positive";
+            if (diplomacyNeutralAttitudes.has(attitude)) return "diplomacy-neutral";
+            if (diplomacyNegativeAttitudes.has(attitude)) return "diplomacy-negative";
+            if (diplomacySubjectAttitudes.has(attitude)) return "diplomacy-subject";
+            return "";
+        }
+
+        function normalizeDiplomacyEntries(relations) {
+            if (!relations) return [];
+            if (Array.isArray(relations)) {
+                const groups = new Map();
+                relations.forEach(item => {
+                    if (!item || typeof item !== "object") return;
+                    const groupName = item.group || item.category || "外交关系";
+                    const label = item.target || item.country || item.name;
+                    const value = item.attitude || item.status || item.value;
+                    if (!label || !value) return;
+                    if (!groups.has(groupName)) groups.set(groupName, []);
+                    groups.get(groupName).push({ label, value, note: item.note || "" });
+                });
+                return Array.from(groups, ([name, entries]) => ({ name, entries }));
+            }
+
+            if (typeof relations !== "object") return [];
+            const entries = Object.entries(relations);
+            const hasNestedGroups = entries.some(([, value]) => value && typeof value === "object" && !Array.isArray(value) && !(value.attitude || value.status || value.value));
+
+            if (hasNestedGroups) {
+                return entries.map(([groupName, groupEntries]) => ({
+                    name: groupName,
+                    entries: Object.entries(groupEntries || {}).map(([label, raw]) => {
+                        if (raw && typeof raw === "object") {
+                            return {
+                                label: raw.target || raw.country || label,
+                                value: raw.attitude || raw.status || raw.value || "",
+                                note: raw.note || ""
+                            };
+                        }
+                        return { label, value: raw, note: "" };
+                    }).filter(entry => entry.value)
+                })).filter(group => group.entries.length);
+            }
+
+            return [{
+                name: "外交关系",
+                entries: entries.map(([label, raw]) => {
+                    if (raw && typeof raw === "object") {
+                        return {
+                            label: raw.target || raw.country || label,
+                            value: raw.attitude || raw.status || raw.value || "",
+                            note: raw.note || ""
+                        };
+                    }
+                    return { label, value: raw, note: "" };
+                }).filter(entry => entry.value)
+            }];
+        }
+
+        function renderDiplomacyPanel(relations) {
+            const groups = normalizeDiplomacyEntries(relations);
+            if (!groups.length) return "";
+
+            return `
+                <section class="policy-panel diplomacy-panel">
+                    <div class="policy-panel-title">外交关系</div>
+                    ${groups.map(group => `
+                        <div class="policy-group">
+                            <div class="policy-group-title">${escapeHTML(group.name)}</div>
+                            <div class="policy-chip-list">
+                                ${group.entries.map(entry => {
+                                    const description = diplomacyDescriptions[entry.value] || "";
+                                    const fullDescription = entry.note ? [description, entry.note].filter(Boolean).join("\n") : description;
+                                    const descriptionAttr = fullDescription ? ` data-policy-desc="${escapeAttribute(fullDescription)}" tabindex="0"` : "";
+                                    return `
+                                        <span class="policy-chip ${diplomacyChipClass(entry.value)}"${descriptionAttr}>
+                                            <span class="policy-label">${escapeHTML(entry.label)}</span>
+                                            <span class="policy-value">${escapeHTML(entry.value)}</span>
+                                        </span>
+                                    `;
+                                }).join("")}
+                            </div>
+                        </div>
+                    `).join("")}
+                </section>
+            `;
+        }
+
         function renderPolicyPanel(policies) {
             if (!policies || typeof policies !== "object") return "";
             if (policies.specialStatus) {
@@ -2062,6 +2204,9 @@
             }
             if (typeof paragraph === "object" && paragraph.type === "policies") {
                 return renderPolicyPanel(paragraph.policies || state.current.policies);
+            }
+            if (typeof paragraph === "object" && (paragraph.type === "relations" || paragraph.type === "diplomacy")) {
+                return renderDiplomacyPanel(paragraph.relations || paragraph.diplomacy || state.current.relations);
             }
 
             const compactHeadings = [
