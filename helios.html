@@ -1489,6 +1489,8 @@
 
             const collapsedClass = depth === 0 ? "" : " collapsed";
             const toggleText = depth === 0 ? "收起" : "展开";
+            const resumeText = data.resume || data.quote || "";
+
             return `
                 <div class="tree-section${collapsedClass}">
                     <button class="tree-toggle" data-node="${escapeAttribute(nodeId)}">
@@ -2401,7 +2403,7 @@
                         ${avatarHtml}
                     </div>
                     <hr class="tapered-rule">
-                    ${data.resume ? `<div class="trait-section"><em>${escapeHTML(data.resume)}</em></div>` : ""}
+                    ${resumeText ? `<div class="trait-section"><em>${escapeHTML(resumeText)}</em></div>` : ""}
                     <div class="property-line"><strong>护甲等级：</strong>${escapeHTML(data.ac || "")}</div>
                     <div class="property-line"><strong>生命值：</strong>${escapeHTML(data.hp || "")}</div>
                     <div class="property-line"><strong>速度：</strong>${escapeHTML(data.speed || "")}</div>
