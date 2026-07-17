@@ -1489,8 +1489,6 @@
 
             const collapsedClass = depth === 0 ? "" : " collapsed";
             const toggleText = depth === 0 ? "收起" : "展开";
-            const resumeText = data.resume || data.quote || "";
-
             return `
                 <div class="tree-section${collapsedClass}">
                     <button class="tree-toggle" data-node="${escapeAttribute(nodeId)}">
@@ -2392,6 +2390,7 @@
                     <img src="${escapeAttribute(data.avatar)}" alt="${escapeAttribute(data.name || state.current.name)}头像">
                 </div>
             ` : "";
+            const resumeText = data.resume || data.quote || "";
 
             return `
                 <div class="stat-block-container">
