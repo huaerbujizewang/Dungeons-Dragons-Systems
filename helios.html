@@ -95,6 +95,93 @@
             line-height: 1.6;
         }
 
+        .archive-search {
+            padding: 14px 14px 0;
+            border-bottom: 1px solid rgba(222, 214, 200, 0.72);
+        }
+
+        .search-field {
+            width: 100%;
+            height: 38px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: var(--paper);
+            color: var(--ink);
+            font: inherit;
+            font-size: 13px;
+            padding: 0 11px;
+            outline: none;
+        }
+
+        .search-field:focus {
+            border-color: var(--line-strong);
+            box-shadow: 0 0 0 3px rgba(163, 111, 44, 0.12);
+        }
+
+        .search-results {
+            display: none;
+            max-height: 260px;
+            margin: 10px 0 12px;
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            background: rgba(255, 253, 248, 0.88);
+        }
+
+        .search-results.visible {
+            display: block;
+        }
+
+        .search-result {
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid rgba(222, 214, 200, 0.72);
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            display: block;
+            font: inherit;
+            padding: 10px 11px;
+            text-align: left;
+        }
+
+        .search-result:last-child {
+            border-bottom: 0;
+        }
+
+        .search-result:hover,
+        .search-result:focus {
+            background: rgba(163, 111, 44, 0.09);
+            outline: none;
+        }
+
+        .search-result-title {
+            display: block;
+            color: var(--ink);
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1.35;
+        }
+
+        .search-result-path,
+        .search-result-snippet,
+        .search-empty {
+            display: block;
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .search-results > .search-empty {
+            margin: 0;
+            padding: 12px 11px;
+        }
+
+        .search-match {
+            color: var(--wine);
+            font-weight: 900;
+        }
+
         .tree {
             flex: 1 1 auto;
             min-height: 0;
@@ -1260,6 +1347,10 @@
                 <h1 class="brand-title">赫里奥斯</h1>
                 <p class="brand-subtitle">世界档案目录</p>
             </div>
+            <div class="archive-search">
+                <input id="archive-search" class="search-field" type="search" placeholder="搜索条目、人物、国家、正文…" autocomplete="off" aria-label="搜索赫里奥斯档案">
+                <div id="search-results" class="search-results" aria-live="polite"></div>
+            </div>
             <nav class="tree" id="tree" aria-label="赫里奥斯目录"></nav>
         </aside>
 
@@ -1301,6 +1392,7 @@
     <script>        let archive = [];
         let personCountryMap = {};
         let countryBadgeClassMap = {};
+        let searchIndex = [];
         const HELIOS_DATA_URL = "helios-data.json";
 
         async function loadHeliosData() {
@@ -1336,6 +1428,8 @@
         };
 
         const tree = document.getElementById("tree");
+        const archiveSearch = document.getElementById("archive-search");
+        const searchResults = document.getElementById("search-results");
         const panelPath = document.getElementById("panel-path");
         const panelTitle = document.getElementById("panel-title");
         const panelType = document.getElementById("panel-type");
@@ -1375,6 +1469,21 @@
                     }
                 }
                 selectNode(button.dataset.node);
+            });
+
+            archiveSearch.addEventListener("input", () => renderSearchResults(archiveSearch.value));
+            archiveSearch.addEventListener("keydown", event => {
+                if (event.key !== "Enter") return;
+                const firstResult = searchResults.querySelector(".search-result[data-search-node]");
+                if (!firstResult) return;
+                event.preventDefault();
+                selectNode(firstResult.dataset.searchNode);
+            });
+
+            searchResults.addEventListener("click", event => {
+                const result = event.target.closest(".search-result[data-search-node]");
+                if (!result) return;
+                selectNode(result.dataset.searchNode);
             });
 
             panelBody.addEventListener("click", event => {
@@ -1478,6 +1587,139 @@
             policyTooltip.style.left = `${left}px`;
             policyTooltip.style.top = `${top}px`;
             return true;
+        }
+
+        function buildSearchIndex() {
+            searchIndex = [];
+            archive.forEach(section => {
+                collectSearchEntry(section, section.id, [childName(section)], section, null);
+            });
+        }
+
+        function collectSearchEntry(node, nodeId, pathNames, section, parent) {
+            if (!node || typeof node !== "object") return;
+
+            const name = childName(node);
+            const readableType = node === section ? section.type || "分类" : childName(parent);
+            const textParts = [name, pathNames.join(" / "), readableType];
+            const countryLabels = personCountryMap[name];
+            if (countryLabels) {
+                textParts.push(...(Array.isArray(countryLabels) ? countryLabels : [countryLabels]));
+            }
+            collectReadableText(node, textParts);
+            const sourceText = textParts.join(" ").replace(/\s+/g, " ").trim();
+
+            searchIndex.push({
+                nodeId,
+                name,
+                path: `首页 / ${pathNames.join(" / ")}`,
+                type: readableType,
+                sourceText,
+                searchText: normalizeSearchText(sourceText),
+                nameText: normalizeSearchText(name),
+                pathText: normalizeSearchText(pathNames.join(" / "))
+            });
+
+            (node.children || []).forEach(child => {
+                const childNameValue = childName(child);
+                collectSearchEntry(child, `${nodeId}:${childNameValue}`, pathNames.concat(childNameValue), section, node);
+            });
+        }
+
+        function collectReadableText(value, output, key = "") {
+            if (value == null) return;
+            const skippedKeys = new Set(["children", "image", "images", "avatar", "imageAspect", "asset", "id"]);
+            if (skippedKeys.has(key)) return;
+            if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+                output.push(String(value));
+                return;
+            }
+            if (Array.isArray(value)) {
+                value.forEach(item => collectReadableText(item, output, key));
+                return;
+            }
+            if (typeof value === "object") {
+                Object.entries(value).forEach(([childKey, childValue]) => collectReadableText(childValue, output, childKey));
+            }
+        }
+
+        function normalizeSearchText(value) {
+            return String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+        }
+
+        function renderSearchResults(rawQuery) {
+            const query = normalizeSearchText(rawQuery);
+            if (!query) {
+                searchResults.classList.remove("visible");
+                searchResults.innerHTML = "";
+                return;
+            }
+
+            const tokens = query.split(/\s+/).filter(Boolean);
+            const matches = searchIndex
+                .filter(entry => tokens.every(token => entry.searchText.includes(token)))
+                .map(entry => ({ entry, score: scoreSearchEntry(entry, tokens, query) }))
+                .sort((a, b) => b.score - a.score || a.entry.path.length - b.entry.path.length)
+                .slice(0, 40);
+
+            searchResults.classList.add("visible");
+            if (!matches.length) {
+                searchResults.innerHTML = `<span class="search-empty">没有找到匹配条目</span>`;
+                return;
+            }
+
+            searchResults.innerHTML = matches.map(({ entry }) => `
+                <button class="search-result" data-search-node="${escapeAttribute(entry.nodeId)}">
+                    <span class="search-result-title">${highlightSearchText(entry.name, tokens)}</span>
+                    <span class="search-result-path">${highlightSearchText(entry.path, tokens)}</span>
+                    <span class="search-result-snippet">${highlightSearchText(makeSearchSnippet(entry, tokens), tokens)}</span>
+                </button>
+            `).join("");
+        }
+
+        function scoreSearchEntry(entry, tokens, query) {
+            let score = 0;
+            if (entry.nameText === query) score += 140;
+            if (entry.nameText.startsWith(query)) score += 90;
+            if (entry.nameText.includes(query)) score += 70;
+            if (entry.pathText.includes(query)) score += 28;
+            tokens.forEach(token => {
+                if (entry.nameText.includes(token)) score += 20;
+                if (entry.pathText.includes(token)) score += 8;
+                if (entry.searchText.includes(token)) score += 2;
+            });
+            return score;
+        }
+
+        function makeSearchSnippet(entry, tokens) {
+            const text = entry.sourceText;
+            const lower = text.toLowerCase();
+            let hitIndex = -1;
+            for (const token of tokens) {
+                const index = lower.indexOf(token);
+                if (index >= 0 && (hitIndex < 0 || index < hitIndex)) hitIndex = index;
+            }
+            if (hitIndex < 0) return entry.type;
+            const start = Math.max(0, hitIndex - 34);
+            const end = Math.min(text.length, hitIndex + 86);
+            return `${start > 0 ? "…" : ""}${text.slice(start, end)}${end < text.length ? "…" : ""}`;
+        }
+
+        function highlightSearchText(value, tokens) {
+            let html = escapeHTML(value);
+            tokens
+                .slice()
+                .sort((a, b) => b.length - a.length)
+                .forEach(token => {
+                    const pattern = escapeRegExp(escapeHTML(token));
+                    if (!pattern) return;
+                    html = html.replace(new RegExp(pattern, "gi"), match => `<span class="search-match">${match}</span>`);
+                });
+            return html;
+        }
+
+        function escapeRegExp(value) {
+            return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         }
 
         function renderTreeNode(node, nodeId, depth = 0) {
@@ -1764,7 +2006,12 @@
 
             for (let index = 0; index < lines.length; index += 1) {
                 const line = lines[index].trim();
-                if (!line || line === "---") continue;
+                if (!line) continue;
+
+                if (line === "---") {
+                    html.push(`<div class="form-rule"></div>`);
+                    continue;
+                }
 
                 if (line.startsWith("*") && !line.startsWith("**") && !line.startsWith("* ")) {
                     const mottoLines = [];
@@ -2645,6 +2892,7 @@
             }
 
             state.current.children = archive;
+            buildSearchIndex();
             buildTree();
             renderPanel();
             resolveHeliosViewerEmail();
