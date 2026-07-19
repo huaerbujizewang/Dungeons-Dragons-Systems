@@ -76,6 +76,12 @@
         return allRows;
     }
 
+    function isMissingRelationError(error) {
+        const message = String(error?.message || error?.details || '');
+        return error?.code === '42P01'
+            || /schema cache|does not exist|Could not find the table/i.test(message);
+    }
+
     function normalizeDate(date) {
         const safe = date || {};
         return {
@@ -366,6 +372,7 @@
             'stock_daily_order_totals',
             'stock_dm_adjustments',
             'stock_news',
+            'stock_trading_halts',
             'stock_daily_returns',
             'stock_monthly_trends',
             'account_stock_state',
@@ -1159,6 +1166,7 @@
         const market = await getMarketConfig(client, accountId);
         if (!isMarketTradable(market, currentDate)) throw new Error('白城证券交易所尚未开放。');
         await catchUpMarket({ client, accountId, currentDate });
+        await assertStockNotHalted(client, accountId, stockId, currentDate);
         const { data: state, error } = await client
             .from('account_stock_state')
             .select('*')
@@ -1167,6 +1175,31 @@
             .single();
         if (error) throw error;
         return state;
+    }
+
+    async function getActiveStockHalt(client, accountId, stockId, currentDate) {
+        if (!accountId || !stockId || !isValidDate(currentDate)) return null;
+        const serial = dateToSerial(currentDate);
+        const { data, error } = await client
+            .from('stock_trading_halts')
+            .select('*')
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId)
+            .lte('start_date_serial', serial)
+            .gte('end_date_serial', serial)
+            .maybeSingle();
+        if (error) {
+            if (isMissingRelationError(error)) return null;
+            throw error;
+        }
+        return data || null;
+    }
+
+    async function assertStockNotHalted(client, accountId, stockId, currentDate) {
+        const halt = await getActiveStockHalt(client, accountId, stockId, currentDate);
+        if (!halt) return;
+        const endDate = halt.end_date_value || serialToDate(halt.end_date_serial);
+        throw new Error(`该股票正在封停交易，封停至 ${endDate.year}-${endDate.month}-${endDate.day}。`);
     }
 
     function isMissingRpcError(error) {
@@ -1201,6 +1234,7 @@
         const { client, accountId, stockId, quantity, currentDate } = options;
         const qty = parseInt(quantity, 10);
         if (!Number.isInteger(qty) || qty <= 0) throw new Error('买入数量必须是正整数。');
+        await assertStockNotHalted(client, accountId, stockId, currentDate);
         const rpcResult = await tradeStockRpc(client, accountId, stockId, qty, currentDate, 'buy');
         if (rpcResult) return rpcResult;
 
@@ -1249,6 +1283,7 @@
         const { client, accountId, stockId, quantity, currentDate } = options;
         const qty = parseInt(quantity, 10);
         if (!Number.isInteger(qty) || qty <= 0) throw new Error('卖出数量必须是正整数。');
+        await assertStockNotHalted(client, accountId, stockId, currentDate);
         const rpcResult = await tradeStockRpc(client, accountId, stockId, qty, currentDate, 'sell');
         if (rpcResult) return rpcResult;
 
@@ -1437,6 +1472,60 @@
         if (newsError) throw newsError;
     }
 
+    async function haltStockTrading(options) {
+        const { client, accountId, stockId, currentDate, days, reason = '' } = options;
+        assertClient(client);
+        const haltDays = parseInt(days, 10);
+        if (!accountId || !stockId || !isValidDate(currentDate)) throw new Error('封停参数不完整。');
+        if (!Number.isInteger(haltDays) || haltDays <= 0) throw new Error('封停天数必须是正整数。');
+
+        const stocks = await ensureStockDefinitions(client);
+        const stock = stocks.find(item => item.id === stockId);
+        if (!stock) throw new Error('股票不存在。');
+
+        const startDate = normalizeDate(currentDate);
+        const endDate = addDays(startDate, haltDays - 1);
+        const startPayload = datePayload(startDate);
+        const endPayload = datePayload(endDate);
+        const { error: haltError } = await client
+            .from('stock_trading_halts')
+            .upsert({
+                account_id: accountId,
+                stock_id: stockId,
+                start_date_key: startPayload.date_key,
+                start_date_value: startPayload.date_value,
+                start_date_serial: startPayload.date_serial,
+                end_date_key: endPayload.date_key,
+                end_date_value: endPayload.date_value,
+                end_date_serial: endPayload.date_serial,
+                days: haltDays,
+                reason: String(reason || '').trim() || null,
+                created_at: new Date().toISOString()
+            }, { onConflict: 'account_id,stock_id' });
+        if (haltError) throw haltError;
+
+        const title = `${stock.name} 暂停交易 ${haltDays} 日`;
+        const body = `${stock.name}（${stock.code}）自 ${startDate.year}-${startDate.month}-${startDate.day} 至 ${endDate.year}-${endDate.month}-${endDate.day} 暂停交易。`;
+        const { error: newsError } = await client.from('stock_news').insert([{
+            account_id: accountId,
+            stock_id: stockId,
+            type: 'halt',
+            title,
+            body,
+            ratio_from: 1,
+            ratio_to: 1,
+            ...startPayload
+        }]);
+        if (newsError) throw newsError;
+
+        return {
+            stock,
+            days: haltDays,
+            startDate,
+            endDate
+        };
+    }
+
     async function loadSnapshot(options) {
         const { client, accountId, currentDate, includeFuture = false, historyDays = 45 } = options;
         assertClient(client);
@@ -1447,6 +1536,7 @@
 
         const stocks = await ensureStockDefinitions(client);
         const stockIds = stocks.map(stock => stock.id);
+        const currentSerial = currentDate ? dateToSerial(currentDate) : null;
         const makeHistoryQuery = () => {
             let query = client
                 .from('stock_price_history')
@@ -1455,7 +1545,6 @@
                 .in('stock_id', stockIds)
                 .order('date_serial', { ascending: true });
             if (currentDate) {
-                const currentSerial = dateToSerial(currentDate);
                 if (!includeFuture) query = query.lte('date_serial', currentSerial);
                 if (Number.isFinite(historyDays) && historyDays > 0) {
                     query = query.gte('date_serial', currentSerial - historyDays);
@@ -1463,14 +1552,29 @@
             }
             return query;
         };
-        const [statesRes, holdingsRes, historyRows, trendsRes, returnsRes, dmRes, newsRows] = await Promise.all([
+        const makeHaltsQuery = () => {
+            let query = client
+                .from('stock_trading_halts')
+                .select('*')
+                .eq('account_id', accountId)
+                .in('stock_id', stockIds);
+            if (currentSerial != null) {
+                query = query.lte('start_date_serial', currentSerial).gte('end_date_serial', currentSerial);
+            }
+            return query;
+        };
+        const [statesRes, holdingsRes, historyRows, trendsRes, returnsRes, dmRes, newsRows, haltRows] = await Promise.all([
             client.from('account_stock_state').select('*').eq('account_id', accountId).in('stock_id', stockIds),
             client.from('stock_holdings').select('*').eq('account_id', accountId).in('stock_id', stockIds),
             fetchPaged(makeHistoryQuery),
             client.from('stock_monthly_trends').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds),
             client.from('stock_daily_returns').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds).order('day', { ascending: true }),
             client.from('stock_dm_adjustments').select('*').eq('account_id', accountId).in('stock_id', stockIds),
-            fetchPaged(() => client.from('stock_news').select('*').eq('account_id', accountId).order('date_serial', { ascending: false }).order('created_at', { ascending: false }).limit(20)).catch(() => [])
+            fetchPaged(() => client.from('stock_news').select('*').eq('account_id', accountId).order('date_serial', { ascending: false }).order('created_at', { ascending: false }).limit(20)).catch(() => []),
+            fetchPaged(makeHaltsQuery).catch(error => {
+                if (isMissingRelationError(error)) return [];
+                throw error;
+            })
         ]);
         for (const res of [statesRes, holdingsRes, trendsRes, returnsRes, dmRes]) {
             if (res.error) throw res.error;
@@ -1496,7 +1600,8 @@
             trends: Object.fromEntries((trendsRes.data || []).map(row => [row.stock_id, row])),
             dailyReturns: returnsRes.data || [],
             dmAdjustments: dmRes.data || [],
-            news: newsRows || []
+            news: newsRows || [],
+            halts: Object.fromEntries((haltRows || []).map(row => [row.stock_id, row]))
         };
     }
 
@@ -1518,8 +1623,12 @@
             await changeGold(client, accountId, tx.type === 'buy' ? amount : -amount);
         }
 
-        for (const table of ['stock_transactions', 'stock_price_history', 'stock_daily_order_totals', 'stock_dm_adjustments', 'stock_news']) {
-            const serialColumn = table === 'stock_dm_adjustments' ? 'effective_date_serial' : 'date_serial';
+        for (const table of ['stock_transactions', 'stock_price_history', 'stock_daily_order_totals', 'stock_dm_adjustments', 'stock_news', 'stock_trading_halts']) {
+            const serialColumn = table === 'stock_dm_adjustments'
+                ? 'effective_date_serial'
+                : table === 'stock_trading_halts'
+                    ? 'start_date_serial'
+                    : 'date_serial';
             const { error } = await client.from(table).delete().eq('account_id', accountId).gt(serialColumn, targetSerial);
             if (error) throw error;
         }
@@ -1610,6 +1719,7 @@
         deleteAccountStockData,
         formatDate: formatDisplayDate,
         getMarketConfig,
+        haltStockTrading,
         getStockChangeOnDate,
         impactTier,
         isMarketTradable,

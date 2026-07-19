@@ -91,9 +91,33 @@
         .chart-tools select { width: auto; min-width: 98px; padding: 6px 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
         th, td { padding: 10px 8px; border-bottom: 1px solid #edf0f5; text-align: right; vertical-align: middle; }
-        th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+        th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { text-align: left; }
         tr.stock-row { cursor: pointer; }
         tr.stock-row:hover, tr.stock-row.active { background: #eef5fb; }
+        tr.stock-row.halted { background: #fff8f2; }
+        tr.stock-row.halted.active { background: #f8eadf; }
+        .halt-badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 22px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: #fff0e4;
+            color: #a64220;
+            border: 1px solid #f2c4aa;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .trade-warning {
+            margin-top: 8px;
+            padding: 8px 9px;
+            border: 1px solid #f2c4aa;
+            border-radius: 6px;
+            background: #fff8f2;
+            color: #a64220;
+            font-size: 0.84rem;
+        }
         .up { color: var(--red); }
         .down { color: var(--green); }
         .status-open { color: var(--green); }
@@ -348,7 +372,7 @@
     <section class="panel news-panel">
         <div class="panel-head">
             <h2>市场新闻</h2>
-            <span class="tiny">拆股公告会在这里播报</span>
+            <span class="tiny">拆股与封停公告会在这里播报</span>
         </div>
         <div id="stock-news-list" class="news-list"></div>
     </section>
@@ -362,6 +386,7 @@
                         <tr>
                             <th>名称</th>
                             <th>代码</th>
+                            <th>状态</th>
                             <th>当前价</th>
                             <th>上一日</th>
                             <th>持有</th>
@@ -455,6 +480,16 @@
                 <input id="dm-split-ratio" type="number" min="2" step="1" placeholder="2">
             </label>
             <button id="split-stock-btn" onclick="splitSelectedStock()">执行拆股并播报</button>
+            <label>
+                <div class="label">封停股票</div>
+                <select id="dm-halt-stock"></select>
+            </label>
+            <label>
+                <div class="label">封停天数</div>
+                <input id="dm-halt-days" type="number" min="1" step="1" placeholder="3">
+                <div class="tiny">从当前世界日期开始计算，1天表示只封当天。</div>
+            </label>
+            <button id="halt-stock-btn" class="danger" onclick="haltSelectedStock()">暂时封停交易</button>
         </div>
         <div id="dm-action-status" class="dm-status">DM 操作状态：空闲。</div>
         <h3 style="margin-top:14px;">本月隐藏趋势与基础涨跌</h3>
@@ -557,6 +592,25 @@
     function getLatestHistoryRow(stockId) {
         const history = snapshot?.historyByStock?.[stockId] || [];
         return history[history.length - 1] || null;
+    }
+
+    function getStockHalt(stockId) {
+        return snapshot?.halts?.[stockId] || null;
+    }
+
+    function formatPlainDate(date) {
+        if (!date) return '--';
+        return `${date.year ?? '--'}-${date.month ?? '--'}-${date.day ?? '--'}`;
+    }
+
+    function formatHaltEnd(halt) {
+        return formatPlainDate(halt?.end_date_value || {});
+    }
+
+    function renderHaltBadge(stockId) {
+        const halt = getStockHalt(stockId);
+        if (!halt) return '<span class="muted">正常</span>';
+        return `<span class="halt-badge">封停至 ${escapeHTML(formatHaltEnd(halt))}</span>`;
     }
 
     function renderStockNews() {
@@ -683,10 +737,12 @@
             const pnl = quantity > 0 ? (price - average) * quantity : 0;
             const change = getLastChange(stock.id);
             const active = stock.id === selectedStockId ? ' active' : '';
+            const halt = getStockHalt(stock.id);
             return `
-                <tr class="stock-row${active}" onclick="selectStock('${stock.id}')">
+                <tr class="stock-row${active}${halt ? ' halted' : ''}" onclick="selectStock('${stock.id}')">
                     <td>${escapeHTML(stock.name)}</td>
                     <td>${escapeHTML(stock.code)}</td>
+                    <td>${renderHaltBadge(stock.id)}</td>
                     <td>${formatMoney(price)}</td>
                     <td class="${change >= 0 ? 'up' : 'down'}">${formatRate(change)}</td>
                     <td>${quantity}</td>
@@ -1161,6 +1217,7 @@
         const latest = getLatestHistoryRow(stock.id);
         const currentPrice = Number(snapshot.states?.[stock.id]?.current_price || latest?.price || stock.initial_price);
         const rangeChange = getRangeChange(stock.id);
+        const halt = getStockHalt(stock.id);
         document.getElementById('selected-quote').innerHTML = `
             <div class="quote-item">
                 <div class="label">当前价</div>
@@ -1170,6 +1227,10 @@
                 <div class="label">当前范围涨跌</div>
                 <strong class="${rangeChange >= 0 ? 'up' : 'down'}">${formatRate(rangeChange)}</strong>
             </div>
+            <div class="quote-item">
+                <div class="label">交易状态</div>
+                <strong>${halt ? `<span class="halt-badge">封停至 ${escapeHTML(formatHaltEnd(halt))}</span>` : '正常'}</strong>
+            </div>
         `;
         const currentDate = accountProfile?.world_date;
         if (currentDate && !document.getElementById('change-query-year').value) {
@@ -1177,12 +1238,16 @@
             document.getElementById('change-query-month').value = currentDate.month;
             document.getElementById('change-query-day').value = currentDate.day;
         }
-        const disabled = !snapshot.tradable;
+        const disabled = !snapshot.tradable || Boolean(halt);
         document.getElementById('buy-btn').disabled = disabled;
         document.getElementById('sell-btn').disabled = disabled;
-        document.getElementById('trade-note').textContent = disabled
-            ? '市场尚未开放，当前不能交易。'
-            : '当日所有交易均按当前价成交，价格只在日期推进时变化。';
+        const note = document.getElementById('trade-note');
+        note.className = halt ? 'trade-warning' : 'tiny';
+        note.textContent = halt
+            ? `该股票正在封停交易，封停至 ${formatHaltEnd(halt)}。`
+            : !snapshot.tradable
+                ? '市场尚未开放，当前不能交易。'
+                : '当日所有交易均按当前价成交，价格只在日期推进时变化。';
         drawChart(stock.id);
     }
 
@@ -1280,8 +1345,9 @@
     function setTradeBusy(isBusy) {
         const buyBtn = document.getElementById('buy-btn');
         const sellBtn = document.getElementById('sell-btn');
-        buyBtn.disabled = isBusy || !snapshot?.tradable;
-        sellBtn.disabled = isBusy || !snapshot?.tradable;
+        const halted = Boolean(selectedStockId && getStockHalt(selectedStockId));
+        buyBtn.disabled = isBusy || !snapshot?.tradable || halted;
+        sellBtn.disabled = isBusy || !snapshot?.tradable || halted;
         buyBtn.textContent = isBusy ? '提交中' : '买入';
         sellBtn.textContent = isBusy ? '提交中' : '卖出';
     }
@@ -1312,6 +1378,11 @@
     async function tradeStock(type) {
         const quantity = parseInt(document.getElementById('trade-quantity').value, 10);
         const currentDate = accountProfile.world_date;
+        const halt = selectedStockId ? getStockHalt(selectedStockId) : null;
+        if (halt) {
+            alert(`该股票正在封停交易，封停至 ${formatHaltEnd(halt)}。`);
+            return;
+        }
         setTradeBusy(true);
         try {
             let result;
@@ -1355,6 +1426,10 @@
             .map(stock => `<option value="${stock.id}">${escapeHTML(stock.name)} (${escapeHTML(stock.code)})</option>`)
             .join('');
         document.getElementById('dm-split-stock').value = selectedStockId || snapshot.stocks[0]?.id || '';
+        document.getElementById('dm-halt-stock').innerHTML = snapshot.stocks
+            .map(stock => `<option value="${stock.id}">${escapeHTML(stock.name)} (${escapeHTML(stock.code)})</option>`)
+            .join('');
+        document.getElementById('dm-halt-stock').value = selectedStockId || snapshot.stocks[0]?.id || '';
         if (shouldAutoRepairHistory(currentDate)) {
             setDmActionStatus('检测到当前可视区间没有足够价格历史。可以点“补齐缺失历史”或“重建价格历史”。', 'error');
         } else {
@@ -1566,6 +1641,36 @@
                     ratioTo
                 });
                 document.getElementById('dm-split-ratio').value = '';
+            }
+        });
+    }
+
+    async function haltSelectedStock() {
+        const stockId = document.getElementById('dm-halt-stock').value;
+        const days = parseInt(document.getElementById('dm-halt-days').value, 10);
+        const stock = snapshot.stocks.find(item => item.id === stockId);
+        if (!stock) {
+            setDmActionStatus('请选择要封停的股票。', 'error');
+            return;
+        }
+        if (!Number.isInteger(days) || days <= 0) {
+            setDmActionStatus('封停天数必须是正整数。', 'error');
+            return;
+        }
+        if (!confirm(`确认将 ${stock.name}（${stock.code}）封停交易 ${days} 天？`)) return;
+        await runDmAction({
+            buttonId: 'halt-stock-btn',
+            busyText: '正在封停股票交易...',
+            successText: `${stock.code} 已封停交易 ${days} 天，并已发布市场新闻。`,
+            action: async () => {
+                await BaichengStocks.haltStockTrading({
+                    client: supabaseClient,
+                    accountId,
+                    stockId,
+                    currentDate: accountProfile.world_date,
+                    days
+                });
+                document.getElementById('dm-halt-days').value = '';
             }
         });
     }
