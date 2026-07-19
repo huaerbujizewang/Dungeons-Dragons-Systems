@@ -947,7 +947,7 @@
     }
 
     async function catchUpMarket(options) {
-        const { client, accountId, currentDate, historyDays = 0 } = options;
+        const { client, accountId, currentDate, historyDays = null } = options;
         const market = await getMarketConfig(client, accountId);
         if (!isMarketTradable(market, currentDate)) return;
         const openDate = marketOpenDate(market);
@@ -977,8 +977,10 @@
                 ? parseDateValue(latestRows[0]?.date_value)
                 : openDate;
         }
-        if (startDate && compareDates(startDate, currentDate) >= 0 && Number.isFinite(historyDays) && historyDays > 0) {
-            const requiredStartSerial = Math.max(openSerial, currentSerial - historyDays);
+        if (startDate && compareDates(startDate, currentDate) >= 0 && Number.isFinite(historyDays) && historyDays >= 0) {
+            const requiredStartSerial = historyDays > 0
+                ? Math.max(openSerial, currentSerial - historyDays)
+                : openSerial;
             const expectedRowsPerStock = Math.max(1, currentSerial - requiredStartSerial + 1);
             const recentHistoryRows = await fetchPaged(() => client
                 .from('stock_price_history')
@@ -1004,6 +1006,27 @@
             await catchUpPromises.get(key);
         }
 
+        await Promise.all(stocks.map(stock =>
+            ensureDailyReturnsForMonth(client, accountId, stock.id, currentDate.year, currentDate.month)
+        ));
+    }
+
+    async function repairMarketHistory(options) {
+        const { client, accountId, currentDate } = options;
+        assertClient(client);
+        if (!accountId || !isValidDate(currentDate)) return;
+        const market = await getMarketConfig(client, accountId);
+        if (!market?.market_enabled || !isMarketTradable(market, currentDate)) return;
+        const openDate = marketOpenDate(market);
+        if (!openDate || compareDates(openDate, currentDate) >= 0) return;
+        const key = `${accountId}:${dateKey(currentDate)}:repair`;
+        if (!catchUpPromises.has(key)) {
+            const promise = settleStocksBetweenBulk({ client, accountId, fromDate: openDate, toDate: currentDate })
+                .finally(() => catchUpPromises.delete(key));
+            catchUpPromises.set(key, promise);
+        }
+        await catchUpPromises.get(key);
+        const stocks = await ensureStockDefinitions(client);
         await Promise.all(stocks.map(stock =>
             ensureDailyReturnsForMonth(client, accountId, stock.id, currentDate.year, currentDate.month)
         ));
@@ -1415,6 +1438,7 @@
         isMarketTradable,
         loadSnapshot,
         marketOpenDate,
+        repairMarketHistory,
         rollbackStocksToDate,
         sellStock,
         setDmAdjustment,

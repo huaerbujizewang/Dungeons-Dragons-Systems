@@ -196,6 +196,9 @@
                     <option value="90">3个月</option>
                     <option value="180">6个月</option>
                     <option value="360" selected>12个月</option>
+                    <option value="720">2年</option>
+                    <option value="1800">5年</option>
+                    <option value="0">全部</option>
                 </select>
             </label>
         </div>
@@ -283,6 +286,7 @@
                 </div>
             </label>
             <button onclick="saveMarketConfig()">保存市场设置</button>
+            <button id="repair-history-btn" onclick="repairMarketHistory()">补全价格历史</button>
             <label>
                 <div class="label">修正股票</div>
                 <select id="dm-adjust-stock"></select>
@@ -313,8 +317,8 @@
     let selectedStockId = null;
     let selectedHistoryDays = 360;
     let presenceChannel = null;
+    let autoRepairAttempted = false;
 
-    const HISTORY_FETCH_DAYS = 390;
     const CHART_COLORS = ['#bf3a30', '#178a55', '#2f6f9f', '#a8791c', '#6f4aa8', '#bf6b2d', '#2b7a78', '#4b5563'];
 
     function escapeHTML(value) {
@@ -418,13 +422,23 @@
         document.getElementById('viewer-label').textContent = profile.email || accountId;
 
         try {
-            snapshot = await BaichengStocks.loadSnapshot({
+            const snapshotOptions = {
                 client: supabaseClient,
                 accountId,
                 currentDate,
                 includeFuture: ADMIN_ROLES.includes(currentRole),
-                historyDays: HISTORY_FETCH_DAYS
-            });
+                historyDays: getHistoryFetchDays()
+            };
+            snapshot = await BaichengStocks.loadSnapshot(snapshotOptions);
+            if (shouldAutoRepairHistory(currentDate)) {
+                autoRepairAttempted = true;
+                await BaichengStocks.repairMarketHistory({
+                    client: supabaseClient,
+                    accountId,
+                    currentDate
+                });
+                snapshot = await BaichengStocks.loadSnapshot(snapshotOptions);
+            }
         } catch (e) {
             showError(`股票数据加载失败：${e.message || e}`);
             return;
@@ -501,10 +515,15 @@
         renderTradePanel();
     }
 
-    function changeHistoryRange() {
-        selectedHistoryDays = parseInt(document.getElementById('history-range').value, 10) || 360;
-        drawComparisonChart();
-        if (selectedStockId) drawChart(selectedStockId);
+    function getHistoryFetchDays() {
+        if (!Number.isFinite(selectedHistoryDays) || selectedHistoryDays <= 0) return 0;
+        return selectedHistoryDays + 30;
+    }
+
+    async function changeHistoryRange() {
+        selectedHistoryDays = parseInt(document.getElementById('history-range').value, 10);
+        if (!Number.isFinite(selectedHistoryDays)) selectedHistoryDays = 360;
+        await refreshPage();
     }
 
     function currentDateSerial() {
@@ -516,6 +535,20 @@
         const serial = currentDateSerial();
         if (!Number.isFinite(serial) || !Number.isFinite(days) || days <= 0) return rows;
         return rows.filter(row => Number(row.date_serial) >= serial - days && Number(row.date_serial) <= serial);
+    }
+
+    function hasRenderableHistory() {
+        if (!snapshot?.stocks?.length) return false;
+        return snapshot.stocks.some(stock =>
+            filterHistoryByDays(snapshot.historyByStock?.[stock.id] || [], selectedHistoryDays).length >= 2
+        );
+    }
+
+    function shouldAutoRepairHistory(currentDate) {
+        if (autoRepairAttempted || !ADMIN_ROLES.includes(currentRole)) return false;
+        if (!snapshot?.market?.market_enabled || !snapshot?.openDate || !currentDate) return false;
+        if (BaichengStocks.compareDates(snapshot.openDate, currentDate) >= 0) return false;
+        return !hasRenderableHistory();
     }
 
     function clearChart(canvas, ctx) {
@@ -774,6 +807,41 @@
             await refreshPage();
         } catch (e) {
             alert(e.message || '保存失败');
+        }
+    }
+
+    async function repairMarketHistory() {
+        if (!ADMIN_ROLES.includes(currentRole)) return;
+        if (!accountProfile?.world_date) {
+            alert('当前日期未加载。');
+            return;
+        }
+        if (!snapshot?.market?.market_enabled) {
+            alert('市场尚未开启。');
+            return;
+        }
+        if (!confirm('将从市场开启日期补齐到当前日期的每日价格历史。继续？')) return;
+        const button = document.getElementById('repair-history-btn');
+        if (button) {
+            button.disabled = true;
+            button.textContent = '正在补全...';
+        }
+        try {
+            await BaichengStocks.repairMarketHistory({
+                client: supabaseClient,
+                accountId,
+                currentDate: accountProfile.world_date
+            });
+            autoRepairAttempted = true;
+            await refreshPage();
+            alert('价格历史已补全。');
+        } catch (e) {
+            showError(`补全价格历史失败：${e.message || e}`);
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = '补全价格历史';
+            }
         }
     }
 
