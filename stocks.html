@@ -286,7 +286,8 @@
                 </div>
             </label>
             <button onclick="saveMarketConfig()">保存市场设置</button>
-            <button id="repair-history-btn" onclick="repairMarketHistory()">补全价格历史</button>
+            <button id="repair-history-btn" onclick="repairMarketHistory()">重建价格历史</button>
+            <button id="delete-stock-data-btn" onclick="deleteAllStockData()">删除全部股票数据</button>
             <label>
                 <div class="label">修正股票</div>
                 <select id="dm-adjust-stock"></select>
@@ -820,7 +821,7 @@
             alert('市场尚未开启。');
             return;
         }
-        if (!confirm('将从市场开启日期补齐到当前日期的每日价格历史。继续？')) return;
+        if (!confirm('将清除旧价格历史、月趋势、每日基础涨跌和当前价，并从市场开启日期重新生成到当前日期。继续？')) return;
         const button = document.getElementById('repair-history-btn');
         if (button) {
             button.disabled = true;
@@ -834,13 +835,44 @@
             });
             autoRepairAttempted = true;
             await refreshPage();
-            alert('价格历史已补全。');
+            alert('价格历史已重建。');
         } catch (e) {
-            showError(`补全价格历史失败：${e.message || e}`);
+            showError(`重建价格历史失败：${e.message || e}`);
         } finally {
             if (button) {
                 button.disabled = false;
-                button.textContent = '补全价格历史';
+                button.textContent = '重建价格历史';
+            }
+        }
+    }
+
+    async function deleteAllStockData() {
+        if (!ADMIN_ROLES.includes(currentRole)) return;
+        const firstConfirm = confirm('这会删除当前账号的全部股票数据，包括市场设置、价格历史、持仓和交易记录。继续？');
+        if (!firstConfirm) return;
+        const secondConfirm = confirm('确认执行硬重置？删除后该账号股票市场会回到未开启状态。');
+        if (!secondConfirm) return;
+        const button = document.getElementById('delete-stock-data-btn');
+        if (button) {
+            button.disabled = true;
+            button.textContent = '正在删除...';
+        }
+        try {
+            await BaichengStocks.deleteAccountStockData({
+                client: supabaseClient,
+                accountId
+            });
+            snapshot = null;
+            selectedStockId = null;
+            autoRepairAttempted = false;
+            await refreshPage();
+            alert('全部股票数据已删除。');
+        } catch (e) {
+            showError(`删除股票数据失败：${e.message || e}`);
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = '删除全部股票数据';
             }
         }
     }

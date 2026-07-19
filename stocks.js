@@ -340,11 +340,51 @@
         return Boolean(market?.market_enabled && openDate && compareDates(currentDate, openDate) >= 0);
     }
 
+    async function clearGeneratedMarketData(client, accountId) {
+        const generatedTables = [
+            'stock_price_history',
+            'stock_daily_returns',
+            'stock_monthly_trends',
+            'account_stock_state'
+        ];
+        const results = await Promise.all(generatedTables.map(table =>
+            client.from(table).delete().eq('account_id', accountId)
+        ));
+        results.forEach(result => {
+            if (result.error) throw result.error;
+        });
+    }
+
+    async function deleteAccountStockData(options) {
+        const { client, accountId } = options;
+        assertClient(client);
+        if (!accountId) throw new Error('缺少账号。');
+        const stockTables = [
+            'stock_transactions',
+            'stock_holdings',
+            'stock_price_history',
+            'stock_daily_order_totals',
+            'stock_dm_adjustments',
+            'stock_daily_returns',
+            'stock_monthly_trends',
+            'account_stock_state',
+            'account_stock_market'
+        ];
+        for (const table of stockTables) {
+            const { error } = await client.from(table).delete().eq('account_id', accountId);
+            if (error) throw error;
+        }
+    }
+
     async function setMarketConfig(options) {
         const { client, accountId, enabled, openDate, currentDate } = options;
         assertClient(client);
         if (!accountId) throw new Error('缺少账号。');
         if (openDate && !isValidDate(openDate)) throw new Error('股票市场开启日期无效。');
+        const previousMarket = await getMarketConfig(client, accountId);
+        const previousOpenDate = marketOpenDate(previousMarket);
+        const openDateChanged = Boolean(openDate)
+            && (!previousOpenDate || dateToSerial(previousOpenDate) !== dateToSerial(openDate));
 
         const payload = {
             account_id: accountId,
@@ -363,6 +403,10 @@
             .select('*')
             .single();
         if (error) throw error;
+
+        if (openDateChanged) {
+            await clearGeneratedMarketData(client, accountId);
+        }
 
         if (data.market_enabled && currentDate && isMarketTradable(data, currentDate)) {
             await catchUpMarket({ client, accountId, currentDate });
@@ -1019,6 +1063,7 @@
         if (!market?.market_enabled || !isMarketTradable(market, currentDate)) return;
         const openDate = marketOpenDate(market);
         if (!openDate || compareDates(openDate, currentDate) >= 0) return;
+        await clearGeneratedMarketData(client, accountId);
         const key = `${accountId}:${dateKey(currentDate)}:repair`;
         if (!catchUpPromises.has(key)) {
             const promise = settleStocksBetweenBulk({ client, accountId, fromDate: openDate, toDate: currentDate })
@@ -1432,6 +1477,7 @@
         compareDates,
         dateKey,
         dateToSerial,
+        deleteAccountStockData,
         formatDate: formatDisplayDate,
         getMarketConfig,
         impactTier,
