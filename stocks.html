@@ -129,6 +129,7 @@
             color: #fff;
         }
         button.secondary { background: #eef2f6; color: #27384a; border: 1px solid #cfd8e3; }
+        button.danger { background: var(--red); }
         button.buy { background: var(--green); }
         button.sell { background: var(--red); }
         button:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -166,6 +167,18 @@
         .dm-panel { margin-top: 16px; border-color: #c7b37a; background: #fffdf6; }
         .dm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
         .dm-intel { max-height: 260px; overflow: auto; font-size: 0.84rem; background: #fff; border: 1px solid #eee3bb; border-radius: 6px; padding: 8px; }
+        .dm-status {
+            margin-top: 10px;
+            padding: 9px 10px;
+            border: 1px solid #eee3bb;
+            border-radius: 6px;
+            background: #fff;
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+        .dm-status.ok { border-color: #b7dfc9; color: var(--green); background: #f3fbf6; }
+        .dm-status.error { border-color: #e3b7b1; color: var(--red); background: #fff6f5; }
+        .dm-status.busy { border-color: #cbd8ea; color: var(--blue); background: #f4f8fd; }
         .tiny { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
         @media (max-width: 900px) {
             header { flex-direction: column; align-items: flex-start; }
@@ -286,8 +299,19 @@
                 </div>
             </label>
             <button onclick="saveMarketConfig()">保存市场设置</button>
+            <button id="catch-up-history-btn" class="secondary" onclick="catchUpMarketHistory()">补齐缺失历史</button>
             <button id="repair-history-btn" onclick="repairMarketHistory()">重建价格历史</button>
-            <button id="delete-stock-data-btn" onclick="deleteAllStockData()">删除全部股票数据</button>
+            <button id="clear-generated-btn" class="secondary" onclick="clearGeneratedStockData()">清除生成数据</button>
+            <label>
+                <div class="label">回滚日期</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+                    <input id="dm-rollback-year" type="number" placeholder="年">
+                    <input id="dm-rollback-month" type="number" min="1" max="12" placeholder="月">
+                    <input id="dm-rollback-day" type="number" min="1" max="30" placeholder="日">
+                </div>
+            </label>
+            <button id="rollback-stock-btn" class="secondary" onclick="rollbackStockMarket()">回滚到日期</button>
+            <button id="delete-stock-data-btn" class="danger" onclick="deleteAllStockData()">删除全部股票数据</button>
             <label>
                 <div class="label">修正股票</div>
                 <select id="dm-adjust-stock"></select>
@@ -299,6 +323,7 @@
             </label>
             <button onclick="saveDmAdjustment()">设置一次性修正</button>
         </div>
+        <div id="dm-action-status" class="dm-status">DM 操作状态：空闲。</div>
         <h3 style="margin-top:14px;">本月隐藏趋势与基础涨跌</h3>
         <div id="dm-intel" class="dm-intel"></div>
     </section>
@@ -431,15 +456,6 @@
                 historyDays: getHistoryFetchDays()
             };
             snapshot = await BaichengStocks.loadSnapshot(snapshotOptions);
-            if (shouldAutoRepairHistory(currentDate)) {
-                autoRepairAttempted = true;
-                await BaichengStocks.repairMarketHistory({
-                    client: supabaseClient,
-                    accountId,
-                    currentDate
-                });
-                snapshot = await BaichengStocks.loadSnapshot(snapshotOptions);
-            }
         } catch (e) {
             showError(`股票数据加载失败：${e.message || e}`);
             return;
@@ -550,6 +566,41 @@
         if (!snapshot?.market?.market_enabled || !snapshot?.openDate || !currentDate) return false;
         if (BaichengStocks.compareDates(snapshot.openDate, currentDate) >= 0) return false;
         return !hasRenderableHistory();
+    }
+
+    function setDmActionStatus(message, type = '') {
+        const box = document.getElementById('dm-action-status');
+        if (!box) return;
+        box.textContent = message || 'DM 操作状态：空闲。';
+        box.className = `dm-status ${type}`.trim();
+    }
+
+    function setDmControlsBusy(isBusy) {
+        document.querySelectorAll('#dm-panel button, #dm-panel input, #dm-panel select').forEach(control => {
+            control.disabled = Boolean(isBusy);
+        });
+    }
+
+    async function runDmAction(options) {
+        const { buttonId, busyText, successText, action, afterSuccess = true } = options;
+        if (!ADMIN_ROLES.includes(currentRole)) return;
+        const button = buttonId ? document.getElementById(buttonId) : null;
+        const originalText = button?.textContent || '';
+        setDmControlsBusy(true);
+        if (button && busyText) button.textContent = busyText;
+        setDmActionStatus(busyText || '正在执行 DM 操作...', 'busy');
+        try {
+            await action();
+            if (afterSuccess) await refreshPage();
+            setDmActionStatus(successText || '操作完成。', 'ok');
+        } catch (e) {
+            const message = e.message || e;
+            showError(message);
+            setDmActionStatus(`操作失败：${message}`, 'error');
+        } finally {
+            if (button) button.textContent = originalText;
+            setDmControlsBusy(false);
+        }
     }
 
     function clearChart(canvas, ctx) {
@@ -760,10 +811,18 @@
         document.getElementById('dm-open-year').value = open.year;
         document.getElementById('dm-open-month').value = open.month;
         document.getElementById('dm-open-day').value = open.day;
+        document.getElementById('dm-rollback-year').value = currentDate.year;
+        document.getElementById('dm-rollback-month').value = currentDate.month;
+        document.getElementById('dm-rollback-day').value = currentDate.day;
         document.getElementById('dm-adjust-stock').innerHTML = snapshot.stocks
             .map(stock => `<option value="${stock.id}">${escapeHTML(stock.name)} (${escapeHTML(stock.code)})</option>`)
             .join('');
         document.getElementById('dm-adjust-stock').value = selectedStockId || snapshot.stocks[0]?.id || '';
+        if (shouldAutoRepairHistory(currentDate)) {
+            setDmActionStatus('检测到当前可视区间没有足够价格历史。可以点“补齐缺失历史”或“重建价格历史”。', 'error');
+        } else {
+            setDmActionStatus('DM 操作状态：空闲。');
+        }
         renderDmIntel();
     }
 
@@ -796,54 +855,110 @@
             day: parseInt(document.getElementById('dm-open-day').value, 10)
         };
         const enabled = document.getElementById('dm-market-enabled').value === 'true';
-        try {
-            await BaichengStocks.setMarketConfig({
-                client: supabaseClient,
-                accountId,
-                enabled,
-                openDate,
-                currentDate: accountProfile.world_date
-            });
-            alert('市场设置已保存。');
-            await refreshPage();
-        } catch (e) {
-            alert(e.message || '保存失败');
+        await runDmAction({
+            busyText: '正在保存市场设置...',
+            successText: '市场设置已保存。',
+            action: async () => {
+                await BaichengStocks.setMarketConfig({
+                    client: supabaseClient,
+                    accountId,
+                    enabled,
+                    openDate,
+                    currentDate: accountProfile.world_date
+                });
+            }
+        });
+    }
+
+    async function catchUpMarketHistory() {
+        if (!accountProfile?.world_date) {
+            setDmActionStatus('当前日期未加载。', 'error');
+            return;
         }
+        if (!snapshot?.market?.market_enabled) {
+            setDmActionStatus('市场尚未开启。', 'error');
+            return;
+        }
+        await runDmAction({
+            buttonId: 'catch-up-history-btn',
+            busyText: '正在补齐缺失历史...',
+            successText: '缺失价格历史已补齐。',
+            action: async () => {
+                await BaichengStocks.catchUpMarket({
+                    client: supabaseClient,
+                    accountId,
+                    currentDate: accountProfile.world_date,
+                    historyDays: 0,
+                    repairSparseHistory: true
+                });
+                autoRepairAttempted = true;
+            }
+        });
     }
 
     async function repairMarketHistory() {
         if (!ADMIN_ROLES.includes(currentRole)) return;
         if (!accountProfile?.world_date) {
-            alert('当前日期未加载。');
+            setDmActionStatus('当前日期未加载。', 'error');
             return;
         }
         if (!snapshot?.market?.market_enabled) {
-            alert('市场尚未开启。');
+            setDmActionStatus('市场尚未开启。', 'error');
             return;
         }
         if (!confirm('将清除旧价格历史、月趋势、每日基础涨跌和当前价，并从市场开启日期重新生成到当前日期。继续？')) return;
-        const button = document.getElementById('repair-history-btn');
-        if (button) {
-            button.disabled = true;
-            button.textContent = '正在补全...';
-        }
-        try {
-            await BaichengStocks.repairMarketHistory({
-                client: supabaseClient,
-                accountId,
-                currentDate: accountProfile.world_date
-            });
-            autoRepairAttempted = true;
-            await refreshPage();
-            alert('价格历史已重建。');
-        } catch (e) {
-            showError(`重建价格历史失败：${e.message || e}`);
-        } finally {
-            if (button) {
-                button.disabled = false;
-                button.textContent = '重建价格历史';
+        await runDmAction({
+            buttonId: 'repair-history-btn',
+            busyText: '正在重建价格历史...',
+            successText: '价格历史已重建。',
+            action: async () => {
+                await BaichengStocks.repairMarketHistory({
+                    client: supabaseClient,
+                    accountId,
+                    currentDate: accountProfile.world_date
+                });
+                autoRepairAttempted = true;
             }
-        }
+        });
+    }
+
+    async function clearGeneratedStockData() {
+        if (!confirm('将清除当前账号的价格历史、月趋势、每日基础涨跌和当前价，但保留持仓与交易记录。继续？')) return;
+        await runDmAction({
+            buttonId: 'clear-generated-btn',
+            busyText: '正在清除生成数据...',
+            successText: '生成数据已清除。',
+            action: async () => {
+                await BaichengStocks.clearGeneratedStockData({
+                    client: supabaseClient,
+                    accountId
+                });
+                selectedStockId = null;
+                autoRepairAttempted = false;
+            }
+        });
+    }
+
+    async function rollbackStockMarket() {
+        const targetDate = {
+            year: parseInt(document.getElementById('dm-rollback-year').value, 10),
+            month: parseInt(document.getElementById('dm-rollback-month').value, 10),
+            day: parseInt(document.getElementById('dm-rollback-day').value, 10)
+        };
+        if (!confirm(`将股票市场回滚到 ${targetDate.year}-${targetDate.month}-${targetDate.day}，未来交易会撤销并回退金币。继续？`)) return;
+        await runDmAction({
+            buttonId: 'rollback-stock-btn',
+            busyText: '正在回滚股票市场...',
+            successText: '股票市场已回滚。',
+            action: async () => {
+                await BaichengStocks.rollbackStocksToDate({
+                    client: supabaseClient,
+                    accountId,
+                    targetDate
+                });
+                autoRepairAttempted = false;
+            }
+        });
     }
 
     async function deleteAllStockData() {
@@ -852,48 +967,39 @@
         if (!firstConfirm) return;
         const secondConfirm = confirm('确认执行硬重置？删除后该账号股票市场会回到未开启状态。');
         if (!secondConfirm) return;
-        const button = document.getElementById('delete-stock-data-btn');
-        if (button) {
-            button.disabled = true;
-            button.textContent = '正在删除...';
-        }
-        try {
-            await BaichengStocks.deleteAccountStockData({
-                client: supabaseClient,
-                accountId
-            });
-            snapshot = null;
-            selectedStockId = null;
-            autoRepairAttempted = false;
-            await refreshPage();
-            alert('全部股票数据已删除。');
-        } catch (e) {
-            showError(`删除股票数据失败：${e.message || e}`);
-        } finally {
-            if (button) {
-                button.disabled = false;
-                button.textContent = '删除全部股票数据';
+        await runDmAction({
+            buttonId: 'delete-stock-data-btn',
+            busyText: '正在删除全部股票数据...',
+            successText: '全部股票数据已删除。',
+            action: async () => {
+                await BaichengStocks.deleteAccountStockData({
+                    client: supabaseClient,
+                    accountId
+                });
+                snapshot = null;
+                selectedStockId = null;
+                autoRepairAttempted = false;
             }
-        }
+        });
     }
 
     async function saveDmAdjustment() {
         const stockId = document.getElementById('dm-adjust-stock').value;
         const percentage = Number(document.getElementById('dm-adjust-percent').value) / 100;
-        try {
-            await BaichengStocks.setDmAdjustment({
-                client: supabaseClient,
-                accountId,
-                stockId,
-                currentDate: accountProfile.world_date,
-                percentage
-            });
-            document.getElementById('dm-adjust-percent').value = '';
-            alert('下一次结算修正已设置。');
-            await refreshPage();
-        } catch (e) {
-            alert(e.message || '设置失败');
-        }
+        await runDmAction({
+            busyText: '正在设置一次性修正...',
+            successText: '下一次结算修正已设置。',
+            action: async () => {
+                await BaichengStocks.setDmAdjustment({
+                    client: supabaseClient,
+                    accountId,
+                    stockId,
+                    currentDate: accountProfile.world_date,
+                    percentage
+                });
+                document.getElementById('dm-adjust-percent').value = '';
+            }
+        });
     }
 
     init();

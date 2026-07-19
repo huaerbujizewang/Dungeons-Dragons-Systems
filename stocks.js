@@ -370,10 +370,19 @@
             'account_stock_state',
             'account_stock_market'
         ];
-        for (const table of stockTables) {
-            const { error } = await client.from(table).delete().eq('account_id', accountId);
-            if (error) throw error;
-        }
+        const results = await Promise.all(stockTables.map(table =>
+            client.from(table).delete().eq('account_id', accountId)
+        ));
+        results.forEach(result => {
+            if (result.error) throw result.error;
+        });
+    }
+
+    async function clearGeneratedStockData(options) {
+        const { client, accountId } = options;
+        assertClient(client);
+        if (!accountId) throw new Error('缺少账号。');
+        await clearGeneratedMarketData(client, accountId);
     }
 
     async function setMarketConfig(options) {
@@ -991,7 +1000,7 @@
     }
 
     async function catchUpMarket(options) {
-        const { client, accountId, currentDate, historyDays = null } = options;
+        const { client, accountId, currentDate, historyDays = null, repairSparseHistory = false } = options;
         const market = await getMarketConfig(client, accountId);
         if (!isMarketTradable(market, currentDate)) return;
         const openDate = marketOpenDate(market);
@@ -1021,7 +1030,7 @@
                 ? parseDateValue(latestRows[0]?.date_value)
                 : openDate;
         }
-        if (startDate && compareDates(startDate, currentDate) >= 0 && Number.isFinite(historyDays) && historyDays >= 0) {
+        if (repairSparseHistory && startDate && compareDates(startDate, currentDate) >= 0 && Number.isFinite(historyDays) && historyDays >= 0) {
             const requiredStartSerial = historyDays > 0
                 ? Math.max(openSerial, currentSerial - historyDays)
                 : openSerial;
@@ -1474,6 +1483,7 @@
         addDays,
         buyStock,
         catchUpMarket,
+        clearGeneratedStockData,
         compareDates,
         dateKey,
         dateToSerial,
