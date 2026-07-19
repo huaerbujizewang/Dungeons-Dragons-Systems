@@ -1715,9 +1715,17 @@
 
     <!-- 集市 -->
      <div id="shop-section" class="section active">
-        <div style="margin-bottom:20px; display:flex; gap:10px; align-items:center; background:#f8f9fa; padding:10px; border-radius:8px;">
+        <div style="margin-bottom:12px; display:flex; gap:10px; align-items:center; background:#f8f9fa; padding:10px; border-radius:8px; flex-wrap:wrap;">
             <button id="shop-mode-btn" onclick="toggleShopMode()" style="padding:10px 20px; background:#333; color:#fff; border:none; border-radius:4px; white-space:nowrap;">🔄 切换：我要出售</button>
-            <input type="text" id="shop-search-input" placeholder="🔍 搜索..." oninput="refreshShopView()" style="width:100%; padding:10px; font-size:1em; border:1px solid #ccc; border-radius:6px;">
+            <input type="text" id="shop-search-input" placeholder="🔍 搜索..." oninput="refreshShopView()" style="flex:1 1 260px; padding:10px; font-size:1em; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        <div style="margin-bottom:18px; background:#fff; border:1px solid #e1e7eb; border-radius:8px; padding:10px;">
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="shop-price-search-input" placeholder="🔎 价格查询：输入物品、分类或稀有度" oninput="refreshShopPriceLookup()" onfocus="refreshShopPriceLookup()" style="flex:1 1 280px; padding:10px; font-size:0.95em; border:1px solid #ccc; border-radius:6px;">
+                <button id="shop-price-table-btn" onclick="toggleShopPriceTable()" style="padding:10px 14px; background:#5d6d7e; color:white; border:none; border-radius:4px;">价格表</button>
+            </div>
+            <div id="shop-price-lookup-results" style="display:none; margin-top:8px;"></div>
+            <div id="shop-price-table-panel" style="display:none; margin-top:10px; max-height:420px; overflow:auto; border-top:1px solid #edf3f8; padding-top:8px;"></div>
         </div>
         <div id="shop-grid" class="shop-grid"></div>
     </div>
@@ -2497,11 +2505,18 @@
                 <select id="adm-user-list" onchange="loadUserDetail()" style="width:100%; padding:10px; margin-bottom:10px; border:2px solid #333;"></select>
                 
                 <div id="user-detail" style="display:none;">
-                    <div style="margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                    <div style="margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                         <span>🎲 团类型:</span>
                         <select id="adm-user-campaign-type" onchange="changeSelectedUserCampaignType()" style="padding:5px; border:1px solid #aaa; border-radius:4px;">
                             <option value="dnd">DND</option>
                             <option value="coc">COC</option>
+                        </select>
+                        <span>📅 历法:</span>
+                        <select id="adm-user-calendar-system" onchange="changeSelectedUserCalendarSystem()" style="padding:5px; border:1px solid #aaa; border-radius:4px;">
+                            <option value="tirlian">蒂尔兰历</option>
+                            <option value="imperial">帝国历</option>
+                            <option value="dr">DR</option>
+                            <option value="ce">公元</option>
                         </select>
                     </div>
                     <div style="margin-bottom:10px;">
@@ -2767,6 +2782,8 @@
     let currentUserEmail = ''; 
     let currentCampaignType = 'dnd';
     let viewingCampaignType = 'dnd';
+    let currentCalendarSystem = '';
+    let viewingCalendarSystem = '';
     let isSellMode = false;
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
@@ -2776,6 +2793,12 @@
     const CAMPAIGN_TYPES = {
         dnd: 'DND',
         coc: 'COC'
+    };
+    const CALENDAR_SYSTEMS = {
+        tirlian: '蒂尔兰历',
+        imperial: '帝国历',
+        dr: 'DR',
+        ce: '公元'
     };
     const COC_HIDDEN_CARD_IDS = [
         'world-card',
@@ -3112,6 +3135,23 @@ function isCocCampaign(value = viewingCampaignType) {
     return normalizeCampaignType(value) === 'coc';
 }
 
+function defaultCalendarForCampaign(campaignType = viewingCampaignType) {
+    return isCocCampaign(campaignType) ? 'ce' : 'dr';
+}
+
+function normalizeCalendarSystem(value, campaignType = viewingCampaignType) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'tirlian' || raw === 'tilian' || raw === 'tl') return 'tirlian';
+    if (raw === 'imperial' || raw === 'empire') return 'imperial';
+    if (raw === 'dr' || raw === 'fr') return 'dr';
+    if (raw === 'ce' || raw === 'ad' || raw === 'gregorian' || raw === 'coc') return 'ce';
+    return defaultCalendarForCampaign(campaignType);
+}
+
+function getCalendarLabel(value, campaignType = viewingCampaignType) {
+    return CALENDAR_SYSTEMS[normalizeCalendarSystem(value, campaignType)] || CALENDAR_SYSTEMS.dr;
+}
+
 function getCurrencyUnit() {
     return isCocCampaign() ? '美元' : 'GP';
 }
@@ -3122,12 +3162,23 @@ function formatCurrency(value) {
     return `${displayValue} ${getCurrencyUnit()}`;
 }
 
-function formatWorldDate(date = currentDate) {
+function convertCalendarYear(year, calendarSystem = viewingCalendarSystem) {
+    if (!Number.isFinite(Number(year))) return year ?? '----';
+    const system = normalizeCalendarSystem(calendarSystem);
+    if (system === 'tirlian' || system === 'imperial') return Number(year) - 966;
+    return Number(year);
+}
+
+function formatWorldDate(date = currentDate, calendarSystem = viewingCalendarSystem) {
     const safeDate = date || {};
-    const year = safeDate.year ?? '----';
+    const system = normalizeCalendarSystem(calendarSystem);
+    const year = convertCalendarYear(safeDate.year, system);
     const month = safeDate.month ?? '--';
     const day = safeDate.day ?? '--';
-    return isCocCampaign() ? `公元${year}年${month}月${day}日` : `FR${year} ${month}月${day}日`;
+    if (system === 'tirlian') return `蒂尔兰历${year}年${month}月${day}日`;
+    if (system === 'imperial') return `帝国历${year}年${month}月${day}日`;
+    if (system === 'ce') return `公元${year}年${month}月${day}日`;
+    return `DR${year} ${month}月${day}日`;
 }
 
 function refreshHeaderLocaleLabels() {
@@ -3171,6 +3222,7 @@ async function loadViewingCampaignType(targetId = viewingUserId || myId) {
     const normalizedDefault = 'dnd';
     if (!targetId) {
         viewingCampaignType = normalizedDefault;
+        viewingCalendarSystem = defaultCalendarForCampaign(viewingCampaignType);
         applyCampaignVisibility();
         return viewingCampaignType;
     }
@@ -3178,19 +3230,25 @@ async function loadViewingCampaignType(targetId = viewingUserId || myId) {
     try {
         const { data, error } = await supabaseClient
             .from('profiles')
-            .select('campaign_type')
+            .select('*')
             .eq('id', targetId)
             .maybeSingle();
 
         if (error) throw error;
         viewingCampaignType = normalizeCampaignType(data?.campaign_type);
+        viewingCalendarSystem = normalizeCalendarSystem(data?.calendar_system, viewingCampaignType);
     } catch (e) {
-        console.warn('读取账号团类型失败，已按 DND 处理:', e.message || e);
+        console.warn('读取账号显示设置失败，已按 DND/DR 处理:', e.message || e);
         viewingCampaignType = normalizedDefault;
+        viewingCalendarSystem = defaultCalendarForCampaign(viewingCampaignType);
     }
 
-    if (targetId === myId) currentCampaignType = viewingCampaignType;
+    if (targetId === myId) {
+        currentCampaignType = viewingCampaignType;
+        currentCalendarSystem = viewingCalendarSystem;
+    }
     applyCampaignVisibility();
+    refreshHeaderLocaleLabels();
     return viewingCampaignType;
 }
 
@@ -3208,7 +3266,9 @@ async function changeUserCampaignType(targetId, nextType) {
         await logAction('团类型修改', `将用户(ID:${targetId}) 标记为 ${getCampaignLabel(campaignType)}`);
         if (targetId === viewingUserId) {
             viewingCampaignType = campaignType;
+            viewingCalendarSystem = normalizeCalendarSystem(viewingCalendarSystem, viewingCampaignType);
             applyCampaignVisibility();
+            refreshHeaderLocaleLabels();
         }
         if (targetId === myId) currentCampaignType = campaignType;
         loadAllAccounts();
@@ -3221,10 +3281,44 @@ async function changeUserCampaignType(targetId, nextType) {
     }
 }
 
+async function changeUserCalendarSystem(targetId, nextSystem) {
+    if (!await requireAdminRole()) return;
+    const calendarSystem = normalizeCalendarSystem(nextSystem, viewingCampaignType);
+    showLoading();
+    try {
+        const { error } = await supabaseClient
+            .from('profiles')
+            .update({ calendar_system: calendarSystem })
+            .eq('id', targetId);
+
+        if (error) throw error;
+        await logAction('历法显示修改', `将用户(ID:${targetId}) 标记为 ${getCalendarLabel(calendarSystem)}`);
+        if (targetId === viewingUserId) {
+            viewingCalendarSystem = calendarSystem;
+            refreshHeaderLocaleLabels();
+            loadStockAdminPanel();
+        }
+        if (targetId === myId) currentCalendarSystem = calendarSystem;
+        loadAllAccounts();
+        loadAdminData();
+    } catch (e) {
+        console.error(e);
+        alert('历法显示修改失败：' + (e.message || '请确认 profiles.calendar_system 字段已创建'));
+    } finally {
+        hideLoading();
+    }
+}
+
 async function changeSelectedUserCampaignType() {
     if (!selectedUserId) return alert('请先选择一个玩家');
     const select = document.getElementById('adm-user-campaign-type');
     await changeUserCampaignType(selectedUserId, select?.value || 'dnd');
+}
+
+async function changeSelectedUserCalendarSystem() {
+    if (!selectedUserId) return alert('请先选择一个玩家');
+    const select = document.getElementById('adm-user-calendar-system');
+    await changeUserCalendarSystem(selectedUserId, select?.value || defaultCalendarForCampaign(viewingCampaignType));
 }
 
 const COC7TH_MONSTER_TEMPLATE = {
@@ -5068,8 +5162,13 @@ async function loadGold() {
 
         userProfile = profile; // 赋值给全局变量供其他函数使用
         viewingCampaignType = normalizeCampaignType(profile.campaign_type);
-        if (viewingUserId === myId) currentCampaignType = viewingCampaignType;
+        viewingCalendarSystem = normalizeCalendarSystem(profile.calendar_system, viewingCampaignType);
+        if (viewingUserId === myId) {
+            currentCampaignType = viewingCampaignType;
+            currentCalendarSystem = viewingCalendarSystem;
+        }
         applyCampaignVisibility();
+        refreshHeaderLocaleLabels();
         document.getElementById('gold-amount').innerText = profile.gold_gp.toLocaleString();
         const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
         if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
@@ -5108,11 +5207,12 @@ async function loadGold() {
         try {
             const { data: profile, error: profileError } = await supabaseClient
                 .from('profiles')
-                .select('world_date,email')
+                .select('*')
                 .eq('id', accountId)
                 .single();
             if (profileError) throw profileError;
             const stockDate = profile.world_date || currentDate;
+            const stockCalendar = normalizeCalendarSystem(profile.calendar_system, normalizeCampaignType(profile.campaign_type));
             const snapshot = await BaichengStocks.loadSnapshot({
                 client: supabaseClient,
                 accountId,
@@ -5135,7 +5235,7 @@ async function loadGold() {
             });
 
             box.innerHTML = `
-                <div style="font-weight:bold; margin-bottom:6px;">${escapeHTML(profile.email || accountId)} · ${BaichengStocks.formatDate(stockDate)}</div>
+                <div style="font-weight:bold; margin-bottom:6px;">${escapeHTML(profile.email || accountId)} · ${formatWorldDate(stockDate, stockCalendar)}</div>
                 ${snapshot.stocks.map(stock => {
                     const state = snapshot.states[stock.id] || {};
                     const trend = snapshot.trends[stock.id];
@@ -5177,7 +5277,7 @@ async function loadGold() {
                 openDate,
                 currentDate
             });
-            await logAction('DM操作', `${enabled ? '开启/更新' : '关闭'}白城证券交易所：User:${accountId}，开启日 ${BaichengStocks.formatDate(openDate)}`);
+            await logAction('DM操作', `${enabled ? '开启/更新' : '关闭'}白城证券交易所：User:${accountId}，开启日 ${formatWorldDate(openDate)}`);
             await loadStockAdminPanel();
             alert('股票市场设置已保存。');
         } catch (e) {
@@ -5286,6 +5386,119 @@ async function loadGold() {
         }
     }
 // --- 集市加载 ---
+    
+    let shopPriceTableCache = null;
+    let shopPriceTableVisible = false;
+
+    function getShopPriceSearchBlob(item) {
+        return [
+            item.name,
+            item.category,
+            item.rarity,
+            item.description
+        ].filter(Boolean).join(' ').toLowerCase();
+    }
+
+    function formatShopPriceRows(items, { compact = false } = {}) {
+        if (!items.length) {
+            return '<div style="padding:10px; color:#999;">没有找到符合条件的物品价格。</div>';
+        }
+        const rows = items.map(item => `
+            <tr>
+                <td style="padding:7px; border-bottom:1px solid #edf3f8; font-weight:bold;">${escapeHTML(item.name)}</td>
+                <td style="padding:7px; border-bottom:1px solid #edf3f8;">${escapeHTML(item.category || '杂项')}</td>
+                <td style="padding:7px; border-bottom:1px solid #edf3f8;">${escapeHTML(item.rarity || '普通')}</td>
+                <td style="padding:7px; border-bottom:1px solid #edf3f8; color:#d35400; white-space:nowrap;">${formatCurrency(item.price ?? 0)}</td>
+            </tr>
+        `).join('');
+        const caption = compact ? '' : `<div style="font-size:0.85em; color:#666; margin-bottom:6px;">共 ${items.length} 项。此表来自图鉴价格库，包含当前未上架物品。</div>`;
+        return `
+            ${caption}
+            <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                <thead>
+                    <tr style="background:#f7f9fb; color:#555; text-align:left;">
+                        <th style="padding:7px;">物品</th>
+                        <th style="padding:7px;">分类</th>
+                        <th style="padding:7px;">稀有度</th>
+                        <th style="padding:7px;">价格</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    async function loadShopPriceTable(force = false) {
+        if (!force && shopPriceTableCache) return shopPriceTableCache;
+        const allItems = [];
+        const pageSize = 1000;
+        for (let start = 0; ; start += pageSize) {
+            const { data, error } = await supabaseClient
+                .from('compendium_items')
+                .select('name, category, rarity, price, description')
+                .order('name')
+                .range(start, start + pageSize - 1);
+            if (error) throw error;
+            allItems.push(...(data || []));
+            if (!data || data.length < pageSize) break;
+        }
+        shopPriceTableCache = allItems.sort((a, b) => {
+            const priceDiff = Number(b.price || 0) - Number(a.price || 0);
+            if (priceDiff) return priceDiff;
+            return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
+        });
+        return shopPriceTableCache;
+    }
+
+    async function refreshShopPriceLookup() {
+        const input = document.getElementById('shop-price-search-input');
+        const resultBox = document.getElementById('shop-price-lookup-results');
+        if (!input || !resultBox) return;
+        const query = input.value.trim().toLowerCase();
+        if (!query) {
+            resultBox.style.display = 'none';
+            resultBox.innerHTML = '';
+            if (shopPriceTableVisible) renderShopPriceTable();
+            return;
+        }
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '<div style="padding:8px; color:#999;">正在查询价格...</div>';
+        try {
+            const items = await loadShopPriceTable();
+            const matches = items.filter(item => getShopPriceSearchBlob(item).includes(query)).slice(0, 30);
+            resultBox.innerHTML = formatShopPriceRows(matches, { compact: true });
+            if (shopPriceTableVisible) renderShopPriceTable();
+        } catch (e) {
+            console.error('价格查询失败:', e);
+            resultBox.innerHTML = `<div style="padding:8px; color:#c0392b;">价格查询失败：${escapeHTML(e.message || e)}</div>`;
+        }
+    }
+
+    async function renderShopPriceTable() {
+        const panel = document.getElementById('shop-price-table-panel');
+        if (!panel) return;
+        panel.innerHTML = '<div style="padding:8px; color:#999;">正在读取完整价格表...</div>';
+        try {
+            const query = (document.getElementById('shop-price-search-input')?.value || '').trim().toLowerCase();
+            const items = await loadShopPriceTable();
+            const filtered = query ? items.filter(item => getShopPriceSearchBlob(item).includes(query)) : items;
+            panel.innerHTML = formatShopPriceRows(filtered);
+        } catch (e) {
+            console.error('价格表加载失败:', e);
+            panel.innerHTML = `<div style="padding:8px; color:#c0392b;">价格表加载失败：${escapeHTML(e.message || e)}</div>`;
+        }
+    }
+
+    async function toggleShopPriceTable() {
+        const panel = document.getElementById('shop-price-table-panel');
+        const btn = document.getElementById('shop-price-table-btn');
+        if (!panel) return;
+        shopPriceTableVisible = !shopPriceTableVisible;
+        panel.style.display = shopPriceTableVisible ? 'block' : 'none';
+        if (btn) btn.innerText = shopPriceTableVisible ? '收起价格表' : '价格表';
+        if (shopPriceTableVisible) await renderShopPriceTable();
+    }
+
     async function loadShop() {
         const grid = document.getElementById('shop-grid');
         const searchInput = document.getElementById('shop-search-input');
@@ -5852,7 +6065,9 @@ async function buy(id, p, n, c) {
         ulist.innerHTML = '<option value="">-- 选择玩家 --</option>';
         if (users && users.length > 0) {
             users.forEach(u => {
-                ulist.innerHTML += `<option value="${escapeHTML(u.id)}">${escapeHTML(u.email)} · ${getCampaignLabel(u.campaign_type)}</option>`;
+                const campaign = normalizeCampaignType(u.campaign_type);
+                const calendar = normalizeCalendarSystem(u.calendar_system, campaign);
+                ulist.innerHTML += `<option value="${escapeHTML(u.id)}">${escapeHTML(u.email)} · ${getCampaignLabel(campaign)} · ${getCalendarLabel(calendar)}</option>`;
             });
         } else {
             ulist.innerHTML = '<option value="">(无关联玩家)</option>';
@@ -5884,6 +6099,8 @@ async function buy(id, p, n, c) {
             loadWarPosterStrip();
             const campaignSelect = document.getElementById('adm-user-campaign-type');
             if (campaignSelect) campaignSelect.value = 'dnd';
+            const calendarSelect = document.getElementById('adm-user-calendar-system');
+            if (calendarSelect) calendarSelect.value = defaultCalendarForCampaign('dnd');
             const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
             if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
             document.getElementById('adm-emp-list').innerHTML = '';
@@ -5909,12 +6126,15 @@ async function buy(id, p, n, c) {
         await refreshAllData();
         setupMainRealtime(viewingUserId); // 切换视角后，重新挂载对应的实时监听
 
-        const { data: prof } = await supabaseClient.from('profiles').select('gold_gp, campaign_type').eq('id', selectedUserId).single();
+        const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', selectedUserId).single();
         if (prof) {
             document.getElementById('adm-user-gold').value = prof.gold_gp;
             viewingCampaignType = normalizeCampaignType(prof.campaign_type);
+            viewingCalendarSystem = normalizeCalendarSystem(prof.calendar_system, viewingCampaignType);
             const campaignSelect = document.getElementById('adm-user-campaign-type');
             if (campaignSelect) campaignSelect.value = viewingCampaignType;
+            const calendarSelect = document.getElementById('adm-user-calendar-system');
+            if (calendarSelect) calendarSelect.value = viewingCalendarSystem;
             const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
             if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
             applyCampaignVisibility();
@@ -6751,18 +6971,26 @@ async function loadLoginLogs() {
             const idArg = jsStringAttr(u.id);
             const campaign = normalizeCampaignType(u.campaign_type);
             const campaignLabel = getCampaignLabel(campaign);
+            const calendar = normalizeCalendarSystem(u.calendar_system, campaign);
+            const calendarLabel = getCalendarLabel(calendar);
 
             return `
-                <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="border-bottom:1px solid #eee; padding:8px 4px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
                     <div style="overflow:hidden; text-overflow:ellipsis;">
                         <div style="font-weight:bold;">${safeEmail}</div>
-                        <div style="font-size:0.8em; color:#999;">${safeStatus} · ${campaignLabel}</div>
+                        <div style="font-size:0.8em; color:#999;">${safeStatus} · ${campaignLabel} · ${calendarLabel}</div>
                     </div>
                     <div style="text-align:right;">
                         <span style="font-size:0.8em; color:${roleColor}; font-weight:bold; margin-right:5px;">${role.toUpperCase()}</span>
                         <select onchange="changeUserCampaignType(${idArg}, this.value)" style="font-size:0.8em; padding:2px; margin-right:4px;">
                             <option value="dnd" ${campaign === 'dnd' ? 'selected' : ''}>DND</option>
                             <option value="coc" ${campaign === 'coc' ? 'selected' : ''}>COC</option>
+                        </select>
+                        <select onchange="changeUserCalendarSystem(${idArg}, this.value)" style="font-size:0.8em; padding:2px; margin-right:4px;">
+                            <option value="tirlian" ${calendar === 'tirlian' ? 'selected' : ''}>蒂尔兰历</option>
+                            <option value="imperial" ${calendar === 'imperial' ? 'selected' : ''}>帝国历</option>
+                            <option value="dr" ${calendar === 'dr' ? 'selected' : ''}>DR</option>
+                            <option value="ce" ${calendar === 'ce' ? 'selected' : ''}>公元</option>
                         </select>
                         ${!isMe ? `
                         <select onchange="changeUserRole(${idArg}, this.value)" style="font-size:0.8em; padding:2px;">
@@ -7052,6 +7280,7 @@ async function loadLoginLogs() {
             if (insertError) throw insertError;
 
             // 3. 记录日志
+            shopPriceTableCache = null;
             await logAction('DM随机进货', `执行了自定义随机进货 (目标: ${targetName})：${describeRestockPlan(plan)}；实际上架 ${rowsToInsert.length} 种`);
 
             const warning = shortageNotes.length ? `\n\n库存池不足：${shortageNotes.join('；')}` : '';

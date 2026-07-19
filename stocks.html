@@ -403,7 +403,7 @@
     async function refreshPage() {
         const { data: profile, error } = await supabaseClient
             .from('profiles')
-            .select('email,gold_gp,world_date')
+            .select('*')
             .eq('id', accountId)
             .single();
         if (error) {
@@ -412,7 +412,8 @@
         }
         accountProfile = profile;
         const currentDate = profile.world_date || { year: 1494, month: 2, day: 12 };
-        document.getElementById('world-date').textContent = BaichengStocks.formatDate(currentDate);
+        const calendarSystem = profile.calendar_system || (profile.campaign_type === 'coc' ? 'ce' : 'dr');
+        document.getElementById('world-date').textContent = BaichengStocks.formatDate(currentDate, calendarSystem, profile.campaign_type);
         document.getElementById('gold-value').textContent = formatMoney(profile.gold_gp);
         document.getElementById('viewer-label').textContent = profile.email || accountId;
 
@@ -455,7 +456,8 @@
             return;
         }
         if (!snapshot.tradable) {
-            status.textContent = openDate ? `${BaichengStocks.formatDate(openDate)} 开放` : '未设日期';
+            const calendarSystem = accountProfile?.calendar_system || (accountProfile?.campaign_type === 'coc' ? 'ce' : 'dr');
+            status.textContent = openDate ? `${BaichengStocks.formatDate(openDate, calendarSystem, accountProfile?.campaign_type)} 开放` : '未设日期';
             status.className = 'value';
             message.style.display = 'block';
             message.textContent = '白城证券交易所尚未开放';
