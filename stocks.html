@@ -111,6 +111,61 @@
             display: grid;
             gap: 10px;
         }
+        .quote-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .quote-item {
+            border: 1px solid #edf0f5;
+            border-radius: 6px;
+            background: #fbfcfe;
+            padding: 8px 9px;
+        }
+        .quote-item strong {
+            display: block;
+            margin-top: 2px;
+            font-size: 0.96rem;
+        }
+        .history-query, .news-list {
+            border: 1px solid #edf0f5;
+            border-radius: 6px;
+            background: #fbfcfe;
+            padding: 10px;
+        }
+        .history-query {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .history-query-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 6px;
+            align-items: end;
+        }
+        .query-result {
+            min-height: 1.5em;
+            font-size: 0.86rem;
+            color: var(--muted);
+        }
+        .news-list {
+            display: grid;
+            gap: 8px;
+        }
+        .news-item {
+            border-bottom: 1px solid #edf0f5;
+            padding-bottom: 8px;
+        }
+        .news-item:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+        .news-item strong {
+            display: block;
+            margin-bottom: 3px;
+        }
         input, select {
             width: 100%;
             padding: 9px 10px;
@@ -141,9 +196,26 @@
             background: linear-gradient(180deg, #fbfdff 0%, #f4f7fb 100%);
             border: 1px solid #edf0f5;
             border-radius: 6px;
+            cursor: grab;
+            touch-action: none;
         }
+        canvas:active { cursor: grabbing; }
         .comparison-panel { margin-bottom: 16px; }
         .comparison-chart { height: 260px; }
+        .chart-zoom-tools {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 8px 0 10px;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        .chart-zoom-tools button {
+            padding: 6px 9px;
+            font-size: 0.78rem;
+        }
+        .chart-hint { color: var(--muted); }
         .history-loading {
             display: none;
             height: 5px;
@@ -177,7 +249,14 @@
             align-items: center;
             gap: 6px;
             white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            padding: 3px 5px;
+            border-radius: 5px;
+            transition: background 0.15s ease, opacity 0.15s ease;
         }
+        .legend-item:hover { background: #eef3f8; }
+        .legend-item.hidden { opacity: 0.38; text-decoration: line-through; }
         .legend-swatch {
             width: 10px;
             height: 10px;
@@ -237,6 +316,11 @@
         </div>
         <div id="history-loading" class="history-loading"><div></div></div>
         <canvas id="comparison-chart" class="comparison-chart" width="1100" height="320"></canvas>
+        <div class="chart-zoom-tools">
+            <span id="chart-zoom-label">缩放：全部范围</span>
+            <span class="chart-hint">滚轮缩放，拖拽平移，双击重置</span>
+            <button class="secondary" onclick="resetChartZoom()">重置缩放</button>
+        </div>
         <div id="comparison-legend" class="chart-legend"></div>
     </section>
 
@@ -260,6 +344,14 @@
     </section>
 
     <section id="closed-message" class="message" style="display:none;"></section>
+
+    <section class="panel news-panel">
+        <div class="panel-head">
+            <h2>市场新闻</h2>
+            <span class="tiny">拆股公告会在这里播报</span>
+        </div>
+        <div id="stock-news-list" class="news-list"></div>
+    </section>
 
     <section class="layout">
         <div class="panel">
@@ -285,6 +377,7 @@
 
         <aside class="panel">
             <h2 id="selected-title">交易</h2>
+            <div id="selected-quote" class="quote-grid"></div>
             <div class="trade-box">
                 <div>
                     <div class="label">整数股数</div>
@@ -295,6 +388,16 @@
                     <button id="sell-btn" class="sell" onclick="tradeStock('sell')">卖出</button>
                 </div>
                 <div id="trade-note" class="tiny">当日所有交易均按当前价成交。</div>
+            </div>
+            <div class="history-query">
+                <strong>历史涨跌查询</strong>
+                <div class="history-query-row">
+                    <input id="change-query-year" type="number" placeholder="年">
+                    <input id="change-query-month" type="number" min="1" max="12" placeholder="月">
+                    <input id="change-query-day" type="number" min="1" max="30" placeholder="日">
+                    <button class="secondary" onclick="querySelectedStockChange()">查询</button>
+                </div>
+                <div id="change-query-result" class="query-result">选择日期后查询该日相对前一交易日的涨跌。</div>
             </div>
             <h3 style="margin-top:18px;">价格历史</h3>
             <canvas id="history-chart" width="640" height="260"></canvas>
@@ -343,6 +446,15 @@
                 <div class="tiny">按百分点加减到当日涨跌率。</div>
             </label>
             <button onclick="saveDmAdjustment()">设置一次性修正</button>
+            <label>
+                <div class="label">拆股股票</div>
+                <select id="dm-split-stock"></select>
+            </label>
+            <label>
+                <div class="label">拆股比例 1:N</div>
+                <input id="dm-split-ratio" type="number" min="2" step="1" placeholder="2">
+            </label>
+            <button id="split-stock-btn" onclick="splitSelectedStock()">执行拆股并播报</button>
         </div>
         <div id="dm-action-status" class="dm-status">DM 操作状态：空闲。</div>
         <h3 style="margin-top:14px;">本月隐藏趋势与基础涨跌</h3>
@@ -365,6 +477,9 @@
     let selectedHistoryDays = 360;
     let presenceChannel = null;
     let autoRepairAttempted = false;
+    let comparisonZoom = null;
+    let comparisonDrag = null;
+    const hiddenComparisonStocks = new Set();
 
     const CHART_COLORS = ['#bf3a30', '#178a55', '#2f6f9f', '#a8791c', '#6f4aa8', '#bf6b2d', '#2b7a78', '#4b5563'];
 
@@ -430,6 +545,41 @@
         return (Number(current.price) / Number(history[history.length - 2].price)) - 1;
     }
 
+    function getRangeChange(stockId) {
+        const history = filterHistoryByDays(snapshot?.historyByStock?.[stockId] || [], selectedHistoryDays)
+            .filter(row => Number(row.price) > 0);
+        if (history.length < 2) return 0;
+        const first = Number(history[0].price);
+        const last = Number(history[history.length - 1].price);
+        return first ? (last / first) - 1 : 0;
+    }
+
+    function getLatestHistoryRow(stockId) {
+        const history = snapshot?.historyByStock?.[stockId] || [];
+        return history[history.length - 1] || null;
+    }
+
+    function renderStockNews() {
+        const box = document.getElementById('stock-news-list');
+        if (!box) return;
+        const news = snapshot?.news || [];
+        if (!news.length) {
+            box.innerHTML = '<div class="tiny">暂无市场新闻。</div>';
+            return;
+        }
+        box.innerHTML = news.slice(0, 8).map(item => {
+            const stock = snapshot.stocks.find(row => row.id === item.stock_id);
+            const date = item.date_value || {};
+            return `
+                <div class="news-item">
+                    <strong>${escapeHTML(item.title || '市场公告')}</strong>
+                    <div class="tiny">${date.year ?? '--'}-${date.month ?? '--'}-${date.day ?? '--'} · ${escapeHTML(stock?.code || item.stock_id || '')}</div>
+                    <div>${escapeHTML(item.body || '')}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
     async function init() {
         const params = new URLSearchParams(location.search);
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -485,6 +635,7 @@
         if (!selectedStockId && snapshot.stocks.length) selectedStockId = snapshot.stocks[0].id;
         renderMarketStatus(currentDate);
         drawComparisonChart();
+        renderStockNews();
         renderStocks();
         renderTradePanel();
         renderDmPanel(currentDate);
@@ -561,6 +712,7 @@
     async function changeHistoryRange() {
         selectedHistoryDays = parseInt(document.getElementById('history-range').value, 10);
         if (!Number.isFinite(selectedHistoryDays)) selectedHistoryDays = 360;
+        comparisonZoom = null;
         setHistoryLoading(true);
         try {
             await refreshPage();
@@ -585,6 +737,73 @@
         const serial = currentDateSerial();
         if (!Number.isFinite(serial) || !Number.isFinite(days) || days <= 0) return rows;
         return rows.filter(row => Number(row.date_serial) >= serial - days && Number(row.date_serial) <= serial);
+    }
+
+    function getComparisonBaseRange(series) {
+        const allPoints = series.flatMap(item => item.points);
+        if (!allPoints.length) return null;
+        return {
+            min: Math.min(...allPoints.map(point => point.serial)),
+            max: Math.max(...allPoints.map(point => point.serial))
+        };
+    }
+
+    function normalizeComparisonZoom(baseRange) {
+        if (!baseRange || baseRange.max <= baseRange.min) {
+            comparisonZoom = null;
+            return null;
+        }
+        if (!comparisonZoom) return null;
+        const minSpan = Math.max(3, (baseRange.max - baseRange.min) * 0.04);
+        let min = Math.max(baseRange.min, comparisonZoom.min);
+        let max = Math.min(baseRange.max, comparisonZoom.max);
+        if (max - min < minSpan) {
+            const center = (min + max) / 2;
+            min = center - minSpan / 2;
+            max = center + minSpan / 2;
+        }
+        if (min < baseRange.min) {
+            max += baseRange.min - min;
+            min = baseRange.min;
+        }
+        if (max > baseRange.max) {
+            min -= max - baseRange.max;
+            max = baseRange.max;
+        }
+        min = Math.max(baseRange.min, min);
+        max = Math.min(baseRange.max, max);
+        comparisonZoom = { min, max };
+        return comparisonZoom;
+    }
+
+    function getComparisonVisibleRange(series) {
+        const baseRange = getComparisonBaseRange(series);
+        if (!baseRange) return null;
+        const zoom = normalizeComparisonZoom(baseRange);
+        return zoom || baseRange;
+    }
+
+    function updateZoomLabel(baseRange, visibleRange) {
+        const label = document.getElementById('chart-zoom-label');
+        if (!label) return;
+        if (!baseRange || !visibleRange || !comparisonZoom) {
+            label.textContent = '缩放：全部范围';
+            return;
+        }
+        const total = Math.max(1, baseRange.max - baseRange.min);
+        const visible = Math.max(1, visibleRange.max - visibleRange.min);
+        label.textContent = `缩放：${Math.round((total / visible) * 10) / 10}x`;
+    }
+
+    function resetChartZoom() {
+        comparisonZoom = null;
+        drawComparisonChart();
+    }
+
+    function toggleComparisonStock(stockId) {
+        if (hiddenComparisonStocks.has(stockId)) hiddenComparisonStocks.delete(stockId);
+        else hiddenComparisonStocks.add(stockId);
+        drawComparisonChart();
     }
 
     function hasRenderableHistory() {
@@ -743,7 +962,7 @@
         const { ctx, width, height } = prepareChartCanvas(canvas);
         clearChart(canvas, ctx, width, height);
         const frame = drawChartFrame(canvas, ctx, width, height, 58, 26, 24, 40);
-        const series = snapshot.stocks.map((stock, index) => {
+        const allSeries = snapshot.stocks.map((stock, index) => {
             const history = filterHistoryByDays(snapshot.historyByStock[stock.id] || [], selectedHistoryDays)
                 .filter(row => Number(row.price) > 0);
             if (history.length < 2) return null;
@@ -759,15 +978,35 @@
             };
         }).filter(Boolean);
 
-        if (!series.length) {
+        if (!allSeries.length) {
             legend.innerHTML = '';
             drawNoData(canvas, ctx, '暂无足够历史', width, height);
+            updateZoomLabel(null, null);
+            return;
+        }
+
+        const baseRange = getComparisonBaseRange(allSeries);
+        const visibleRange = getComparisonVisibleRange(allSeries);
+        updateZoomLabel(baseRange, visibleRange);
+        const series = allSeries
+            .filter(item => !hiddenComparisonStocks.has(item.stock.id))
+            .map(item => ({
+                ...item,
+                points: item.points.filter(point =>
+                    point.serial >= visibleRange.min && point.serial <= visibleRange.max
+                )
+            }))
+            .filter(item => item.points.length >= 2);
+
+        if (!series.length) {
+            legend.innerHTML = renderComparisonLegend(allSeries);
+            drawNoData(canvas, ctx, '没有可见股票', width, height);
             return;
         }
 
         const allPoints = series.flatMap(item => item.points);
-        const minSerial = Math.min(...allPoints.map(point => point.serial));
-        const maxSerial = Math.max(...allPoints.map(point => point.serial));
+        const minSerial = visibleRange.min;
+        const maxSerial = visibleRange.max;
         const rawMinValue = Math.min(...allPoints.map(point => point.value));
         const rawMaxValue = Math.max(...allPoints.map(point => point.value));
         const padding = Math.max(0.01, (rawMaxValue - rawMinValue) * 0.08);
@@ -805,18 +1044,139 @@
         ctx.font = '12px "PingFang SC", "Microsoft YaHei", sans-serif';
         ctx.fillText(formatMoney(maxValue), frame.left + 4, frame.top + 14);
         ctx.fillText(formatMoney(minValue), frame.left + 4, frame.top + frame.height - 7);
-        legend.innerHTML = series.map(item => `
-            <span class="legend-item">
-                <span class="legend-swatch" style="background:${item.color}"></span>
-                ${escapeHTML(item.stock.code)} ${formatMoney(item.last)}
-            </span>
-        `).join('');
+        legend.innerHTML = renderComparisonLegend(allSeries);
+    }
+
+    function renderComparisonLegend(series) {
+        return series.map(item => {
+            const hidden = hiddenComparisonStocks.has(item.stock.id);
+            return `
+                <span class="legend-item${hidden ? ' hidden' : ''}" onclick="toggleComparisonStock('${item.stock.id}')">
+                    <span class="legend-swatch" style="background:${item.color}"></span>
+                    ${escapeHTML(item.stock.code)} ${formatMoney(item.last)}
+                </span>
+            `;
+        }).join('');
+    }
+
+    function getComparisonSeriesForZoom() {
+        if (!snapshot?.stocks?.length) return [];
+        return snapshot.stocks.map((stock, index) => {
+            const history = filterHistoryByDays(snapshot.historyByStock[stock.id] || [], selectedHistoryDays)
+                .filter(row => Number(row.price) > 0);
+            if (history.length < 2) return null;
+            return {
+                stock,
+                color: CHART_COLORS[index % CHART_COLORS.length],
+                points: history.map(row => ({
+                    serial: Number(row.date_serial),
+                    value: Number(row.price)
+                }))
+            };
+        }).filter(Boolean);
+    }
+
+    function zoomComparisonAt(clientX, deltaY) {
+        const canvas = document.getElementById('comparison-chart');
+        if (!canvas) return;
+        const series = getComparisonSeriesForZoom();
+        const baseRange = getComparisonBaseRange(series);
+        if (!baseRange || baseRange.max <= baseRange.min) return;
+        const current = comparisonZoom || baseRange;
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / Math.max(1, rect.width)));
+        const anchor = current.min + (current.max - current.min) * ratio;
+        const factor = deltaY > 0 ? 1.22 : 0.82;
+        const minSpan = Math.max(3, (baseRange.max - baseRange.min) * 0.04);
+        const nextSpan = Math.min(baseRange.max - baseRange.min, Math.max(minSpan, (current.max - current.min) * factor));
+        let min = anchor - nextSpan * ratio;
+        let max = min + nextSpan;
+        if (min < baseRange.min) {
+            max += baseRange.min - min;
+            min = baseRange.min;
+        }
+        if (max > baseRange.max) {
+            min -= max - baseRange.max;
+            max = baseRange.max;
+        }
+        if (min <= baseRange.min && max >= baseRange.max) comparisonZoom = null;
+        else comparisonZoom = { min, max };
+        drawComparisonChart();
+    }
+
+    function panComparisonBy(deltaPixels) {
+        const canvas = document.getElementById('comparison-chart');
+        if (!canvas || !comparisonZoom) return;
+        const series = getComparisonSeriesForZoom();
+        const baseRange = getComparisonBaseRange(series);
+        if (!baseRange) return;
+        const rect = canvas.getBoundingClientRect();
+        const span = comparisonZoom.max - comparisonZoom.min;
+        const deltaSerial = -(deltaPixels / Math.max(1, rect.width)) * span;
+        let min = comparisonZoom.min + deltaSerial;
+        let max = comparisonZoom.max + deltaSerial;
+        if (min < baseRange.min) {
+            max += baseRange.min - min;
+            min = baseRange.min;
+        }
+        if (max > baseRange.max) {
+            min -= max - baseRange.max;
+            max = baseRange.max;
+        }
+        comparisonZoom = { min, max };
+        drawComparisonChart();
+    }
+
+    function setupComparisonChartInteractions() {
+        const canvas = document.getElementById('comparison-chart');
+        if (!canvas) return;
+        canvas.addEventListener('wheel', event => {
+            event.preventDefault();
+            zoomComparisonAt(event.clientX, event.deltaY);
+        }, { passive: false });
+        canvas.addEventListener('pointerdown', event => {
+            comparisonDrag = { x: event.clientX };
+            canvas.setPointerCapture?.(event.pointerId);
+        });
+        canvas.addEventListener('pointermove', event => {
+            if (!comparisonDrag) return;
+            const delta = event.clientX - comparisonDrag.x;
+            comparisonDrag.x = event.clientX;
+            panComparisonBy(delta);
+        });
+        canvas.addEventListener('pointerup', event => {
+            comparisonDrag = null;
+            canvas.releasePointerCapture?.(event.pointerId);
+        });
+        canvas.addEventListener('pointercancel', () => {
+            comparisonDrag = null;
+        });
+        canvas.addEventListener('dblclick', resetChartZoom);
     }
 
     function renderTradePanel() {
         const stock = snapshot.stocks.find(item => item.id === selectedStockId);
         if (!stock) return;
         document.getElementById('selected-title').textContent = `${stock.name} (${stock.code})`;
+        const latest = getLatestHistoryRow(stock.id);
+        const currentPrice = Number(snapshot.states?.[stock.id]?.current_price || latest?.price || stock.initial_price);
+        const rangeChange = getRangeChange(stock.id);
+        document.getElementById('selected-quote').innerHTML = `
+            <div class="quote-item">
+                <div class="label">当前价</div>
+                <strong>${formatMoney(currentPrice)}</strong>
+            </div>
+            <div class="quote-item">
+                <div class="label">当前范围涨跌</div>
+                <strong class="${rangeChange >= 0 ? 'up' : 'down'}">${formatRate(rangeChange)}</strong>
+            </div>
+        `;
+        const currentDate = accountProfile?.world_date;
+        if (currentDate && !document.getElementById('change-query-year').value) {
+            document.getElementById('change-query-year').value = currentDate.year;
+            document.getElementById('change-query-month').value = currentDate.month;
+            document.getElementById('change-query-day').value = currentDate.day;
+        }
         const disabled = !snapshot.tradable;
         document.getElementById('buy-btn').disabled = disabled;
         document.getElementById('sell-btn').disabled = disabled;
@@ -824,6 +1184,39 @@
             ? '市场尚未开放，当前不能交易。'
             : '当日所有交易均按当前价成交，价格只在日期推进时变化。';
         drawChart(stock.id);
+    }
+
+    async function querySelectedStockChange() {
+        const stock = snapshot?.stocks?.find(item => item.id === selectedStockId);
+        const resultBox = document.getElementById('change-query-result');
+        if (!stock || !resultBox) return;
+        const date = {
+            year: parseInt(document.getElementById('change-query-year').value, 10),
+            month: parseInt(document.getElementById('change-query-month').value, 10),
+            day: parseInt(document.getElementById('change-query-day').value, 10)
+        };
+        resultBox.textContent = '正在查询...';
+        try {
+            const result = await BaichengStocks.getStockChangeOnDate({
+                client: supabaseClient,
+                accountId,
+                stockId: stock.id,
+                date
+            });
+            if (!result) {
+                resultBox.textContent = `${stock.code} 在该日期没有价格历史。`;
+                return;
+            }
+            const previous = result.previous_price == null ? '无前日记录' : formatMoney(result.previous_price);
+            const changeClass = Number(result.change) >= 0 ? 'up' : 'down';
+            resultBox.innerHTML = `
+                ${stock.code} ${date.year}-${date.month}-${date.day}：
+                价格 ${formatMoney(result.price)}，前一记录 ${previous}，
+                <strong class="${changeClass}">涨跌 ${formatRate(result.change)}</strong>
+            `;
+        } catch (e) {
+            resultBox.textContent = `查询失败：${e.message || e}`;
+        }
     }
 
     function drawChart(stockId) {
@@ -958,6 +1351,10 @@
             .map(stock => `<option value="${stock.id}">${escapeHTML(stock.name)} (${escapeHTML(stock.code)})</option>`)
             .join('');
         document.getElementById('dm-adjust-stock').value = selectedStockId || snapshot.stocks[0]?.id || '';
+        document.getElementById('dm-split-stock').innerHTML = snapshot.stocks
+            .map(stock => `<option value="${stock.id}">${escapeHTML(stock.name)} (${escapeHTML(stock.code)})</option>`)
+            .join('');
+        document.getElementById('dm-split-stock').value = selectedStockId || snapshot.stocks[0]?.id || '';
         if (shouldAutoRepairHistory(currentDate)) {
             setDmActionStatus('检测到当前可视区间没有足够价格历史。可以点“补齐缺失历史”或“重建价格历史”。', 'error');
         } else {
@@ -1142,6 +1539,37 @@
         });
     }
 
+    async function splitSelectedStock() {
+        const stockId = document.getElementById('dm-split-stock').value;
+        const ratioTo = parseInt(document.getElementById('dm-split-ratio').value, 10);
+        const stock = snapshot.stocks.find(item => item.id === stockId);
+        if (!stock) {
+            setDmActionStatus('请选择要拆分的股票。', 'error');
+            return;
+        }
+        if (!Number.isInteger(ratioTo) || ratioTo <= 1) {
+            setDmActionStatus('拆股比例必须是大于 1 的整数，例如 2、3、10。', 'error');
+            return;
+        }
+        if (!confirm(`确认对 ${stock.name}（${stock.code}）执行 1:${ratioTo} 拆股？`)) return;
+        await runDmAction({
+            buttonId: 'split-stock-btn',
+            busyText: '正在执行拆股...',
+            successText: `${stock.code} 1:${ratioTo} 拆股已完成，并已发布新闻。`,
+            action: async () => {
+                await BaichengStocks.splitStock({
+                    client: supabaseClient,
+                    accountId,
+                    stockId,
+                    currentDate: accountProfile.world_date,
+                    ratioFrom: 1,
+                    ratioTo
+                });
+                document.getElementById('dm-split-ratio').value = '';
+            }
+        });
+    }
+
     let chartResizeTimer = null;
     window.addEventListener('resize', () => {
         clearTimeout(chartResizeTimer);
@@ -1152,6 +1580,7 @@
         }, 120);
     });
 
+    setupComparisonChartInteractions();
     init();
 </script>
 </body>

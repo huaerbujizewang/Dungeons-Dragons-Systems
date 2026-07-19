@@ -365,6 +365,7 @@
             'stock_price_history',
             'stock_daily_order_totals',
             'stock_dm_adjustments',
+            'stock_news',
             'stock_daily_returns',
             'stock_monthly_trends',
             'account_stock_state',
@@ -1319,6 +1320,123 @@
         if (error) throw error;
     }
 
+    async function getStockChangeOnDate(options) {
+        const { client, accountId, stockId, date } = options;
+        assertClient(client);
+        if (!accountId || !stockId || !isValidDate(date)) throw new Error('涨跌查询参数不完整。');
+        const payload = datePayload(date);
+        const { data: row, error } = await client
+            .from('stock_price_history')
+            .select('*')
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId)
+            .eq('date_key', payload.date_key)
+            .maybeSingle();
+        if (error) throw error;
+        if (!row) return null;
+
+        let previousPrice = row.previous_price == null ? null : toNumber(row.previous_price, null);
+        if (!previousPrice) {
+            const { data: previousRow, error: previousError } = await client
+                .from('stock_price_history')
+                .select('price')
+                .eq('account_id', accountId)
+                .eq('stock_id', stockId)
+                .lt('date_serial', payload.date_serial)
+                .order('date_serial', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            if (previousError) throw previousError;
+            previousPrice = previousRow ? toNumber(previousRow.price, null) : null;
+        }
+
+        const price = toNumber(row.price, 0);
+        const change = previousPrice ? (price / previousPrice) - 1 : 0;
+        return {
+            stock_id: stockId,
+            price: roundMoney(price),
+            previous_price: previousPrice == null ? null : roundMoney(previousPrice),
+            change: roundRate(change),
+            ...payload
+        };
+    }
+
+    async function splitStock(options) {
+        const { client, accountId, stockId, currentDate, ratioFrom = 1, ratioTo } = options;
+        assertClient(client);
+        const from = parseInt(ratioFrom, 10);
+        const to = parseInt(ratioTo, 10);
+        if (!accountId || !stockId || !isValidDate(currentDate)) throw new Error('拆股参数不完整。');
+        if (from !== 1 || !Number.isInteger(to) || to <= 1) throw new Error('目前只支持 1:N 拆股。');
+
+        const stocks = await ensureStockDefinitions(client);
+        const stock = stocks.find(item => item.id === stockId);
+        if (!stock) throw new Error('股票不存在。');
+
+        const factor = to / from;
+        const { data: stateRows, error: stateReadError } = await client
+            .from('account_stock_state')
+            .select('*')
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId);
+        if (stateReadError) throw stateReadError;
+        const { data: holdingRows, error: holdingReadError } = await client
+            .from('stock_holdings')
+            .select('*')
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId);
+        if (holdingReadError) throw holdingReadError;
+        const historyRows = await fetchPaged(() => client
+            .from('stock_price_history')
+            .select('*')
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId));
+
+        const stateUpdates = (stateRows || []).map(row => ({
+            ...row,
+            current_price: roundMoney(toNumber(row.current_price, stock.initial_price) / factor),
+            updated_at: new Date().toISOString()
+        }));
+        const holdingUpdates = (holdingRows || []).map(row => ({
+            ...row,
+            quantity: Math.floor(toNumber(row.quantity, 0) * factor),
+            average_cost: roundMoney(toNumber(row.average_cost, 0) / factor),
+            updated_at: new Date().toISOString()
+        }));
+        const historyUpdates = (historyRows || []).map(row => ({
+            ...row,
+            price: roundMoney(toNumber(row.price, stock.initial_price) / factor),
+            previous_price: row.previous_price == null ? null : roundMoney(toNumber(row.previous_price, stock.initial_price) / factor)
+        }));
+
+        for (const chunk of chunkArray(stateUpdates, DB_WRITE_CHUNK_SIZE)) {
+            const { error } = await client.from('account_stock_state').upsert(chunk, { onConflict: 'account_id,stock_id' });
+            if (error) throw error;
+        }
+        for (const chunk of chunkArray(holdingUpdates, DB_WRITE_CHUNK_SIZE)) {
+            const { error } = await client.from('stock_holdings').upsert(chunk, { onConflict: 'account_id,stock_id' });
+            if (error) throw error;
+        }
+        for (const chunk of chunkArray(historyUpdates, DB_WRITE_CHUNK_SIZE)) {
+            const { error } = await client.from('stock_price_history').upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
+            if (error) throw error;
+        }
+
+        const title = `${stock.name} 宣布 1:${to} 拆股`;
+        const body = `${stock.name}（${stock.code}）完成 1:${to} 拆股。持股数量按 ${to} 倍调整，历史价格和当前价按比例折算。`;
+        const { error: newsError } = await client.from('stock_news').insert([{
+            account_id: accountId,
+            stock_id: stockId,
+            type: 'split',
+            title,
+            body,
+            ratio_from: from,
+            ratio_to: to,
+            ...datePayload(currentDate)
+        }]);
+        if (newsError) throw newsError;
+    }
+
     async function loadSnapshot(options) {
         const { client, accountId, currentDate, includeFuture = false, historyDays = 45 } = options;
         assertClient(client);
@@ -1345,13 +1463,14 @@
             }
             return query;
         };
-        const [statesRes, holdingsRes, historyRows, trendsRes, returnsRes, dmRes] = await Promise.all([
+        const [statesRes, holdingsRes, historyRows, trendsRes, returnsRes, dmRes, newsRows] = await Promise.all([
             client.from('account_stock_state').select('*').eq('account_id', accountId).in('stock_id', stockIds),
             client.from('stock_holdings').select('*').eq('account_id', accountId).in('stock_id', stockIds),
             fetchPaged(makeHistoryQuery),
             client.from('stock_monthly_trends').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds),
             client.from('stock_daily_returns').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds).order('day', { ascending: true }),
-            client.from('stock_dm_adjustments').select('*').eq('account_id', accountId).in('stock_id', stockIds)
+            client.from('stock_dm_adjustments').select('*').eq('account_id', accountId).in('stock_id', stockIds),
+            fetchPaged(() => client.from('stock_news').select('*').eq('account_id', accountId).order('date_serial', { ascending: false }).order('created_at', { ascending: false }).limit(20)).catch(() => [])
         ]);
         for (const res of [statesRes, holdingsRes, trendsRes, returnsRes, dmRes]) {
             if (res.error) throw res.error;
@@ -1376,7 +1495,8 @@
             historyByStock,
             trends: Object.fromEntries((trendsRes.data || []).map(row => [row.stock_id, row])),
             dailyReturns: returnsRes.data || [],
-            dmAdjustments: dmRes.data || []
+            dmAdjustments: dmRes.data || [],
+            news: newsRows || []
         };
     }
 
@@ -1398,7 +1518,7 @@
             await changeGold(client, accountId, tx.type === 'buy' ? amount : -amount);
         }
 
-        for (const table of ['stock_transactions', 'stock_price_history', 'stock_daily_order_totals', 'stock_dm_adjustments']) {
+        for (const table of ['stock_transactions', 'stock_price_history', 'stock_daily_order_totals', 'stock_dm_adjustments', 'stock_news']) {
             const serialColumn = table === 'stock_dm_adjustments' ? 'effective_date_serial' : 'date_serial';
             const { error } = await client.from(table).delete().eq('account_id', accountId).gt(serialColumn, targetSerial);
             if (error) throw error;
@@ -1490,6 +1610,7 @@
         deleteAccountStockData,
         formatDate: formatDisplayDate,
         getMarketConfig,
+        getStockChangeOnDate,
         impactTier,
         isMarketTradable,
         loadSnapshot,
@@ -1499,6 +1620,7 @@
         sellStock,
         setDmAdjustment,
         setMarketConfig,
+        splitStock,
         settleStocksBetween
     };
 })();
