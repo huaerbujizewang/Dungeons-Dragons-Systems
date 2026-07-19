@@ -312,6 +312,7 @@
     let snapshot = null;
     let selectedStockId = null;
     let selectedHistoryDays = 360;
+    let presenceChannel = null;
 
     const HISTORY_FETCH_DAYS = 390;
     const CHART_COLORS = ['#bf3a30', '#178a55', '#2f6f9f', '#a8791c', '#6f4aa8', '#bf6b2d', '#2b7a78', '#4b5563'];
@@ -321,6 +322,44 @@
             '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
         }[ch]));
     }
+
+    async function initPresenceSystem(email, role = 'player') {
+        email = String(email || '').trim().toLowerCase();
+        if (!email) return;
+
+        if (presenceChannel) {
+            const oldChannel = presenceChannel;
+            presenceChannel = null;
+            try {
+                await supabaseClient.removeChannel(oldChannel);
+            } catch (error) {
+                console.warn('presence cleanup failed', error);
+            }
+        }
+
+        presenceChannel = supabaseClient.channel('online-users', {
+            config: {
+                presence: {
+                    key: email
+                }
+            }
+        });
+
+        presenceChannel.subscribe(async status => {
+            if (status !== 'SUBSCRIBED' || !presenceChannel) return;
+            const trackStatus = await presenceChannel.track({
+                email,
+                role,
+                page: 'stocks',
+                online_at: new Date().toISOString()
+            });
+            if (trackStatus !== 'ok') console.warn('presence track failed', trackStatus);
+        });
+    }
+
+    window.addEventListener('beforeunload', () => {
+        if (presenceChannel) presenceChannel.untrack();
+    });
 
     function formatMoney(value) {
         return `${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} GP`;
@@ -356,6 +395,7 @@
             .maybeSingle();
         currentRole = roleData?.role_level || 'player';
         accountId = ADMIN_ROLES.includes(currentRole) && params.get('uid') ? params.get('uid') : user.id;
+        initPresenceSystem(user.email || '', currentRole);
         document.getElementById('back-link').href = `index.html${accountId ? `?uid=${encodeURIComponent(accountId)}` : ''}`;
         await refreshPage();
     }

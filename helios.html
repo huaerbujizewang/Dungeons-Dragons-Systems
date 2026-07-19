@@ -1410,6 +1410,7 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw";
         const supabaseClient = window.supabase ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
         const HELIOS_FULL_STAT_EMAIL = "739477825@qq.com";
+        let presenceChannel = null;
 
         const state = {
             current: {
@@ -1424,6 +1425,7 @@
             },
             authResolved: false,
             viewerEmail: "",
+            viewerRole: "player",
             revealedStatBlocks: new Set()
         };
 
@@ -2795,6 +2797,43 @@
             return String(value || "").trim().toLowerCase();
         }
 
+        async function initPresenceSystem(email, role = "player") {
+            if (!supabaseClient || !supabaseClient.channel || !email) return;
+
+            if (presenceChannel) {
+                const oldChannel = presenceChannel;
+                presenceChannel = null;
+                try {
+                    await supabaseClient.removeChannel(oldChannel);
+                } catch (error) {
+                    console.warn("presence cleanup failed", error);
+                }
+            }
+
+            presenceChannel = supabaseClient.channel("online-users", {
+                config: {
+                    presence: {
+                        key: email
+                    }
+                }
+            });
+
+            presenceChannel.subscribe(async status => {
+                if (status !== "SUBSCRIBED" || !presenceChannel) return;
+                const trackStatus = await presenceChannel.track({
+                    email,
+                    role,
+                    page: "helios",
+                    online_at: new Date().toISOString()
+                });
+                if (trackStatus !== "ok") console.warn("presence track failed", trackStatus);
+            });
+        }
+
+        window.addEventListener("beforeunload", () => {
+            if (presenceChannel) presenceChannel.untrack();
+        });
+
         function readStoredViewerEmail() {
             const params = new URLSearchParams(location.search);
             const paramKeys = ["email", "userEmail", "account", "viewerEmail"];
@@ -2833,15 +2872,29 @@
 
         async function resolveHeliosViewerEmail() {
             let email = readStoredViewerEmail();
+            let userId = "";
+            let role = "player";
 
             if (typeof supabaseClient !== "undefined" && supabaseClient && supabaseClient.auth) {
                 try {
                     const { data: { session } } = await supabaseClient.auth.getSession();
                     if (session && session.user && session.user.email) {
                         email = normalizeEmail(session.user.email);
+                        userId = session.user.id || "";
                     } else {
                         const { data: { user } } = await supabaseClient.auth.getUser();
-                        if (user && user.email) email = normalizeEmail(user.email);
+                        if (user && user.email) {
+                            email = normalizeEmail(user.email);
+                            userId = user.id || "";
+                        }
+                    }
+                    if (userId) {
+                        const { data: roleData } = await supabaseClient
+                            .from("admin_users")
+                            .select("role_level")
+                            .eq("id", userId)
+                            .maybeSingle();
+                        role = roleData && roleData.role_level ? roleData.role_level : "player";
                     }
                 } catch (error) {
                     // 本页是静态档案页，鉴权失败不能影响浏览；只会让战斗细节保持防窥。
@@ -2849,8 +2902,10 @@
             }
 
             state.viewerEmail = email;
+            state.viewerRole = role;
             state.authResolved = true;
             renderPanel();
+            initPresenceSystem(email, role);
         }
 
         function preserveUidLinks() {
