@@ -3164,8 +3164,6 @@ function formatCurrency(value) {
 
 function convertCalendarYear(year, calendarSystem = viewingCalendarSystem) {
     if (!Number.isFinite(Number(year))) return year ?? '----';
-    const system = normalizeCalendarSystem(calendarSystem);
-    if (system === 'tirlian' || system === 'imperial') return Number(year) - 966;
     return Number(year);
 }
 
