@@ -2,6 +2,8 @@
     const DAYS_PER_MONTH = 30;
     const MONTHS_PER_YEAR = 12;
     const MIN_PRICE = 0.01;
+    const DETAILED_SETTLEMENT_MAX_DAYS = 180;
+    const DB_PAGE_SIZE = 1000;
 
     const STOCK_DEFINITIONS = [
         { id: 'WCHP', code: 'WCHP', name: '白城联合港务', initial_price: 12 },
@@ -62,6 +64,17 @@
         return chunks;
     }
 
+    async function fetchPaged(makeQuery, pageSize = DB_PAGE_SIZE) {
+        const allRows = [];
+        for (let start = 0; ; start += pageSize) {
+            const { data, error } = await makeQuery().range(start, start + pageSize - 1);
+            if (error) throw error;
+            allRows.push(...(data || []));
+            if (!data || data.length < pageSize) break;
+        }
+        return allRows;
+    }
+
     function normalizeDate(date) {
         const safe = date || {};
         return {
@@ -69,6 +82,34 @@
             month: parseInt(safe.month, 10),
             day: parseInt(safe.day, 10)
         };
+    }
+
+    function defaultCalendarForCampaign(campaignType = 'dnd') {
+        return String(campaignType || '').toLowerCase() === 'coc' ? 'ce' : 'dr';
+    }
+
+    function normalizeCalendarSystem(value, campaignType = 'dnd') {
+        const raw = String(value || '').trim().toLowerCase();
+        if (raw === 'tirlian' || raw === 'tilian' || raw === 'tl') return 'tirlian';
+        if (raw === 'imperial' || raw === 'empire') return 'imperial';
+        if (raw === 'dr' || raw === 'fr') return 'dr';
+        if (raw === 'ce' || raw === 'ad' || raw === 'gregorian' || raw === 'coc') return 'ce';
+        return defaultCalendarForCampaign(campaignType);
+    }
+
+    function convertCalendarYear(year, calendarSystem = 'dr') {
+        if (!Number.isFinite(Number(year))) return year ?? '----';
+        return Number(year);
+    }
+
+    function formatDisplayDate(date, calendarSystem = 'dr', campaignType = 'dnd') {
+        const d = normalizeDate(date);
+        const system = normalizeCalendarSystem(calendarSystem, campaignType);
+        const year = convertCalendarYear(d.year, system);
+        if (system === 'tirlian') return `蒂尔兰历${year}年${d.month}月${d.day}日`;
+        if (system === 'imperial') return `帝国历${year}年${d.month}月${d.day}日`;
+        if (system === 'ce') return `公元${year}年${d.month}月${d.day}日`;
+        return `DR${year} ${d.month}月${d.day}日`;
     }
 
     function isValidDate(date) {
@@ -121,6 +162,10 @@
     function dateKey(date) {
         const d = normalizeDate(date);
         return `${pad(d.year, 4)}-${pad(d.month, 2)}-${pad(d.day, 2)}`;
+    }
+
+    function monthKey(year, month) {
+        return `${pad(year, 4)}-${pad(month, 2)}`;
     }
 
     function parseDateValue(value) {
@@ -430,6 +475,214 @@
     }
 
     async function settleStocksBetween(options) {
+        const { fromDate, toDate } = options;
+        if (!isValidDate(fromDate) || !isValidDate(toDate)) return;
+        const totalDays = dateToSerial(toDate) - dateToSerial(fromDate);
+        if (totalDays > DETAILED_SETTLEMENT_MAX_DAYS) {
+            return settleStocksBetweenBulk(options);
+        }
+        return settleStocksBetweenDetailed(options);
+    }
+
+    async function settleStocksBetweenBulk(options) {
+        const { client, accountId, fromDate, toDate } = options;
+        assertClient(client);
+        if (!accountId || !isValidDate(fromDate) || !isValidDate(toDate)) return;
+        const market = await getMarketConfig(client, accountId);
+        if (!market?.market_enabled) return;
+        const openDate = marketOpenDate(market);
+        const fromSerial = dateToSerial(fromDate);
+        const targetSerial = dateToSerial(toDate);
+        if (targetSerial <= fromSerial) return;
+
+        const activeStartSerial = openDate ? Math.max(fromSerial, dateToSerial(openDate)) : fromSerial;
+        if (activeStartSerial >= targetSerial) return;
+
+        const stocks = await ensureAccountInitialized(client, accountId, openDate);
+        const stockIds = stocks.map(stock => stock.id);
+        const activeStartDate = serialToDate(activeStartSerial);
+        const lastSettledDate = addDays(toDate, -1);
+
+        const activeMonths = listMonthsBetween(activeStartDate, lastSettledDate);
+        const minYear = activeMonths[0]?.year ?? activeStartDate.year;
+        const maxYear = activeMonths[activeMonths.length - 1]?.year ?? lastSettledDate.year;
+
+        const [statesRes, existingTrends, existingReturnRows, orderRows, dmRows] = await Promise.all([
+            client
+                .from('account_stock_state')
+                .select('*')
+                .eq('account_id', accountId)
+                .in('stock_id', stockIds),
+            fetchPaged(() => client
+                .from('stock_monthly_trends')
+                .select('*')
+                .eq('account_id', accountId)
+                .gte('year', minYear)
+                .lte('year', maxYear)
+                .in('stock_id', stockIds)),
+            fetchPaged(() => client
+                .from('stock_daily_returns')
+                .select('*')
+                .eq('account_id', accountId)
+                .gte('date_serial', activeStartSerial)
+                .lt('date_serial', targetSerial)
+                .in('stock_id', stockIds)),
+            fetchPaged(() => client
+                .from('stock_daily_order_totals')
+                .select('*')
+                .eq('account_id', accountId)
+                .gte('date_serial', activeStartSerial)
+                .lt('date_serial', targetSerial)
+                .in('stock_id', stockIds)),
+            fetchPaged(() => client
+                .from('stock_dm_adjustments')
+                .select('*')
+                .eq('account_id', accountId)
+                .gte('effective_date_serial', activeStartSerial)
+                .lt('effective_date_serial', targetSerial)
+                .in('stock_id', stockIds))
+        ]);
+        if (statesRes.error) throw statesRes.error;
+
+        const currentPrices = Object.fromEntries(stocks.map(stock => [stock.id, roundMoney(stock.initial_price)]));
+        for (const state of statesRes.data || []) {
+            currentPrices[state.stock_id] = roundMoney(state.current_price);
+        }
+
+        const trendMap = {};
+        for (const row of existingTrends || []) {
+            trendMap[`${row.stock_id}:${monthKey(row.year, row.month)}`] = row;
+        }
+
+        const missingTrendRows = [];
+        const returnSeriesMap = {};
+        function getMonthlyReturnSeries(stockId, year, month) {
+            const key = `${stockId}:${monthKey(year, month)}`;
+            if (returnSeriesMap[key]) return returnSeriesMap[key];
+            let trend = trendMap[key];
+            if (!trend) {
+                const config = pickTrendConfig();
+                const targetReturn = randomBetween(config.min, config.max);
+                trend = {
+                    account_id: accountId,
+                    stock_id: stockId,
+                    year,
+                    month,
+                    trend_type: config.type,
+                    target_return: roundRate(targetReturn)
+                };
+                trendMap[key] = trend;
+                missingTrendRows.push(trend);
+            }
+            const config = TREND_CONFIGS.find(item => item.type === trend.trend_type) || TREND_CONFIGS[0];
+            returnSeriesMap[key] = generateMonthlyReturns(config, toNumber(trend.target_return, randomBetween(config.min, config.max)));
+            return returnSeriesMap[key];
+        }
+
+        const dailyReturnMap = {};
+        for (const row of existingReturnRows || []) {
+            dailyReturnMap[`${row.date_key}:${row.stock_id}`] = row;
+        }
+        const orderMap = {};
+        for (const row of orderRows || []) {
+            orderMap[`${row.date_key}:${row.stock_id}`] = row;
+        }
+        const dmMap = {};
+        for (const row of dmRows || []) {
+            dmMap[`${row.effective_date_key}:${row.stock_id}`] = row;
+        }
+
+        const historyRows = [];
+        const dailyReturnRows = [];
+        for (let serial = activeStartSerial; serial < targetSerial; serial++) {
+            const from = serialToDate(serial);
+            const to = serialToDate(serial + 1);
+            const key = dateKey(from);
+            for (const stock of stocks) {
+                const returns = getMonthlyReturnSeries(stock.id, from.year, from.month);
+                const existingDailyReturn = dailyReturnMap[`${key}:${stock.id}`];
+                const baseReturn = existingDailyReturn
+                    ? toNumber(existingDailyReturn.base_return, 0)
+                    : toNumber(returns[from.day - 1], 0);
+                const order = orderMap[`${key}:${stock.id}`] || {};
+                const orderImpact = toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
+                const dmAdjustment = toNumber(dmMap[`${key}:${stock.id}`]?.percentage, 0);
+                const currentPrice = currentPrices[stock.id] || roundMoney(stock.initial_price);
+                const cleanPrice = roundMoney(Math.max(MIN_PRICE, currentPrice * (1 + baseReturn + orderImpact + dmAdjustment)));
+
+                if (!existingDailyReturn) {
+                    dailyReturnRows.push({
+                        account_id: accountId,
+                        stock_id: stock.id,
+                        base_return: roundRate(baseReturn),
+                        ...datePayload(from)
+                    });
+                }
+                historyRows.push({
+                    account_id: accountId,
+                    stock_id: stock.id,
+                    price: cleanPrice,
+                    base_return: roundRate(baseReturn),
+                    order_impact: roundRate(orderImpact),
+                    dm_adjustment: roundRate(dmAdjustment),
+                    previous_price: currentPrice,
+                    ...datePayload(to)
+                });
+
+                currentPrices[stock.id] = cleanPrice;
+            }
+        }
+
+        for (const chunk of chunkArray(missingTrendRows, DB_PAGE_SIZE)) {
+            const { error } = await client
+                .from('stock_monthly_trends')
+                .upsert(chunk, { onConflict: 'account_id,stock_id,year,month' });
+            if (error) throw error;
+        }
+
+        for (const chunk of chunkArray(dailyReturnRows, DB_PAGE_SIZE)) {
+            const { error } = await client
+                .from('stock_daily_returns')
+                .upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
+            if (error) throw error;
+        }
+
+        for (const chunk of chunkArray(historyRows, DB_PAGE_SIZE)) {
+            const { error } = await client
+                .from('stock_price_history')
+                .upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
+            if (error) throw error;
+        }
+
+        const stateRows = stocks.map(stock => ({
+            account_id: accountId,
+            stock_id: stock.id,
+            current_price: currentPrices[stock.id] || roundMoney(stock.initial_price),
+            updated_at: new Date().toISOString()
+        }));
+        const { error: stateError } = await client
+            .from('account_stock_state')
+            .upsert(stateRows, { onConflict: 'account_id,stock_id' });
+        if (stateError) throw stateError;
+
+        const { error: clearOrderError } = await client
+            .from('stock_daily_order_totals')
+            .delete()
+            .eq('account_id', accountId)
+            .gte('date_serial', activeStartSerial)
+            .lt('date_serial', targetSerial);
+        if (clearOrderError) throw clearOrderError;
+
+        const { error: clearDmError } = await client
+            .from('stock_dm_adjustments')
+            .delete()
+            .eq('account_id', accountId)
+            .gte('effective_date_serial', activeStartSerial)
+            .lt('effective_date_serial', targetSerial);
+        if (clearDmError) throw clearDmError;
+    }
+
+    async function settleStocksBetweenDetailed(options) {
         const { client, accountId, fromDate, toDate } = options;
         assertClient(client);
         if (!accountId || !isValidDate(fromDate) || !isValidDate(toDate)) return;
@@ -458,37 +711,35 @@
             ));
         }
 
-        const [statesRes, returnsRes, orderRes, dmRes] = await Promise.all([
+        const [statesRes, returnRows, orderRows, dmRows] = await Promise.all([
             client
                 .from('account_stock_state')
                 .select('*')
                 .eq('account_id', accountId)
                 .in('stock_id', stockIds),
-            client
+            fetchPaged(() => client
                 .from('stock_daily_returns')
                 .select('*')
                 .eq('account_id', accountId)
                 .gte('date_serial', fromSerial)
                 .lt('date_serial', targetSerial)
-                .in('stock_id', stockIds),
-            client
+                .in('stock_id', stockIds)),
+            fetchPaged(() => client
                 .from('stock_daily_order_totals')
                 .select('*')
                 .eq('account_id', accountId)
                 .gte('date_serial', fromSerial)
                 .lt('date_serial', targetSerial)
-                .in('stock_id', stockIds),
-            client
+                .in('stock_id', stockIds)),
+            fetchPaged(() => client
                 .from('stock_dm_adjustments')
                 .select('*')
                 .eq('account_id', accountId)
                 .gte('effective_date_serial', fromSerial)
                 .lt('effective_date_serial', targetSerial)
-                .in('stock_id', stockIds)
+                .in('stock_id', stockIds))
         ]);
-        for (const res of [statesRes, returnsRes, orderRes, dmRes]) {
-            if (res.error) throw res.error;
-        }
+        if (statesRes.error) throw statesRes.error;
 
         const currentPrices = Object.fromEntries(stocks.map(stock => [stock.id, roundMoney(stock.initial_price)]));
         for (const state of statesRes.data || []) {
@@ -496,15 +747,15 @@
         }
 
         const returnsMap = {};
-        for (const row of returnsRes.data || []) {
+        for (const row of returnRows || []) {
             returnsMap[`${row.date_key}:${row.stock_id}`] = row;
         }
         const orderMap = {};
-        for (const row of orderRes.data || []) {
+        for (const row of orderRows || []) {
             orderMap[`${row.date_key}:${row.stock_id}`] = row;
         }
         const dmMap = {};
-        for (const row of dmRes.data || []) {
+        for (const row of dmRows || []) {
             dmMap[`${row.effective_date_key}:${row.stock_id}`] = row;
         }
 
@@ -998,13 +1249,12 @@
         if (!accountId || !isValidDate(targetDate)) return;
         const targetSerial = dateToSerial(targetDate);
 
-        const { data: futureTransactions, error: txError } = await client
+        const futureTransactions = await fetchPaged(() => client
             .from('stock_transactions')
             .select('*')
             .eq('account_id', accountId)
             .gt('date_serial', targetSerial)
-            .order('date_serial', { ascending: false });
-        if (txError) throw txError;
+            .order('date_serial', { ascending: false }));
 
         for (const tx of futureTransactions || []) {
             const amount = toNumber(tx.total_amount, 0);
@@ -1024,14 +1274,13 @@
         if (returnDeleteError) throw returnDeleteError;
 
         const stocks = await ensureStockDefinitions(client);
-        const { data: keptTransactions, error: keptError } = await client
+        const keptTransactions = await fetchPaged(() => client
             .from('stock_transactions')
             .select('*')
             .eq('account_id', accountId)
             .lte('date_serial', targetSerial)
             .order('date_serial', { ascending: true })
-            .order('created_at', { ascending: true });
-        if (keptError) throw keptError;
+            .order('created_at', { ascending: true }));
 
         const holdings = {};
         for (const tx of keptTransactions || []) {
@@ -1068,13 +1317,12 @@
             if (error) throw error;
         }
 
-        const { data: targetHistory, error: historyError } = await client
+        const targetHistory = await fetchPaged(() => client
             .from('stock_price_history')
             .select('*')
             .eq('account_id', accountId)
             .lte('date_serial', targetSerial)
-            .order('date_serial', { ascending: false });
-        if (historyError) throw historyError;
+            .order('date_serial', { ascending: false }));
         const historyByStock = {};
         for (const row of targetHistory || []) {
             if (!historyByStock[row.stock_id]) historyByStock[row.stock_id] = row;
@@ -1101,10 +1349,7 @@
         compareDates,
         dateKey,
         dateToSerial,
-        formatDate(date) {
-            const d = normalizeDate(date);
-            return `${d.year}年${d.month}月${d.day}日`;
-        },
+        formatDate: formatDisplayDate,
         getMarketConfig,
         impactTier,
         isMarketTradable,
