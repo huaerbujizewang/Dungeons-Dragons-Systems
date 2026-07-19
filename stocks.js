@@ -569,7 +569,7 @@
         const minYear = activeMonths[0]?.year ?? activeStartDate.year;
         const maxYear = activeMonths[activeMonths.length - 1]?.year ?? lastSettledDate.year;
 
-        const [statesRes, anchorHistoryRes, existingTrends, existingReturnRows, orderRows, dmRows] = await Promise.all([
+        const [statesRes, anchorHistoryRes, existingTrends, existingReturnRows, orderRows, dmRows, haltRows] = await Promise.all([
             client
                 .from('account_stock_state')
                 .select('*')
@@ -608,7 +608,8 @@
                 .eq('account_id', accountId)
                 .gte('effective_date_serial', activeStartSerial)
                 .lt('effective_date_serial', targetSerial)
-                .in('stock_id', stockIds))
+                .in('stock_id', stockIds)),
+            fetchStockHaltsBetween(client, accountId, stockIds, activeStartSerial, targetSerial)
         ]);
         if (statesRes.error) throw statesRes.error;
         if (anchorHistoryRes.error) throw anchorHistoryRes.error;
@@ -663,6 +664,7 @@
         for (const row of dmRows || []) {
             dmMap[`${row.effective_date_key}:${row.stock_id}`] = row;
         }
+        const haltMap = groupHaltsByStock(haltRows);
 
         const historyRows = [];
         const dailyReturnRows = [];
@@ -673,16 +675,17 @@
             for (const stock of stocks) {
                 const returns = getMonthlyReturnSeries(stock.id, from.year, from.month);
                 const existingDailyReturn = dailyReturnMap[`${key}:${stock.id}`];
-                const baseReturn = existingDailyReturn
+                const halted = isStockHaltedOn(haltMap, stock.id, serial);
+                const baseReturn = halted ? 0 : existingDailyReturn
                     ? toNumber(existingDailyReturn.base_return, 0)
                     : toNumber(returns[from.day - 1], 0);
                 const order = orderMap[`${key}:${stock.id}`] || {};
-                const orderImpact = toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
-                const dmAdjustment = toNumber(dmMap[`${key}:${stock.id}`]?.percentage, 0);
+                const orderImpact = halted ? 0 : toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
+                const dmAdjustment = halted ? 0 : toNumber(dmMap[`${key}:${stock.id}`]?.percentage, 0);
                 const currentPrice = currentPrices[stock.id] || roundMoney(stock.initial_price);
                 const cleanPrice = roundMoney(Math.max(MIN_PRICE, currentPrice * (1 + baseReturn + orderImpact + dmAdjustment)));
 
-                if (!existingDailyReturn) {
+                if (!existingDailyReturn || halted) {
                     dailyReturnRows.push({
                         account_id: accountId,
                         stock_id: stock.id,
@@ -783,7 +786,7 @@
             ));
         }
 
-        const [statesRes, anchorHistoryRes, returnRows, orderRows, dmRows] = await Promise.all([
+        const [statesRes, anchorHistoryRes, returnRows, orderRows, dmRows, haltRows] = await Promise.all([
             client
                 .from('account_stock_state')
                 .select('*')
@@ -815,7 +818,8 @@
                 .eq('account_id', accountId)
                 .gte('effective_date_serial', fromSerial)
                 .lt('effective_date_serial', targetSerial)
-                .in('stock_id', stockIds))
+                .in('stock_id', stockIds)),
+            fetchStockHaltsBetween(client, accountId, stockIds, fromSerial, targetSerial)
         ]);
         if (statesRes.error) throw statesRes.error;
         if (anchorHistoryRes.error) throw anchorHistoryRes.error;
@@ -840,19 +844,31 @@
         for (const row of dmRows || []) {
             dmMap[`${row.effective_date_key}:${row.stock_id}`] = row;
         }
+        const haltMap = groupHaltsByStock(haltRows);
 
         const historyRows = [];
+        const forcedDailyReturnRows = [];
         for (const step of steps) {
+            const stepSerial = dateToSerial(step.fromDate);
             for (const stock of stocks) {
                 const mapKey = `${step.fromKey}:${stock.id}`;
                 const currentPrice = currentPrices[stock.id] || roundMoney(stock.initial_price);
-                const baseReturn = toNumber(returnsMap[mapKey]?.base_return, 0);
+                const halted = isStockHaltedOn(haltMap, stock.id, stepSerial);
+                const baseReturn = halted ? 0 : toNumber(returnsMap[mapKey]?.base_return, 0);
                 const order = orderMap[mapKey] || {};
-                const orderImpact = toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
-                const dmAdjustment = toNumber(dmMap[mapKey]?.percentage, 0);
+                const orderImpact = halted ? 0 : toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
+                const dmAdjustment = halted ? 0 : toNumber(dmMap[mapKey]?.percentage, 0);
                 const totalReturn = baseReturn + orderImpact + dmAdjustment;
                 const nextPrice = Math.max(MIN_PRICE, currentPrice * (1 + totalReturn));
                 const cleanPrice = roundMoney(nextPrice);
+                if (halted) {
+                    forcedDailyReturnRows.push({
+                        account_id: accountId,
+                        stock_id: stock.id,
+                        base_return: 0,
+                        ...datePayload(step.fromDate)
+                    });
+                }
                 historyRows.push({
                     account_id: accountId,
                     stock_id: stock.id,
@@ -865,6 +881,13 @@
                 });
                 currentPrices[stock.id] = cleanPrice;
             }
+        }
+
+        for (const chunk of chunkArray(forcedDailyReturnRows, DB_WRITE_CHUNK_SIZE)) {
+            const { error } = await client
+                .from('stock_daily_returns')
+                .upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
+            if (error) throw error;
         }
 
         for (const chunk of chunkArray(historyRows)) {
@@ -917,6 +940,7 @@
 
         const stockIds = stocks.map(stock => stock.id);
         const fromKey = dateKey(fromDate);
+        const fromSerial = dateToSerial(fromDate);
         const { data: states, error: statesError } = await client
             .from('account_stock_state')
             .select('*')
@@ -951,19 +975,30 @@
             .in('stock_id', stockIds);
         if (dmError) throw dmError;
         const dmMap = Object.fromEntries((dmAdjustments || []).map(row => [row.stock_id, row]));
+        const haltMap = groupHaltsByStock(await fetchStockHaltsBetween(client, accountId, stockIds, fromSerial, fromSerial + 1));
 
         const historyRows = [];
         const nextStates = [];
+        const forcedDailyReturnRows = [];
         for (const stock of stocks) {
             const state = stateMap[stock.id];
             const currentPrice = roundMoney(state?.current_price || stock.initial_price);
-            const baseReturn = toNumber(returnMap[stock.id]?.base_return, 0);
+            const halted = isStockHaltedOn(haltMap, stock.id, fromSerial);
+            const baseReturn = halted ? 0 : toNumber(returnMap[stock.id]?.base_return, 0);
             const order = orderMap[stock.id] || {};
-            const orderImpact = toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
-            const dmAdjustment = toNumber(dmMap[stock.id]?.percentage, 0);
+            const orderImpact = halted ? 0 : toNumber(order.buy_impact, 0) - toNumber(order.sell_impact, 0);
+            const dmAdjustment = halted ? 0 : toNumber(dmMap[stock.id]?.percentage, 0);
             const totalReturn = baseReturn + orderImpact + dmAdjustment;
             const nextPrice = Math.max(MIN_PRICE, currentPrice * (1 + totalReturn));
             const cleanPrice = roundMoney(nextPrice);
+            if (halted) {
+                forcedDailyReturnRows.push({
+                    account_id: accountId,
+                    stock_id: stock.id,
+                    base_return: 0,
+                    ...datePayload(fromDate)
+                });
+            }
             historyRows.push({
                 account_id: accountId,
                 stock_id: stock.id,
@@ -980,6 +1015,13 @@
                 current_price: cleanPrice,
                 updated_at: new Date().toISOString()
             });
+        }
+
+        if (forcedDailyReturnRows.length) {
+            const { error: forcedReturnError } = await client
+                .from('stock_daily_returns')
+                .upsert(forcedDailyReturnRows, { onConflict: 'account_id,stock_id,date_key' });
+            if (forcedReturnError) throw forcedReturnError;
         }
 
         const { error: historyError } = await client
@@ -1200,6 +1242,37 @@
         if (!halt) return;
         const endDate = halt.end_date_value || serialToDate(halt.end_date_serial);
         throw new Error(`该股票正在封停交易，封停至 ${endDate.year}-${endDate.month}-${endDate.day}。`);
+    }
+
+    async function fetchStockHaltsBetween(client, accountId, stockIds, fromSerial, targetSerial) {
+        if (!accountId || !stockIds?.length || !Number.isFinite(fromSerial) || !Number.isFinite(targetSerial)) return [];
+        return fetchPaged(() => client
+            .from('stock_trading_halts')
+            .select('*')
+            .eq('account_id', accountId)
+            .in('stock_id', stockIds)
+            .lte('start_date_serial', targetSerial - 1)
+            .gte('end_date_serial', fromSerial)
+        ).catch(error => {
+            if (isMissingRelationError(error)) return [];
+            throw error;
+        });
+    }
+
+    function groupHaltsByStock(rows) {
+        const map = {};
+        for (const row of rows || []) {
+            if (!map[row.stock_id]) map[row.stock_id] = [];
+            map[row.stock_id].push(row);
+        }
+        return map;
+    }
+
+    function isStockHaltedOn(haltsByStock, stockId, serial) {
+        return Boolean((haltsByStock?.[stockId] || []).some(row =>
+            toNumber(row.start_date_serial, Infinity) <= serial
+            && toNumber(row.end_date_serial, -Infinity) >= serial
+        ));
     }
 
     function isMissingRpcError(error) {
@@ -1487,6 +1560,15 @@
         const endDate = addDays(startDate, haltDays - 1);
         const startPayload = datePayload(startDate);
         const endPayload = datePayload(endDate);
+        const zeroReturnRows = [];
+        for (let serial = startPayload.date_serial; serial <= endPayload.date_serial; serial++) {
+            zeroReturnRows.push({
+                account_id: accountId,
+                stock_id: stockId,
+                base_return: 0,
+                ...datePayload(serialToDate(serial))
+            });
+        }
         const { error: haltError } = await client
             .from('stock_trading_halts')
             .upsert({
@@ -1503,6 +1585,21 @@
                 created_at: new Date().toISOString()
             }, { onConflict: 'account_id,stock_id' });
         if (haltError) throw haltError;
+
+        for (const chunk of chunkArray(zeroReturnRows, DB_WRITE_CHUNK_SIZE)) {
+            const { error } = await client
+                .from('stock_daily_returns')
+                .upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
+            if (error) throw error;
+        }
+
+        const { error: staleHistoryError } = await client
+            .from('stock_price_history')
+            .delete()
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId)
+            .gt('date_serial', startPayload.date_serial);
+        if (staleHistoryError) throw staleHistoryError;
 
         const title = `${stock.name} 暂停交易 ${haltDays} 日`;
         const body = `${stock.name}（${stock.code}）自 ${startDate.year}-${startDate.month}-${startDate.day} 至 ${endDate.year}-${endDate.month}-${endDate.day} 暂停交易。`;
