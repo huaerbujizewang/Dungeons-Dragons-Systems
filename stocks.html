@@ -138,12 +138,32 @@
             width: 100%;
             height: 180px;
             display: block;
-            background: #fbfcfe;
+            background: linear-gradient(180deg, #fbfdff 0%, #f4f7fb 100%);
             border: 1px solid #edf0f5;
             border-radius: 6px;
         }
         .comparison-panel { margin-bottom: 16px; }
         .comparison-chart { height: 260px; }
+        .history-loading {
+            display: none;
+            height: 5px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #e7edf5;
+            margin: 0 0 10px;
+        }
+        .history-loading.active { display: block; }
+        .history-loading div {
+            width: 38%;
+            height: 100%;
+            border-radius: inherit;
+            background: var(--blue);
+            animation: loading-slide 0.9s ease-in-out infinite;
+        }
+        @keyframes loading-slide {
+            0% { transform: translateX(-110%); }
+            100% { transform: translateX(280%); }
+        }
         .chart-legend {
             display: flex;
             flex-wrap: wrap;
@@ -215,6 +235,7 @@
                 </select>
             </label>
         </div>
+        <div id="history-loading" class="history-loading"><div></div></div>
         <canvas id="comparison-chart" class="comparison-chart" width="1100" height="320"></canvas>
         <div id="comparison-legend" class="chart-legend"></div>
     </section>
@@ -540,7 +561,19 @@
     async function changeHistoryRange() {
         selectedHistoryDays = parseInt(document.getElementById('history-range').value, 10);
         if (!Number.isFinite(selectedHistoryDays)) selectedHistoryDays = 360;
-        await refreshPage();
+        setHistoryLoading(true);
+        try {
+            await refreshPage();
+        } finally {
+            setHistoryLoading(false);
+        }
+    }
+
+    function setHistoryLoading(isLoading) {
+        const bar = document.getElementById('history-loading');
+        const select = document.getElementById('history-range');
+        if (bar) bar.classList.toggle('active', Boolean(isLoading));
+        if (select) select.disabled = Boolean(isLoading);
     }
 
     function currentDateSerial() {
@@ -603,47 +636,120 @@
         }
     }
 
-    function clearChart(canvas, ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fbfcfe';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#d7dde7';
-        ctx.lineWidth = 1;
+    function prepareChartCanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.max(1, window.devicePixelRatio || 1);
+        const width = Math.max(1, Math.round(rect.width));
+        const height = Math.max(1, Math.round(rect.height));
+        const pixelWidth = Math.round(width * ratio);
+        const pixelHeight = Math.round(height * ratio);
+        if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+            canvas.width = pixelWidth;
+            canvas.height = pixelHeight;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        return { ctx, width, height };
     }
 
-    function drawChartFrame(canvas, ctx, left = 44, top = 22, right = 18, bottom = 34) {
-        const width = canvas.width - left - right;
-        const height = canvas.height - top - bottom;
+    function clearChart(canvas, ctx, width, height) {
+        ctx.clearRect(0, 0, width, height);
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, '#fbfdff');
+        gradient.addColorStop(1, '#f4f7fb');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+    }
+
+    function drawChartFrame(canvas, ctx, width, height, left = 44, top = 22, right = 18, bottom = 34) {
+        const innerWidth = width - left - right;
+        const innerHeight = height - top - bottom;
+        ctx.save();
+        ctx.strokeStyle = '#dfe6ef';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 4; i += 1) {
+            const y = top + (innerHeight / 4) * i;
+            ctx.moveTo(left, y);
+            ctx.lineTo(left + innerWidth, y);
+        }
+        for (let i = 0; i <= 6; i += 1) {
+            const x = left + (innerWidth / 6) * i;
+            ctx.moveTo(x, top);
+            ctx.lineTo(x, top + innerHeight);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = '#bfc9d6';
+        ctx.lineWidth = 1.25;
         ctx.beginPath();
         ctx.moveTo(left, top);
-        ctx.lineTo(left, top + height);
-        ctx.lineTo(left + width, top + height);
+        ctx.lineTo(left, top + innerHeight);
+        ctx.lineTo(left + innerWidth, top + innerHeight);
         ctx.stroke();
-        return { left, top, right, bottom, width, height };
+        ctx.restore();
+        return { left, top, right, bottom, width: innerWidth, height: innerHeight };
     }
 
-    function drawNoData(canvas, ctx, text) {
+    function drawNoData(canvas, ctx, text, width, height) {
         ctx.fillStyle = '#667085';
         ctx.textAlign = 'center';
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+        ctx.fillText(text, width / 2, height / 2);
         ctx.textAlign = 'start';
+    }
+
+    function drawSmoothLine(ctx, points, color, options = {}) {
+        if (!points.length) return;
+        const { lineWidth = 2.5, glow = true } = options;
+        ctx.save();
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        if (glow) {
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8;
+            ctx.globalAlpha = 0.2;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth + 3;
+            ctx.beginPath();
+            points.forEach((point, index) => {
+                if (index === 0) ctx.moveTo(point.x, point.y);
+                else ctx.lineTo(point.x, point.y);
+            });
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        points.forEach((point, index) => {
+            if (index === 0) {
+                ctx.moveTo(point.x, point.y);
+            } else if (index < points.length - 1) {
+                const next = points[index + 1];
+                ctx.quadraticCurveTo(point.x, point.y, (point.x + next.x) / 2, (point.y + next.y) / 2);
+            } else {
+                ctx.lineTo(point.x, point.y);
+            }
+        });
+        ctx.stroke();
+        ctx.restore();
     }
 
     function drawComparisonChart() {
         const canvas = document.getElementById('comparison-chart');
         const legend = document.getElementById('comparison-legend');
         if (!canvas || !legend || !snapshot) return;
-        const ctx = canvas.getContext('2d');
-        clearChart(canvas, ctx);
-        const frame = drawChartFrame(canvas, ctx, 52, 24, 20, 38);
+        const { ctx, width, height } = prepareChartCanvas(canvas);
+        clearChart(canvas, ctx, width, height);
+        const frame = drawChartFrame(canvas, ctx, width, height, 58, 26, 24, 40);
         const series = snapshot.stocks.map((stock, index) => {
             const history = filterHistoryByDays(snapshot.historyByStock[stock.id] || [], selectedHistoryDays)
                 .filter(row => Number(row.price) > 0);
             if (history.length < 2) return null;
-            const first = Number(history[0].price);
             const points = history.map(row => ({
                 serial: Number(row.date_serial),
-                value: (Number(row.price) / first) - 1
+                value: Number(row.price)
             }));
             return {
                 stock,
@@ -655,45 +761,54 @@
 
         if (!series.length) {
             legend.innerHTML = '';
-            drawNoData(canvas, ctx, '暂无足够历史');
+            drawNoData(canvas, ctx, '暂无足够历史', width, height);
             return;
         }
 
         const allPoints = series.flatMap(item => item.points);
         const minSerial = Math.min(...allPoints.map(point => point.serial));
         const maxSerial = Math.max(...allPoints.map(point => point.serial));
-        const minValue = Math.min(...allPoints.map(point => point.value), 0);
-        const maxValue = Math.max(...allPoints.map(point => point.value), 0);
+        const rawMinValue = Math.min(...allPoints.map(point => point.value));
+        const rawMaxValue = Math.max(...allPoints.map(point => point.value));
+        const padding = Math.max(0.01, (rawMaxValue - rawMinValue) * 0.08);
+        const minValue = Math.max(0, rawMinValue - padding);
+        const maxValue = rawMaxValue + padding;
         const valueSpan = Math.max(0.01, maxValue - minValue);
         const serialSpan = Math.max(1, maxSerial - minSerial);
 
-        const zeroY = frame.top + frame.height - ((0 - minValue) / valueSpan) * frame.height;
+        const midY = frame.top + frame.height / 2;
         ctx.strokeStyle = '#edf0f5';
         ctx.beginPath();
-        ctx.moveTo(frame.left, zeroY);
-        ctx.lineTo(frame.left + frame.width, zeroY);
+        ctx.moveTo(frame.left, midY);
+        ctx.lineTo(frame.left + frame.width, midY);
         ctx.stroke();
 
         for (const item of series) {
-            ctx.strokeStyle = item.color;
+            const screenPoints = item.points.map(point => ({
+                x: frame.left + ((point.serial - minSerial) / serialSpan) * frame.width,
+                y: frame.top + frame.height - ((point.value - minValue) / valueSpan) * frame.height
+            }));
+            drawSmoothLine(ctx, screenPoints, item.color, { lineWidth: 2.4, glow: true });
+            const lastPoint = screenPoints[screenPoints.length - 1];
+            ctx.save();
+            ctx.fillStyle = item.color;
+            ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            item.points.forEach((point, index) => {
-                const x = frame.left + ((point.serial - minSerial) / serialSpan) * frame.width;
-                const y = frame.top + frame.height - ((point.value - minValue) / valueSpan) * frame.height;
-                if (index === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
+            ctx.arc(lastPoint.x, lastPoint.y, 3.6, 0, Math.PI * 2);
+            ctx.fill();
             ctx.stroke();
+            ctx.restore();
         }
 
         ctx.fillStyle = '#1f2933';
-        ctx.fillText(formatRate(maxValue), frame.left + 4, frame.top + 12);
-        ctx.fillText(formatRate(minValue), frame.left + 4, frame.top + frame.height - 6);
+        ctx.font = '12px "PingFang SC", "Microsoft YaHei", sans-serif';
+        ctx.fillText(formatMoney(maxValue), frame.left + 4, frame.top + 14);
+        ctx.fillText(formatMoney(minValue), frame.left + 4, frame.top + frame.height - 7);
         legend.innerHTML = series.map(item => `
             <span class="legend-item">
                 <span class="legend-swatch" style="background:${item.color}"></span>
-                ${escapeHTML(item.stock.code)} ${formatRate(item.last)}
+                ${escapeHTML(item.stock.code)} ${formatMoney(item.last)}
             </span>
         `).join('');
     }
@@ -713,35 +828,60 @@
 
     function drawChart(stockId) {
         const canvas = document.getElementById('history-chart');
-        const ctx = canvas.getContext('2d');
+        const { ctx, width, height } = prepareChartCanvas(canvas);
         const history = filterHistoryByDays(snapshot.historyByStock[stockId] || [], selectedHistoryDays);
-        clearChart(canvas, ctx);
-        const frame = drawChartFrame(canvas, ctx, 40, 20, 20, 36);
+        clearChart(canvas, ctx, width, height);
+        const frame = drawChartFrame(canvas, ctx, width, height, 46, 22, 22, 38);
         if (history.length < 2) {
-            drawNoData(canvas, ctx, '暂无足够历史');
+            drawNoData(canvas, ctx, '暂无足够历史', width, height);
             return;
         }
         const prices = history.map(row => Number(row.price));
         const serials = history.map(row => Number(row.date_serial));
         const min = Math.min(...prices);
         const max = Math.max(...prices);
-        const span = Math.max(0.01, max - min);
+        const padding = Math.max(0.01, (max - min) * 0.08);
+        const minValue = Math.max(0, min - padding);
+        const maxValue = max + padding;
+        const span = Math.max(0.01, maxValue - minValue);
         const minSerial = Math.min(...serials);
         const maxSerial = Math.max(...serials);
         const serialSpan = Math.max(1, maxSerial - minSerial);
-        ctx.strokeStyle = '#2f6f9f';
-        ctx.lineWidth = 3;
+        const points = history.map(row => ({
+            x: frame.left + ((Number(row.date_serial) - minSerial) / serialSpan) * frame.width,
+            y: frame.top + frame.height - ((Number(row.price) - minValue) / span) * frame.height
+        }));
+        const areaGradient = ctx.createLinearGradient(0, frame.top, 0, frame.top + frame.height);
+        areaGradient.addColorStop(0, 'rgba(47, 111, 159, 0.24)');
+        areaGradient.addColorStop(1, 'rgba(47, 111, 159, 0)');
+        ctx.save();
+        ctx.fillStyle = areaGradient;
         ctx.beginPath();
-        history.forEach((row, index) => {
-            const x = frame.left + ((Number(row.date_serial) - minSerial) / serialSpan) * frame.width;
-            const y = frame.top + frame.height - ((Number(row.price) - min) / span) * frame.height;
-            if (index === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
+        points.forEach((point, index) => {
+            if (index === 0) ctx.moveTo(point.x, point.y);
+            else ctx.lineTo(point.x, point.y);
         });
+        ctx.lineTo(points[points.length - 1].x, frame.top + frame.height);
+        ctx.lineTo(points[0].x, frame.top + frame.height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        drawSmoothLine(ctx, points, '#2f6f9f', { lineWidth: 3, glow: true });
+        const lastPoint = points[points.length - 1];
+        ctx.save();
+        ctx.fillStyle = '#2f6f9f';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(lastPoint.x, lastPoint.y, 4.2, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
+        ctx.restore();
         ctx.fillStyle = '#1f2933';
-        ctx.fillText(formatMoney(max), frame.left + 4, frame.top + 12);
-        ctx.fillText(formatMoney(min), frame.left + 4, frame.top + frame.height - 6);
+        ctx.font = '12px "PingFang SC", "Microsoft YaHei", sans-serif';
+        ctx.fillText(formatMoney(maxValue), frame.left + 4, frame.top + 14);
+        ctx.fillText(formatMoney(minValue), frame.left + 4, frame.top + frame.height - 7);
     }
 
     function setTradeBusy(isBusy) {
@@ -1001,6 +1141,16 @@
             }
         });
     }
+
+    let chartResizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(chartResizeTimer);
+        chartResizeTimer = setTimeout(() => {
+            if (!snapshot) return;
+            drawComparisonChart();
+            if (selectedStockId) drawChart(selectedStockId);
+        }, 120);
+    });
 
     init();
 </script>
