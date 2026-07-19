@@ -4,6 +4,7 @@
     const MIN_PRICE = 0.01;
     const DETAILED_SETTLEMENT_MAX_DAYS = 180;
     const DB_PAGE_SIZE = 1000;
+    const DB_WRITE_CHUNK_SIZE = 5000;
 
     const STOCK_DEFINITIONS = [
         { id: 'WCHP', code: 'WCHP', name: '白城联合港务', initial_price: 12 },
@@ -507,11 +508,17 @@
         const minYear = activeMonths[0]?.year ?? activeStartDate.year;
         const maxYear = activeMonths[activeMonths.length - 1]?.year ?? lastSettledDate.year;
 
-        const [statesRes, existingTrends, existingReturnRows, orderRows, dmRows] = await Promise.all([
+        const [statesRes, anchorHistoryRes, existingTrends, existingReturnRows, orderRows, dmRows] = await Promise.all([
             client
                 .from('account_stock_state')
                 .select('*')
                 .eq('account_id', accountId)
+                .in('stock_id', stockIds),
+            client
+                .from('stock_price_history')
+                .select('*')
+                .eq('account_id', accountId)
+                .eq('date_serial', activeStartSerial)
                 .in('stock_id', stockIds),
             fetchPaged(() => client
                 .from('stock_monthly_trends')
@@ -543,10 +550,14 @@
                 .in('stock_id', stockIds))
         ]);
         if (statesRes.error) throw statesRes.error;
+        if (anchorHistoryRes.error) throw anchorHistoryRes.error;
 
         const currentPrices = Object.fromEntries(stocks.map(stock => [stock.id, roundMoney(stock.initial_price)]));
         for (const state of statesRes.data || []) {
             currentPrices[state.stock_id] = roundMoney(state.current_price);
+        }
+        for (const row of anchorHistoryRes.data || []) {
+            currentPrices[row.stock_id] = roundMoney(row.price);
         }
 
         const trendMap = {};
@@ -633,21 +644,21 @@
             }
         }
 
-        for (const chunk of chunkArray(missingTrendRows, DB_PAGE_SIZE)) {
+        for (const chunk of chunkArray(missingTrendRows, DB_WRITE_CHUNK_SIZE)) {
             const { error } = await client
                 .from('stock_monthly_trends')
                 .upsert(chunk, { onConflict: 'account_id,stock_id,year,month' });
             if (error) throw error;
         }
 
-        for (const chunk of chunkArray(dailyReturnRows, DB_PAGE_SIZE)) {
+        for (const chunk of chunkArray(dailyReturnRows, DB_WRITE_CHUNK_SIZE)) {
             const { error } = await client
                 .from('stock_daily_returns')
                 .upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
             if (error) throw error;
         }
 
-        for (const chunk of chunkArray(historyRows, DB_PAGE_SIZE)) {
+        for (const chunk of chunkArray(historyRows, DB_WRITE_CHUNK_SIZE)) {
             const { error } = await client
                 .from('stock_price_history')
                 .upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
@@ -711,11 +722,17 @@
             ));
         }
 
-        const [statesRes, returnRows, orderRows, dmRows] = await Promise.all([
+        const [statesRes, anchorHistoryRes, returnRows, orderRows, dmRows] = await Promise.all([
             client
                 .from('account_stock_state')
                 .select('*')
                 .eq('account_id', accountId)
+                .in('stock_id', stockIds),
+            client
+                .from('stock_price_history')
+                .select('*')
+                .eq('account_id', accountId)
+                .eq('date_serial', fromSerial)
                 .in('stock_id', stockIds),
             fetchPaged(() => client
                 .from('stock_daily_returns')
@@ -740,10 +757,14 @@
                 .in('stock_id', stockIds))
         ]);
         if (statesRes.error) throw statesRes.error;
+        if (anchorHistoryRes.error) throw anchorHistoryRes.error;
 
         const currentPrices = Object.fromEntries(stocks.map(stock => [stock.id, roundMoney(stock.initial_price)]));
         for (const state of statesRes.data || []) {
             currentPrices[state.stock_id] = roundMoney(state.current_price);
+        }
+        for (const row of anchorHistoryRes.data || []) {
+            currentPrices[row.stock_id] = roundMoney(row.price);
         }
 
         const returnsMap = {};
@@ -930,15 +951,31 @@
         const market = await getMarketConfig(client, accountId);
         if (!isMarketTradable(market, currentDate)) return;
         const openDate = marketOpenDate(market);
-        const { data: history, error } = await client
-            .from('stock_price_history')
-            .select('date_value,date_serial')
-            .eq('account_id', accountId)
-            .lte('date_serial', dateToSerial(currentDate))
-            .order('date_serial', { ascending: false })
-            .limit(1);
-        if (error) throw error;
-        const startDate = parseDateValue(history?.[0]?.date_value) || openDate;
+        const stocks = await ensureAccountInitialized(client, accountId, openDate);
+        const currentSerial = dateToSerial(currentDate);
+        const latestHistoryResults = await Promise.all(stocks.map(stock =>
+            client
+                .from('stock_price_history')
+                .select('stock_id,date_value,date_serial')
+                .eq('account_id', accountId)
+                .eq('stock_id', stock.id)
+                .lte('date_serial', currentSerial)
+                .order('date_serial', { ascending: false })
+                .limit(1)
+        ));
+        latestHistoryResults.forEach(res => {
+            if (res.error) throw res.error;
+        });
+        const latestRows = latestHistoryResults.map(res => res.data?.[0]).filter(Boolean);
+        let startDate = openDate;
+        if (latestRows.length === stocks.length) {
+            const serials = latestRows.map(row => Number(row.date_serial));
+            const minSerial = Math.min(...serials);
+            const maxSerial = Math.max(...serials);
+            startDate = minSerial === maxSerial
+                ? parseDateValue(latestRows[0]?.date_value)
+                : openDate;
+        }
         if (startDate && compareDates(startDate, currentDate) < 0) {
             const key = `${accountId}:${dateKey(currentDate)}`;
             if (!catchUpPromises.has(key)) {
@@ -947,9 +984,11 @@
                 catchUpPromises.set(key, promise);
             }
             await catchUpPromises.get(key);
-        } else if (!history?.length && openDate) {
-            await ensureAccountInitialized(client, accountId, openDate);
         }
+
+        await Promise.all(stocks.map(stock =>
+            ensureDailyReturnsForMonth(client, accountId, stock.id, currentDate.year, currentDate.month)
+        ));
     }
 
     function impactTier(amount) {
