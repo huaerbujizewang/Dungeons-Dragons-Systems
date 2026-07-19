@@ -372,7 +372,7 @@
     <section class="panel news-panel">
         <div class="panel-head">
             <h2>市场新闻</h2>
-            <span class="tiny">拆股与封停公告会在这里播报</span>
+            <span class="tiny">拆股、封停与复牌公告会在这里播报</span>
         </div>
         <div id="stock-news-list" class="news-list"></div>
     </section>
@@ -490,6 +490,7 @@
                 <div class="tiny">从当前世界日期开始计算，1天表示只封当天。</div>
             </label>
             <button id="halt-stock-btn" class="danger" onclick="haltSelectedStock()">暂时封停交易</button>
+            <button id="resume-stock-btn" class="secondary" onclick="resumeSelectedStock()">解除封停</button>
         </div>
         <div id="dm-action-status" class="dm-status">DM 操作状态：空闲。</div>
         <h3 style="margin-top:14px;">本月隐藏趋势与基础涨跌</h3>
@@ -1669,6 +1670,30 @@
                     stockId,
                     currentDate: accountProfile.world_date,
                     days
+                });
+                document.getElementById('dm-halt-days').value = '';
+            }
+        });
+    }
+
+    async function resumeSelectedStock() {
+        const stockId = document.getElementById('dm-halt-stock').value;
+        const stock = snapshot.stocks.find(item => item.id === stockId);
+        if (!stock) {
+            setDmActionStatus('请选择要解除封停的股票。', 'error');
+            return;
+        }
+        if (!confirm(`确认解除 ${stock.name}（${stock.code}）的交易封停？当前日期之后的该股收益缓存与未来价格会重新生成。`)) return;
+        await runDmAction({
+            buttonId: 'resume-stock-btn',
+            busyText: '正在解除封停...',
+            successText: `${stock.code} 已解除封停，后续走势将重新计算。`,
+            action: async () => {
+                await BaichengStocks.resumeStockTrading({
+                    client: supabaseClient,
+                    accountId,
+                    stockId,
+                    currentDate: accountProfile.world_date
                 });
                 document.getElementById('dm-halt-days').value = '';
             }

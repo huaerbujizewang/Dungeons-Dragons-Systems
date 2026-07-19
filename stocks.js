@@ -1623,6 +1623,69 @@
         };
     }
 
+    async function resumeStockTrading(options) {
+        const { client, accountId, stockId, currentDate } = options;
+        assertClient(client);
+        if (!accountId || !stockId || !isValidDate(currentDate)) throw new Error('解除封停参数不完整。');
+
+        const stocks = await ensureStockDefinitions(client);
+        const stock = stocks.find(item => item.id === stockId);
+        if (!stock) throw new Error('股票不存在。');
+
+        const payload = datePayload(currentDate);
+        const { data: halt, error: haltReadError } = await client
+            .from('stock_trading_halts')
+            .select('*')
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId)
+            .maybeSingle();
+        if (haltReadError) throw haltReadError;
+        if (!halt) throw new Error('该股票没有封停记录。');
+
+        const { error: haltDeleteError } = await client
+            .from('stock_trading_halts')
+            .delete()
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId);
+        if (haltDeleteError) throw haltDeleteError;
+
+        const { error: staleReturnsError } = await client
+            .from('stock_daily_returns')
+            .delete()
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId)
+            .gte('date_serial', payload.date_serial);
+        if (staleReturnsError) throw staleReturnsError;
+
+        const { error: staleHistoryError } = await client
+            .from('stock_price_history')
+            .delete()
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId)
+            .gt('date_serial', payload.date_serial);
+        if (staleHistoryError) throw staleHistoryError;
+
+        const resumeDate = payload.date_value;
+        const title = `${stock.name} 恢复交易`;
+        const body = `${stock.name}（${stock.code}）自 ${resumeDate.year}-${resumeDate.month}-${resumeDate.day} 起解除封停并恢复交易。`;
+        const { error: newsError } = await client.from('stock_news').insert([{
+            account_id: accountId,
+            stock_id: stockId,
+            type: 'resume',
+            title,
+            body,
+            ratio_from: 1,
+            ratio_to: 1,
+            ...payload
+        }]);
+        if (newsError) throw newsError;
+
+        return {
+            stock,
+            resumedDate: payload.date_value
+        };
+    }
+
     async function loadSnapshot(options) {
         const { client, accountId, currentDate, includeFuture = false, historyDays = 45 } = options;
         assertClient(client);
@@ -1823,6 +1886,7 @@
         loadSnapshot,
         marketOpenDate,
         repairMarketHistory,
+        resumeStockTrading,
         rollbackStocksToDate,
         sellStock,
         setDmAdjustment,
