@@ -947,12 +947,13 @@
     }
 
     async function catchUpMarket(options) {
-        const { client, accountId, currentDate } = options;
+        const { client, accountId, currentDate, historyDays = 0 } = options;
         const market = await getMarketConfig(client, accountId);
         if (!isMarketTradable(market, currentDate)) return;
         const openDate = marketOpenDate(market);
         const stocks = await ensureAccountInitialized(client, accountId, openDate);
         const currentSerial = dateToSerial(currentDate);
+        const openSerial = openDate ? dateToSerial(openDate) : currentSerial;
         const latestHistoryResults = await Promise.all(stocks.map(stock =>
             client
                 .from('stock_price_history')
@@ -975,6 +976,23 @@
             startDate = minSerial === maxSerial
                 ? parseDateValue(latestRows[0]?.date_value)
                 : openDate;
+        }
+        if (startDate && compareDates(startDate, currentDate) >= 0 && Number.isFinite(historyDays) && historyDays > 0) {
+            const requiredStartSerial = Math.max(openSerial, currentSerial - historyDays);
+            const expectedRowsPerStock = Math.max(1, currentSerial - requiredStartSerial + 1);
+            const recentHistoryRows = await fetchPaged(() => client
+                .from('stock_price_history')
+                .select('stock_id,date_serial')
+                .eq('account_id', accountId)
+                .gte('date_serial', requiredStartSerial)
+                .lte('date_serial', currentSerial)
+                .in('stock_id', stocks.map(stock => stock.id)));
+            const counts = Object.fromEntries(stocks.map(stock => [stock.id, 0]));
+            for (const row of recentHistoryRows || []) {
+                if (counts[row.stock_id] !== undefined) counts[row.stock_id] += 1;
+            }
+            const hasSparseHistory = stocks.some(stock => counts[stock.id] < expectedRowsPerStock);
+            if (hasSparseHistory) startDate = openDate;
         }
         if (startDate && compareDates(startDate, currentDate) < 0) {
             const key = `${accountId}:${dateKey(currentDate)}`;
@@ -1229,39 +1247,42 @@
         assertClient(client);
         const market = await getMarketConfig(client, accountId);
         if (market.market_enabled && currentDate && isMarketTradable(market, currentDate)) {
-            await catchUpMarket({ client, accountId, currentDate });
+            await catchUpMarket({ client, accountId, currentDate, historyDays });
         }
 
         const stocks = await ensureStockDefinitions(client);
         const stockIds = stocks.map(stock => stock.id);
-        let historyQuery = client
-            .from('stock_price_history')
-            .select('*')
-            .eq('account_id', accountId)
-            .in('stock_id', stockIds)
-            .order('date_serial', { ascending: true });
-        if (currentDate) {
-            const currentSerial = dateToSerial(currentDate);
-            if (!includeFuture) historyQuery = historyQuery.lte('date_serial', currentSerial);
-            if (Number.isFinite(historyDays) && historyDays > 0) {
-                historyQuery = historyQuery.gte('date_serial', currentSerial - historyDays);
+        const makeHistoryQuery = () => {
+            let query = client
+                .from('stock_price_history')
+                .select('*')
+                .eq('account_id', accountId)
+                .in('stock_id', stockIds)
+                .order('date_serial', { ascending: true });
+            if (currentDate) {
+                const currentSerial = dateToSerial(currentDate);
+                if (!includeFuture) query = query.lte('date_serial', currentSerial);
+                if (Number.isFinite(historyDays) && historyDays > 0) {
+                    query = query.gte('date_serial', currentSerial - historyDays);
+                }
             }
-        }
-        const [statesRes, holdingsRes, historyRes, trendsRes, returnsRes, dmRes] = await Promise.all([
+            return query;
+        };
+        const [statesRes, holdingsRes, historyRows, trendsRes, returnsRes, dmRes] = await Promise.all([
             client.from('account_stock_state').select('*').eq('account_id', accountId).in('stock_id', stockIds),
             client.from('stock_holdings').select('*').eq('account_id', accountId).in('stock_id', stockIds),
-            historyQuery,
+            fetchPaged(makeHistoryQuery),
             client.from('stock_monthly_trends').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds),
             client.from('stock_daily_returns').select('*').eq('account_id', accountId).eq('year', currentDate.year).eq('month', currentDate.month).in('stock_id', stockIds).order('day', { ascending: true }),
             client.from('stock_dm_adjustments').select('*').eq('account_id', accountId).in('stock_id', stockIds)
         ]);
-        for (const res of [statesRes, holdingsRes, historyRes, trendsRes, returnsRes, dmRes]) {
+        for (const res of [statesRes, holdingsRes, trendsRes, returnsRes, dmRes]) {
             if (res.error) throw res.error;
         }
 
         const history = includeFuture
-            ? (historyRes.data || [])
-            : (historyRes.data || []).filter(row => row.date_serial <= dateToSerial(currentDate));
+            ? (historyRows || [])
+            : (historyRows || []).filter(row => row.date_serial <= dateToSerial(currentDate));
         const historyByStock = {};
         for (const row of history) {
             if (!historyByStock[row.stock_id]) historyByStock[row.stock_id] = [];
