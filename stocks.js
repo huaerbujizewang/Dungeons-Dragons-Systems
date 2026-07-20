@@ -1494,15 +1494,21 @@
             .eq('account_id', accountId)
             .eq('stock_id', stockId);
         if (holdingReadError) throw holdingReadError;
-        const historyRows = await fetchPaged(() => client
+        const splitPayload = datePayload(currentDate);
+        const { data: currentHistory, error: currentHistoryError } = await client
             .from('stock_price_history')
             .select('*')
             .eq('account_id', accountId)
-            .eq('stock_id', stockId));
+            .eq('stock_id', stockId)
+            .eq('date_key', splitPayload.date_key)
+            .maybeSingle();
+        if (currentHistoryError) throw currentHistoryError;
 
-        const stateUpdates = (stateRows || []).map(row => ({
+        const originalCurrentPrice = roundMoney(toNumber(stateRows?.[0]?.current_price, stock.initial_price));
+        const splitPrice = roundMoney(originalCurrentPrice / factor);
+        const stateUpdates = (stateRows?.length ? stateRows : [{ account_id: accountId, stock_id: stockId, current_price: originalCurrentPrice }]).map(row => ({
             ...row,
-            current_price: roundMoney(toNumber(row.current_price, stock.initial_price) / factor),
+            current_price: splitPrice,
             updated_at: new Date().toISOString()
         }));
         const holdingUpdates = (holdingRows || []).map(row => ({
@@ -1511,12 +1517,6 @@
             average_cost: roundMoney(toNumber(row.average_cost, 0) / factor),
             updated_at: new Date().toISOString()
         }));
-        const historyUpdates = (historyRows || []).map(row => ({
-            ...row,
-            price: roundMoney(toNumber(row.price, stock.initial_price) / factor),
-            previous_price: row.previous_price == null ? null : roundMoney(toNumber(row.previous_price, stock.initial_price) / factor)
-        }));
-
         for (const chunk of chunkArray(stateUpdates, DB_WRITE_CHUNK_SIZE)) {
             const { error } = await client.from('account_stock_state').upsert(chunk, { onConflict: 'account_id,stock_id' });
             if (error) throw error;
@@ -1525,13 +1525,33 @@
             const { error } = await client.from('stock_holdings').upsert(chunk, { onConflict: 'account_id,stock_id' });
             if (error) throw error;
         }
-        for (const chunk of chunkArray(historyUpdates, DB_WRITE_CHUNK_SIZE)) {
-            const { error } = await client.from('stock_price_history').upsert(chunk, { onConflict: 'account_id,stock_id,date_key' });
-            if (error) throw error;
-        }
+
+        const { error: staleHistoryError } = await client
+            .from('stock_price_history')
+            .delete()
+            .eq('account_id', accountId)
+            .eq('stock_id', stockId)
+            .gt('date_serial', splitPayload.date_serial);
+        if (staleHistoryError) throw staleHistoryError;
+
+        const { error: splitHistoryError } = await client
+            .from('stock_price_history')
+            .upsert({
+                account_id: accountId,
+                stock_id: stockId,
+                price: splitPrice,
+                base_return: roundRate(currentHistory?.base_return || 0),
+                order_impact: roundRate(currentHistory?.order_impact || 0),
+                dm_adjustment: roundRate(currentHistory?.dm_adjustment || 0),
+                previous_price: currentHistory?.previous_price == null
+                    ? originalCurrentPrice
+                    : roundMoney(toNumber(currentHistory.previous_price, stock.initial_price)),
+                ...splitPayload
+            }, { onConflict: 'account_id,stock_id,date_key' });
+        if (splitHistoryError) throw splitHistoryError;
 
         const title = `${stock.name} 宣布 1:${to} 拆股`;
-        const body = `${stock.name}（${stock.code}）完成 1:${to} 拆股。持股数量按 ${to} 倍调整，历史价格和当前价按比例折算。`;
+        const body = `${stock.name}（${stock.code}）完成 1:${to} 拆股。持股数量按 ${to} 倍调整，当前价按比例折算；拆股日前历史价格保留，之后走势重新计算。`;
         const { error: newsError } = await client.from('stock_news').insert([{
             account_id: accountId,
             stock_id: stockId,
