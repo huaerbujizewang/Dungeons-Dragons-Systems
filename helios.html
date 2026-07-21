@@ -1804,6 +1804,7 @@
                     images: node && typeof node === "object" ? node.images || [] : [],
                     imageAspect: node && typeof node === "object" ? node.imageAspect || "" : "",
                     markdown: node && typeof node === "object" ? node.markdown || "" : "",
+                    profileSections: node && typeof node === "object" ? node.profileSections || [] : [],
                     statBlock: node && typeof node === "object" ? node.statBlock || null : null,
                     policies: node && typeof node === "object" ? node.policies || null : null,
                     relations: node && typeof node === "object" ? node.relations || node.diplomacy || null : null
@@ -1840,6 +1841,7 @@
             if (!node || typeof node !== "object") return false;
             return Boolean(
                 node.markdown ||
+                node.profileSections && node.profileSections.length ||
                 node.statBlock ||
                 node.policies ||
                 node.relations ||
@@ -1905,9 +1907,10 @@
                 relations: state.current.relations && !contentHasRelations
             }) : "";
 
-            if (state.current.markdown || state.current.statBlock || state.current.policies || state.current.relations) {
+            if (state.current.markdown || state.current.profileSections && state.current.profileSections.length || state.current.statBlock || state.current.policies || state.current.relations) {
                 panelBody.innerHTML = `
                     ${bodyMarkdown ? `<div class="intro-copy">${renderMarkdown(bodyMarkdown)}</div>` : ""}
+                    ${state.current.profileSections && state.current.profileSections.length ? renderProfileSections(state.current.profileSections) : ""}
                     ${state.current.content && state.current.content.length ? `<div class="intro-copy">${state.current.content.map(renderContentParagraph).join("")}</div>` : ""}
                     ${state.current.policies && !contentHasPolicies && (!bodyMarkdown || !bodyMarkdown.includes("[[policies]]")) ? `<div class="intro-copy">${renderPolicyPanel(state.current.policies)}</div>` : ""}
                     ${state.current.relations && !contentHasRelations && (!bodyMarkdown || (!bodyMarkdown.includes("[[relations]]") && !bodyMarkdown.includes("[[diplomacy]]"))) ? `<div class="intro-copy">${renderDiplomacyPanel(state.current.relations)}</div>` : ""}
@@ -1997,6 +2000,7 @@
             if (typeof child !== "object") return "未填充";
             if (child.content && child.content.length) return "已记录";
             if (child.markdown) return "已记录";
+            if (child.profileSections && child.profileSections.length) return "已记录";
             if (child.statBlock) return "已记录";
             if (child.children && child.children.length) return `含 ${child.children.length} 项`;
             return "未填充";
@@ -2126,6 +2130,24 @@
             }
 
             return html.join("");
+        }
+
+        function renderProfileSections(sections) {
+            if (!Array.isArray(sections) || !sections.length) return "";
+            return `
+                <div class="intro-copy profile-sections">
+                    ${sections.map(section => {
+                        const title = section && section.title ? section.title : "";
+                        const paragraphs = Array.isArray(section && section.paragraphs) ? section.paragraphs : [];
+                        const quotes = Array.isArray(section && section.quotes) ? section.quotes : [];
+                        return `
+                            ${title ? `<div class="section-heading">${renderInlineMarkdown(title)}</div>` : ""}
+                            ${paragraphs.map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")}
+                            ${quotes.map(quote => `<p>${renderInlineMarkdown(quote)}</p>`).join("")}
+                        `;
+                    }).join("")}
+                </div>
+            `;
         }
 
         function renderOfficialCard(role, title, image, body) {
