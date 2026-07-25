@@ -574,6 +574,25 @@
         .tab-btn { padding: 8px 16px; border: none; background: none; cursor: pointer; font-size: 1em; color: #7f8c8d; border-radius: 4px; font-weight: 500; transition: 0.2s; }
         .tab-btn.active { background: #333; color: #fff; }
         .tab-btn:hover:not(.active) { color: #333; background: #f0f0f0; }
+        .checkin-hero { border:1px solid #d7e1df; border-radius:8px; padding:18px; background:linear-gradient(135deg,#f7fbfa 0%,#fff 58%,#f7f3e8 100%); margin-bottom:16px; }
+        .checkin-title { margin:0; color:#18433d; letter-spacing:1px; font-size:1.8em; }
+        .checkin-summary { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; color:#48615d; font-size:0.92em; }
+        .checkin-summary span { border:1px solid #dbe7e4; background:#fff; border-radius:6px; padding:6px 10px; }
+        .checkin-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; }
+        .checkin-card { border:1px solid #e0e6e4; border-radius:8px; padding:12px; background:#fff; min-height:104px; box-shadow:0 3px 10px rgba(0,0,0,0.035); }
+        .checkin-card.done { border-color:#16a085; background:#f4fffb; }
+        .checkin-card-head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+        .checkin-no { color:#7f8c8d; font-size:0.78em; font-weight:bold; }
+        .checkin-place { font-weight:bold; font-size:1.08em; color:#25322f; }
+        .checkin-country { color:#667; font-size:0.86em; margin-top:4px; }
+        .checkin-stamp { color:#16a085; font-weight:bold; font-size:0.85em; white-space:nowrap; }
+        .checkin-stamp.pending { color:#95a5a6; }
+        .admin-checkin-list { max-height:520px; overflow:auto; border:1px solid #e5ecea; background:#fff; border-radius:6px; }
+        .admin-checkin-row { display:grid; grid-template-columns:34px minmax(125px,1fr) 92px 62px 54px 54px 54px 76px; gap:6px; align-items:center; padding:7px; border-bottom:1px solid #edf2f0; font-size:0.84em; }
+        .admin-checkin-row:nth-child(even) { background:#fbfdfc; }
+        .admin-checkin-row input[type="number"] { width:100%; box-sizing:border-box; padding:4px; border:1px solid #ccd8d5; border-radius:4px; }
+        .admin-checkin-row button { padding:5px 6px; border:none; border-radius:4px; background:#16a085; color:#fff; cursor:pointer; }
+        .admin-checkin-head { position:sticky; top:0; z-index:1; background:#eaf6f3; font-weight:bold; color:#24564f; }
         
         .info-bar { margin-left: auto; text-align: right; font-size: 0.9em; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
         
@@ -1528,6 +1547,7 @@
     
 
     <div class="nav">
+    <button id="checkins-tab-btn" class="tab-btn" onclick="switchTab('checkins')" style="display:none;">打卡点</button>
     <button id="war-tab-btn" class="tab-btn" onclick="switchTab('war')" >战局</button>
     <button class="tab-btn active" onclick="switchTab('shop')">商城</button>
     <button class="tab-btn" onclick="switchTab('team')">队伍</button>
@@ -1550,6 +1570,18 @@
                 <a href="#" onclick="logout()" style="color:#999; font-size:0.8em; text-decoration: underline;">退出登录</a>
             </div>
         </div>
+    </div>
+
+    <!-- 打卡点 -->
+    <div id="checkins-section" class="section">
+        <div class="checkin-hero">
+            <h2 class="checkin-title">环陆大赏打卡点</h2>
+            <div class="checkin-summary">
+                <span>已打卡：<strong id="checkin-done-count">0</strong> / <strong id="checkin-total-count">80</strong></span>
+                <span>当前视角：<strong id="checkin-view-date">日期加载中...</strong></span>
+            </div>
+        </div>
+        <div id="checkin-container" class="checkin-grid"></div>
     </div>
 
     <!-- 战局 -->
@@ -2539,6 +2571,22 @@
                     </div>
                     <div style="font-size:0.8em; color:#666;">背包预览:</div>
                     <div id="adm-user-inv" style="max-height:150px; overflow-y:auto; background:#fff; padding:5px; border:1px solid #ddd; margin-top:5px;"></div>
+                </div>
+            </div>
+
+            <div class="admin-box" style="border:1px solid #16a085; padding:15px; border-radius:8px; background:#f5fffc;">
+                <h3 style="margin-top:0; color:#117864;">◎ 环陆大赏打卡管理</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:8px;">先在上方选择玩家；打卡日期默认使用该玩家当前世界时间，可手动改写。</div>
+                <label style="display:flex; align-items:center; gap:7px; font-size:0.9em; margin-bottom:8px;">
+                    <input id="adm-checkin-visible" type="checkbox">
+                    对该玩家显示“打卡点”页面
+                </label>
+                <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                    <button onclick="saveCheckinVisibility()" style="background:#117864; color:white; border:none; padding:7px 10px; border-radius:4px;">保存显示权限</button>
+                    <button onclick="saveAllCheckins()" style="background:#16a085; color:white; border:none; padding:7px 10px; border-radius:4px;">保存全部打卡</button>
+                </div>
+                <div id="adm-checkin-list" class="admin-checkin-list">
+                    <div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>
                 </div>
             </div>
 
@@ -3599,9 +3647,373 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     const dossierBasicPaneTemplate = document.getElementById('dossier-pane-basic').innerHTML;
     const dossierCombatPaneTemplate = document.getElementById('dossier-pane-combat').innerHTML;
     const CORE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+    const CHECKIN_POINTS = [
+        { no: 1, location: '白城', country: '东蒂尔兰' },
+        { no: 2, location: '卡尔诺维克', country: '东蒂尔兰' },
+        { no: 3, location: '因斯卡利亚', country: '西蒂尔兰' },
+        { no: 4, location: '瓦伦', country: '西蒂尔兰' },
+        { no: 5, location: '黑曜庭', country: '乌瑞克自治领' },
+        { no: 6, location: '绿金港', country: '埃林多尔共和国' },
+        { no: 7, location: '斯托罗维克堡', country: '韦尔丹蒂娅骑士团' },
+        { no: 8, location: '巴尔梅林', country: '班贝伦采邑主教区' },
+        { no: 9, location: '莫斯塔尔', country: '穆斯特采邑主教区' },
+        { no: 10, location: '卡林诺夫', country: '卡林迪亚大公国' },
+        { no: 11, location: '瓦萨尔斯克', country: '瓦萨兰大公国' },
+        { no: 12, location: '奥斯兰斯克', country: '奥斯兰大公国' },
+        { no: 13, location: '拜亚尔斯克', country: '拜恩大公国' },
+        { no: 14, location: '扎列斯克', country: '扎夫拉格勒公国' },
+        { no: 15, location: '诺沃扎夫拉', country: '扎夫拉格勒公国' },
+        { no: 16, location: '伊尔库斯克', country: '伊尔库斯基公国' },
+        { no: 17, location: '威尔诺', country: '巴登威尔公国' },
+        { no: 18, location: '萨洛姆', country: '乌尔岑公国' },
+        { no: 19, location: '卡法瑞', country: '乌尔岑公国' },
+        { no: 20, location: '泽纳罗', country: '泽尼塔公国' },
+        { no: 21, location: '沃尔加斯塔', country: '瓦拉齐斯坦选帝侯' },
+        { no: 22, location: '扎尔梅克', country: '奥尔比扎尔选帝侯' },
+        { no: 23, location: '伊兹米兰', country: '帕拉蒂纳选帝侯' },
+        { no: 24, location: '索尔卡巴德', country: '索尔卡巴德选帝侯' },
+        { no: 25, location: '米亚罗夫', country: '克里姆什选帝侯' },
+        { no: 26, location: '誓钢堡', country: '威斯特丽亚帝国' },
+        { no: 27, location: '北穗城', country: '威斯特丽亚帝国' },
+        { no: 28, location: '七门镇', country: '威斯特丽亚帝国' },
+        { no: 29, location: '南穗城', country: '威斯特丽亚帝国' },
+        { no: 30, location: '阿卡迪亚', country: '黄金王国' },
+        { no: 31, location: '布劳哈芬', country: '黄金王国' },
+        { no: 32, location: '洛伦茨塔特', country: '黄金王国' },
+        { no: 33, location: '施塔尔马克', country: '黄金王国' },
+        { no: 34, location: '银路城', country: '艾瑟加德王国' },
+        { no: 35, location: '白帆港', country: '艾瑟加德王国' },
+        { no: 36, location: '绿冠港', country: '艾瑟加德王国' },
+        { no: 37, location: '露米奈里斯', country: '露米奈里斯公国' },
+        { no: 38, location: '星井城', country: '梅尔吉亚共和国' },
+        { no: 39, location: '布拉尼斯', country: '斯瓦迪亚王国' },
+        { no: 40, location: '巴仑西', country: '瑞佐利亚共和国' },
+        { no: 41, location: '诺瓦罗姆', country: '瑞佐利亚共和国' },
+        { no: 42, location: '白钟城', country: '塞伦迪亚联邦' },
+        { no: 43, location: '塔拉科', country: '塞伦迪亚联邦' },
+        { no: 44, location: '未知地点', country: '加拉提亚斯' },
+        { no: 45, location: '霜门城', country: '格伦瑟公国' },
+        { no: 46, location: '鸦冠城', country: '罗德兰王国' },
+        { no: 47, location: '白河堡城', country: '尤克托巴尼亚王国' },
+        { no: 48, location: '白堤城', country: '达尔梅西亚王国' },
+        { no: 49, location: '达尔港', country: '达尔梅西亚王国' },
+        { no: 50, location: '灰砧城', country: '奎尔萨隆大公国' },
+        { no: 51, location: '晶冻谷', country: '温顿公国' },
+        { no: 52, location: '咕噜噜湾', country: '温顿公国' },
+        { no: 53, location: '碧透城', country: '温顿公国' },
+        { no: 54, location: '炎狱都', country: '提尔斯王国' },
+        { no: 55, location: '提尔沃德', country: '提尔斯王国' },
+        { no: 56, location: '渊血堡', country: '桑格里亚大公国' },
+        { no: 57, location: '11号试验场', country: '桑格里亚大公国' },
+        { no: 58, location: '哈洛克雷斯特', country: '阿拉贡拉斯大帝国' },
+        { no: 59, location: '埃尔温米尔', country: '阿拉贡拉斯大帝国' },
+        { no: 60, location: '洛里安威克', country: '阿拉贡拉斯大帝国' },
+        { no: 61, location: '高巢城', country: '瓦兰迪亚公爵领' },
+        { no: 62, location: '白翼堡', country: '瓦兰迪亚公爵领' },
+        { no: 63, location: '万花庭', country: '米尔豪斯公爵领' },
+        { no: 64, location: '细须城', country: '艾泽利亚公爵领' },
+        { no: 65, location: '绯岸城', country: '科尔萨公爵领' },
+        { no: 66, location: '归魂桥', country: '科尔萨公爵领' },
+        { no: 67, location: '沉礁堡', country: '莫拉维纳边境公爵领' },
+        { no: 68, location: '艾德赫', country: '莫拉维纳边境公爵领' },
+        { no: 69, location: '塔马齐尔', country: '阿马齐格帝国' },
+        { no: 70, location: '阿兹鲁姆', country: '阿马齐格帝国' },
+        { no: 71, location: '圣城', country: '阿马齐格帝国' },
+        { no: 72, location: '纳里德港', country: '阿马齐格帝国' },
+        { no: 73, location: '扎胡姆', country: '杰纳里苏丹国' },
+        { no: 74, location: '贾巴尔·希克马', country: '杰纳里苏丹国' },
+        { no: 75, location: '纳吉拉', country: '马德里巴大哈里发国' },
+        { no: 76, location: '米纳港', country: '马德里巴大哈里发国' },
+        { no: 77, location: '马拉基亚', country: '马德里巴大哈里发国' },
+        { no: 78, location: '北极点', country: '北极' },
+        { no: 79, location: '南极点', country: '南极' },
+        { no: 80, location: '月球', country: '地外' }
+    ];
+    let checkinPageVisible = false;
+    let checkinRecords = [];
 
     function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
     function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+    function cloneWorldDate(date = currentDate) {
+        return {
+            year: Number(date?.year) || 1494,
+            month: Number(date?.month) || 1,
+            day: Number(date?.day) || 1
+        };
+    }
+
+    function normalizeCheckinDate(raw, fallback = null) {
+        if (!raw) return fallback ? cloneWorldDate(fallback) : null;
+        const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const date = cloneWorldDate(value);
+        if (!date.year || !date.month || !date.day) return fallback ? cloneWorldDate(fallback) : null;
+        return date;
+    }
+
+    function getCheckinRecordMap(records = checkinRecords) {
+        const map = {};
+        (records || []).forEach(row => { map[row.point_no] = row; });
+        return map;
+    }
+
+    function applyCheckinVisibility() {
+        const canSee = isCurrentAdmin() || checkinPageVisible;
+        setElementDisplay('checkins-tab-btn', canSee, 'inline-block');
+        const section = document.getElementById('checkins-section');
+        if (!canSee && section?.classList.contains('active')) switchTab('shop');
+    }
+
+    function renderCheckinPoints(message = '') {
+        const container = document.getElementById('checkin-container');
+        if (!container) return;
+        document.getElementById('checkin-total-count').innerText = CHECKIN_POINTS.length;
+        document.getElementById('checkin-view-date').innerText = formatWorldDate(currentDate);
+
+        if (message) {
+            container.innerHTML = `<div style="grid-column:1/-1; color:#8a6d3b; background:#fff8e1; border:1px solid #f0d98c; border-radius:8px; padding:14px;">${escapeHTML(message)}</div>`;
+            document.getElementById('checkin-done-count').innerText = '0';
+            return;
+        }
+
+        if (!isCurrentAdmin() && !checkinPageVisible) {
+            container.innerHTML = '<div style="grid-column:1/-1; color:#999; text-align:center; padding:24px;">该页面尚未开放。</div>';
+            document.getElementById('checkin-done-count').innerText = '0';
+            return;
+        }
+
+        const recordMap = getCheckinRecordMap();
+        const doneCount = CHECKIN_POINTS.filter(point => recordMap[point.no]?.is_checked).length;
+        document.getElementById('checkin-done-count').innerText = doneCount;
+        container.innerHTML = CHECKIN_POINTS.map(point => {
+            const record = recordMap[point.no];
+            const done = record?.is_checked === true;
+            const checkedDate = done ? normalizeCheckinDate(record.checked_date, currentDate) : null;
+            const stamp = done && checkedDate
+                ? formatWorldDate(checkedDate)
+                : '未打卡';
+            return `
+                <div class="checkin-card ${done ? 'done' : ''}">
+                    <div class="checkin-card-head">
+                        <div>
+                            <div class="checkin-no">#${point.no}</div>
+                            <div class="checkin-place">${escapeHTML(point.location)}</div>
+                            <div class="checkin-country">${escapeHTML(point.country)}</div>
+                        </div>
+                        <div class="checkin-stamp ${done ? '' : 'pending'}">${escapeHTML(stamp)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadCheckinPoints() {
+        if (!viewingUserId) return;
+        try {
+            const { data: visibility, error: visibilityError } = await supabaseClient
+                .from('checkin_page_visibility')
+                .select('is_visible')
+                .eq('account_id', viewingUserId)
+                .maybeSingle();
+            if (visibilityError) throw visibilityError;
+
+            checkinPageVisible = visibility?.is_visible === true;
+            const canLoadRecords = isCurrentAdmin() || checkinPageVisible;
+            let records = [];
+            if (canLoadRecords) {
+                const { data, error } = await supabaseClient
+                    .from('checkin_records')
+                    .select('*')
+                    .eq('account_id', viewingUserId)
+                    .order('point_no');
+                if (error) throw error;
+                records = data || [];
+            }
+
+            checkinRecords = records;
+            applyCheckinVisibility();
+            renderCheckinPoints();
+        } catch (e) {
+            console.warn('打卡点加载失败:', e.message || e);
+            checkinPageVisible = false;
+            checkinRecords = [];
+            applyCheckinVisibility();
+            const setupHint = isCurrentAdmin()
+                ? '打卡点数据表尚未就绪，请先执行 checkin_points.sql。'
+                : '';
+            renderCheckinPoints(setupHint);
+        }
+    }
+
+    function getAdminCheckinDate(pointNo) {
+        const y = parseInt(document.getElementById(`adm-checkin-y-${pointNo}`)?.value, 10);
+        const m = parseInt(document.getElementById(`adm-checkin-m-${pointNo}`)?.value, 10);
+        const d = parseInt(document.getElementById(`adm-checkin-d-${pointNo}`)?.value, 10);
+        if (!y || !m || !d) return cloneWorldDate(currentDate);
+        return { year: y, month: m, day: d };
+    }
+
+    function handleCheckinCheckedToggle(pointNo) {
+        const checked = document.getElementById(`adm-checkin-c-${pointNo}`)?.checked;
+        if (!checked) return;
+        const date = cloneWorldDate(currentDate);
+        const y = document.getElementById(`adm-checkin-y-${pointNo}`);
+        const m = document.getElementById(`adm-checkin-m-${pointNo}`);
+        const d = document.getElementById(`adm-checkin-d-${pointNo}`);
+        if (y && !y.value) y.value = date.year;
+        if (m && !m.value) m.value = date.month;
+        if (d && !d.value) d.value = date.day;
+    }
+
+    function renderAdminCheckinList(records = checkinRecords) {
+        const list = document.getElementById('adm-checkin-list');
+        if (!list) return;
+        if (!selectedUserId) {
+            list.innerHTML = '<div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>';
+            return;
+        }
+
+        const map = getCheckinRecordMap(records);
+        list.innerHTML = `
+            <div class="admin-checkin-row admin-checkin-head">
+                <div>#</div><div>地点</div><div>国家</div><div>打卡</div><div>年</div><div>月</div><div>日</div><div>操作</div>
+            </div>
+            ${CHECKIN_POINTS.map(point => {
+                const record = map[point.no];
+                const done = record?.is_checked === true;
+                const date = normalizeCheckinDate(record?.checked_date, currentDate) || cloneWorldDate(currentDate);
+                return `
+                    <div class="admin-checkin-row">
+                        <div>${point.no}</div>
+                        <div>${escapeHTML(point.location)}</div>
+                        <div>${escapeHTML(point.country)}</div>
+                        <label style="display:flex; align-items:center; justify-content:center;">
+                            <input id="adm-checkin-c-${point.no}" type="checkbox" ${done ? 'checked' : ''} onchange="handleCheckinCheckedToggle(${point.no})">
+                        </label>
+                        <input id="adm-checkin-y-${point.no}" type="number" value="${date.year}">
+                        <input id="adm-checkin-m-${point.no}" type="number" min="1" max="12" value="${date.month}">
+                        <input id="adm-checkin-d-${point.no}" type="number" min="1" max="30" value="${date.day}">
+                        <button onclick="saveCheckinPoint(${point.no})">保存</button>
+                    </div>
+                `;
+            }).join('')}
+        `;
+    }
+
+    async function loadAdminCheckins(accountId = selectedUserId) {
+        if (!isCurrentAdmin()) return;
+        const visibleInput = document.getElementById('adm-checkin-visible');
+        if (!accountId) {
+            if (visibleInput) visibleInput.checked = false;
+            renderAdminCheckinList([]);
+            return;
+        }
+
+        const list = document.getElementById('adm-checkin-list');
+        if (list) list.innerHTML = '<div style="color:#999; text-align:center; padding:18px;">打卡点加载中...</div>';
+        try {
+            const { data: visibility, error: visibilityError } = await supabaseClient
+                .from('checkin_page_visibility')
+                .select('is_visible')
+                .eq('account_id', accountId)
+                .maybeSingle();
+            if (visibilityError) throw visibilityError;
+            if (visibleInput) visibleInput.checked = visibility?.is_visible === true;
+
+            const { data: records, error: recordsError } = await supabaseClient
+                .from('checkin_records')
+                .select('*')
+                .eq('account_id', accountId)
+                .order('point_no');
+            if (recordsError) throw recordsError;
+            renderAdminCheckinList(records || []);
+        } catch (e) {
+            console.warn('DM 打卡点面板加载失败:', e.message || e);
+            if (list) list.innerHTML = `<div style="color:#c0392b; padding:12px;">打卡点加载失败：${escapeHTML(e.message || e)}<br>请确认已执行 checkin_points.sql。</div>`;
+        }
+    }
+
+    async function saveCheckinVisibility() {
+        if (!await requireAdminRole()) return;
+        if (!selectedUserId) return alert('请先选择一个玩家');
+        const isVisible = document.getElementById('adm-checkin-visible')?.checked === true;
+        showLoading();
+        try {
+            const { error } = await supabaseClient
+                .from('checkin_page_visibility')
+                .upsert({
+                    account_id: selectedUserId,
+                    is_visible: isVisible,
+                    updated_by: myId,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'account_id' });
+            if (error) throw error;
+            await logAction('DM操作', `${isVisible ? '开放' : '关闭'}打卡点页面：User:${selectedUserId}`);
+            if (selectedUserId === viewingUserId) await loadCheckinPoints();
+            alert('打卡点显示权限已保存。');
+        } catch (e) {
+            console.error(e);
+            alert('保存失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function buildCheckinSaveRow(pointNo) {
+        const checked = document.getElementById(`adm-checkin-c-${pointNo}`)?.checked === true;
+        return {
+            account_id: selectedUserId,
+            point_no: pointNo,
+            is_checked: checked,
+            checked_date: checked ? getAdminCheckinDate(pointNo) : null,
+            updated_by: myId,
+            updated_at: new Date().toISOString()
+        };
+    }
+
+    async function saveCheckinPoint(pointNo, silent = false) {
+        if (!await requireAdminRole()) return;
+        if (!selectedUserId) return alert('请先选择一个玩家');
+        showLoading();
+        try {
+            const { error } = await supabaseClient
+                .from('checkin_records')
+                .upsert(buildCheckinSaveRow(pointNo), { onConflict: 'account_id,point_no' });
+            if (error) throw error;
+            await logAction('DM操作', `更新打卡点 #${pointNo}：User:${selectedUserId}`);
+            await loadAdminCheckins(selectedUserId);
+            if (selectedUserId === viewingUserId) await loadCheckinPoints();
+            if (!silent) alert('打卡记录已保存。');
+        } catch (e) {
+            console.error(e);
+            alert('保存失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function saveAllCheckins() {
+        if (!await requireAdminRole()) return;
+        if (!selectedUserId) return alert('请先选择一个玩家');
+        showLoading();
+        try {
+            const rows = CHECKIN_POINTS.map(point => buildCheckinSaveRow(point.no));
+            const { error } = await supabaseClient
+                .from('checkin_records')
+                .upsert(rows, { onConflict: 'account_id,point_no' });
+            if (error) throw error;
+            await logAction('DM操作', `批量更新打卡点：User:${selectedUserId}`);
+            await loadAdminCheckins(selectedUserId);
+            if (selectedUserId === viewingUserId) await loadCheckinPoints();
+            alert('全部打卡记录已保存。');
+        } catch (e) {
+            console.error(e);
+            alert('保存失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
     function setupMainRealtime(targetId) {
         // 如果已经有频道在运行，先关掉
         if (mainRealtimeChannel) {
@@ -3667,6 +4079,16 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'research_projects', filter: `user_id=eq.${targetId}` }, (payload) => {
             console.log('科研进度有变动');
             if (isCurrentAdmin()) loadAdminResearch(); 
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'checkin_page_visibility', filter: `account_id=eq.${targetId}` }, () => {
+                console.log('打卡点页面权限有更新');
+                loadCheckinPoints();
+                if (isCurrentAdmin() && selectedUserId === targetId) loadAdminCheckins(targetId);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'checkin_records', filter: `account_id=eq.${targetId}` }, () => {
+                console.log('打卡点记录有更新');
+                loadCheckinPoints();
+                if (isCurrentAdmin() && selectedUserId === targetId) loadAdminCheckins(targetId);
             })
             .subscribe();
     }
@@ -5318,6 +5740,7 @@ async function loadGold() {
 
     async function switchTab(tab) {
         if (tab === 'security' && !await requireAdminRole(['root'], true)) return;
+        if (tab === 'checkins' && !isCurrentAdmin() && !checkinPageVisible) return alert('打卡点页面尚未开放。');
         setWarBgmActive(tab === 'war');
 
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -5337,6 +5760,9 @@ async function loadGold() {
         }
         if (tab === 'war') {
             loadWarPosterStrip();
+        }
+        if (tab === 'checkins') {
+            loadCheckinPoints();
         }
     }
 
@@ -5381,6 +5807,7 @@ async function loadGold() {
             loadAdminMonsters(); 
             loadAdminResearch(); 
             loadStockAdminPanel();
+            loadAdminCheckins(selectedUserId);
         }
     }
 // --- 集市加载 ---
@@ -6112,6 +6539,10 @@ async function buy(id, p, n, c) {
             if (visibilitySelect) visibilitySelect.innerHTML = '';
             if (visibilityMask) visibilityMask.value = '';
             if (visibilityCheck) visibilityCheck.checked = false;
+            const checkinVisible = document.getElementById('adm-checkin-visible');
+            const checkinList = document.getElementById('adm-checkin-list');
+            if (checkinVisible) checkinVisible.checked = false;
+            if (checkinList) checkinList.innerHTML = '<div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>';
             loadStockAdminPanel();
             return;
         }
@@ -6199,6 +6630,7 @@ async function buy(id, p, n, c) {
         loadEmpForVisibility(selectedUserId);
         loadAdminResearch();
         loadStockAdminPanel();
+        loadAdminCheckins(selectedUserId);
         loadWarPosterStrip();
     }
 
@@ -6277,7 +6709,8 @@ async function buy(id, p, n, c) {
             loadShop(),       // 3. 商店
             loadTeam(),       // 4. 队伍
             loadInventory(),  // 5. 背包
-            loadEmployees()   // 6. 雇员
+            loadEmployees(),  // 6. 雇员
+            loadCheckinPoints() // 7. 打卡点
         ];
 
         let completed = 0;
@@ -6309,6 +6742,8 @@ async function buy(id, p, n, c) {
         ]);
         if (typeof loadAdminResearch === 'function') loadAdminResearch();
         if (typeof loadStockAdminPanel === 'function') loadStockAdminPanel();
+        if (typeof loadCheckinPoints === 'function') loadCheckinPoints();
+        if (typeof loadAdminCheckins === 'function' && selectedUserId) loadAdminCheckins(selectedUserId);
     }
 
     // ================== ：加载日志 ==================
