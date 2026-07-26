@@ -591,13 +591,24 @@
         .checkin-leaderboard-head { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 14px; background:#eef8f5; border-bottom:1px solid #dbe6e2; }
         .checkin-leaderboard-title { margin:0; color:#18433d; font-size:1.1em; }
         .checkin-leaderboard-list { max-height:360px; overflow:auto; }
-        .checkin-rank-row { display:grid; grid-template-columns:46px minmax(150px,1.5fr) 86px 82px minmax(180px,2fr); gap:10px; align-items:center; padding:9px 12px; border-bottom:1px solid #edf2f0; font-size:0.9em; }
+        .checkin-rank-row { display:grid; grid-template-columns:46px minmax(150px,1fr) 86px 82px minmax(360px,3fr); gap:10px; align-items:start; padding:10px 12px; border-bottom:1px solid #edf2f0; font-size:0.9em; }
         .checkin-rank-row:nth-child(even) { background:#fbfdfc; }
         .checkin-rank-row.header { position:sticky; top:0; z-index:1; background:#f7fbfa; color:#52645f; font-weight:bold; }
         .checkin-rank-no { color:#7f8c8d; font-weight:bold; }
         .checkin-rank-team { font-weight:bold; color:#25322f; }
         .checkin-rank-meta { color:#666; font-size:0.82em; margin-top:2px; }
-        .checkin-member-line { color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .checkin-member-grid { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; }
+        .checkin-member-chip { display:grid; grid-template-columns:auto 1fr; gap:5px 7px; align-items:center; padding:7px 8px; border:1px solid #e2e8e5; border-radius:6px; background:#fff; color:#34423f; line-height:1.35; min-width:170px; max-width:100%; }
+        .checkin-member-name { font-weight:bold; color:#25322f; overflow-wrap:anywhere; }
+        .checkin-member-meta { grid-column:2; color:#667; font-size:0.82em; overflow-wrap:anywhere; }
+        .checkin-badge { display:inline-flex; align-items:center; justify-content:center; min-width:38px; padding:2px 6px; border-radius:4px; font-size:0.78em; font-weight:bold; border:1px solid transparent; white-space:nowrap; }
+        .checkin-badge-white { background:#fff; color:#6f7c80; border-color:#cfd8dc; }
+        .checkin-badge-copper { background:#b87333; color:#fff; border-color:#9a5b24; }
+        .checkin-badge-iron { background:#606b72; color:#fff; border-color:#4b5459; }
+        .checkin-badge-silver { background:#dfe7ea; color:#2f3a40; border-color:#bac8ce; }
+        .checkin-badge-gold { background:#f1c40f; color:#382b00; border-color:#d4a908; }
+        .checkin-badge-black { background:#17191c; color:#f4f4f4; border-color:#000; }
+        .checkin-badge-unknown { background:#eef2f1; color:#60706c; border-color:#d9e1de; }
         .admin-checkin-list { max-height:520px; overflow:auto; border:1px solid #e5ecea; background:#fff; border-radius:6px; }
         .admin-checkin-row { display:grid; grid-template-columns:34px minmax(125px,1fr) 92px 62px 54px 54px 54px 76px; gap:6px; align-items:center; padding:7px; border-bottom:1px solid #edf2f0; font-size:0.84em; }
         .admin-checkin-row:nth-child(even) { background:#fbfdfc; }
@@ -4051,9 +4062,30 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         return [];
     }
 
+    function normalizeBadgeName(badge) {
+        const raw = String(badge || '').trim();
+        if (!raw) return '未知';
+        if (raw.endsWith('牌')) return raw;
+        if (['白', '铜', '铁', '银', '金', '黑'].includes(raw)) return `${raw}牌`;
+        return raw;
+    }
+
     function getBadgeWeight(badge) {
-        const key = String(badge || '').trim();
+        const key = normalizeBadgeName(badge);
         return CHECKIN_BADGE_WEIGHTS[key] ?? 0;
+    }
+
+    function getBadgeClass(badge) {
+        const key = normalizeBadgeName(badge);
+        const classMap = {
+            '白牌': 'checkin-badge-white',
+            '铜牌': 'checkin-badge-copper',
+            '铁牌': 'checkin-badge-iron',
+            '银牌': 'checkin-badge-silver',
+            '金牌': 'checkin-badge-gold',
+            '黑牌': 'checkin-badge-black'
+        };
+        return classMap[key] || 'checkin-badge-unknown';
     }
 
     function getTeamBadgeRatio(team) {
@@ -4079,11 +4111,31 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const list = normalizeTeamMembers(members);
         if (list.length === 0) return '暂无成员资料';
         const shown = list.slice(0, limit).map(member => {
-            const bits = [member.name, member.gender, member.race, member.class, member.badge].filter(Boolean);
+            const bits = [member.name, member.gender, member.race, member.class, normalizeBadgeName(member.badge)].filter(Boolean);
             return bits.join(' / ');
         });
         const extra = list.length > limit ? ` 等${list.length}人` : '';
         return `${shown.join('；')}${extra}`;
+    }
+
+    function renderTeamMemberBlocks(members) {
+        const list = normalizeTeamMembers(members);
+        if (list.length === 0) return '<div style="color:#999;">暂无成员资料</div>';
+        return `
+            <div class="checkin-member-grid">
+                ${list.map(member => {
+                    const badge = normalizeBadgeName(member.badge);
+                    const meta = [member.gender, member.race, member.class].filter(Boolean).join(' / ');
+                    return `
+                        <div class="checkin-member-chip">
+                            <span class="checkin-badge ${getBadgeClass(badge)}">${escapeHTML(badge)}</span>
+                            <span class="checkin-member-name">${escapeHTML(member.name || '未命名')}</span>
+                            <span class="checkin-member-meta">${escapeHTML(meta || '资料未录入')}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
     function renderCheckinLeaderboard(message = '') {
@@ -4117,7 +4169,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                         </div>
                         <div><strong>${checkinCount}</strong> / ${CHECKIN_POINTS.length}</div>
                         <div>${Math.round(ratio * 100)}%<div class="checkin-rank-meta">${badgeScore}/${members.length * CHECKIN_BADGE_WEIGHTS['黑牌'] || 0}</div></div>
-                        <div class="checkin-member-line" title="${escapeHTML(formatTeamMembers(members, 99))}">${escapeHTML(formatTeamMembers(members))}</div>
+                        <div>${renderTeamMemberBlocks(members)}</div>
                     </div>
                 `;
             }).join('')}
