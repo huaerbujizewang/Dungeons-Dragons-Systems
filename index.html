@@ -587,12 +587,24 @@
         .checkin-country { color:#667; font-size:0.86em; margin-top:4px; }
         .checkin-stamp { color:#16a085; font-weight:bold; font-size:0.85em; white-space:nowrap; }
         .checkin-stamp.pending { color:#95a5a6; }
+        .checkin-leaderboard { border:1px solid #dbe6e2; border-radius:8px; background:#fff; margin-bottom:16px; overflow:hidden; }
+        .checkin-leaderboard-head { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 14px; background:#eef8f5; border-bottom:1px solid #dbe6e2; }
+        .checkin-leaderboard-title { margin:0; color:#18433d; font-size:1.1em; }
+        .checkin-leaderboard-list { max-height:360px; overflow:auto; }
+        .checkin-rank-row { display:grid; grid-template-columns:46px minmax(150px,1.5fr) 86px 82px minmax(180px,2fr); gap:10px; align-items:center; padding:9px 12px; border-bottom:1px solid #edf2f0; font-size:0.9em; }
+        .checkin-rank-row:nth-child(even) { background:#fbfdfc; }
+        .checkin-rank-row.header { position:sticky; top:0; z-index:1; background:#f7fbfa; color:#52645f; font-weight:bold; }
+        .checkin-rank-no { color:#7f8c8d; font-weight:bold; }
+        .checkin-rank-team { font-weight:bold; color:#25322f; }
+        .checkin-rank-meta { color:#666; font-size:0.82em; margin-top:2px; }
+        .checkin-member-line { color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .admin-checkin-list { max-height:520px; overflow:auto; border:1px solid #e5ecea; background:#fff; border-radius:6px; }
         .admin-checkin-row { display:grid; grid-template-columns:34px minmax(125px,1fr) 92px 62px 54px 54px 54px 76px; gap:6px; align-items:center; padding:7px; border-bottom:1px solid #edf2f0; font-size:0.84em; }
         .admin-checkin-row:nth-child(even) { background:#fbfdfc; }
         .admin-checkin-row input[type="number"] { width:100%; box-sizing:border-box; padding:4px; border:1px solid #ccd8d5; border-radius:4px; }
         .admin-checkin-row button { padding:5px 6px; border:none; border-radius:4px; background:#16a085; color:#fff; cursor:pointer; }
         .admin-checkin-head { position:sticky; top:0; z-index:1; background:#eaf6f3; font-weight:bold; color:#24564f; }
+        .admin-leaderboard-form input, .admin-leaderboard-form textarea, .admin-leaderboard-form select { box-sizing:border-box; width:100%; padding:6px; border:1px solid #ccd8d5; border-radius:4px; font-family:inherit; }
         
         .info-bar { margin-left: auto; text-align: right; font-size: 0.9em; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
         
@@ -1579,6 +1591,15 @@
             <div class="checkin-summary">
                 <span>已打卡：<strong id="checkin-done-count">0</strong> / <strong id="checkin-total-count">80</strong></span>
                 <span>当前视角：<strong id="checkin-view-date">日期加载中...</strong></span>
+            </div>
+        </div>
+        <div class="checkin-leaderboard">
+            <div class="checkin-leaderboard-head">
+                <h3 class="checkin-leaderboard-title">排行榜</h3>
+                <button onclick="loadCheckinLeaderboard()" style="border:1px solid #16a085; background:#fff; color:#117864; padding:6px 10px; border-radius:4px; cursor:pointer;">刷新榜单</button>
+            </div>
+            <div id="checkin-leaderboard-container" class="checkin-leaderboard-list">
+                <div style="padding:12px; color:#999;">榜单加载中...</div>
             </div>
         </div>
         <div id="checkin-container" class="checkin-grid"></div>
@@ -2592,6 +2613,31 @@
                 <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
                     <button onclick="saveCheckinVisibility()" style="background:#117864; color:white; border:none; padding:7px 10px; border-radius:4px;">保存显示权限</button>
                     <button onclick="saveAllCheckins()" style="background:#16a085; color:white; border:none; padding:7px 10px; border-radius:4px;">保存全部打卡</button>
+                </div>
+                <div style="border:1px dashed #16a085; background:#fff; border-radius:6px; padding:8px; margin-bottom:8px;">
+                    <div style="font-size:0.84em; font-weight:bold; color:#117864; margin-bottom:6px;">玩家小队归属</div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input id="adm-checkin-player-team-no" type="number" min="1" value="100" style="flex:1; padding:6px; border:1px solid #ccd8d5; border-radius:4px;">
+                        <button onclick="saveSelectedPlayerTeamAssignment()" style="background:#117864; color:white; border:none; padding:7px 10px; border-radius:4px;">指定为当前玩家小队</button>
+                    </div>
+                    <div style="font-size:0.76em; color:#666; margin-top:5px;">默认第100小队；保存后该队打卡数自动统计此玩家账号。</div>
+                </div>
+                <div class="admin-leaderboard-form" style="border:1px solid #dbe6e2; background:#fff; border-radius:6px; padding:8px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+                        <strong style="font-size:0.86em; color:#117864;">排行榜队伍资料编辑</strong>
+                        <button onclick="loadAdminLeaderboardTeams()" style="font-size:0.78em; padding:4px 8px;">读取队伍</button>
+                    </div>
+                    <select id="adm-checkin-team-select" onchange="syncAdminLeaderboardTeamForm()" style="margin-bottom:6px;"></select>
+                    <div style="display:grid; grid-template-columns:78px 1fr 86px; gap:6px; margin-bottom:6px;">
+                        <input id="adm-checkin-team-no" type="number" min="1" placeholder="队号">
+                        <input id="adm-checkin-team-name" type="text" placeholder="队名">
+                        <input id="adm-checkin-team-count" type="number" min="0" max="80" value="0" placeholder="打卡">
+                    </div>
+                    <textarea id="adm-checkin-team-members" style="height:120px; font-family:monospace; font-size:0.78em;" placeholder='成员 JSON，例如 [{"name":"安妮特","gender":"女","race":"魅魔","class":"战士","badge":"铁牌"}]'></textarea>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+                        <button onclick="saveAdminLeaderboardTeam()" style="background:#16a085; color:white; border:none; padding:7px 10px; border-radius:4px;">保存/新建队伍</button>
+                        <button onclick="deleteAdminLeaderboardTeam()" style="background:#c0392b; color:white; border:none; padding:7px 10px; border-radius:4px;">删除队伍</button>
+                    </div>
                 </div>
                 <div id="adm-checkin-list" class="admin-checkin-list">
                     <div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>
@@ -3955,6 +4001,16 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     ];
     let checkinPageVisible = false;
     let checkinRecords = [];
+    let checkinLeaderboardTeams = [];
+    let adminLeaderboardTeams = [];
+    const CHECKIN_BADGE_WEIGHTS = {
+        '白牌': 0,
+        '铜牌': 1,
+        '铁牌': 3,
+        '银牌': 6,
+        '金牌': 10,
+        '黑牌': 15
+    };
 
     function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
     function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
@@ -3979,6 +4035,105 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const map = {};
         (records || []).forEach(row => { map[row.point_no] = row; });
         return map;
+    }
+
+    function normalizeTeamMembers(members) {
+        if (Array.isArray(members)) return members;
+        if (!members) return [];
+        if (typeof members === 'string') {
+            try {
+                const parsed = JSON.parse(members);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+        return [];
+    }
+
+    function getBadgeWeight(badge) {
+        const key = String(badge || '').trim();
+        return CHECKIN_BADGE_WEIGHTS[key] ?? 0;
+    }
+
+    function getTeamBadgeRatio(team) {
+        const members = normalizeTeamMembers(team.members);
+        if (members.length === 0) return 0;
+        const total = members.reduce((sum, member) => sum + getBadgeWeight(member.badge), 0);
+        return total / (members.length * CHECKIN_BADGE_WEIGHTS['黑牌']);
+    }
+
+    function getTeamBadgeScore(team) {
+        return normalizeTeamMembers(team.members).reduce((sum, member) => sum + getBadgeWeight(member.badge), 0);
+    }
+
+    function sortLeaderboardTeams(teams) {
+        return [...(teams || [])].sort((a, b) => {
+            const ratioDiff = getTeamBadgeRatio(b) - getTeamBadgeRatio(a);
+            if (Math.abs(ratioDiff) > 0.000001) return ratioDiff;
+            return String(a.team_name || '').localeCompare(String(b.team_name || ''), 'zh-Hans-CN-u-co-pinyin');
+        });
+    }
+
+    function formatTeamMembers(members, limit = 5) {
+        const list = normalizeTeamMembers(members);
+        if (list.length === 0) return '暂无成员资料';
+        const shown = list.slice(0, limit).map(member => {
+            const bits = [member.name, member.gender, member.race, member.class, member.badge].filter(Boolean);
+            return bits.join(' / ');
+        });
+        const extra = list.length > limit ? ` 等${list.length}人` : '';
+        return `${shown.join('；')}${extra}`;
+    }
+
+    function renderCheckinLeaderboard(message = '') {
+        const box = document.getElementById('checkin-leaderboard-container');
+        if (!box) return;
+        if (message) {
+            box.innerHTML = `<div style="padding:12px; color:#8a6d3b;">${escapeHTML(message)}</div>`;
+            return;
+        }
+        const teams = sortLeaderboardTeams(checkinLeaderboardTeams);
+        if (teams.length === 0) {
+            box.innerHTML = '<div style="padding:12px; color:#999;">暂无排行榜数据。</div>';
+            return;
+        }
+        box.innerHTML = `
+            <div class="checkin-rank-row header">
+                <div>排名</div><div>队伍</div><div>打卡</div><div>牌占比</div><div>成员</div>
+            </div>
+            ${teams.map((team, index) => {
+                const members = normalizeTeamMembers(team.members);
+                const badgeScore = getTeamBadgeScore(team);
+                const ratio = getTeamBadgeRatio(team);
+                const checkinCount = Number(team.checkin_count ?? team.manual_checkin_count ?? 0) || 0;
+                const linkedCount = Array.isArray(team.player_account_ids) ? team.player_account_ids.length : 0;
+                return `
+                    <div class="checkin-rank-row">
+                        <div class="checkin-rank-no">#${index + 1}</div>
+                        <div>
+                            <div class="checkin-rank-team">${escapeHTML(team.team_name || `第${team.team_no}小队`)}</div>
+                            <div class="checkin-rank-meta">第${team.team_no}小队${linkedCount ? ` · 玩家账号 x${linkedCount}` : ''}</div>
+                        </div>
+                        <div><strong>${checkinCount}</strong> / ${CHECKIN_POINTS.length}</div>
+                        <div>${Math.round(ratio * 100)}%<div class="checkin-rank-meta">${badgeScore}/${members.length * CHECKIN_BADGE_WEIGHTS['黑牌'] || 0}</div></div>
+                        <div class="checkin-member-line" title="${escapeHTML(formatTeamMembers(members, 99))}">${escapeHTML(formatTeamMembers(members))}</div>
+                    </div>
+                `;
+            }).join('')}
+        `;
+    }
+
+    async function loadCheckinLeaderboard() {
+        try {
+            const { data, error } = await supabaseClient.rpc('get_checkin_leaderboard');
+            if (error) throw error;
+            checkinLeaderboardTeams = data || [];
+            renderCheckinLeaderboard();
+        } catch (e) {
+            console.warn('打卡排行榜加载失败:', e.message || e);
+            renderCheckinLeaderboard('排行榜数据暂不可用，请确认已执行新版 checkin_points.sql。');
+        }
     }
 
     function applyCheckinVisibility() {
@@ -4057,6 +4212,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             checkinRecords = records;
             applyCheckinVisibility();
             renderCheckinPoints();
+            if (canLoadRecords) loadCheckinLeaderboard();
         } catch (e) {
             console.warn('打卡点加载失败:', e.message || e);
             checkinPageVisible = false;
@@ -4129,6 +4285,8 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const visibleInput = document.getElementById('adm-checkin-visible');
         if (!accountId) {
             if (visibleInput) visibleInput.checked = false;
+            const teamInput = document.getElementById('adm-checkin-player-team-no');
+            if (teamInput) teamInput.value = 100;
             renderAdminCheckinList([]);
             return;
         }
@@ -4144,6 +4302,15 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             if (visibilityError) throw visibilityError;
             if (visibleInput) visibleInput.checked = visibility?.is_visible === true;
 
+            const { data: assignment, error: assignmentError } = await supabaseClient
+                .from('checkin_player_team_assignments')
+                .select('team_no')
+                .eq('account_id', accountId)
+                .maybeSingle();
+            if (assignmentError) throw assignmentError;
+            const teamInput = document.getElementById('adm-checkin-player-team-no');
+            if (teamInput) teamInput.value = assignment?.team_no || 100;
+
             const { data: records, error: recordsError } = await supabaseClient
                 .from('checkin_records')
                 .select('*')
@@ -4154,6 +4321,133 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         } catch (e) {
             console.warn('DM 打卡点面板加载失败:', e.message || e);
             if (list) list.innerHTML = `<div style="color:#c0392b; padding:12px;">打卡点加载失败：${escapeHTML(e.message || e)}<br>请确认已执行 checkin_points.sql。</div>`;
+        }
+    }
+
+    async function saveSelectedPlayerTeamAssignment() {
+        if (!await requireAdminRole()) return;
+        if (!selectedUserId) return alert('请先选择一个玩家');
+        const teamNo = parseInt(document.getElementById('adm-checkin-player-team-no')?.value, 10) || 100;
+        showLoading();
+        try {
+            const { error } = await supabaseClient
+                .from('checkin_player_team_assignments')
+                .upsert({
+                    account_id: selectedUserId,
+                    team_no: teamNo,
+                    updated_by: myId,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'account_id' });
+            if (error) throw error;
+            await logAction('DM操作', `将玩家(ID:${selectedUserId}) 指定为第${teamNo}小队`);
+            await loadCheckinLeaderboard();
+            alert('玩家小队归属已保存。');
+        } catch (e) {
+            console.error(e);
+            alert('保存失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function populateAdminLeaderboardSelect() {
+        const select = document.getElementById('adm-checkin-team-select');
+        if (!select) return;
+        const sorted = sortLeaderboardTeams(adminLeaderboardTeams);
+        select.innerHTML = sorted.map(team => `<option value="${team.team_no}">第${team.team_no}小队 · ${escapeHTML(team.team_name || '')}</option>`).join('');
+        syncAdminLeaderboardTeamForm();
+    }
+
+    async function loadAdminLeaderboardTeams() {
+        if (!isCurrentAdmin()) return;
+        const select = document.getElementById('adm-checkin-team-select');
+        if (select) select.innerHTML = '<option value="">读取中...</option>';
+        try {
+            const { data, error } = await supabaseClient
+                .from('checkin_leaderboard_teams')
+                .select('*')
+                .order('team_no');
+            if (error) throw error;
+            adminLeaderboardTeams = data || [];
+            populateAdminLeaderboardSelect();
+        } catch (e) {
+            console.warn('DM 排行榜队伍读取失败:', e.message || e);
+            if (select) select.innerHTML = '<option value="">请先执行新版 checkin_points.sql</option>';
+        }
+    }
+
+    function syncAdminLeaderboardTeamForm() {
+        const select = document.getElementById('adm-checkin-team-select');
+        const teamNo = parseInt(select?.value, 10);
+        const team = adminLeaderboardTeams.find(row => row.team_no === teamNo) || {};
+        const noInput = document.getElementById('adm-checkin-team-no');
+        const nameInput = document.getElementById('adm-checkin-team-name');
+        const countInput = document.getElementById('adm-checkin-team-count');
+        const membersInput = document.getElementById('adm-checkin-team-members');
+        if (noInput) noInput.value = team.team_no || '';
+        if (nameInput) nameInput.value = team.team_name || '';
+        if (countInput) countInput.value = Number(team.manual_checkin_count || 0);
+        if (membersInput) membersInput.value = JSON.stringify(normalizeTeamMembers(team.members), null, 2);
+    }
+
+    function collectAdminTeamMembers() {
+        const text = document.getElementById('adm-checkin-team-members')?.value.trim() || '[]';
+        const members = JSON.parse(text);
+        if (!Array.isArray(members)) throw new Error('成员资料必须是 JSON 数组');
+        return members;
+    }
+
+    async function saveAdminLeaderboardTeam() {
+        if (!await requireAdminRole()) return;
+        const teamNo = parseInt(document.getElementById('adm-checkin-team-no')?.value, 10);
+        const teamName = document.getElementById('adm-checkin-team-name')?.value.trim();
+        const manualCount = Math.max(0, Math.min(CHECKIN_POINTS.length, parseInt(document.getElementById('adm-checkin-team-count')?.value, 10) || 0));
+        if (!teamNo || !teamName) return alert('队号和队名必填');
+        showLoading();
+        try {
+            const members = collectAdminTeamMembers();
+            const { error } = await supabaseClient
+                .from('checkin_leaderboard_teams')
+                .upsert({
+                    team_no: teamNo,
+                    team_name: teamName,
+                    manual_checkin_count: manualCount,
+                    members,
+                    updated_by: myId,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'team_no' });
+            if (error) throw error;
+            await logAction('DM操作', `保存排行榜队伍：第${teamNo}小队 [${teamName}]`);
+            await Promise.all([loadAdminLeaderboardTeams(), loadCheckinLeaderboard()]);
+            alert('队伍资料已保存。');
+        } catch (e) {
+            console.error(e);
+            alert('保存失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function deleteAdminLeaderboardTeam() {
+        if (!await requireAdminRole()) return;
+        const teamNo = parseInt(document.getElementById('adm-checkin-team-no')?.value, 10);
+        if (!teamNo) return alert('请先选择或填写队号');
+        if (!confirm(`确定删除第${teamNo}小队的排行榜资料吗？`)) return;
+        showLoading();
+        try {
+            const { error } = await supabaseClient
+                .from('checkin_leaderboard_teams')
+                .delete()
+                .eq('team_no', teamNo);
+            if (error) throw error;
+            await logAction('DM操作', `删除排行榜队伍：第${teamNo}小队`);
+            await Promise.all([loadAdminLeaderboardTeams(), loadCheckinLeaderboard()]);
+            alert('队伍资料已删除。');
+        } catch (e) {
+            console.error(e);
+            alert('删除失败：' + (e.message || e));
+        } finally {
+            hideLoading();
         }
     }
 
@@ -6036,6 +6330,7 @@ async function loadGold() {
             loadAdminResearch(); 
             loadStockAdminPanel();
             loadAdminCheckins(selectedUserId);
+            loadAdminLeaderboardTeams();
         }
     }
 // --- 集市加载 ---
@@ -6771,6 +7066,8 @@ async function buy(id, p, n, c) {
             const checkinVisible = document.getElementById('adm-checkin-visible');
             const checkinList = document.getElementById('adm-checkin-list');
             if (checkinVisible) checkinVisible.checked = false;
+            const checkinTeamInput = document.getElementById('adm-checkin-player-team-no');
+            if (checkinTeamInput) checkinTeamInput.value = 100;
             if (checkinList) checkinList.innerHTML = '<div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>';
             loadStockAdminPanel();
             return;
@@ -6939,7 +7236,8 @@ async function buy(id, p, n, c) {
             loadTeam(),       // 4. 队伍
             loadInventory(),  // 5. 背包
             loadEmployees(),  // 6. 雇员
-            loadCheckinPoints() // 7. 打卡点
+            loadCheckinPoints(), // 7. 打卡点
+            loadCheckinLeaderboard() // 8. 打卡排行榜
         ];
 
         let completed = 0;
