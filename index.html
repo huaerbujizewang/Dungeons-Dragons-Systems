@@ -2049,6 +2049,14 @@
                     <h3 style="margin-top:0; color:#c0392b;">🚨 登录监控日志</h3>
                     <div id="login-log-container" style="height:300px; overflow-y:auto; background:#fff; padding:10px; border:1px solid #eee;"></div>
                 </div>
+                <div class="admin-box" style="border:1px solid #8e44ad; padding:15px; border-radius:8px; background:#fbf5ff; flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px;">
+                        <h3 style="margin:0; color:#8e44ad;">◎ 玩家行为记录</h3>
+                        <button onclick="loadPlayerActivityLogs()" style="font-size:0.8em;">读取最新</button>
+                    </div>
+                    <div style="font-size:0.78em; color:#666; margin-bottom:8px;">事件写入式记录：登录、退出、页面停留和关键操作；不轮询。</div>
+                    <div id="player-activity-log-container" style="height:360px; overflow-y:auto; background:#fff; padding:10px; border:1px solid #eee;"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -2836,6 +2844,26 @@
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const ACTIVITY_AREA_LABELS = {
+        checkins: '打卡点',
+        war: '战局',
+        shop: '商城',
+        team: '队伍',
+        inventory: '背包',
+        employees: '雇员中心',
+        gacha: '抽卡',
+        others: '其他内容',
+        security: '安全与权限'
+    };
+    const activityTracker = {
+        sessionKey: '',
+        started: false,
+        finalized: false,
+        currentArea: 'shop',
+        areaStartedAt: null,
+        sessionStartedAt: null,
+        accessToken: ''
+    };
     const DM_EMAIL = '739477825@qq.com';
     const ADMIN_ROLES = ['dm', 'root'];
     const CAMPAIGN_TYPES = {
@@ -3067,6 +3095,202 @@
 
     function isCurrentRoot() {
         return currentUserRole === 'root';
+    }
+
+    function makeActivitySessionKey() {
+        if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+        return `sess-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function getActiveTabName() {
+        const active = document.querySelector('.section.active');
+        return active?.id?.replace('-section', '') || 'shop';
+    }
+
+    function secondsBetween(startIso, endIso) {
+        const start = new Date(startIso).getTime();
+        const end = new Date(endIso).getTime();
+        if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
+        return Math.max(0, Math.round((end - start) / 1000));
+    }
+
+    function buildActivityRow(eventType, data = {}) {
+        const nowIso = data.created_at || new Date().toISOString();
+        return {
+            user_id: myId,
+            user_email: currentUserEmail || '',
+            session_key: activityTracker.sessionKey,
+            event_type: eventType,
+            area: data.area || null,
+            action_type: data.action_type || null,
+            details: data.details || null,
+            started_at: data.started_at || nowIso,
+            ended_at: data.ended_at || null,
+            duration_seconds: Number(data.duration_seconds) || 0,
+            metadata: data.metadata || {},
+            created_at: nowIso
+        };
+    }
+
+    async function insertActivityRows(rows, { keepalive = false } = {}) {
+        const cleanRows = (rows || []).filter(row => row?.user_id && row?.session_key && row?.event_type);
+        if (cleanRows.length === 0) return;
+
+        if (keepalive && activityTracker.accessToken && window.fetch) {
+            fetch(`${SUPABASE_URL}/rest/v1/player_activity_logs`, {
+                method: 'POST',
+                keepalive: true,
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${activityTracker.accessToken}`,
+                    'Content-Type': 'application/json',
+                    Prefer: 'return=minimal'
+                },
+                body: JSON.stringify(cleanRows)
+            }).catch(() => {});
+            return;
+        }
+
+        try {
+            const { error } = await supabaseClient.from('player_activity_logs').insert(cleanRows);
+            if (error) throw error;
+        } catch (e) {
+            console.warn('玩家行为记录写入失败:', e.message || e);
+        }
+    }
+
+    async function startPlayerActivitySession() {
+        if (!myId || activityTracker.started) return;
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        activityTracker.accessToken = sessionData?.session?.access_token || '';
+        activityTracker.sessionKey = makeActivitySessionKey();
+        activityTracker.started = true;
+        activityTracker.finalized = false;
+        activityTracker.currentArea = getActiveTabName();
+        activityTracker.sessionStartedAt = new Date().toISOString();
+        activityTracker.areaStartedAt = activityTracker.sessionStartedAt;
+
+        await insertActivityRows([
+            buildActivityRow('session_start', {
+                area: activityTracker.currentArea,
+                metadata: {
+                    user_agent: navigator.userAgent,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+                    viewport: `${window.innerWidth}x${window.innerHeight}`
+                }
+            })
+        ]);
+    }
+
+    function buildCurrentAreaSpan(endIso = new Date().toISOString()) {
+        if (!activityTracker.started || !activityTracker.areaStartedAt) return null;
+        const area = activityTracker.currentArea;
+        return buildActivityRow('activity_span', {
+            area,
+            details: `停留在【${ACTIVITY_AREA_LABELS[area] || area}】`,
+            started_at: activityTracker.areaStartedAt,
+            ended_at: endIso,
+            duration_seconds: secondsBetween(activityTracker.areaStartedAt, endIso),
+            created_at: endIso
+        });
+    }
+
+    async function recordActivityAreaChange(nextArea) {
+        if (!activityTracker.started || !nextArea || nextArea === activityTracker.currentArea) return;
+        const nowIso = new Date().toISOString();
+        const span = buildCurrentAreaSpan(nowIso);
+        activityTracker.currentArea = nextArea;
+        activityTracker.areaStartedAt = nowIso;
+        if (span) await insertActivityRows([span]);
+    }
+
+    async function recordPlayerAction(actionType, details) {
+        if (!activityTracker.started) return;
+        await insertActivityRows([
+            buildActivityRow('action', {
+                area: activityTracker.currentArea,
+                action_type: actionType,
+                details
+            })
+        ]);
+    }
+
+    async function finalizePlayerActivitySession(reason = 'logout', { keepalive = false } = {}) {
+        if (!activityTracker.started || activityTracker.finalized) return;
+        activityTracker.finalized = true;
+        const nowIso = new Date().toISOString();
+        const rows = [];
+        const span = buildCurrentAreaSpan(nowIso);
+        if (span) rows.push(span);
+        rows.push(buildActivityRow('session_end', {
+            area: activityTracker.currentArea,
+            details: reason,
+            started_at: activityTracker.sessionStartedAt,
+            ended_at: nowIso,
+            duration_seconds: secondsBetween(activityTracker.sessionStartedAt, nowIso),
+            created_at: nowIso
+        }));
+        await insertActivityRows(rows, { keepalive });
+    }
+
+    function formatDuration(seconds) {
+        const total = Math.max(0, Number(seconds) || 0);
+        const h = Math.floor(total / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        if (h) return `${h}小时${m}分`;
+        if (m) return `${m}分${s}秒`;
+        return `${s}秒`;
+    }
+
+    function getActivityEventLabel(row) {
+        if (row.event_type === 'session_start') return '上线';
+        if (row.event_type === 'session_end') return '下线';
+        if (row.event_type === 'activity_span') return '页面停留';
+        if (row.event_type === 'action') return row.action_type || '操作';
+        return row.event_type || '记录';
+    }
+
+    async function loadPlayerActivityLogs() {
+        if (!await requireAdminRole(['root'], true)) return;
+        const box = document.getElementById('player-activity-log-container');
+        if (!box) return;
+        box.innerHTML = '读取行为记录中...';
+
+        try {
+            const { data: logs, error } = await supabaseClient
+                .from('player_activity_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(120);
+            if (error) throw error;
+
+            if (!logs || logs.length === 0) {
+                box.innerHTML = '<div style="color:#999;">暂无行为记录。</div>';
+                return;
+            }
+
+            box.innerHTML = logs.map(row => {
+                const time = new Date(row.created_at).toLocaleString();
+                const label = getActivityEventLabel(row);
+                const area = ACTIVITY_AREA_LABELS[row.area] || row.area || '系统';
+                const duration = row.duration_seconds ? ` · ${formatDuration(row.duration_seconds)}` : '';
+                const safeEmail = escapeHTML(row.user_email || row.user_id || '未知账号');
+                const safeDetails = escapeHTML(row.details || '');
+                const safeLabel = escapeHTML(label);
+                const safeArea = escapeHTML(area);
+                return `
+                    <div style="border-bottom:1px solid #eee; padding:8px 0; font-size:0.88em;">
+                        <div style="color:#999; font-size:0.78em;">${time} - ${safeEmail}</div>
+                        <div><strong style="color:#8e44ad;">[${safeLabel}]</strong> ${safeArea}${duration}</div>
+                        ${safeDetails ? `<div style="color:#555; margin-top:3px;">${safeDetails}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.warn('行为记录读取失败:', e.message || e);
+            box.innerHTML = `<div style="color:#c0392b;">行为记录读取失败：${escapeHTML(e.message || e)}<br>请确认已执行 player_activity_logs.sql。</div>`;
+        }
     }
 
     async function requireWarAccess(faction = null) {
@@ -5332,6 +5556,7 @@ async function login() {
 }
 
     async function logout() {
+        await finalizePlayerActivitySession('logout');
         // 尝试离开频道
         try {
             if (typeof presenceChannel !== 'undefined' && presenceChannel) {
@@ -5376,6 +5601,7 @@ async function login() {
             
             // 检查管理员权限
             await refreshCurrentRole(true);
+            await startPlayerActivitySession();
 
             if (isCurrentAdmin()) {
                 // 显示 DM 入口
@@ -5741,6 +5967,7 @@ async function loadGold() {
     async function switchTab(tab) {
         if (tab === 'security' && !await requireAdminRole(['root'], true)) return;
         if (tab === 'checkins' && !isCurrentAdmin() && !checkinPageVisible) return alert('打卡点页面尚未开放。');
+        await recordActivityAreaChange(tab);
         setWarBgmActive(tab === 'war');
 
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -5757,6 +5984,7 @@ async function loadGold() {
             loadAllAccounts();
             loadLogs();
             loadLoginLogs();
+            loadPlayerActivityLogs();
         }
         if (tab === 'war') {
             loadWarPosterStrip();
@@ -6452,6 +6680,7 @@ async function buy(id, p, n, c) {
                 action_type: actionType,
                 details: details
             }]);
+            await recordPlayerAction(actionType, details);
         }
     }
 
@@ -11715,6 +11944,10 @@ window.endWarTurn = async function() {
             alert('身份凭证已失效或账号被锁定，请重新登录。');
             window.location.reload(); 
         }
+    });
+
+    window.addEventListener('pagehide', () => {
+        finalizePlayerActivitySession('pagehide', { keepalive: true });
     });
 
 
