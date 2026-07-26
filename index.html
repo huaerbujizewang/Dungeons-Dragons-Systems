@@ -2649,6 +2649,19 @@
                         <button onclick="saveAdminLeaderboardTeam()" style="background:#16a085; color:white; border:none; padding:7px 10px; border-radius:4px;">保存/新建队伍</button>
                         <button onclick="deleteAdminLeaderboardTeam()" style="background:#c0392b; color:white; border:none; padding:7px 10px; border-radius:4px;">删除队伍</button>
                     </div>
+                    <div style="border-top:1px solid #edf2f0; margin-top:10px; padding-top:10px;">
+                        <strong style="font-size:0.84em; color:#117864; display:block; margin-bottom:6px;">批量改打卡数</strong>
+                        <div style="display:grid; grid-template-columns:1fr 80px; gap:6px; margin-bottom:6px;">
+                            <input id="adm-checkin-batch-teams" type="text" value="all" placeholder="all 或 1,3,8-12">
+                            <input id="adm-checkin-batch-delta" type="number" value="1" step="1" placeholder="+/-">
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button onclick="applyLeaderboardBatchDelta('all', 1)" style="background:#117864; color:white; border:none; padding:7px 10px; border-radius:4px;">全体 +1</button>
+                            <button onclick="applyLeaderboardBatchDelta('all', -1)" style="background:#5d6d7e; color:white; border:none; padding:7px 10px; border-radius:4px;">全体 -1</button>
+                            <button onclick="applyLeaderboardBatchDeltaFromForm()" style="background:#8e44ad; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入批量修改</button>
+                        </div>
+                        <div style="font-size:0.74em; color:#666; margin-top:5px;">只改排行榜里的手填打卡数；已绑定玩家账号的小队仍会额外叠加账号实际打卡。</div>
+                    </div>
                 </div>
                 <div id="adm-checkin-list" class="admin-checkin-list">
                     <div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>
@@ -4478,6 +4491,87 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         } finally {
             hideLoading();
         }
+    }
+
+    function parseLeaderboardTeamTargets(input, teams = adminLeaderboardTeams) {
+        const text = String(input || '').trim().toLowerCase();
+        const allTeamNos = (teams || []).map(team => Number(team.team_no)).filter(Boolean);
+        if (!text || text === 'all' || text === '全部' || text === '全体') return new Set(allTeamNos);
+
+        const result = new Set();
+        text.split(/[，,]/).map(part => part.trim()).filter(Boolean).forEach(part => {
+            const rangeMatch = part.match(/^(\d+)\s*[-~到至]\s*(\d+)$/);
+            if (rangeMatch) {
+                const start = Number(rangeMatch[1]);
+                const end = Number(rangeMatch[2]);
+                const min = Math.min(start, end);
+                const max = Math.max(start, end);
+                for (let no = min; no <= max; no++) result.add(no);
+                return;
+            }
+            const no = Number(part);
+            if (Number.isInteger(no) && no > 0) result.add(no);
+        });
+        return result;
+    }
+
+    function clampCheckinCount(value) {
+        return Math.max(0, Math.min(CHECKIN_POINTS.length, Number(value) || 0));
+    }
+
+    async function ensureAdminLeaderboardTeamsLoaded() {
+        if (adminLeaderboardTeams.length > 0) return adminLeaderboardTeams;
+        const { data, error } = await supabaseClient
+            .from('checkin_leaderboard_teams')
+            .select('*')
+            .order('team_no');
+        if (error) throw error;
+        adminLeaderboardTeams = data || [];
+        populateAdminLeaderboardSelect();
+        return adminLeaderboardTeams;
+    }
+
+    async function applyLeaderboardBatchDelta(targetInput, deltaInput) {
+        if (!await requireAdminRole()) return;
+        const delta = Number(deltaInput);
+        if (!Number.isInteger(delta) || delta === 0) return alert('批量修改值必须是非 0 整数');
+
+        showLoading();
+        try {
+            const teams = await ensureAdminLeaderboardTeamsLoaded();
+            const targetNos = parseLeaderboardTeamTargets(targetInput, teams);
+            const affected = teams.filter(team => targetNos.has(Number(team.team_no)));
+            if (affected.length === 0) throw new Error('没有匹配到任何队伍。可输入 all、1,3,8-12。');
+
+            const rows = affected.map(team => ({
+                team_no: team.team_no,
+                team_name: team.team_name,
+                manual_checkin_count: clampCheckinCount((Number(team.manual_checkin_count) || 0) + delta),
+                members: normalizeTeamMembers(team.members),
+                updated_by: myId,
+                updated_at: new Date().toISOString()
+            }));
+
+            const { error } = await supabaseClient
+                .from('checkin_leaderboard_teams')
+                .upsert(rows, { onConflict: 'team_no' });
+            if (error) throw error;
+
+            await logAction('DM操作', `批量修改排行榜打卡数：${targetInput} ${delta > 0 ? '+' : ''}${delta}，影响 ${rows.length} 队`);
+            await Promise.all([loadAdminLeaderboardTeams(), loadCheckinLeaderboard()]);
+            alert(`批量修改完成：${rows.length} 支队伍 ${delta > 0 ? '+' : ''}${delta}。`);
+        } catch (e) {
+            console.error(e);
+            alert('批量修改失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function applyLeaderboardBatchDeltaFromForm() {
+        const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || 'all';
+        const delta = parseInt(document.getElementById('adm-checkin-batch-delta')?.value, 10);
+        await applyLeaderboardBatchDelta(targetInput, delta);
     }
 
     async function deleteAdminLeaderboardTeam() {
