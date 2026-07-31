@@ -4114,7 +4114,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
 
     function sortLeaderboardTeams(teams) {
         return [...(teams || [])].sort((a, b) => {
-            const ratioDiff = getTeamBadgeRatio(b) - getTeamBadgeRatio(a);
+            const ratioDiff = getTeamBadgeRatio(a) - getTeamBadgeRatio(b);
             if (Math.abs(ratioDiff) > 0.000001) return ratioDiff;
             return String(a.team_name || '').localeCompare(String(b.team_name || ''), 'zh-Hans-CN-u-co-pinyin');
         });
