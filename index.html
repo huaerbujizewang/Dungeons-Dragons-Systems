@@ -4127,6 +4127,8 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         return [...(teams || [])].sort((a, b) => {
             const withdrawnDiff = Number(Boolean(a.is_withdrawn)) - Number(Boolean(b.is_withdrawn));
             if (withdrawnDiff !== 0) return withdrawnDiff;
+            const checkinDiff = (Number(b.checkin_count ?? b.manual_checkin_count ?? 0) || 0) - (Number(a.checkin_count ?? a.manual_checkin_count ?? 0) || 0);
+            if (checkinDiff !== 0) return checkinDiff;
             const ratioDiff = getTeamBadgeRatio(a) - getTeamBadgeRatio(b);
             if (Math.abs(ratioDiff) > 0.000001) return ratioDiff;
             return String(a.team_name || '').localeCompare(String(b.team_name || ''), 'zh-Hans-CN-u-co-pinyin');
