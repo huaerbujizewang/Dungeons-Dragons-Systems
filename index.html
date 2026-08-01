@@ -593,10 +593,13 @@
         .checkin-leaderboard-list { max-height:360px; overflow:auto; }
         .checkin-rank-row { display:grid; grid-template-columns:46px minmax(150px,1fr) 86px 82px minmax(360px,3fr); gap:10px; align-items:start; padding:10px 12px; border-bottom:1px solid #edf2f0; font-size:0.9em; }
         .checkin-rank-row:nth-child(even) { background:#fbfdfc; }
+        .checkin-rank-row.withdrawn { background:#f3f4f4; color:#77817e; }
         .checkin-rank-row.header { position:sticky; top:0; z-index:1; background:#f7fbfa; color:#52645f; font-weight:bold; }
         .checkin-rank-no { color:#7f8c8d; font-weight:bold; }
         .checkin-rank-team { font-weight:bold; color:#25322f; }
+        .checkin-rank-row.withdrawn .checkin-rank-team { color:#6d7774; }
         .checkin-rank-meta { color:#666; font-size:0.82em; margin-top:2px; }
+        .checkin-withdrawn-tag { display:inline-flex; align-items:center; margin-left:6px; padding:1px 6px; border-radius:4px; background:#7f8c8d; color:#fff; font-size:0.75em; font-weight:bold; vertical-align:middle; white-space:nowrap; }
         .checkin-member-grid { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; }
         .checkin-member-chip { display:grid; grid-template-columns:auto 1fr; gap:5px 7px; align-items:center; padding:7px 8px; border:1px solid #e2e8e5; border-radius:6px; background:#fff; color:#34423f; line-height:1.35; min-width:170px; max-width:100%; }
         .checkin-member-name { font-weight:bold; color:#25322f; overflow-wrap:anywhere; }
@@ -2644,6 +2647,10 @@
                         <input id="adm-checkin-team-name" type="text" placeholder="队名">
                         <input id="adm-checkin-team-count" type="number" min="0" max="80" value="0" placeholder="打卡">
                     </div>
+                    <label style="display:flex; align-items:center; gap:6px; margin-bottom:6px; font-size:0.84em; color:#52645f;">
+                        <input id="adm-checkin-team-withdrawn" type="checkbox">
+                        <span>退赛，固定沉到排行榜底部</span>
+                    </label>
                     <textarea id="adm-checkin-team-members" style="height:120px; font-family:monospace; font-size:0.78em;" placeholder='成员 JSON，例如 [{"name":"安妮特","gender":"女","race":"魅魔","class":"战士","badge":"铁牌"}]'></textarea>
                     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
                         <button onclick="saveAdminLeaderboardTeam()" style="background:#16a085; color:white; border:none; padding:7px 10px; border-radius:4px;">保存/新建队伍</button>
@@ -2659,6 +2666,8 @@
                             <button onclick="applyLeaderboardBatchDelta('all', 1)" style="background:#117864; color:white; border:none; padding:7px 10px; border-radius:4px;">全体 +1</button>
                             <button onclick="applyLeaderboardBatchDelta('all', -1)" style="background:#5d6d7e; color:white; border:none; padding:7px 10px; border-radius:4px;">全体 -1</button>
                             <button onclick="applyLeaderboardBatchDeltaFromForm()" style="background:#8e44ad; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入批量修改</button>
+                            <button onclick="applyLeaderboardBatchWithdrawnFromForm(true)" style="background:#7f8c8d; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入设为退赛</button>
+                            <button onclick="applyLeaderboardBatchWithdrawnFromForm(false)" style="background:#27ae60; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入恢复参赛</button>
                         </div>
                         <div style="font-size:0.74em; color:#666; margin-top:5px;">只改排行榜里的手填打卡数；已绑定玩家账号的小队仍会额外叠加账号实际打卡。</div>
                     </div>
@@ -4114,6 +4123,8 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
 
     function sortLeaderboardTeams(teams) {
         return [...(teams || [])].sort((a, b) => {
+            const withdrawnDiff = Number(Boolean(a.is_withdrawn)) - Number(Boolean(b.is_withdrawn));
+            if (withdrawnDiff !== 0) return withdrawnDiff;
             const ratioDiff = getTeamBadgeRatio(a) - getTeamBadgeRatio(b);
             if (Math.abs(ratioDiff) > 0.000001) return ratioDiff;
             return String(a.team_name || '').localeCompare(String(b.team_name || ''), 'zh-Hans-CN-u-co-pinyin');
@@ -4173,11 +4184,12 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 const ratio = getTeamBadgeRatio(team);
                 const checkinCount = Number(team.checkin_count ?? team.manual_checkin_count ?? 0) || 0;
                 const linkedCount = Array.isArray(team.player_account_ids) ? team.player_account_ids.length : 0;
+                const withdrawn = team.is_withdrawn === true;
                 return `
-                    <div class="checkin-rank-row">
+                    <div class="checkin-rank-row ${withdrawn ? 'withdrawn' : ''}">
                         <div class="checkin-rank-no">#${index + 1}</div>
                         <div>
-                            <div class="checkin-rank-team">${escapeHTML(team.team_name || `第${team.team_no}小队`)}</div>
+                            <div class="checkin-rank-team">${escapeHTML(team.team_name || `第${team.team_no}小队`)}${withdrawn ? '<span class="checkin-withdrawn-tag">退赛</span>' : ''}</div>
                             <div class="checkin-rank-meta">第${team.team_no}小队${linkedCount ? ` · 玩家账号 x${linkedCount}` : ''}</div>
                         </div>
                         <div><strong>${checkinCount}</strong> / ${CHECKIN_POINTS.length}</div>
@@ -4419,7 +4431,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const select = document.getElementById('adm-checkin-team-select');
         if (!select) return;
         const sorted = sortLeaderboardTeams(adminLeaderboardTeams);
-        select.innerHTML = sorted.map(team => `<option value="${team.team_no}">第${team.team_no}小队 · ${escapeHTML(team.team_name || '')}</option>`).join('');
+        select.innerHTML = sorted.map(team => `<option value="${team.team_no}">第${team.team_no}小队 · ${escapeHTML(team.team_name || '')}${team.is_withdrawn ? ' · 退赛' : ''}</option>`).join('');
         syncAdminLeaderboardTeamForm();
     }
 
@@ -4448,10 +4460,12 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const noInput = document.getElementById('adm-checkin-team-no');
         const nameInput = document.getElementById('adm-checkin-team-name');
         const countInput = document.getElementById('adm-checkin-team-count');
+        const withdrawnInput = document.getElementById('adm-checkin-team-withdrawn');
         const membersInput = document.getElementById('adm-checkin-team-members');
         if (noInput) noInput.value = team.team_no || '';
         if (nameInput) nameInput.value = team.team_name || '';
         if (countInput) countInput.value = Number(team.manual_checkin_count || 0);
+        if (withdrawnInput) withdrawnInput.checked = team.is_withdrawn === true;
         if (membersInput) membersInput.value = JSON.stringify(normalizeTeamMembers(team.members), null, 2);
     }
 
@@ -4467,6 +4481,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const teamNo = parseInt(document.getElementById('adm-checkin-team-no')?.value, 10);
         const teamName = document.getElementById('adm-checkin-team-name')?.value.trim();
         const manualCount = Math.max(0, Math.min(CHECKIN_POINTS.length, parseInt(document.getElementById('adm-checkin-team-count')?.value, 10) || 0));
+        const isWithdrawn = document.getElementById('adm-checkin-team-withdrawn')?.checked === true;
         if (!teamNo || !teamName) return alert('队号和队名必填');
         showLoading();
         try {
@@ -4477,6 +4492,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                     team_no: teamNo,
                     team_name: teamName,
                     manual_checkin_count: manualCount,
+                    is_withdrawn: isWithdrawn,
                     members,
                     updated_by: myId,
                     updated_at: new Date().toISOString()
@@ -4547,6 +4563,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 team_no: team.team_no,
                 team_name: team.team_name,
                 manual_checkin_count: clampCheckinCount((Number(team.manual_checkin_count) || 0) + delta),
+                is_withdrawn: team.is_withdrawn === true,
                 members: normalizeTeamMembers(team.members),
                 updated_by: myId,
                 updated_at: new Date().toISOString()
@@ -4572,6 +4589,46 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || 'all';
         const delta = parseInt(document.getElementById('adm-checkin-batch-delta')?.value, 10);
         await applyLeaderboardBatchDelta(targetInput, delta);
+    }
+
+    async function applyLeaderboardBatchWithdrawn(targetInput, isWithdrawn) {
+        if (!await requireAdminRole()) return;
+        showLoading();
+        try {
+            const teams = await ensureAdminLeaderboardTeamsLoaded();
+            const targetNos = parseLeaderboardTeamTargets(targetInput, teams);
+            const affected = teams.filter(team => targetNos.has(Number(team.team_no)));
+            if (affected.length === 0) throw new Error('没有匹配到任何队伍。可输入 all、1,3,8-12。');
+
+            const rows = affected.map(team => ({
+                team_no: team.team_no,
+                team_name: team.team_name,
+                manual_checkin_count: clampCheckinCount(team.manual_checkin_count),
+                is_withdrawn: isWithdrawn === true,
+                members: normalizeTeamMembers(team.members),
+                updated_by: myId,
+                updated_at: new Date().toISOString()
+            }));
+
+            const { error } = await supabaseClient
+                .from('checkin_leaderboard_teams')
+                .upsert(rows, { onConflict: 'team_no' });
+            if (error) throw error;
+
+            await logAction('DM操作', `批量${isWithdrawn ? '设为退赛' : '恢复参赛'}：${targetInput}，影响 ${rows.length} 队`);
+            await Promise.all([loadAdminLeaderboardTeams(), loadCheckinLeaderboard()]);
+            alert(`已${isWithdrawn ? '设为退赛' : '恢复参赛'}：${rows.length} 支队伍。`);
+        } catch (e) {
+            console.error(e);
+            alert('批量修改退赛状态失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function applyLeaderboardBatchWithdrawnFromForm(isWithdrawn) {
+        const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || 'all';
+        await applyLeaderboardBatchWithdrawn(targetInput, isWithdrawn);
     }
 
     async function deleteAdminLeaderboardTeam() {
