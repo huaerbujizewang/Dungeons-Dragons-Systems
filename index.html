@@ -2659,12 +2659,14 @@
                     <div style="border-top:1px solid #edf2f0; margin-top:10px; padding-top:10px;">
                         <strong style="font-size:0.84em; color:#117864; display:block; margin-bottom:6px;">批量改打卡数</strong>
                         <div style="display:grid; grid-template-columns:1fr 80px; gap:6px; margin-bottom:6px;">
-                            <input id="adm-checkin-batch-teams" type="text" value="all" placeholder="all 或 1,3,8-12">
+                            <input id="adm-checkin-batch-teams" type="text" placeholder="1,3,8-12；输入 all 才是全体">
                             <input id="adm-checkin-batch-delta" type="number" value="1" step="1" placeholder="+/-">
                         </div>
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
                             <button onclick="applyLeaderboardBatchDelta('all', 1)" style="background:#117864; color:white; border:none; padding:7px 10px; border-radius:4px;">全体 +1</button>
                             <button onclick="applyLeaderboardBatchDelta('all', -1)" style="background:#5d6d7e; color:white; border:none; padding:7px 10px; border-radius:4px;">全体 -1</button>
+                            <button onclick="applyLeaderboardBatchDeltaFromFormWithDelta(-1)" style="background:#34495e; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入 -1</button>
+                            <button onclick="applyLeaderboardBatchDeltaFromFormWithDelta(1)" style="background:#16a085; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入 +1</button>
                             <button onclick="applyLeaderboardBatchDeltaFromForm()" style="background:#8e44ad; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入批量修改</button>
                             <button onclick="applyLeaderboardBatchWithdrawnFromForm(true)" style="background:#7f8c8d; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入设为退赛</button>
                             <button onclick="applyLeaderboardBatchWithdrawnFromForm(false)" style="background:#27ae60; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入恢复参赛</button>
@@ -4512,7 +4514,8 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     function parseLeaderboardTeamTargets(input, teams = adminLeaderboardTeams) {
         const text = String(input || '').trim().toLowerCase();
         const allTeamNos = (teams || []).map(team => Number(team.team_no)).filter(Boolean);
-        if (!text || text === 'all' || text === '全部' || text === '全体') return new Set(allTeamNos);
+        if (!text) return new Set();
+        if (text === 'all' || text === '全部' || text === '全体') return new Set(allTeamNos);
 
         const result = new Set();
         text.split(/[，,]/).map(part => part.trim()).filter(Boolean).forEach(part => {
@@ -4552,13 +4555,14 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const delta = Number(deltaInput);
         if (!Number.isInteger(delta) || delta === 0) return alert('批量修改值必须是非 0 整数');
 
-        showLoading();
         try {
             const teams = await ensureAdminLeaderboardTeamsLoaded();
             const targetNos = parseLeaderboardTeamTargets(targetInput, teams);
             const affected = teams.filter(team => targetNos.has(Number(team.team_no)));
             if (affected.length === 0) throw new Error('没有匹配到任何队伍。可输入 all、1,3,8-12。');
+            if (affected.length === teams.length && !confirm(`将对全部 ${affected.length} 支队伍执行 ${delta > 0 ? '+' : ''}${delta}，确定吗？`)) return;
 
+            showLoading();
             const rows = affected.map(team => ({
                 team_no: team.team_no,
                 team_name: team.team_name,
@@ -4586,8 +4590,13 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     }
 
     async function applyLeaderboardBatchDeltaFromForm() {
-        const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || 'all';
+        const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || '';
         const delta = parseInt(document.getElementById('adm-checkin-batch-delta')?.value, 10);
+        await applyLeaderboardBatchDelta(targetInput, delta);
+    }
+
+    async function applyLeaderboardBatchDeltaFromFormWithDelta(delta) {
+        const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || '';
         await applyLeaderboardBatchDelta(targetInput, delta);
     }
 
@@ -4599,6 +4608,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             const targetNos = parseLeaderboardTeamTargets(targetInput, teams);
             const affected = teams.filter(team => targetNos.has(Number(team.team_no)));
             if (affected.length === 0) throw new Error('没有匹配到任何队伍。可输入 all、1,3,8-12。');
+            if (affected.length === teams.length && !confirm(`将对全部 ${affected.length} 支队伍执行“${isWithdrawn ? '退赛' : '恢复参赛'}”，确定吗？`)) return;
 
             const rows = affected.map(team => ({
                 team_no: team.team_no,
@@ -4627,7 +4637,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     }
 
     async function applyLeaderboardBatchWithdrawnFromForm(isWithdrawn) {
-        const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || 'all';
+        const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || '';
         await applyLeaderboardBatchWithdrawn(targetInput, isWithdrawn);
     }
 
