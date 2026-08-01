@@ -2671,6 +2671,10 @@
                             <button onclick="applyLeaderboardBatchWithdrawnFromForm(true)" style="background:#7f8c8d; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入设为退赛</button>
                             <button onclick="applyLeaderboardBatchWithdrawnFromForm(false)" style="background:#27ae60; color:white; border:none; padding:7px 10px; border-radius:4px;">按输入恢复参赛</button>
                         </div>
+                        <div style="display:grid; grid-template-columns:1fr auto; gap:6px; margin-top:8px;">
+                            <input id="adm-checkin-batch-match-count" type="number" min="0" max="80" step="1" placeholder="打卡数 X">
+                            <button onclick="applyLeaderboardAddCountToTeamsAtCountFromForm()" style="background:#d35400; color:white; border:none; padding:7px 10px; border-radius:4px;">打卡数=X 的队伍 +X</button>
+                        </div>
                         <div style="font-size:0.74em; color:#666; margin-top:5px;">只改排行榜里的手填打卡数；已绑定玩家账号的小队仍会额外叠加账号实际打卡。</div>
                     </div>
                 </div>
@@ -4600,6 +4604,61 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     async function applyLeaderboardBatchDeltaFromFormWithDelta(delta) {
         const targetInput = document.getElementById('adm-checkin-batch-teams')?.value || '';
         await applyLeaderboardBatchDelta(targetInput, delta);
+    }
+
+    async function loadLeaderboardTeamsForBatchCountMatch() {
+        const { data, error } = await supabaseClient.rpc('get_checkin_leaderboard');
+        if (error) throw error;
+        return data || [];
+    }
+
+    async function applyLeaderboardAddCountToTeamsAtCount(matchCountInput) {
+        if (!await requireAdminRole()) return;
+        const matchCount = Number(matchCountInput);
+        if (!Number.isInteger(matchCount) || matchCount < 0 || matchCount > CHECKIN_POINTS.length) {
+            return alert(`打卡数 X 必须是 0-${CHECKIN_POINTS.length} 的整数`);
+        }
+        if (matchCount === 0) return alert('X 为 0 时不会产生变化。');
+
+        try {
+            const teams = await loadLeaderboardTeamsForBatchCountMatch();
+            const affected = teams.filter(team => {
+                const total = Number(team.checkin_count ?? team.manual_checkin_count ?? 0) || 0;
+                return total === matchCount;
+            });
+            if (affected.length === 0) throw new Error(`当前没有总打卡数为 ${matchCount} 的队伍。`);
+            if (!confirm(`将给 ${affected.length} 支“打卡数=${matchCount}”的队伍各 +${matchCount}，确定吗？`)) return;
+
+            showLoading();
+            const rows = affected.map(team => ({
+                team_no: team.team_no,
+                team_name: team.team_name,
+                manual_checkin_count: clampCheckinCount((Number(team.manual_checkin_count) || 0) + matchCount),
+                is_withdrawn: team.is_withdrawn === true,
+                members: normalizeTeamMembers(team.members),
+                updated_by: myId,
+                updated_at: new Date().toISOString()
+            }));
+
+            const { error } = await supabaseClient
+                .from('checkin_leaderboard_teams')
+                .upsert(rows, { onConflict: 'team_no' });
+            if (error) throw error;
+
+            await logAction('DM操作', `批量补打卡：总打卡数=${matchCount} 的队伍 +${matchCount}，影响 ${rows.length} 队`);
+            await Promise.all([loadAdminLeaderboardTeams(), loadCheckinLeaderboard()]);
+            alert(`已完成：${rows.length} 支队伍各 +${matchCount}。`);
+        } catch (e) {
+            console.error(e);
+            alert('按打卡数批量修改失败：' + (e.message || e));
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function applyLeaderboardAddCountToTeamsAtCountFromForm() {
+        const matchCount = document.getElementById('adm-checkin-batch-match-count')?.value;
+        await applyLeaderboardAddCountToTeamsAtCount(matchCount);
     }
 
     async function applyLeaderboardBatchWithdrawn(targetInput, isWithdrawn) {
