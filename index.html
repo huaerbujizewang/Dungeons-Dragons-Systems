@@ -2485,9 +2485,54 @@
             </div>
             
 
-            <div class="admin-box" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fffcf0; margin-top:20px;">
+            <div class="admin-box" style="border:1px solid #c0392b; padding:15px; border-radius:8px; background:#fff;">
+                <h3 style="margin-top:0; color:#c0392b;">☠️ 签发通缉令</h3>
+    
+                <!-- 单个添加 -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
+                    <input type="text" id="adm-wanted-name" placeholder="姓名" style="grid-column: 1/3;">
+                    <input type="number" id="adm-wanted-amount" placeholder="赏金金额">
+                    <select id="adm-wanted-status">
+                        <option value="DEAD OR ALIVE">DEAD OR ALIVE</option>
+                        <option value="CAPTURED">CAPTURED (已捕获)</option>
+                        <option value="REVOKED">REVOKED (已撤销)</option>
+                    </select>
+                    <input type="text" id="adm-wanted-source" placeholder="悬赏组织">
+                </div>
+                <button onclick="addWantedPoster()" style="width:100%; background:#c0392b; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">签发 / 更新</button>
+    
+                <hr style="margin:15px 0;">
+
+                <!-- 批量导入 -->
+                <h4 style="margin:0 0 5px 0;">批量导入 / 更新 (名字,金额,组织,状态可选)</h4>
+                <textarea id="adm-wanted-bulk" placeholder="玛尔佐拉,34500,龙巫教&#10;路人甲,500,领主联盟,CAPTURED" style="width:100%; height:60px; font-size:0.8em;"></textarea>
+                <button onclick="bulkAddWanted()" style="width:100%; margin-top:5px; border:1px solid #c0392b; color:#c0392b; background:none; padding:5px;">批量签发 / 更新</button>
+
+                <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #ddd;">
+                    <h4 style="margin:0 0 5px 0;">通缉令批量管理</h4>
+                    <div style="display:flex; gap:5px; margin-bottom:6px;">
+                        <input type="text" id="adm-wanted-search" placeholder="搜索当前玩家通缉令..." style="flex:1; padding:5px;">
+                        <button onclick="searchWantedPosters()" style="padding:5px 8px;">搜索</button>
+                    </div>
+                    <div id="adm-wanted-search-summary" style="font-size:0.8em; color:#666; margin-bottom:5px;">先选择玩家，再搜索通缉令。</div>
+                    <div id="adm-wanted-search-results" style="max-height:130px; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.82em;"></div>
+                    <div style="display:grid; grid-template-columns: 1fr 95px; gap:5px; margin-top:8px;">
+                        <select id="adm-wanted-bulk-status" style="padding:5px;">
+                            <option value="">不改状态</option>
+                            <option value="CAPTURED">CAPTURED (已捕获)</option>
+                            <option value="DEAD OR ALIVE">DEAD OR ALIVE (通缉中)</option>
+                            <option value="REVOKED">REVOKED (已撤销)</option>
+                        </select>
+                        <input type="number" id="adm-wanted-bulk-amount" placeholder="新赏金" style="padding:5px;">
+                    </div>
+                    <button onclick="bulkUpdateWantedPosters()" style="width:100%; margin-top:5px; background:#34495e; color:white; border:none; padding:6px; border-radius:4px;">批量应用修改</button>
+                </div>
+           </div>
+
+<div class="admin-box" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fffcf0; margin-top:20px;">
                 <h3 style="margin-top:0; color:#e74c3c;">💀 怪物图鉴在线编辑器</h3>
                 
+                <input type="text" id="adm-monster-search" placeholder="搜索怪物名、势力、身份标签或 CR..." oninput="renderAdminMonsterOptions()" style="width:100%; box-sizing:border-box; padding:7px; border:1px solid #ccc; border-radius:4px; margin-bottom:8px;">
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <select id="adm-monster-select" style="flex:1; padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="loadMonsterForEdit()">
                         <option value="">-- 选择已有怪物进行编辑，或留空以 --</option>
@@ -2851,49 +2896,7 @@
             </div>
 
             
-            <div class="admin-box" style="border:1px solid #c0392b; padding:15px; border-radius:8px; background:#fff;">
-                <h3 style="margin-top:0; color:#c0392b;">☠️ 签发通缉令</h3>
-    
-                <!-- 单个添加 -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
-                    <input type="text" id="adm-wanted-name" placeholder="姓名" style="grid-column: 1/3;">
-                    <input type="number" id="adm-wanted-amount" placeholder="赏金金额">
-                    <select id="adm-wanted-status">
-                        <option value="DEAD OR ALIVE">DEAD OR ALIVE</option>
-                        <option value="CAPTURED">CAPTURED (已捕获)</option>
-                        <option value="REVOKED">REVOKED (已撤销)</option>
-                    </select>
-                    <input type="text" id="adm-wanted-source" placeholder="悬赏组织">
-                </div>
-                <button onclick="addWantedPoster()" style="width:100%; background:#c0392b; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">签发 / 更新</button>
-    
-                <hr style="margin:15px 0;">
-
-                <!-- 批量导入 -->
-                <h4 style="margin:0 0 5px 0;">批量导入 / 更新 (名字,金额,组织,状态可选)</h4>
-                <textarea id="adm-wanted-bulk" placeholder="玛尔佐拉,34500,龙巫教&#10;路人甲,500,领主联盟,CAPTURED" style="width:100%; height:60px; font-size:0.8em;"></textarea>
-                <button onclick="bulkAddWanted()" style="width:100%; margin-top:5px; border:1px solid #c0392b; color:#c0392b; background:none; padding:5px;">批量签发 / 更新</button>
-
-                <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #ddd;">
-                    <h4 style="margin:0 0 5px 0;">通缉令批量管理</h4>
-                    <div style="display:flex; gap:5px; margin-bottom:6px;">
-                        <input type="text" id="adm-wanted-search" placeholder="搜索当前玩家通缉令..." style="flex:1; padding:5px;">
-                        <button onclick="searchWantedPosters()" style="padding:5px 8px;">搜索</button>
-                    </div>
-                    <div id="adm-wanted-search-summary" style="font-size:0.8em; color:#666; margin-bottom:5px;">先选择玩家，再搜索通缉令。</div>
-                    <div id="adm-wanted-search-results" style="max-height:130px; overflow-y:auto; background:#fff; border:1px solid #eee; padding:5px; font-size:0.82em;"></div>
-                    <div style="display:grid; grid-template-columns: 1fr 95px; gap:5px; margin-top:8px;">
-                        <select id="adm-wanted-bulk-status" style="padding:5px;">
-                            <option value="">不改状态</option>
-                            <option value="CAPTURED">CAPTURED (已捕获)</option>
-                            <option value="DEAD OR ALIVE">DEAD OR ALIVE (通缉中)</option>
-                            <option value="REVOKED">REVOKED (已撤销)</option>
-                        </select>
-                        <input type="number" id="adm-wanted-bulk-amount" placeholder="新赏金" style="padding:5px;">
-                    </div>
-                    <button onclick="bulkUpdateWantedPosters()" style="width:100%; margin-top:5px; background:#34495e; color:white; border:none; padding:6px; border-radius:4px;">批量应用修改</button>
-                </div>
-           </div>
+            
         </div>
     </div>
 </div>
@@ -3405,6 +3408,125 @@
     // === 怪物图鉴在线修改器 ===
     let adminMonsters = [];
 
+    function normalizeAdminMonsterText(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function parseAdminMonsterCr(value) {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        const raw = String(value ?? '').trim();
+        if (!raw) return 0;
+
+        const fraction = raw.match(/(\d+)\s*\/\s*(\d+)/);
+        if (fraction) {
+            const numerator = Number(fraction[1]);
+            const denominator = Number(fraction[2]);
+            return denominator ? numerator / denominator : 0;
+        }
+
+        const number = raw.match(/-?\d+(?:\.\d+)?/);
+        return number ? Number(number[0]) : 0;
+    }
+
+    function getAdminMonsterCr(monster = {}) {
+        const statBlock = monster.stat_block || {};
+        const candidates = [
+            monster.cr,
+            monster.challenge_rating,
+            monster.challenge,
+            statBlock.cr,
+            statBlock.challenge_rating,
+            statBlock.challenge,
+            statBlock.basic_info?.cr,
+            statBlock.basic_info?.challenge_rating,
+            statBlock.basic_info?.challenge
+        ];
+        for (const candidate of candidates) {
+            const parsed = parseAdminMonsterCr(candidate);
+            if (parsed > 0) return parsed;
+        }
+        return 0;
+    }
+
+    function formatAdminMonsterCr(monster = {}) {
+        const statBlock = monster.stat_block || {};
+        const raw = monster.cr ?? monster.challenge_rating ?? monster.challenge ??
+            statBlock.cr ?? statBlock.challenge_rating ?? statBlock.challenge ??
+            statBlock.basic_info?.cr ?? statBlock.basic_info?.challenge_rating ?? statBlock.basic_info?.challenge;
+        return raw === undefined || raw === null || raw === '' ? '0' : String(raw);
+    }
+
+    function getAdminMonsterFaction(monster = {}) {
+        return String(monster.faction || '无归属 / 野外势力').trim();
+    }
+
+    function compareAdminMonsters(a, b) {
+        const factionCompare = getAdminMonsterFaction(a).localeCompare(getAdminMonsterFaction(b), 'zh-Hans-CN');
+        if (factionCompare !== 0) return factionCompare;
+
+        const crCompare = getAdminMonsterCr(b) - getAdminMonsterCr(a);
+        if (crCompare !== 0) return crCompare;
+
+        const threatWeights = { '首领': 3, '精英': 2, '杂兵': 1 };
+        const threatCompare = (threatWeights[b.threat_level] || 0) - (threatWeights[a.threat_level] || 0);
+        if (threatCompare !== 0) return threatCompare;
+
+        return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
+    }
+
+    function adminMonsterMatchesSearch(monster, query) {
+        if (!query) return true;
+        const crText = formatAdminMonsterCr(monster);
+        const haystack = [
+            monster.name,
+            monster.faction,
+            monster.status,
+            monster.threat_level,
+            `cr ${crText}`,
+            `挑战 ${crText}`,
+            crText
+        ].map(normalizeAdminMonsterText).join(' ');
+        return haystack.includes(query);
+    }
+
+    function renderAdminMonsterOptions() {
+        const select = document.getElementById('adm-monster-select');
+        if (!select) return;
+
+        const previousValue = select.value;
+        const query = normalizeAdminMonsterText(document.getElementById('adm-monster-search')?.value);
+        const sorted = [...adminMonsters]
+            .filter(monster => adminMonsterMatchesSearch(monster, query))
+            .sort(compareAdminMonsters);
+
+        select.innerHTML = '';
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = query ? `-- 新建怪物 / 当前匹配 ${sorted.length} 个 --` : '-- 怪物（留空新建） --';
+        select.appendChild(emptyOption);
+
+        let currentGroup = null;
+        let currentFaction = '';
+        sorted.forEach(monster => {
+            const faction = getAdminMonsterFaction(monster);
+            if (faction !== currentFaction) {
+                currentFaction = faction;
+                currentGroup = document.createElement('optgroup');
+                currentGroup.label = faction;
+                select.appendChild(currentGroup);
+            }
+
+            const option = document.createElement('option');
+            option.value = monster.id;
+            option.textContent = `${monster.name || '未命名'} | CR ${formatAdminMonsterCr(monster)} | ${monster.threat_level || '未分级'}${monster.status ? ` | ${monster.status}` : ''}`;
+            currentGroup.appendChild(option);
+        });
+
+        if (sorted.some(monster => String(monster.id) === String(previousValue))) {
+            select.value = previousValue;
+        }
+    }
+
     function normalizeCommaList(value) {
         if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean);
         if (typeof value === 'string') return value.split(',').map(v => v.trim()).filter(Boolean);
@@ -3823,9 +3945,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         if (!await requireAdminRole()) return;
         const { data } = await supabaseClient.from('bestiary').select('*');
         adminMonsters = data || [];
-        const sel = document.getElementById('adm-monster-select');
-        sel.innerHTML = '<option value="">-- 怪物 (留空) --</option>';
-        adminMonsters.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name} (${m.faction})</option>`);
+        renderAdminMonsterOptions();
     }
 
     // 加载怪物到表单
