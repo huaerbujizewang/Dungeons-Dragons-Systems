@@ -754,31 +754,41 @@
         .helios-1112-map-circle,
         .helios-1112-map-poly {
             cursor: pointer;
+            pointer-events: all;
             outline: none;
-            transition: opacity 0.16s ease, stroke-width 0.16s ease, filter 0.16s ease;
+            transition: opacity 0.16s ease, fill 0.16s ease, stroke 0.16s ease, stroke-width 0.16s ease, filter 0.16s ease;
         }
 
         .helios-1112-map-circle {
-            fill: rgba(46, 204, 113, 0.2);
-            stroke: #2ecc71;
-            stroke-width: 4;
-            filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.22));
+            fill: rgba(46, 204, 113, 0);
+            stroke: rgba(46, 204, 113, 0);
+            stroke-width: 3;
+            filter: none;
         }
 
         .helios-1112-map-circle:hover,
         .helios-1112-map-circle:focus,
-        .helios-1112-map-circle.active,
+        .helios-1112-map-circle.active {
+            fill: rgba(46, 204, 113, 0.22);
+            stroke: #2ecc71;
+            stroke-width: 5;
+            filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.2));
+            opacity: 0.96;
+        }
+
         .helios-1112-map-poly:hover,
         .helios-1112-map-poly:focus,
         .helios-1112-map-poly.active {
+            fill: rgba(46, 204, 113, 0.22);
+            stroke: rgba(46, 204, 113, 0.95);
             opacity: 0.96;
-            stroke-width: 7;
+            stroke-width: 5;
         }
 
         .helios-1112-map-poly {
-            fill: rgba(46, 204, 113, 0.12);
-            stroke: rgba(46, 204, 113, 0.88);
-            stroke-width: 4;
+            fill: rgba(46, 204, 113, 0);
+            stroke: rgba(46, 204, 113, 0);
+            stroke-width: 3;
             stroke-linejoin: round;
         }
 
@@ -2524,6 +2534,7 @@
         function renderHelios1112Section(section) {
             if (!section || section.kind === "welcome") return renderHelios1112Welcome(section || {});
             if (section.kind === "map") return renderHelios1112Map(section);
+            if (section.kind === "collection") return renderHelios1112Collection(section);
             if (section.kind === "facts") return renderHelios1112Facts(section);
             if (section.kind === "game-note") return renderHelios1112GameNote(section);
             return renderHelios1112TextSection(section);
@@ -2600,6 +2611,23 @@
                 .filter(point => Array.isArray(point) && point.length >= 2)
                 .map(point => `${Number(point[0]) || 0},${Number(point[1]) || 0}`)
                 .join(" ");
+        }
+
+        function renderHelios1112Collection(section) {
+            const items = Array.isArray(section.items) ? section.items : [];
+            return `
+                <section class="helios-1112-home">
+                    ${items.length ? `
+                        <div class="children-grid">
+                            ${items.map(item => `
+                                <button class="section-card" type="button">
+                                    <strong>${escapeHTML(item.title || item.name || "")}</strong>
+                                </button>
+                            `).join("")}
+                        </div>
+                    ` : ""}
+                </section>
+            `;
         }
 
         function renderHelios1112Facts(section) {

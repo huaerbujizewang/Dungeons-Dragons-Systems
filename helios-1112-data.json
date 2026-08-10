@@ -47,7 +47,7 @@
         "height": 892,
         "alt": "1112年桐花语区地图"
       },
-      "markerRadius": 28,
+      "markerRadius": 18,
       "areas": [
         { "name": "天陆", "shape": "circle", "x": 387, "y": 353 },
         { "name": "高庭", "shape": "circle", "x": 408, "y": 472 },
@@ -82,6 +82,34 @@
           }
         }
       ]
+    },
+    {
+      "id": "countries",
+      "title": "国家",
+      "type": "目录",
+      "kind": "collection",
+      "items": []
+    },
+    {
+      "id": "people",
+      "title": "人物",
+      "type": "目录",
+      "kind": "collection",
+      "items": []
+    },
+    {
+      "id": "bestiary",
+      "title": "图鉴",
+      "type": "目录",
+      "kind": "collection",
+      "items": []
+    },
+    {
+      "id": "organizations",
+      "title": "组织",
+      "type": "目录",
+      "kind": "collection",
+      "items": []
     },
     {
       "id": "facts",
