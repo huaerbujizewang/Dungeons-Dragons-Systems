@@ -466,6 +466,27 @@
             color: #0f172a;
         }
 
+        body.era-1112 .tree-toggle.active {
+            background: rgba(46, 204, 113, 0.12);
+            color: #15803d;
+        }
+
+        body.era-1112 .tree-toggle:hover {
+            background: rgba(46, 204, 113, 0.09);
+        }
+
+        body.era-1112 .tree-children {
+            border-left-color: #d7eee5;
+        }
+
+        body.era-1112 .toggle-mark {
+            color: #16a34a;
+        }
+
+        body.era-1112 .toggle-mark:hover {
+            background: rgba(46, 204, 113, 0.12);
+        }
+
         body.era-1112 .tree-leaf:hover {
             background: rgba(46, 204, 113, 0.09);
         }
@@ -477,6 +498,10 @@
 
         body.era-1112 .kicker {
             color: #2ecc71;
+        }
+
+        body.era-1112 .panel-eyebrow {
+            color: #16a34a;
         }
 
         body.era-1112 .main-panel {
@@ -2642,17 +2667,18 @@
                             <h2 class="helios-1112-title">${escapeHTML(section.name || "赫里奥斯 1112")}</h2>
                             <div class="helios-1112-copy">${paragraphs}</div>
                         </div>
-                        <aside class="helios-1112-framework" aria-label="1112 年档案框架">
-                            <div class="helios-1112-framework-title">Framework Reserved</div>
-                            <div class="helios-1112-framework-list">
-                                ${frameworkItems.map(item => `
-                                    <div class="helios-1112-framework-item">
-                                        <strong>${escapeHTML(item.title || "")}</strong>
-                                        <span>${escapeHTML(item.text || "")}</span>
-                                    </div>
-                                `).join("")}
-                            </div>
-                        </aside>
+                        ${frameworkItems.length ? `
+                            <aside class="helios-1112-framework" aria-label="1112 年档案框架">
+                                <div class="helios-1112-framework-list">
+                                    ${frameworkItems.map(item => `
+                                        <div class="helios-1112-framework-item">
+                                            <strong>${escapeHTML(item.title || "")}</strong>
+                                            <span>${escapeHTML(item.text || "")}</span>
+                                        </div>
+                                    `).join("")}
+                                </div>
+                            </aside>
+                        ` : ""}
                     </div>
                 </section>
             `;
