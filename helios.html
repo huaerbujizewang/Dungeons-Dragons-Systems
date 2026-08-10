@@ -441,9 +441,33 @@
         }
 
         body.era-1112 .sidebar {
-            opacity: 0.28;
-            filter: saturate(0.35);
-            pointer-events: none;
+            opacity: 1;
+            filter: none;
+            pointer-events: auto;
+            border-right-color: #d7eee5;
+            background: #f8fafc;
+        }
+
+        body.era-1112 .brand {
+            border-bottom-color: #d7eee5;
+        }
+
+        body.era-1112 .brand-title {
+            color: #0f172a;
+        }
+
+        body.era-1112 .brand-subtitle,
+        body.era-1112 .back-link {
+            color: #64748b;
+        }
+
+        body.era-1112 .tree-leaf.active {
+            background: rgba(46, 204, 113, 0.14);
+            color: #0f172a;
+        }
+
+        body.era-1112 .tree-leaf:hover {
+            background: rgba(46, 204, 113, 0.09);
         }
 
         body.era-1112 .content-top {
@@ -555,6 +579,12 @@
             padding-top: clamp(24px, 4vw, 38px);
         }
 
+        .helios-1112-facts.standalone {
+            margin-top: 0;
+            border-top: 0;
+            padding-top: 0;
+        }
+
         .helios-1112-facts-title {
             margin: 0 0 18px;
             color: #0f172a;
@@ -618,6 +648,10 @@
                 rgba(255, 255, 255, 0.92);
             box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
             padding: clamp(20px, 3vw, 28px);
+        }
+
+        .helios-1112-game-note.standalone {
+            margin-top: 0;
         }
 
         .helios-1112-game-note h2 {
@@ -687,6 +721,106 @@
             color: #64748b;
             font-size: 13px;
             line-height: 1.6;
+        }
+
+        .helios-1112-map-shell {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 18px;
+        }
+
+        .helios-1112-map-frame {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #d7eee5;
+            background: #e5edf0;
+            box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
+        }
+
+        .helios-1112-map-frame img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .helios-1112-map-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .helios-1112-map-circle,
+        .helios-1112-map-poly {
+            cursor: pointer;
+            outline: none;
+            transition: opacity 0.16s ease, stroke-width 0.16s ease, filter 0.16s ease;
+        }
+
+        .helios-1112-map-circle {
+            fill: rgba(46, 204, 113, 0.2);
+            stroke: #2ecc71;
+            stroke-width: 4;
+            filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.22));
+        }
+
+        .helios-1112-map-circle:hover,
+        .helios-1112-map-circle:focus,
+        .helios-1112-map-circle.active,
+        .helios-1112-map-poly:hover,
+        .helios-1112-map-poly:focus,
+        .helios-1112-map-poly.active {
+            opacity: 0.96;
+            stroke-width: 7;
+        }
+
+        .helios-1112-map-poly {
+            fill: rgba(46, 204, 113, 0.12);
+            stroke: rgba(46, 204, 113, 0.88);
+            stroke-width: 4;
+            stroke-linejoin: round;
+        }
+
+        .helios-1112-map-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .helios-1112-map-chip {
+            border: 1px solid #d7eee5;
+            background: rgba(255, 255, 255, 0.9);
+            color: #0f172a;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 7px 10px;
+        }
+
+        .helios-1112-map-chip.active {
+            border-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.14);
+        }
+
+        .helios-1112-map-info h2 {
+            margin: 0 0 12px;
+            color: #0f172a;
+            font-size: clamp(22px, 2.4vw, 30px);
+            line-height: 1.25;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-map-info p {
+            margin: 0 0 12px;
+            color: #334155;
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1.9;
+        }
+
+        .helios-1112-map-info p:last-child {
+            margin-bottom: 0;
         }
 
         @media (max-width: 920px) {
@@ -1730,64 +1864,28 @@
         let countryBadgeClassMap = {};
         let searchIndex = [];
         let currentHeliosEra = "528";
-        const HELIOS_1112_INTRO = [
-            "高塔之间流动着人工制造的光，钢铁列车昼夜不停地穿越大陆，巨大的工厂能够在一天内生产古代王国一年也无法制造的财富。",
-            "还有一些东西，神话都无法用来形容。",
-            "由思想编织而成的虚拟世界，能够替代感官的幻境，与血肉共同成长的机械，拥有自我意识的人造生命，以及那些正在实验室最深处诞生、尚且没有名字的新事物。",
-            "赫里奥斯相信，文明的发展终将使世界更加明亮。",
-            "于是，生命开始自己创造奇迹。",
-            "生命的天性就是不断地推动自己越过新的边界。",
-            "我们考验自身的极限。",
-            "我们直面自己的恐惧。",
-            "我们奋起迎接挑战，最终成为超越我们自身的存在。"
-        ];
-        const HELIOS_1112_FACTS = [
-            {
-                title: "“神”已经存在",
-                paragraphs: [
-                    "蒂尔兰历1112年，当人们谈论“神”，很多时候已经不再指向宗教经典中的神明。",
-                    "它更接近一个战力学、政治学乃至大众文化中的称呼。",
-                    "当某个个体的力量彻底脱离常规军事尺度，当国家无法用数量、工业与传统战略衡量其威胁，当它的行动本身就足以成为国际政治中的一个变量，人们便开始称其为“神”。",
-                    "忒弥斯就是其中最典型的存在。",
-                    "她是目前唯一的强人工智能，CR达到100。",
-                    "对于绝大多数人而言，这个数字已经没有多少实际意义。它表达的只有一件事情：",
-                    "常规意义上的人力无法与之抗衡。",
-                    "1112年的“神”可能出生于实验室，诞生于战争，来自某次无人理解的技术突破，或者仅仅是某个在漫长岁月中走得太远的个体。",
-                    "文明已经能够亲手制造一些足以被称作神的东西。"
-                ]
-            },
-            {
-                title: "这是一个真正强者遍地的时代",
-                paragraphs: [
-                    "五百年前，一名高阶法师足以成为王室座上宾。",
-                    "如今，九环法术的完整课程能够被上传到视频网站，任何人都可以免费观看。",
-                    "当然，看懂九环法术和真正施展九环法术之间仍然隔着巨大的距离。天赋、训练、设备、魔力、身体条件与资源依然存在门槛。",
-                    "可整个社会的基础已经被彻底抬高。",
-                    "普通大学生拥有CR2至CR3的综合能力并不值得惊讶。受过专业训练的军人、施法者、工程师和特殊职业者更加强大。过去足以让一个小镇陷入恐慌的怪物，在现代城市里可能只会换来一次交通管制和几辆执法车辆。",
-                    "文明本身就是强者的生产机器。"
-                ]
-            }
-        ];
-        const HELIOS_1112_GAME_NOTE = [
-            "1112年的赫里奥斯并不是艾伯伦。",
-            "这里不仅广泛存在魔法，也拥有远远超过传统D&D世界的高端战力、工业能力与社会组织程度。九环法术可以公开传播，人工智能能够参与国家治理，现代军队拥有专门针对高阶施法者和异常个体的完整作战体系。",
-            "因此，这并不是一个适合几名冒险者接取委托、探索遗迹、打败怪物的时代。",
-            "现代社会同样意味着极端庞大的信息量。",
-            "在528年，一个王国的重要机构也许只有十几个；到了1112年，一个大型国家拥有数千个部门都十分正常。",
-            "如果试图完整描述整个1112年的赫里奥斯，它最终只会变成一部永远写不完的百科全书。",
-            "1112年的故事只聚焦于一个很小的切面："
-        ];
+        let helios1112Data = { sections: [] };
+        let currentHelios1112NodeId = "welcome";
         const HELIOS_DATA_URL = "helios-data.json";
+        const HELIOS_1112_DATA_URL = "helios-1112-data.json";
 
         async function loadHeliosData() {
-            const response = await fetch(HELIOS_DATA_URL, { cache: "no-store" });
+            const [response, response1112] = await Promise.all([
+                fetch(HELIOS_DATA_URL, { cache: "no-store" }),
+                fetch(HELIOS_1112_DATA_URL, { cache: "no-store" })
+            ]);
             if (!response.ok) {
                 throw new Error("无法加载档案数据：" + response.status + " " + response.statusText);
             }
+            if (!response1112.ok) {
+                throw new Error("无法加载1112档案数据：" + response1112.status + " " + response1112.statusText);
+            }
             const data = await response.json();
+            const data1112 = await response1112.json();
             archive = Array.isArray(data.archive) ? data.archive : [];
             personCountryMap = data.personCountryMap || {};
             countryBadgeClassMap = data.countryBadgeClassMap || {};
+            helios1112Data = data1112 && typeof data1112 === "object" ? data1112 : { sections: [] };
         }
 
         const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
@@ -1826,6 +1924,11 @@
         const assetLabel = document.getElementById("asset-label");
         const assetNote = document.getElementById("asset-note");
         const eraButtons = document.querySelectorAll(".era-button");
+        const brandTitle = document.querySelector(".brand-title");
+        const brandSubtitle = document.querySelector(".brand-subtitle");
+        const archiveSearchBox = document.querySelector(".archive-search");
+        const contentKicker = document.querySelector(".kicker");
+        const pageTitle = document.querySelector(".page-title");
 
         const policyTooltip = document.createElement("div");
         policyTooltip.className = "policy-floating-tooltip";
@@ -1837,13 +1940,14 @@
 
 
         function buildTree() {
-            const homeButton = `<button class="tree-leaf active" data-node="home">首页</button>`;
-            const sections = archive.map(section => {
-                return renderTreeNode(section, section.id, 0);
-            }).join("");
-
-            tree.innerHTML = homeButton + sections;
+            renderEraSidebar();
             tree.addEventListener("click", event => {
+                const eraNode = event.target.closest("button[data-era-node]");
+                if (eraNode) {
+                    selectHelios1112Node(eraNode.dataset.eraNode);
+                    return;
+                }
+
                 const button = event.target.closest("button[data-node]");
                 if (!button) return;
                 if (button.classList.contains("tree-toggle")) {
@@ -1874,6 +1978,12 @@
             });
 
             panelBody.addEventListener("click", event => {
+                const mapArea = event.target.closest("[data-helios-map-area]");
+                if (mapArea) {
+                    selectHelios1112MapArea(mapArea);
+                    return;
+                }
+
                 const revealButton = event.target.closest(".stat-reveal-button[data-stat-reveal]");
                 if (revealButton) {
                     state.revealedStatBlocks.add(revealButton.dataset.statReveal);
@@ -1884,6 +1994,14 @@
                 const card = event.target.closest(".section-card[data-target]");
                 if (!card) return;
                 selectNode(card.dataset.target);
+            });
+
+            panelBody.addEventListener("keydown", event => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                const mapArea = event.target.closest("[data-helios-map-area]");
+                if (!mapArea) return;
+                event.preventDefault();
+                selectHelios1112MapArea(mapArea);
             });
 
             panelBody.addEventListener("pointerover", event => {
@@ -1908,6 +2026,96 @@
 
             window.addEventListener("resize", repositionPolicyTooltip);
             document.addEventListener("scroll", repositionPolicyTooltip, true);
+        }
+
+        function renderEraSidebar() {
+            if (currentHeliosEra === "1112") {
+                renderHelios1112Sidebar();
+                return;
+            }
+
+            if (brandTitle) brandTitle.textContent = "赫里奥斯";
+            if (brandSubtitle) brandSubtitle.textContent = "世界档案目录";
+            if (contentKicker) contentKicker.textContent = "Helios Archive";
+            if (pageTitle) pageTitle.textContent = "赫里奥斯";
+            if (archiveSearchBox) archiveSearchBox.style.display = "";
+
+            const homeButton = `<button class="tree-leaf ${state.current.nodeId === "home" ? "active" : ""}" data-node="home">首页</button>`;
+            const sections = archive.map(section => {
+                return renderTreeNode(section, section.id, 0);
+            }).join("");
+            tree.innerHTML = homeButton + sections;
+        }
+
+        function renderHelios1112Sidebar() {
+            if (brandTitle) brandTitle.textContent = helios1112Data.title || "赫里奥斯 1112";
+            if (brandSubtitle) brandSubtitle.textContent = helios1112Data.subtitle || "Omni Civic Layer";
+            if (contentKicker) contentKicker.textContent = helios1112Data.kicker || "Helios 1112";
+            if (pageTitle) pageTitle.textContent = helios1112Data.title || "赫里奥斯 1112";
+            if (archiveSearchBox) {
+                archiveSearchBox.style.display = "none";
+                archiveSearch.value = "";
+                searchResults.classList.remove("visible");
+                searchResults.innerHTML = "";
+            }
+
+            tree.innerHTML = getHelios1112Sections().map(section => `
+                <button class="tree-leaf ${section.id === currentHelios1112NodeId ? "active" : ""}" data-era-node="${escapeAttribute(section.id)}">
+                    ${escapeHTML(section.title || section.id)}
+                </button>
+            `).join("");
+        }
+
+        function getHelios1112Sections() {
+            return Array.isArray(helios1112Data.sections) ? helios1112Data.sections : [];
+        }
+
+        function getCurrentHelios1112Section() {
+            const sections = getHelios1112Sections();
+            return sections.find(section => section.id === currentHelios1112NodeId) || sections[0] || {
+                id: "empty",
+                title: "赫里奥斯 1112",
+                type: "空档案",
+                kind: "empty",
+                paragraphs: ["1112 年档案尚未载入。"]
+            };
+        }
+
+        function selectHelios1112Node(nodeId) {
+            const section = getHelios1112Sections().find(item => item.id === nodeId);
+            if (!section) return;
+            currentHelios1112NodeId = nodeId;
+            renderEraSidebar();
+            renderPanel();
+        }
+
+        function selectHelios1112MapArea(target) {
+            const shell = target.closest(".helios-1112-map-shell");
+            if (!shell) return;
+            const name = target.dataset.heliosMapArea || "";
+            shell.querySelectorAll("[data-helios-map-area]").forEach(item => {
+                item.classList.toggle("active", item.dataset.heliosMapArea === name);
+            });
+            const selection = shell.querySelector("[data-map-selection]");
+            if (!selection) return;
+
+            const currentSection = getCurrentHelios1112Section();
+            const area = (Array.isArray(currentSection.areas) ? currentSection.areas : []).find(item => item.name === name);
+            const details = area && area.details ? area.details : null;
+            if (!details) {
+                selection.classList.remove("helios-1112-map-info");
+                selection.textContent = name ? `当前选择：${name}` : "选择地图上的地点后，这里会显示地点名称。";
+                return;
+            }
+
+            const paragraphs = Array.isArray(details.paragraphs)
+                ? details.paragraphs.map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")
+                : "";
+            selection.classList.add("helios-1112-map-info");
+            selection.innerHTML = `
+                <h2>${escapeHTML(details.title || name)}</h2>
+                ${paragraphs}
+            `;
         }
 
         function showPolicyTooltip(target) {
@@ -2282,7 +2490,11 @@
             workspace.classList.add("era-transitioning");
             window.setTimeout(() => {
                 currentHeliosEra = nextEra;
+                if (currentHeliosEra === "1112" && !getHelios1112Sections().some(section => section.id === currentHelios1112NodeId)) {
+                    currentHelios1112NodeId = getHelios1112Sections()[0]?.id || "welcome";
+                }
                 updateHeliosEraState();
+                renderEraSidebar();
                 renderPanel();
                 window.requestAnimationFrame(() => {
                     workspace.classList.remove("era-transitioning");
@@ -2298,73 +2510,147 @@
         }
 
         function renderHelios1112Panel() {
-            panelPath.textContent = "首页 / 1112";
-            panelTitle.textContent = "欢迎来到赫里奥斯";
-            panelType.textContent = "1112";
+            const section = getCurrentHelios1112Section();
+            panelPath.textContent = `1112 / ${section.title || "档案"}`;
+            panelTitle.textContent = section.title || "赫里奥斯 1112";
+            panelType.textContent = section.type || "1112";
             panelType.className = "type-pill optional";
             workspace.classList.remove("country-layout", "person-layout", "no-asset-layout");
             workspace.classList.add("home-layout");
-            panelBody.innerHTML = renderHelios1112Home();
+            panelBody.innerHTML = renderHelios1112Section(section);
             renderAssetSlot("optional");
         }
 
-        function renderHelios1112Home() {
-            const paragraphs = HELIOS_1112_INTRO.map(text => `<p>${escapeHTML(text)}</p>`).join("");
+        function renderHelios1112Section(section) {
+            if (!section || section.kind === "welcome") return renderHelios1112Welcome(section || {});
+            if (section.kind === "map") return renderHelios1112Map(section);
+            if (section.kind === "facts") return renderHelios1112Facts(section);
+            if (section.kind === "game-note") return renderHelios1112GameNote(section);
+            return renderHelios1112TextSection(section);
+        }
+
+        function renderHelios1112Welcome(section) {
+            const paragraphs = Array.isArray(section.paragraphs)
+                ? section.paragraphs.map(text => `<p>${escapeHTML(text)}</p>`).join("")
+                : "";
+            const frameworkItems = Array.isArray(section.framework) ? section.framework : [];
             return `
                 <section class="helios-1112-home">
                     <div class="helios-1112-content">
                         <div>
-                            <div class="helios-1112-kicker">Helios 1112 / Omni Civic Layer</div>
-                            <h2 class="helios-1112-title">欢迎来到赫里奥斯</h2>
+                            <div class="helios-1112-kicker">${escapeHTML(section.kicker || helios1112Data.kicker || "Helios 1112")}</div>
+                            <h2 class="helios-1112-title">${escapeHTML(section.title || "赫里奥斯 1112")}</h2>
                             <div class="helios-1112-copy">${paragraphs}</div>
                         </div>
                         <aside class="helios-1112-framework" aria-label="1112 年档案框架">
                             <div class="helios-1112-framework-title">Framework Reserved</div>
                             <div class="helios-1112-framework-list">
-                                <div class="helios-1112-framework-item">
-                                    <strong>国家与城市</strong>
-                                    <span>等待录入 1112 年政治实体、巨型都市与跨大陆交通网络。</span>
-                                </div>
-                                <div class="helios-1112-framework-item">
-                                    <strong>技术与生命</strong>
-                                    <span>等待录入虚拟世界、机械共生、人造生命与未命名实验项目。</span>
-                                </div>
-                                <div class="helios-1112-framework-item">
-                                    <strong>组织与事件</strong>
-                                    <span>等待录入新时代机构、危机、战争与文明边界突破记录。</span>
-                                </div>
+                                ${frameworkItems.map(item => `
+                                    <div class="helios-1112-framework-item">
+                                        <strong>${escapeHTML(item.title || "")}</strong>
+                                        <span>${escapeHTML(item.text || "")}</span>
+                                    </div>
+                                `).join("")}
                             </div>
                         </aside>
                     </div>
-                    ${renderHelios1112Facts()}
-                    ${renderHelios1112GameNote()}
                 </section>
             `;
         }
 
-        function renderHelios1112Facts() {
+        function renderHelios1112Map(section) {
+            const image = section.image || {};
+            const width = Number(image.width) || 1128;
+            const height = Number(image.height) || 892;
+            const markerRadius = Number(section.markerRadius) || 28;
+            const areas = Array.isArray(section.areas) ? section.areas : [];
+            const circles = areas.filter(area => area.shape === "circle");
+            const polygons = areas.filter(area => area.shape === "poly");
+
             return `
-                <section class="helios-1112-facts">
-                    <h2 class="helios-1112-facts-title">你应该知道的两件事</h2>
-                    <div class="helios-1112-fact-grid">
-                        ${HELIOS_1112_FACTS.map((fact, index) => `
-                            <article class="helios-1112-fact-card">
-                                <div class="helios-1112-fact-index">${String(index + 1).padStart(2, "0")}</div>
-                                <h3>${escapeHTML(fact.title)}</h3>
-                                ${fact.paragraphs.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")}
-                            </article>
-                        `).join("")}
+                <section class="helios-1112-home">
+                    <div class="helios-1112-map-shell">
+                        <div class="helios-1112-map-frame">
+                            <img src="${escapeAttribute(image.src || "")}" alt="${escapeAttribute(image.alt || section.title || "地图")}">
+                            <svg class="helios-1112-map-overlay" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" aria-label="${escapeAttribute(section.title || "地图")}互动点位">
+                                ${polygons.map(area => `
+                                    <polygon class="helios-1112-map-poly" points="${escapeAttribute(formatSvgPoints(area.points))}" data-helios-map-area="${escapeAttribute(area.name || "")}" tabindex="0" role="button" aria-label="${escapeAttribute(area.name || "")}">
+                                        <title>${escapeHTML(area.name || "")}</title>
+                                    </polygon>
+                                `).join("")}
+                                ${circles.map(area => `
+                                    <circle class="helios-1112-map-circle" cx="${Number(area.x) || 0}" cy="${Number(area.y) || 0}" r="${markerRadius}" data-helios-map-area="${escapeAttribute(area.name || "")}" tabindex="0" role="button" aria-label="${escapeAttribute(area.name || "")}">
+                                        <title>${escapeHTML(area.name || "")}</title>
+                                    </circle>
+                                `).join("")}
+                            </svg>
+                        </div>
+                        <div class="helios-1112-map-labels" aria-label="地图点位">
+                            ${areas.map(area => `<button class="helios-1112-map-chip" type="button" data-helios-map-area="${escapeAttribute(area.name || "")}">${escapeHTML(area.name || "")}</button>`).join("")}
+                        </div>
+                        <div class="helios-1112-focus" data-map-selection>选择地图上的地点后，这里会显示地点名称。</div>
                     </div>
                 </section>
             `;
         }
 
-        function renderHelios1112GameNote() {
+        function formatSvgPoints(points) {
+            if (!Array.isArray(points)) return "";
+            return points
+                .filter(point => Array.isArray(point) && point.length >= 2)
+                .map(point => `${Number(point[0]) || 0},${Number(point[1]) || 0}`)
+                .join(" ");
+        }
+
+        function renderHelios1112Facts(section) {
+            const items = Array.isArray(section.items) ? section.items : [];
             return `
-                <section class="helios-1112-game-note">
-                    <h2>游戏说明</h2>
-                    ${HELIOS_1112_GAME_NOTE.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")}
-                    <div class="helios-1112-focus">洛萨维亚帝国——桐花语区——对魔特别行动科。</div>
+                <section class="helios-1112-home">
+                    <section class="helios-1112-facts standalone">
+                        <h2 class="helios-1112-facts-title">${escapeHTML(section.title || "档案")}</h2>
+                        <div class="helios-1112-fact-grid">
+                            ${items.map((fact, index) => `
+                                <article class="helios-1112-fact-card">
+                                    <div class="helios-1112-fact-index">${String(index + 1).padStart(2, "0")}</div>
+                                    <h3>${escapeHTML(fact.title || "")}</h3>
+                                    ${(Array.isArray(fact.paragraphs) ? fact.paragraphs : []).map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")}
+                                </article>
+                            `).join("")}
+                        </div>
+                    </section>
+                </section>
+            `;
+        }
+
+        function renderHelios1112GameNote(section) {
+            const paragraphs = Array.isArray(section.paragraphs)
+                ? section.paragraphs.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")
+                : "";
+            const focus = section.focus ? `<div class="helios-1112-focus">${escapeHTML(section.focus)}</div>` : "";
+            return `
+                <section class="helios-1112-home">
+                    <section class="helios-1112-game-note standalone">
+                        <h2>${escapeHTML(section.title || "档案")}</h2>
+                        ${paragraphs}
+                        ${focus}
+                    </section>
+                </section>
+            `;
+        }
+
+        function renderHelios1112TextSection(section) {
+            const paragraphs = Array.isArray(section.paragraphs)
+                ? section.paragraphs.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")
+                : "";
+            return `
+                <section class="helios-1112-home">
+                    <div class="helios-1112-content">
+                        <div>
+                            <div class="helios-1112-kicker">${escapeHTML(section.type || "1112")}</div>
+                            <h2 class="helios-1112-title">${escapeHTML(section.title || "赫里奥斯 1112")}</h2>
+                            <div class="helios-1112-copy">${paragraphs}</div>
+                        </div>
+                    </div>
                 </section>
             `;
         }
