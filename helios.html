@@ -890,6 +890,40 @@
             margin-bottom: 0;
         }
 
+        .helios-1112-record-card {
+            border: 1px solid #d7eee5;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+            padding: clamp(20px, 3vw, 28px);
+        }
+
+        .helios-1112-record-card h2 {
+            margin: 0 0 14px;
+            color: #0f172a;
+            font-size: clamp(24px, 2.8vw, 34px);
+            line-height: 1.25;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-record-card h3 {
+            margin: 22px 0 10px;
+            color: #0f172a;
+            font-size: 19px;
+            line-height: 1.35;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-record-card p {
+            margin: 0 0 12px;
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.9;
+        }
+
+        .helios-1112-record-card p:last-child {
+            margin-bottom: 0;
+        }
+
         @media (max-width: 920px) {
             .content-top {
                 align-items: stretch;
@@ -2706,15 +2740,32 @@
             return `
                 <section class="helios-1112-home">
                     ${items.length ? `
-                        <div class="children-grid">
-                            ${items.map(item => `
-                                <button class="section-card" type="button">
-                                    <strong>${escapeHTML(item.title || item.name || "")}</strong>
-                                </button>
-                            `).join("")}
+                        <div class="helios-1112-collection">
+                            ${items.map(renderHelios1112RecordCard).join("")}
                         </div>
                     ` : ""}
                 </section>
+            `;
+        }
+
+        function renderHelios1112RecordCard(item) {
+            const paragraphs = Array.isArray(item.paragraphs)
+                ? item.paragraphs.map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")
+                : "";
+            const sections = Array.isArray(item.sections)
+                ? item.sections.map(section => `
+                    <section>
+                        <h3>${escapeHTML(section.title || "")}</h3>
+                        ${(Array.isArray(section.paragraphs) ? section.paragraphs : []).map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")}
+                    </section>
+                `).join("")
+                : "";
+            return `
+                <article class="helios-1112-record-card">
+                    <h2>${escapeHTML(item.title || item.name || "")}</h2>
+                    ${paragraphs}
+                    ${sections}
+                </article>
             `;
         }
 
