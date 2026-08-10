@@ -833,6 +833,63 @@
             margin-bottom: 0;
         }
 
+        .helios-1112-collection {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 18px;
+        }
+
+        .helios-1112-person-card {
+            display: grid;
+            grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+            gap: 22px;
+            border: 1px solid #d7eee5;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+            padding: 18px;
+        }
+
+        .helios-1112-person-image {
+            overflow: hidden;
+            aspect-ratio: 2 / 3;
+            background: #eef6f3;
+        }
+
+        .helios-1112-person-image img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .helios-1112-person-card h2 {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: clamp(22px, 2.4vw, 30px);
+            line-height: 1.25;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-person-meta {
+            margin-bottom: 14px;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.6;
+        }
+
+        .helios-1112-person-card p {
+            margin: 0 0 12px;
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.9;
+        }
+
+        .helios-1112-person-card p:last-child {
+            margin-bottom: 0;
+        }
+
         @media (max-width: 920px) {
             .content-top {
                 align-items: stretch;
@@ -849,6 +906,14 @@
 
             .helios-1112-fact-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .helios-1112-person-card {
+                grid-template-columns: 1fr;
+            }
+
+            .helios-1112-person-image {
+                max-width: 260px;
             }
         }
 
@@ -2615,6 +2680,29 @@
 
         function renderHelios1112Collection(section) {
             const items = Array.isArray(section.items) ? section.items : [];
+            if (section.id === "people") {
+                return `
+                    <section class="helios-1112-home">
+                        <div class="helios-1112-collection">
+                            ${items.map(item => `
+                                <article class="helios-1112-person-card">
+                                    ${item.image ? `
+                                        <div class="helios-1112-person-image">
+                                            <img src="${escapeAttribute(item.image)}" alt="${escapeAttribute(item.name || "人物")}">
+                                        </div>
+                                    ` : ""}
+                                    <div>
+                                        <h2>${escapeHTML(item.name || "")}</h2>
+                                        ${item.meta ? `<div class="helios-1112-person-meta">${escapeHTML(item.meta)}</div>` : ""}
+                                        ${(Array.isArray(item.paragraphs) ? item.paragraphs : []).map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")}
+                                    </div>
+                                </article>
+                            `).join("")}
+                        </div>
+                    </section>
+                `;
+            }
+
             return `
                 <section class="helios-1112-home">
                     ${items.length ? `
