@@ -350,6 +350,8 @@
             border-bottom: 1px solid var(--line);
             display: flex;
             align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
             background: rgba(255, 253, 248, 0.72);
         }
 
@@ -368,12 +370,342 @@
             letter-spacing: 0;
         }
 
+        .era-switch {
+            flex: 0 0 auto;
+            display: inline-flex;
+            gap: 4px;
+            padding: 4px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 253, 248, 0.82);
+        }
+
+        .era-button {
+            min-width: 78px;
+            min-height: 34px;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .era-button.active {
+            background: #232b35;
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(35, 43, 53, 0.14);
+        }
+
+        .era-button[data-era="1112"].active {
+            background: #2ecc71;
+            color: #fff;
+            box-shadow: 0 8px 22px rgba(46, 204, 113, 0.28);
+        }
+
         .workspace {
             padding: 34px;
             display: grid;
             grid-template-columns: minmax(0, 1fr) 320px;
             gap: 24px;
             align-items: start;
+        }
+
+        .sidebar,
+        .main-panel,
+        .asset-panel,
+        .content-top {
+            transition: opacity 0.24s ease, transform 0.24s ease, filter 0.24s ease, background 0.24s ease, border-color 0.24s ease;
+        }
+
+        .workspace.era-transitioning .main-panel,
+        .workspace.era-transitioning .asset-panel {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        body.era-1112 {
+            background:
+                linear-gradient(135deg, rgba(74, 222, 128, 0.18), rgba(6, 182, 212, 0.1) 42%, transparent 70%),
+                linear-gradient(300deg, rgba(71, 85, 105, 0.12), transparent 46%),
+                #ffffff;
+        }
+
+        body.era-1112 .page-shell {
+            border-color: #d7eee5;
+            background: rgba(248, 250, 252, 0.92);
+        }
+
+        body.era-1112 .sidebar {
+            opacity: 0.28;
+            filter: saturate(0.35);
+            pointer-events: none;
+        }
+
+        body.era-1112 .content-top {
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom-color: #d7eee5;
+        }
+
+        body.era-1112 .kicker {
+            color: #2ecc71;
+        }
+
+        body.era-1112 .main-panel {
+            border-color: #d7eee5;
+            background: #ffffff;
+            box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+        }
+
+        body.era-1112 .panel-header {
+            border-bottom-color: #d7eee5;
+            background: linear-gradient(90deg, rgba(46, 204, 113, 0.1), rgba(6, 182, 212, 0.06), transparent);
+        }
+
+        body.era-1112 .type-pill {
+            background: #2ecc71;
+        }
+
+        .helios-1112-home {
+            position: relative;
+            min-height: 560px;
+            overflow: hidden;
+            padding: clamp(28px, 5vw, 56px);
+            border: 1px solid #d7eee5;
+            background:
+                linear-gradient(135deg, rgba(74, 222, 128, 0.16), transparent 32%),
+                linear-gradient(315deg, rgba(56, 189, 248, 0.14), transparent 42%),
+                #ffffff;
+        }
+
+        .helios-1112-home::before,
+        .helios-1112-home::after {
+            content: "";
+            position: absolute;
+            inset: auto;
+            pointer-events: none;
+            filter: blur(18px);
+            opacity: 0.45;
+        }
+
+        .helios-1112-home::before {
+            width: 58%;
+            height: 62%;
+            top: -18%;
+            right: -18%;
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.7), rgba(6, 182, 212, 0.32));
+            clip-path: polygon(12% 0, 100% 8%, 78% 100%, 0 76%);
+        }
+
+        .helios-1112-home::after {
+            width: 54%;
+            height: 46%;
+            left: -18%;
+            bottom: -16%;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.16), rgba(46, 204, 113, 0.32));
+            clip-path: polygon(0 18%, 72% 0, 100% 74%, 18% 100%);
+        }
+
+        .helios-1112-content {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(230px, 320px);
+            gap: clamp(24px, 4vw, 52px);
+            align-items: start;
+        }
+
+        .helios-1112-kicker {
+            color: #2ecc71;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .helios-1112-title {
+            margin: 12px 0 24px;
+            color: #0f172a;
+            font-size: clamp(34px, 5vw, 64px);
+            line-height: 1.04;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-copy {
+            max-width: 760px;
+            color: #334155;
+            font-size: 17px;
+            line-height: 2;
+        }
+
+        .helios-1112-copy p {
+            margin: 0 0 18px;
+        }
+
+        .helios-1112-facts {
+            position: relative;
+            z-index: 1;
+            margin-top: clamp(28px, 5vw, 52px);
+            border-top: 1px solid #d7eee5;
+            padding-top: clamp(24px, 4vw, 38px);
+        }
+
+        .helios-1112-facts-title {
+            margin: 0 0 18px;
+            color: #0f172a;
+            font-size: clamp(24px, 3vw, 34px);
+            letter-spacing: 0;
+        }
+
+        .helios-1112-fact-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .helios-1112-fact-card {
+            border: 1px solid #d7eee5;
+            background: rgba(255, 255, 255, 0.88);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+            padding: 20px;
+        }
+
+        .helios-1112-fact-index {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            min-height: 28px;
+            margin-bottom: 12px;
+            background: #2ecc71;
+            color: #fff;
+            font-family: Consolas, "Courier New", monospace;
+            font-weight: 900;
+            clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+        }
+
+        .helios-1112-fact-card h3 {
+            margin: 0 0 14px;
+            color: #0f172a;
+            font-size: 20px;
+            line-height: 1.35;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-fact-card p {
+            margin: 0 0 12px;
+            color: #334155;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .helios-1112-fact-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .helios-1112-game-note {
+            position: relative;
+            z-index: 1;
+            margin-top: 18px;
+            border: 1px solid #c4eadc;
+            background:
+                linear-gradient(135deg, rgba(46, 204, 113, 0.09), transparent 38%),
+                rgba(255, 255, 255, 0.92);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+            padding: clamp(20px, 3vw, 28px);
+        }
+
+        .helios-1112-game-note h2 {
+            margin: 0 0 16px;
+            color: #0f172a;
+            font-size: clamp(22px, 2.6vw, 30px);
+            letter-spacing: 0;
+        }
+
+        .helios-1112-game-note p {
+            margin: 0 0 12px;
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.9;
+        }
+
+        .helios-1112-game-note p:last-child {
+            margin-bottom: 0;
+        }
+
+        .helios-1112-focus {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-left: 4px solid #2ecc71;
+            background: #f8fafc;
+            color: #0f172a;
+            font-size: 17px;
+            font-weight: 900;
+            line-height: 1.7;
+        }
+
+        .helios-1112-framework {
+            border: 1px solid #d7eee5;
+            background: rgba(248, 250, 252, 0.84);
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+        }
+
+        .helios-1112-framework-title {
+            padding: 14px 16px;
+            border-bottom: 1px solid #d7eee5;
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .helios-1112-framework-list {
+            display: grid;
+            gap: 1px;
+            background: #d7eee5;
+        }
+
+        .helios-1112-framework-item {
+            min-height: 76px;
+            padding: 14px 16px;
+            background: #fff;
+        }
+
+        .helios-1112-framework-item strong {
+            display: block;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .helios-1112-framework-item span {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 920px) {
+            .content-top {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .era-switch {
+                align-self: flex-start;
+            }
+
+            .helios-1112-content {
+                grid-template-columns: 1fr;
+            }
+
+            .helios-1112-fact-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .workspace.country-layout {
@@ -1360,6 +1692,10 @@
                     <div class="kicker">Helios Archive</div>
                     <h2 class="page-title">赫里奥斯</h2>
                 </div>
+                <div class="era-switch" aria-label="切换赫里奥斯时代">
+                    <button class="era-button active" type="button" data-era="528" onclick="switchHeliosEra('528')">528</button>
+                    <button class="era-button" type="button" data-era="1112" onclick="switchHeliosEra('1112')">1112</button>
+                </div>
             </header>
 
             <section class="workspace" id="workspace">
@@ -1393,6 +1729,54 @@
         let personCountryMap = {};
         let countryBadgeClassMap = {};
         let searchIndex = [];
+        let currentHeliosEra = "528";
+        const HELIOS_1112_INTRO = [
+            "高塔之间流动着人工制造的光，钢铁列车昼夜不停地穿越大陆，巨大的工厂能够在一天内生产古代王国一年也无法制造的财富。",
+            "还有一些东西，神话都无法用来形容。",
+            "由思想编织而成的虚拟世界，能够替代感官的幻境，与血肉共同成长的机械，拥有自我意识的人造生命，以及那些正在实验室最深处诞生、尚且没有名字的新事物。",
+            "赫里奥斯相信，文明的发展终将使世界更加明亮。",
+            "于是，生命开始自己创造奇迹。",
+            "生命的天性就是不断地推动自己越过新的边界。",
+            "我们考验自身的极限。",
+            "我们直面自己的恐惧。",
+            "我们奋起迎接挑战，最终成为超越我们自身的存在。"
+        ];
+        const HELIOS_1112_FACTS = [
+            {
+                title: "“神”已经存在",
+                paragraphs: [
+                    "蒂尔兰历1112年，当人们谈论“神”，很多时候已经不再指向宗教经典中的神明。",
+                    "它更接近一个战力学、政治学乃至大众文化中的称呼。",
+                    "当某个个体的力量彻底脱离常规军事尺度，当国家无法用数量、工业与传统战略衡量其威胁，当它的行动本身就足以成为国际政治中的一个变量，人们便开始称其为“神”。",
+                    "忒弥斯就是其中最典型的存在。",
+                    "她是目前唯一的强人工智能，CR达到100。",
+                    "对于绝大多数人而言，这个数字已经没有多少实际意义。它表达的只有一件事情：",
+                    "常规意义上的人力无法与之抗衡。",
+                    "1112年的“神”可能出生于实验室，诞生于战争，来自某次无人理解的技术突破，或者仅仅是某个在漫长岁月中走得太远的个体。",
+                    "文明已经能够亲手制造一些足以被称作神的东西。"
+                ]
+            },
+            {
+                title: "这是一个真正强者遍地的时代",
+                paragraphs: [
+                    "五百年前，一名高阶法师足以成为王室座上宾。",
+                    "如今，九环法术的完整课程能够被上传到视频网站，任何人都可以免费观看。",
+                    "当然，看懂九环法术和真正施展九环法术之间仍然隔着巨大的距离。天赋、训练、设备、魔力、身体条件与资源依然存在门槛。",
+                    "可整个社会的基础已经被彻底抬高。",
+                    "普通大学生拥有CR2至CR3的综合能力并不值得惊讶。受过专业训练的军人、施法者、工程师和特殊职业者更加强大。过去足以让一个小镇陷入恐慌的怪物，在现代城市里可能只会换来一次交通管制和几辆执法车辆。",
+                    "文明本身就是强者的生产机器。"
+                ]
+            }
+        ];
+        const HELIOS_1112_GAME_NOTE = [
+            "1112年的赫里奥斯并不是艾伯伦。",
+            "这里不仅广泛存在魔法，也拥有远远超过传统D&D世界的高端战力、工业能力与社会组织程度。九环法术可以公开传播，人工智能能够参与国家治理，现代军队拥有专门针对高阶施法者和异常个体的完整作战体系。",
+            "因此，这并不是一个适合几名冒险者接取委托、探索遗迹、打败怪物的时代。",
+            "现代社会同样意味着极端庞大的信息量。",
+            "在528年，一个王国的重要机构也许只有十几个；到了1112年，一个大型国家拥有数千个部门都十分正常。",
+            "如果试图完整描述整个1112年的赫里奥斯，它最终只会变成一部永远写不完的百科全书。",
+            "1112年的故事只聚焦于一个很小的切面："
+        ];
         const HELIOS_DATA_URL = "helios-data.json";
 
         async function loadHeliosData() {
@@ -1441,6 +1825,7 @@
         const assetSlot = document.getElementById("asset-slot");
         const assetLabel = document.getElementById("asset-label");
         const assetNote = document.getElementById("asset-note");
+        const eraButtons = document.querySelectorAll(".era-button");
 
         const policyTooltip = document.createElement("div");
         policyTooltip.className = "policy-floating-tooltip";
@@ -1890,7 +2275,107 @@
             return { section, node, parent, path };
         }
 
+        function switchHeliosEra(nextEra) {
+            if (nextEra !== "528" && nextEra !== "1112") return;
+            if (currentHeliosEra === nextEra) return;
+
+            workspace.classList.add("era-transitioning");
+            window.setTimeout(() => {
+                currentHeliosEra = nextEra;
+                updateHeliosEraState();
+                renderPanel();
+                window.requestAnimationFrame(() => {
+                    workspace.classList.remove("era-transitioning");
+                });
+            }, 180);
+        }
+
+        function updateHeliosEraState() {
+            document.body.classList.toggle("era-1112", currentHeliosEra === "1112");
+            eraButtons.forEach(button => {
+                button.classList.toggle("active", button.dataset.era === currentHeliosEra);
+            });
+        }
+
+        function renderHelios1112Panel() {
+            panelPath.textContent = "首页 / 1112";
+            panelTitle.textContent = "欢迎来到赫里奥斯";
+            panelType.textContent = "1112";
+            panelType.className = "type-pill optional";
+            workspace.classList.remove("country-layout", "person-layout", "no-asset-layout");
+            workspace.classList.add("home-layout");
+            panelBody.innerHTML = renderHelios1112Home();
+            renderAssetSlot("optional");
+        }
+
+        function renderHelios1112Home() {
+            const paragraphs = HELIOS_1112_INTRO.map(text => `<p>${escapeHTML(text)}</p>`).join("");
+            return `
+                <section class="helios-1112-home">
+                    <div class="helios-1112-content">
+                        <div>
+                            <div class="helios-1112-kicker">Helios 1112 / Omni Civic Layer</div>
+                            <h2 class="helios-1112-title">欢迎来到赫里奥斯</h2>
+                            <div class="helios-1112-copy">${paragraphs}</div>
+                        </div>
+                        <aside class="helios-1112-framework" aria-label="1112 年档案框架">
+                            <div class="helios-1112-framework-title">Framework Reserved</div>
+                            <div class="helios-1112-framework-list">
+                                <div class="helios-1112-framework-item">
+                                    <strong>国家与城市</strong>
+                                    <span>等待录入 1112 年政治实体、巨型都市与跨大陆交通网络。</span>
+                                </div>
+                                <div class="helios-1112-framework-item">
+                                    <strong>技术与生命</strong>
+                                    <span>等待录入虚拟世界、机械共生、人造生命与未命名实验项目。</span>
+                                </div>
+                                <div class="helios-1112-framework-item">
+                                    <strong>组织与事件</strong>
+                                    <span>等待录入新时代机构、危机、战争与文明边界突破记录。</span>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                    ${renderHelios1112Facts()}
+                    ${renderHelios1112GameNote()}
+                </section>
+            `;
+        }
+
+        function renderHelios1112Facts() {
+            return `
+                <section class="helios-1112-facts">
+                    <h2 class="helios-1112-facts-title">你应该知道的两件事</h2>
+                    <div class="helios-1112-fact-grid">
+                        ${HELIOS_1112_FACTS.map((fact, index) => `
+                            <article class="helios-1112-fact-card">
+                                <div class="helios-1112-fact-index">${String(index + 1).padStart(2, "0")}</div>
+                                <h3>${escapeHTML(fact.title)}</h3>
+                                ${fact.paragraphs.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")}
+                            </article>
+                        `).join("")}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderHelios1112GameNote() {
+            return `
+                <section class="helios-1112-game-note">
+                    <h2>游戏说明</h2>
+                    ${HELIOS_1112_GAME_NOTE.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")}
+                    <div class="helios-1112-focus">洛萨维亚帝国——桐花语区——对魔特别行动科。</div>
+                </section>
+            `;
+        }
+
         function renderPanel() {
+            updateHeliosEraState();
+            if (currentHeliosEra === "1112") {
+                renderHelios1112Panel();
+                return;
+            }
+
             panelPath.textContent = state.current.path;
             panelTitle.textContent = state.current.name;
             panelType.textContent = state.current.type;
