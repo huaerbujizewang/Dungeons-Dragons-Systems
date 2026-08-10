@@ -1969,12 +1969,17 @@
     </div>
 
     <script>        let archive = [];
+        let helios528Archive = [];
+        let helios1112Archive = [];
         let personCountryMap = {};
         let countryBadgeClassMap = {};
         let searchIndex = [];
         let currentHeliosEra = "528";
-        let helios1112Data = { sections: [] };
-        let currentHelios1112NodeId = "welcome";
+        let helios1112Data = { archive: [] };
+        const currentNodeByEra = {
+            "528": "home",
+            "1112": "home"
+        };
         const HELIOS_DATA_URL = "helios-data.json";
         const HELIOS_1112_DATA_URL = "helios-1112-data.json";
 
@@ -1991,10 +1996,12 @@
             }
             const data = await response.json();
             const data1112 = await response1112.json();
-            archive = Array.isArray(data.archive) ? data.archive : [];
+            helios528Archive = Array.isArray(data.archive) ? data.archive : [];
             personCountryMap = data.personCountryMap || {};
             countryBadgeClassMap = data.countryBadgeClassMap || {};
-            helios1112Data = data1112 && typeof data1112 === "object" ? data1112 : { sections: [] };
+            helios1112Data = data1112 && typeof data1112 === "object" ? data1112 : { archive: [] };
+            helios1112Archive = Array.isArray(helios1112Data.archive) ? helios1112Data.archive : [];
+            archive = helios528Archive;
         }
 
         const SUPABASE_URL = "https://vbzfpgucpciqgaakqndz.supabase.co";
@@ -2051,12 +2058,6 @@
         function buildTree() {
             renderEraSidebar();
             tree.addEventListener("click", event => {
-                const eraNode = event.target.closest("button[data-era-node]");
-                if (eraNode) {
-                    selectHelios1112Node(eraNode.dataset.eraNode);
-                    return;
-                }
-
                 const button = event.target.closest("button[data-node]");
                 if (!button) return;
                 if (button.classList.contains("tree-toggle")) {
@@ -2138,6 +2139,7 @@
         }
 
         function renderEraSidebar() {
+            archive = getCurrentArchive();
             if (currentHeliosEra === "1112") {
                 renderHelios1112Sidebar();
                 return;
@@ -2156,46 +2158,26 @@
             tree.innerHTML = homeButton + sections;
         }
 
+        function getCurrentArchive() {
+            return currentHeliosEra === "1112" ? helios1112Archive : helios528Archive;
+        }
+
         function renderHelios1112Sidebar() {
             if (brandTitle) brandTitle.textContent = helios1112Data.title || "赫里奥斯 1112";
             if (brandSubtitle) brandSubtitle.textContent = helios1112Data.subtitle || "Omni Civic Layer";
             if (contentKicker) contentKicker.textContent = helios1112Data.kicker || "Helios 1112";
             if (pageTitle) pageTitle.textContent = helios1112Data.title || "赫里奥斯 1112";
             if (archiveSearchBox) {
-                archiveSearchBox.style.display = "none";
-                archiveSearch.value = "";
+                archiveSearchBox.style.display = "";
                 searchResults.classList.remove("visible");
                 searchResults.innerHTML = "";
             }
 
-            tree.innerHTML = getHelios1112Sections().map(section => `
-                <button class="tree-leaf ${section.id === currentHelios1112NodeId ? "active" : ""}" data-era-node="${escapeAttribute(section.id)}">
-                    ${escapeHTML(section.title || section.id)}
-                </button>
-            `).join("");
-        }
-
-        function getHelios1112Sections() {
-            return Array.isArray(helios1112Data.sections) ? helios1112Data.sections : [];
-        }
-
-        function getCurrentHelios1112Section() {
-            const sections = getHelios1112Sections();
-            return sections.find(section => section.id === currentHelios1112NodeId) || sections[0] || {
-                id: "empty",
-                title: "赫里奥斯 1112",
-                type: "空档案",
-                kind: "empty",
-                paragraphs: ["1112 年档案尚未载入。"]
-            };
-        }
-
-        function selectHelios1112Node(nodeId) {
-            const section = getHelios1112Sections().find(item => item.id === nodeId);
-            if (!section) return;
-            currentHelios1112NodeId = nodeId;
-            renderEraSidebar();
-            renderPanel();
+            const homeButton = `<button class="tree-leaf ${state.current.nodeId === "home" ? "active" : ""}" data-node="home">首页</button>`;
+            const sections = archive.map(section => {
+                return renderTreeNode(section, section.id, 0);
+            }).join("");
+            tree.innerHTML = homeButton + sections;
         }
 
         function selectHelios1112MapArea(target) {
@@ -2208,8 +2190,8 @@
             const selection = shell.querySelector("[data-map-selection]");
             if (!selection) return;
 
-            const currentSection = getCurrentHelios1112Section();
-            const area = (Array.isArray(currentSection.areas) ? currentSection.areas : []).find(item => item.name === name);
+            const currentMap = state.current.map || {};
+            const area = (Array.isArray(currentMap.areas) ? currentMap.areas : []).find(item => item.name === name);
             const details = area && area.details ? area.details : null;
             if (!details) {
                 selection.classList.remove("helios-1112-map-info");
@@ -2480,8 +2462,8 @@
                     type: "目录",
                     asset: "optional",
                     children: archive,
-                    image: "assets/helios/封面.png",
-                    imageAspect: "1103 / 1426"
+                    image: currentHeliosEra === "1112" ? "" : "assets/helios/封面.png",
+                    imageAspect: currentHeliosEra === "1112" ? "" : "1103 / 1426"
                 };
             } else {
                 const resolved = resolveNode(nodeId);
@@ -2509,9 +2491,17 @@
                     profileSections: node && typeof node === "object" ? node.profileSections || [] : [],
                     statBlock: node && typeof node === "object" ? node.statBlock || null : null,
                     policies: node && typeof node === "object" ? node.policies || null : null,
-                    relations: node && typeof node === "object" ? node.relations || node.diplomacy || null : null
+                    relations: node && typeof node === "object" ? node.relations || node.diplomacy || null : null,
+                    kind: node && typeof node === "object" ? node.kind || "" : "",
+                    map: node && typeof node === "object" ? node.map || null : null,
+                    framework: node && typeof node === "object" ? node.framework || [] : [],
+                    items: node && typeof node === "object" ? node.items || [] : [],
+                    focus: node && typeof node === "object" ? node.focus || "" : "",
+                    kicker: node && typeof node === "object" ? node.kicker || "" : ""
                 };
             }
+
+            currentNodeByEra[currentHeliosEra] = nodeId;
 
             document.querySelectorAll(".tree-leaf").forEach(button => {
                 button.classList.toggle("active", button.dataset.node === nodeId);
@@ -2598,13 +2588,13 @@
 
             workspace.classList.add("era-transitioning");
             window.setTimeout(() => {
+                currentNodeByEra[currentHeliosEra] = state.current.nodeId || "home";
                 currentHeliosEra = nextEra;
-                if (currentHeliosEra === "1112" && !getHelios1112Sections().some(section => section.id === currentHelios1112NodeId)) {
-                    currentHelios1112NodeId = getHelios1112Sections()[0]?.id || "welcome";
-                }
+                archive = getCurrentArchive();
+                buildSearchIndex();
                 updateHeliosEraState();
                 renderEraSidebar();
-                renderPanel();
+                selectNode(currentNodeByEra[currentHeliosEra] || "home");
                 window.requestAnimationFrame(() => {
                     workspace.classList.remove("era-transitioning");
                 });
@@ -2618,30 +2608,30 @@
             });
         }
 
-        function renderHelios1112Panel() {
-            const section = getCurrentHelios1112Section();
-            panelPath.textContent = `1112 / ${section.title || "档案"}`;
-            panelTitle.textContent = section.title || "赫里奥斯 1112";
-            panelType.textContent = section.type || "1112";
+        function renderHelios1112SpecialPanel() {
+            if (!state.current.kind || !["welcome", "map", "facts", "game-note"].includes(state.current.kind)) return false;
+            panelPath.textContent = state.current.path || "首页";
+            panelTitle.textContent = state.current.name || "赫里奥斯 1112";
+            panelType.textContent = state.current.type || "1112";
             panelType.className = "type-pill optional";
             workspace.classList.remove("country-layout", "person-layout", "no-asset-layout");
             workspace.classList.add("home-layout");
-            panelBody.innerHTML = renderHelios1112Section(section);
+            panelBody.innerHTML = renderHelios1112Section(state.current);
             renderAssetSlot("optional");
+            return true;
         }
 
         function renderHelios1112Section(section) {
             if (!section || section.kind === "welcome") return renderHelios1112Welcome(section || {});
             if (section.kind === "map") return renderHelios1112Map(section);
-            if (section.kind === "collection") return renderHelios1112Collection(section);
             if (section.kind === "facts") return renderHelios1112Facts(section);
             if (section.kind === "game-note") return renderHelios1112GameNote(section);
             return renderHelios1112TextSection(section);
         }
 
         function renderHelios1112Welcome(section) {
-            const paragraphs = Array.isArray(section.paragraphs)
-                ? section.paragraphs.map(text => `<p>${escapeHTML(text)}</p>`).join("")
+            const paragraphs = Array.isArray(section.content)
+                ? section.content.map(text => `<p>${escapeHTML(text)}</p>`).join("")
                 : "";
             const frameworkItems = Array.isArray(section.framework) ? section.framework : [];
             return `
@@ -2649,7 +2639,7 @@
                     <div class="helios-1112-content">
                         <div>
                             <div class="helios-1112-kicker">${escapeHTML(section.kicker || helios1112Data.kicker || "Helios 1112")}</div>
-                            <h2 class="helios-1112-title">${escapeHTML(section.title || "赫里奥斯 1112")}</h2>
+                            <h2 class="helios-1112-title">${escapeHTML(section.name || "赫里奥斯 1112")}</h2>
                             <div class="helios-1112-copy">${paragraphs}</div>
                         </div>
                         <aside class="helios-1112-framework" aria-label="1112 年档案框架">
@@ -2669,11 +2659,12 @@
         }
 
         function renderHelios1112Map(section) {
-            const image = section.image || {};
+            const mapData = section.map || {};
+            const image = mapData.image || {};
             const width = Number(image.width) || 1128;
             const height = Number(image.height) || 892;
-            const markerRadius = Number(section.markerRadius) || 28;
-            const areas = Array.isArray(section.areas) ? section.areas : [];
+            const markerRadius = Number(mapData.markerRadius) || 28;
+            const areas = Array.isArray(mapData.areas) ? mapData.areas : [];
             const circles = areas.filter(area => area.shape === "circle");
             const polygons = areas.filter(area => area.shape === "poly");
 
@@ -2681,8 +2672,8 @@
                 <section class="helios-1112-home">
                     <div class="helios-1112-map-shell">
                         <div class="helios-1112-map-frame">
-                            <img src="${escapeAttribute(image.src || "")}" alt="${escapeAttribute(image.alt || section.title || "地图")}">
-                            <svg class="helios-1112-map-overlay" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" aria-label="${escapeAttribute(section.title || "地图")}互动点位">
+                            <img src="${escapeAttribute(image.src || "")}" alt="${escapeAttribute(image.alt || section.name || "地图")}">
+                            <svg class="helios-1112-map-overlay" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" aria-label="${escapeAttribute(section.name || "地图")}互动点位">
                                 ${polygons.map(area => `
                                     <polygon class="helios-1112-map-poly" points="${escapeAttribute(formatSvgPoints(area.points))}" data-helios-map-area="${escapeAttribute(area.name || "")}" tabindex="0" role="button" aria-label="${escapeAttribute(area.name || "")}">
                                         <title>${escapeHTML(area.name || "")}</title>
@@ -2712,69 +2703,12 @@
                 .join(" ");
         }
 
-        function renderHelios1112Collection(section) {
-            const items = Array.isArray(section.items) ? section.items : [];
-            if (section.id === "people") {
-                return `
-                    <section class="helios-1112-home">
-                        <div class="helios-1112-collection">
-                            ${items.map(item => `
-                                <article class="helios-1112-person-card">
-                                    ${item.image ? `
-                                        <div class="helios-1112-person-image">
-                                            <img src="${escapeAttribute(item.image)}" alt="${escapeAttribute(item.name || "人物")}">
-                                        </div>
-                                    ` : ""}
-                                    <div>
-                                        <h2>${escapeHTML(item.name || "")}</h2>
-                                        ${item.meta ? `<div class="helios-1112-person-meta">${escapeHTML(item.meta)}</div>` : ""}
-                                        ${(Array.isArray(item.paragraphs) ? item.paragraphs : []).map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")}
-                                    </div>
-                                </article>
-                            `).join("")}
-                        </div>
-                    </section>
-                `;
-            }
-
-            return `
-                <section class="helios-1112-home">
-                    ${items.length ? `
-                        <div class="helios-1112-collection">
-                            ${items.map(renderHelios1112RecordCard).join("")}
-                        </div>
-                    ` : ""}
-                </section>
-            `;
-        }
-
-        function renderHelios1112RecordCard(item) {
-            const paragraphs = Array.isArray(item.paragraphs)
-                ? item.paragraphs.map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")
-                : "";
-            const sections = Array.isArray(item.sections)
-                ? item.sections.map(section => `
-                    <section>
-                        <h3>${escapeHTML(section.title || "")}</h3>
-                        ${(Array.isArray(section.paragraphs) ? section.paragraphs : []).map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")}
-                    </section>
-                `).join("")
-                : "";
-            return `
-                <article class="helios-1112-record-card">
-                    <h2>${escapeHTML(item.title || item.name || "")}</h2>
-                    ${paragraphs}
-                    ${sections}
-                </article>
-            `;
-        }
-
         function renderHelios1112Facts(section) {
             const items = Array.isArray(section.items) ? section.items : [];
             return `
                 <section class="helios-1112-home">
                     <section class="helios-1112-facts standalone">
-                        <h2 class="helios-1112-facts-title">${escapeHTML(section.title || "档案")}</h2>
+                        <h2 class="helios-1112-facts-title">${escapeHTML(section.name || "档案")}</h2>
                         <div class="helios-1112-fact-grid">
                             ${items.map((fact, index) => `
                                 <article class="helios-1112-fact-card">
@@ -2790,14 +2724,14 @@
         }
 
         function renderHelios1112GameNote(section) {
-            const paragraphs = Array.isArray(section.paragraphs)
-                ? section.paragraphs.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")
+            const paragraphs = Array.isArray(section.content)
+                ? section.content.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")
                 : "";
             const focus = section.focus ? `<div class="helios-1112-focus">${escapeHTML(section.focus)}</div>` : "";
             return `
                 <section class="helios-1112-home">
                     <section class="helios-1112-game-note standalone">
-                        <h2>${escapeHTML(section.title || "档案")}</h2>
+                        <h2>${escapeHTML(section.name || "档案")}</h2>
                         ${paragraphs}
                         ${focus}
                     </section>
@@ -2806,15 +2740,15 @@
         }
 
         function renderHelios1112TextSection(section) {
-            const paragraphs = Array.isArray(section.paragraphs)
-                ? section.paragraphs.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")
+            const paragraphs = Array.isArray(section.content)
+                ? section.content.map(paragraph => `<p>${escapeHTML(paragraph)}</p>`).join("")
                 : "";
             return `
                 <section class="helios-1112-home">
                     <div class="helios-1112-content">
                         <div>
                             <div class="helios-1112-kicker">${escapeHTML(section.type || "1112")}</div>
-                            <h2 class="helios-1112-title">${escapeHTML(section.title || "赫里奥斯 1112")}</h2>
+                            <h2 class="helios-1112-title">${escapeHTML(section.name || "赫里奥斯 1112")}</h2>
                             <div class="helios-1112-copy">${paragraphs}</div>
                         </div>
                     </div>
@@ -2824,8 +2758,7 @@
 
         function renderPanel() {
             updateHeliosEraState();
-            if (currentHeliosEra === "1112") {
-                renderHelios1112Panel();
+            if (currentHeliosEra === "1112" && renderHelios1112SpecialPanel()) {
                 return;
             }
 
@@ -2940,6 +2873,8 @@
             if (child.markdown) return "已记录";
             if (child.profileSections && child.profileSections.length) return "已记录";
             if (child.statBlock) return "已记录";
+            if (child.map) return "已记录";
+            if (child.items && child.items.length) return "已记录";
             if (child.children && child.children.length) return `含 ${child.children.length} 项`;
             return "未填充";
         }
@@ -3432,7 +3367,8 @@
             ];
             const isHeading = index > 0 && (/^\d+\.\s/.test(paragraph) || compactHeadings.includes(paragraph));
             const className = isHeading ? ' class="fact-heading"' : "";
-            return `<p${className}>${escapeHTML(paragraph)}</p>`;
+            const text = currentHeliosEra === "1112" ? renderInlineMarkdown(paragraph) : escapeHTML(paragraph);
+            return `<p${className}>${text}</p>`;
         }
 
         function renderContentHeading(heading) {
