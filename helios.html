@@ -2188,10 +2188,10 @@
         }
 
         function renderHelios1112Sidebar() {
-            if (brandTitle) brandTitle.textContent = helios1112Data.title || "赫里奥斯 1112";
+            if (brandTitle) brandTitle.textContent = helios1112Data.title || "赫里奥斯";
             if (brandSubtitle) brandSubtitle.textContent = helios1112Data.subtitle || "Omni Civic Layer";
             if (contentKicker) contentKicker.textContent = helios1112Data.kicker || "Helios 1112";
-            if (pageTitle) pageTitle.textContent = helios1112Data.title || "赫里奥斯 1112";
+            if (pageTitle) pageTitle.textContent = helios1112Data.title || "赫里奥斯";
             if (archiveSearchBox) {
                 archiveSearchBox.style.display = "";
                 searchResults.classList.remove("visible");
@@ -2636,7 +2636,7 @@
         function renderHelios1112SpecialPanel() {
             if (!state.current.kind || !["welcome", "map", "facts", "game-note"].includes(state.current.kind)) return false;
             panelPath.textContent = state.current.path || "首页";
-            panelTitle.textContent = state.current.name || "赫里奥斯 1112";
+            panelTitle.textContent = state.current.name || "赫里奥斯";
             panelType.textContent = state.current.type || "1112";
             panelType.className = "type-pill optional";
             workspace.classList.remove("country-layout", "person-layout", "no-asset-layout");
@@ -2664,7 +2664,7 @@
                     <div class="helios-1112-content">
                         <div>
                             <div class="helios-1112-kicker">${escapeHTML(section.kicker || helios1112Data.kicker || "Helios 1112")}</div>
-                            <h2 class="helios-1112-title">${escapeHTML(section.name || "赫里奥斯 1112")}</h2>
+                            <h2 class="helios-1112-title">${escapeHTML(section.name || "赫里奥斯")}</h2>
                             <div class="helios-1112-copy">${paragraphs}</div>
                         </div>
                         ${frameworkItems.length ? `
@@ -2774,7 +2774,7 @@
                     <div class="helios-1112-content">
                         <div>
                             <div class="helios-1112-kicker">${escapeHTML(section.type || "1112")}</div>
-                            <h2 class="helios-1112-title">${escapeHTML(section.name || "赫里奥斯 1112")}</h2>
+                            <h2 class="helios-1112-title">${escapeHTML(section.name || "赫里奥斯")}</h2>
                             <div class="helios-1112-copy">${paragraphs}</div>
                         </div>
                     </div>
