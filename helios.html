@@ -663,6 +663,51 @@
             margin-bottom: 0;
         }
 
+        .helios-1112-history {
+            margin-top: clamp(28px, 5vw, 52px);
+            border-top: 1px solid #d7eee5;
+            padding-top: clamp(24px, 4vw, 38px);
+        }
+
+        .helios-1112-history h2 {
+            margin: 0 0 18px;
+            color: #0f172a;
+            font-size: clamp(24px, 3vw, 34px);
+            line-height: 1.25;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-history h3 {
+            margin: 24px 0 10px;
+            color: #15803d;
+            font-size: 19px;
+            line-height: 1.35;
+            letter-spacing: 0;
+        }
+
+        .helios-1112-history p {
+            margin: 0 0 12px;
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.9;
+        }
+
+        .helios-1112-bottom-image {
+            position: relative;
+            z-index: 1;
+            margin-top: clamp(28px, 5vw, 52px);
+            overflow: hidden;
+            border: 1px solid #d7eee5;
+            background: #eef6f3;
+            box-shadow: 0 18px 44px rgba(15, 23, 42, 0.1);
+        }
+
+        .helios-1112-bottom-image img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
         .helios-1112-game-note {
             position: relative;
             z-index: 1;
@@ -2731,6 +2776,8 @@
 
         function renderHelios1112Facts(section) {
             const items = Array.isArray(section.items) ? section.items : [];
+            const extraSections = Array.isArray(section.sections) ? section.sections : [];
+            const bottomImage = section.bottomImage || null;
             return `
                 <section class="helios-1112-home">
                     <section class="helios-1112-facts standalone">
@@ -2745,6 +2792,27 @@
                             `).join("")}
                         </div>
                     </section>
+                    ${extraSections.map(renderHelios1112FactExtraSection).join("")}
+                    ${bottomImage ? `
+                        <figure class="helios-1112-bottom-image" style="aspect-ratio:${escapeAttribute(bottomImage.aspect || "16 / 9")}">
+                            <img src="${escapeAttribute(bottomImage.src || "")}" alt="${escapeAttribute(bottomImage.alt || section.name || "图片")}">
+                        </figure>
+                    ` : ""}
+                </section>
+            `;
+        }
+
+        function renderHelios1112FactExtraSection(section) {
+            const subsections = Array.isArray(section.subsections) ? section.subsections : [];
+            return `
+                <section class="helios-1112-history">
+                    <h2>${escapeHTML(section.title || "")}</h2>
+                    ${subsections.map(subsection => `
+                        <section>
+                            <h3>${escapeHTML(subsection.title || "")}</h3>
+                            ${(Array.isArray(subsection.paragraphs) ? subsection.paragraphs : []).map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")}
+                        </section>
+                    `).join("")}
                 </section>
             `;
         }
