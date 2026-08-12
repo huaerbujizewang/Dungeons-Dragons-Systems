@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>赫里奥斯</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -502,6 +505,28 @@
 
         body.era-1112 .panel-eyebrow {
             color: #16a34a;
+        }
+
+        body.era-1112 .intro-copy p:first-child {
+            color: #334155;
+            font-size: 17px;
+            font-weight: 400;
+        }
+
+        body.era-1112 .intro-copy strong {
+            color: #15803d;
+            font-weight: 900;
+        }
+
+        body.era-1112 .intro-copy .section-heading {
+            border-bottom-color: #d7eee5;
+            color: #15803d;
+        }
+
+        body.era-1112 .intro-copy .fact-heading,
+        body.era-1112 .intro-copy .sub-heading,
+        body.era-1112 .intro-copy .minor-heading {
+            color: #0f172a;
         }
 
         body.era-1112 .main-panel {
@@ -2050,8 +2075,9 @@
             "528": "home",
             "1112": "home"
         };
-        const HELIOS_DATA_URL = "helios-data.json";
-        const HELIOS_1112_DATA_URL = "helios-1112-data.json";
+        const HELIOS_DATA_VERSION = "2026-08-12-1112-history";
+        const HELIOS_DATA_URL = `helios-data.json?v=${HELIOS_DATA_VERSION}`;
+        const HELIOS_1112_DATA_URL = `helios-1112-data.json?v=${HELIOS_DATA_VERSION}`;
 
         async function loadHeliosData() {
             const [response, response1112] = await Promise.all([
