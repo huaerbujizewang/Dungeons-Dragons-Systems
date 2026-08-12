@@ -2073,7 +2073,7 @@
         let helios1112Data = { archive: [] };
         const currentNodeByEra = {
             "528": "home",
-            "1112": "home"
+            "1112": "intro"
         };
         const HELIOS_DATA_VERSION = "2026-08-12-1112-history";
         const HELIOS_DATA_URL = `helios-data.json?v=${HELIOS_DATA_VERSION}`;
@@ -2592,6 +2592,8 @@
                     map: node && typeof node === "object" ? node.map || null : null,
                     framework: node && typeof node === "object" ? node.framework || [] : [],
                     items: node && typeof node === "object" ? node.items || [] : [],
+                    sections: node && typeof node === "object" ? node.sections || [] : [],
+                    bottomImage: node && typeof node === "object" ? node.bottomImage || null : null,
                     focus: node && typeof node === "object" ? node.focus || "" : "",
                     kicker: node && typeof node === "object" ? node.kicker || "" : ""
                 };
