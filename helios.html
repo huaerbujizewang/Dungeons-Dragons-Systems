@@ -2236,15 +2236,11 @@
 
         function renderEraSidebar() {
             archive = getCurrentArchive();
-            if (currentHeliosEra === "1112") {
-                renderHelios1112Sidebar();
-                return;
-            }
-
-            if (brandTitle) brandTitle.textContent = "赫里奥斯";
-            if (brandSubtitle) brandSubtitle.textContent = "世界档案目录";
-            if (contentKicker) contentKicker.textContent = "Helios Archive";
-            if (pageTitle) pageTitle.textContent = "赫里奥斯";
+            const meta = getCurrentEraMeta();
+            if (brandTitle) brandTitle.textContent = meta.title;
+            if (brandSubtitle) brandSubtitle.textContent = meta.subtitle;
+            if (contentKicker) contentKicker.textContent = meta.kicker;
+            if (pageTitle) pageTitle.textContent = meta.title;
             if (archiveSearchBox) archiveSearchBox.style.display = "";
 
             const homeButton = `<button class="tree-leaf ${state.current.nodeId === "home" ? "active" : ""}" data-node="home">首页</button>`;
@@ -2258,22 +2254,20 @@
             return currentHeliosEra === "1112" ? helios1112Archive : helios528Archive;
         }
 
-        function renderHelios1112Sidebar() {
-            if (brandTitle) brandTitle.textContent = helios1112Data.title || "赫里奥斯";
-            if (brandSubtitle) brandSubtitle.textContent = helios1112Data.subtitle || "Omni Civic Layer";
-            if (contentKicker) contentKicker.textContent = helios1112Data.kicker || "Helios 1112";
-            if (pageTitle) pageTitle.textContent = helios1112Data.title || "赫里奥斯";
-            if (archiveSearchBox) {
-                archiveSearchBox.style.display = "";
-                searchResults.classList.remove("visible");
-                searchResults.innerHTML = "";
+        function getCurrentEraMeta() {
+            if (currentHeliosEra === "1112") {
+                return {
+                    title: helios1112Data.title || "赫里奥斯",
+                    subtitle: helios1112Data.subtitle || "Omni Civic Layer",
+                    kicker: helios1112Data.kicker || "Helios 1112"
+                };
             }
 
-            const homeButton = `<button class="tree-leaf ${state.current.nodeId === "home" ? "active" : ""}" data-node="home">首页</button>`;
-            const sections = archive.map(section => {
-                return renderTreeNode(section, section.id, 0);
-            }).join("");
-            tree.innerHTML = homeButton + sections;
+            return {
+                title: "赫里奥斯",
+                subtitle: "世界档案目录",
+                kicker: "Helios Archive"
+            };
         }
 
         function selectHelios1112MapArea(target) {
@@ -2706,26 +2700,18 @@
             });
         }
 
-        function renderHelios1112SpecialPanel() {
-            if (!state.current.kind || !["welcome", "map", "facts", "history", "game-note"].includes(state.current.kind)) return false;
-            panelPath.textContent = state.current.path || "首页";
-            panelTitle.textContent = state.current.name || "赫里奥斯";
-            panelType.textContent = state.current.type || "1112";
-            panelType.className = "type-pill optional";
-            workspace.classList.remove("country-layout", "person-layout", "no-asset-layout");
-            workspace.classList.add("home-layout");
-            panelBody.innerHTML = renderHelios1112Section(state.current);
-            renderAssetSlot("optional");
-            return true;
-        }
+        const helios1112Renderers = {
+            welcome: renderHelios1112Welcome,
+            map: renderHelios1112Map,
+            facts: renderHelios1112Facts,
+            history: renderHelios1112History,
+            "game-note": renderHelios1112GameNote
+        };
 
-        function renderHelios1112Section(section) {
-            if (!section || section.kind === "welcome") return renderHelios1112Welcome(section || {});
-            if (section.kind === "map") return renderHelios1112Map(section);
-            if (section.kind === "facts") return renderHelios1112Facts(section);
-            if (section.kind === "history") return renderHelios1112History(section);
-            if (section.kind === "game-note") return renderHelios1112GameNote(section);
-            return renderHelios1112TextSection(section);
+        function renderEraKindContent() {
+            if (currentHeliosEra !== "1112" || !state.current.kind) return "";
+            const renderer = helios1112Renderers[state.current.kind];
+            return renderer ? renderer(state.current) : "";
         }
 
         function renderHelios1112Welcome(section) {
@@ -2896,16 +2882,14 @@
 
         function renderPanel() {
             updateHeliosEraState();
-            if (currentHeliosEra === "1112" && renderHelios1112SpecialPanel()) {
-                return;
-            }
 
             panelPath.textContent = state.current.path;
             panelTitle.textContent = state.current.name;
             panelType.textContent = state.current.type;
             panelType.className = `type-pill ${assetClass(state.current.asset)}`;
             workspace.classList.toggle("country-layout", state.current.asset === "country");
-            workspace.classList.toggle("home-layout", state.current.nodeId === "home");
+            const eraKindContent = renderEraKindContent();
+            workspace.classList.toggle("home-layout", state.current.nodeId === "home" || Boolean(eraKindContent));
             workspace.classList.toggle("person-layout", state.current.asset === "person" && Boolean(state.current.image));
             workspace.classList.toggle("no-asset-layout", state.current.asset === "none");
 
@@ -2916,7 +2900,12 @@
                 relations: state.current.relations && !contentHasRelations
             }) : "";
 
-            if (state.current.markdown || state.current.profileSections && state.current.profileSections.length || state.current.statBlock || state.current.policies || state.current.relations) {
+            if (eraKindContent) {
+                panelBody.innerHTML = `
+                    ${eraKindContent}
+                    ${state.current.children.length ? renderChildrenGrid() : ""}
+                `;
+            } else if (state.current.markdown || state.current.profileSections && state.current.profileSections.length || state.current.statBlock || state.current.policies || state.current.relations) {
                 panelBody.innerHTML = `
                     ${bodyMarkdown ? `<div class="intro-copy">${renderMarkdown(bodyMarkdown)}</div>` : ""}
                     ${state.current.profileSections && state.current.profileSections.length ? renderProfileSections(state.current.profileSections) : ""}
