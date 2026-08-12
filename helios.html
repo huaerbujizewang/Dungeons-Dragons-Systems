@@ -2707,7 +2707,7 @@
         }
 
         function renderHelios1112SpecialPanel() {
-            if (!state.current.kind || !["welcome", "map", "facts", "game-note"].includes(state.current.kind)) return false;
+            if (!state.current.kind || !["welcome", "map", "facts", "history", "game-note"].includes(state.current.kind)) return false;
             panelPath.textContent = state.current.path || "首页";
             panelTitle.textContent = state.current.name || "赫里奥斯";
             panelType.textContent = state.current.type || "1112";
@@ -2723,6 +2723,7 @@
             if (!section || section.kind === "welcome") return renderHelios1112Welcome(section || {});
             if (section.kind === "map") return renderHelios1112Map(section);
             if (section.kind === "facts") return renderHelios1112Facts(section);
+            if (section.kind === "history") return renderHelios1112History(section);
             if (section.kind === "game-note") return renderHelios1112GameNote(section);
             return renderHelios1112TextSection(section);
         }
@@ -2841,6 +2842,21 @@
                             ${(Array.isArray(subsection.paragraphs) ? subsection.paragraphs : []).map(paragraph => `<p>${renderInlineMarkdown(paragraph)}</p>`).join("")}
                         </section>
                     `).join("")}
+                </section>
+            `;
+        }
+
+        function renderHelios1112History(section) {
+            const extraSections = Array.isArray(section.sections) ? section.sections : [];
+            const bottomImage = section.bottomImage || null;
+            return `
+                <section class="helios-1112-home">
+                    ${extraSections.map(renderHelios1112FactExtraSection).join("")}
+                    ${bottomImage ? `
+                        <figure class="helios-1112-bottom-image" style="aspect-ratio:${escapeAttribute(bottomImage.aspect || "16 / 9")}">
+                            <img src="${escapeAttribute(bottomImage.src || "")}" alt="${escapeAttribute(bottomImage.alt || section.name || "图片")}">
+                        </figure>
+                    ` : ""}
                 </section>
             `;
         }
