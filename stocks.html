@@ -14,7 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>白城证券交易所</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="stocks.js"></script>
+    <script src="stocks.js?v=20260815-bank"></script>
     <style>
         :root {
             --ink: #1f2933;
@@ -684,6 +684,10 @@
     }
 
     async function transferBankFunds(type) {
+        if (!window.BaichengStocks?.transferBankFunds) {
+            alert('经济脚本尚未更新，请强制刷新页面后再试。');
+            return;
+        }
         const amount = Number(document.getElementById('bank-amount')?.value || 0);
         if (!Number.isFinite(amount) || amount <= 0) {
             alert('请输入大于 0 的金额。');
