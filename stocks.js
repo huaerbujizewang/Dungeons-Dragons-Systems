@@ -1281,6 +1281,62 @@
             || /trade_stock/i.test(message) && /schema cache|function|could not find/i.test(message);
     }
 
+    function isMissingBankRpcError(error) {
+        const message = String(error?.message || '');
+        return error?.code === 'PGRST202'
+            || /(get_bank_account|transfer_bank_funds)/i.test(message) && /schema cache|function|could not find/i.test(message);
+    }
+
+    function normalizeBankAccountPayload(data) {
+        return {
+            balance: roundMoney(data?.balance),
+            annualRate: roundRate(data?.annualRate),
+            lastInterestDate: data?.lastInterestDate || null,
+            lastInterestSerial: parseInt(data?.lastInterestSerial, 10),
+            totalInterest: roundMoney(data?.totalInterest),
+            settledInterest: roundMoney(data?.settledInterest),
+            settledDays: parseInt(data?.settledDays, 10) || 0,
+            gold: data?.gold === undefined ? undefined : roundMoney(data.gold),
+            amount: data?.amount === undefined ? undefined : roundMoney(data.amount),
+            type: data?.type || null
+        };
+    }
+
+    async function getBankAccount(options) {
+        const { client, accountId, currentDate } = options;
+        assertClient(client);
+        if (!accountId) throw new Error('缺少账号。');
+        const { data, error } = await client.rpc('get_bank_account', {
+            p_account_id: accountId,
+            p_current_date: normalizeDate(currentDate)
+        });
+        if (error) {
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            throw error;
+        }
+        return normalizeBankAccountPayload(data || {});
+    }
+
+    async function transferBankFunds(options) {
+        const { client, accountId, amount, type, currentDate } = options;
+        assertClient(client);
+        if (!accountId) throw new Error('缺少账号。');
+        const safeAmount = roundMoney(amount);
+        if (!Number.isFinite(safeAmount) || safeAmount <= 0) throw new Error('金额必须大于 0。');
+        if (!['deposit', 'withdraw'].includes(type)) throw new Error('银行操作类型无效。');
+        const { data, error } = await client.rpc('transfer_bank_funds', {
+            p_account_id: accountId,
+            p_amount: safeAmount,
+            p_type: type,
+            p_current_date: normalizeDate(currentDate)
+        });
+        if (error) {
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            throw error;
+        }
+        return normalizeBankAccountPayload(data || {});
+    }
+
     async function tradeStockRpc(client, accountId, stockId, quantity, currentDate, type) {
         const { data, error } = await client.rpc('trade_stock', {
             p_account_id: accountId,
@@ -1898,6 +1954,7 @@
         dateToSerial,
         deleteAccountStockData,
         formatDate: formatDisplayDate,
+        getBankAccount,
         getMarketConfig,
         haltStockTrading,
         getStockChangeOnDate,
@@ -1912,6 +1969,7 @@
         setDmAdjustment,
         setMarketConfig,
         splitStock,
-        settleStocksBetween
+        settleStocksBetween,
+        transferBankFunds
     };
 })();

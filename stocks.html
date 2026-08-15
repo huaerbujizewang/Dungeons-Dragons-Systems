@@ -14,7 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>白城证券交易所</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="stocks.js?v=20260815-bank"></script>
+    <script src="stocks.js?v=20260815-bank2"></script>
     <style>
         :root {
             --ink: #1f2933;
@@ -657,15 +657,83 @@
         }
     }
 
-    async function refreshBankPanel({ silent = true } = {}) {
-        const note = document.getElementById('bank-note');
-        if (!accountProfile?.world_date || !window.BaichengStocks?.getBankAccount) return;
-        try {
-            bankAccount = await BaichengStocks.getBankAccount({
+    function normalizeBankDate(date) {
+        const safe = date || {};
+        return {
+            year: parseInt(safe.year, 10),
+            month: parseInt(safe.month, 10),
+            day: parseInt(safe.day, 10)
+        };
+    }
+
+    function normalizeBankPayload(data) {
+        return {
+            balance: Number(data?.balance || 0),
+            annualRate: Number(data?.annualRate ?? 0.0135),
+            lastInterestDate: data?.lastInterestDate || null,
+            lastInterestSerial: parseInt(data?.lastInterestSerial, 10),
+            totalInterest: Number(data?.totalInterest || 0),
+            settledInterest: Number(data?.settledInterest || 0),
+            settledDays: parseInt(data?.settledDays, 10) || 0,
+            gold: data?.gold === undefined ? undefined : Number(data.gold),
+            amount: data?.amount === undefined ? undefined : Number(data.amount),
+            type: data?.type || null
+        };
+    }
+
+    function isMissingBankRpcError(error) {
+        const message = String(error?.message || '');
+        return error?.code === 'PGRST202'
+            || /(get_bank_account|transfer_bank_funds)/i.test(message) && /schema cache|function|could not find/i.test(message);
+    }
+
+    async function getBankAccountForPage() {
+        if (window.BaichengStocks?.getBankAccount) {
+            return BaichengStocks.getBankAccount({
                 client: supabaseClient,
                 accountId,
                 currentDate: accountProfile.world_date
             });
+        }
+        const { data, error } = await supabaseClient.rpc('get_bank_account', {
+            p_account_id: accountId,
+            p_current_date: normalizeBankDate(accountProfile.world_date)
+        });
+        if (error) {
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            throw error;
+        }
+        return normalizeBankPayload(data || {});
+    }
+
+    async function transferBankFundsForPage(type, amount) {
+        if (window.BaichengStocks?.transferBankFunds) {
+            return BaichengStocks.transferBankFunds({
+                client: supabaseClient,
+                accountId,
+                amount,
+                type,
+                currentDate: accountProfile.world_date
+            });
+        }
+        const { data, error } = await supabaseClient.rpc('transfer_bank_funds', {
+            p_account_id: accountId,
+            p_amount: Math.round(Number(amount || 0) * 100) / 100,
+            p_type: type,
+            p_current_date: normalizeBankDate(accountProfile.world_date)
+        });
+        if (error) {
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            throw error;
+        }
+        return normalizeBankPayload(data || {});
+    }
+
+    async function refreshBankPanel({ silent = true } = {}) {
+        const note = document.getElementById('bank-note');
+        if (!accountProfile?.world_date) return;
+        try {
+            bankAccount = await getBankAccountForPage();
             renderBankPanel(bankAccount);
             if (note) {
                 const settled = Number(bankAccount.settledInterest || 0);
@@ -684,10 +752,6 @@
     }
 
     async function transferBankFunds(type) {
-        if (!window.BaichengStocks?.transferBankFunds) {
-            alert('经济脚本尚未更新，请强制刷新页面后再试。');
-            return;
-        }
         const amount = Number(document.getElementById('bank-amount')?.value || 0);
         if (!Number.isFinite(amount) || amount <= 0) {
             alert('请输入大于 0 的金额。');
@@ -699,13 +763,7 @@
         }
         setBankBusy(true);
         try {
-            const result = await BaichengStocks.transferBankFunds({
-                client: supabaseClient,
-                accountId,
-                amount,
-                type,
-                currentDate: accountProfile.world_date
-            });
+            const result = await transferBankFundsForPage(type, amount);
             bankAccount = result;
             renderBankPanel(result);
             if (Number.isFinite(Number(result.gold))) {
