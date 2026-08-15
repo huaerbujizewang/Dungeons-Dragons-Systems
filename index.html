@@ -1838,11 +1838,11 @@
             <p style="font-size:0.8em; color:#666;">星系设定、国家、人物、组织与术语目录</p>
         </div>
 
-        <!-- 卡片：白城证券交易所 -->
+        <!-- 卡片：经济 -->
         <div class="card emp-card-content" onclick="window.location.href='stocks.html?uid=' + viewingUserId" style="cursor:pointer;">
             <div style="font-size: 2.5em; margin-bottom:10px; color:#2f6f9f;">▥</div>
-            <div style="font-weight:bold; font-size:1.1em;">白城证券交易所</div>
-            <p style="font-size:0.8em; color:#666;">按当前账号独立结算的股票交易小游戏</p>
+            <div style="font-weight:bold; font-size:1.1em;">经济</div>
+            <p style="font-size:0.8em; color:#666;">白城证券交易所、银行与账号资产</p>
         </div>
 
         <!-- 卡片 3：传记与间章 -->
@@ -2424,8 +2424,8 @@
             </div>
 
             <div class="admin-box" style="border:1px solid #2f6f9f; padding:15px; border-radius:8px; background:#f2f8fc;">
-                <h3 style="margin-top:0; color:#2f6f9f;">▥ 白城证券交易所</h3>
-                <div style="font-size:0.8em; color:#666; margin-bottom:10px;">先在右侧【玩家资产操控】选择目标玩家；股票日期跟随该玩家当前世界日期。</div>
+                <h3 style="margin-top:0; color:#2f6f9f;">▥ 经济</h3>
+                <div style="font-size:0.8em; color:#666; margin-bottom:10px;">先在右侧【玩家资产操控】选择目标玩家；证券与银行日期跟随该玩家当前世界日期。</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:end;">
                     <label style="font-size:0.85em;">市场状态
                         <select id="adm-stock-enabled" style="width:100%; padding:6px;">
@@ -2690,7 +2690,7 @@
                     <div style="display:grid; grid-template-columns:78px 1fr 86px; gap:6px; margin-bottom:6px;">
                         <input id="adm-checkin-team-no" type="number" min="1" placeholder="队号">
                         <input id="adm-checkin-team-name" type="text" placeholder="队名">
-                        <input id="adm-checkin-team-count" type="number" min="0" max="80" value="0" placeholder="打卡">
+                        <input id="adm-checkin-team-count" type="number" min="-80" max="80" value="0" placeholder="手动修正">
                     </div>
                     <label style="display:flex; align-items:center; gap:6px; margin-bottom:6px; font-size:0.84em; color:#52645f;">
                         <input id="adm-checkin-team-withdrawn" type="checkbox">
@@ -2720,7 +2720,7 @@
                             <input id="adm-checkin-batch-match-count" type="number" min="0" max="80" step="1" placeholder="打卡数 X">
                             <button onclick="applyLeaderboardAddCountToTeamsAtCountFromForm()" style="background:#d35400; color:white; border:none; padding:7px 10px; border-radius:4px;">打卡数=X 的队伍 +X</button>
                         </div>
-                        <div style="font-size:0.74em; color:#666; margin-top:5px;">只改排行榜里的手填打卡数；已绑定玩家账号的小队仍会额外叠加账号实际打卡。</div>
+                        <div style="font-size:0.74em; color:#666; margin-top:5px;">只改排行榜里的手填修正值；可为负数，用来抵消玩家账号实际打卡；最终显示不会低于 0。</div>
                     </div>
                 </div>
                 <div id="adm-checkin-list" class="admin-checkin-list">
@@ -4251,7 +4251,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         return [...(teams || [])].sort((a, b) => {
             const withdrawnDiff = Number(Boolean(a.is_withdrawn)) - Number(Boolean(b.is_withdrawn));
             if (withdrawnDiff !== 0) return withdrawnDiff;
-            const checkinDiff = (Number(b.checkin_count ?? b.manual_checkin_count ?? 0) || 0) - (Number(a.checkin_count ?? a.manual_checkin_count ?? 0) || 0);
+            const checkinDiff = clampDisplayedCheckinCount(b.checkin_count ?? b.manual_checkin_count) - clampDisplayedCheckinCount(a.checkin_count ?? a.manual_checkin_count);
             if (checkinDiff !== 0) return checkinDiff;
             const ratioDiff = getTeamBadgeRatio(a) - getTeamBadgeRatio(b);
             if (Math.abs(ratioDiff) > 0.000001) return ratioDiff;
@@ -4310,7 +4310,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 const members = normalizeTeamMembers(team.members);
                 const badgeScore = getTeamBadgeScore(team);
                 const ratio = getTeamBadgeRatio(team);
-                const checkinCount = Number(team.checkin_count ?? team.manual_checkin_count ?? 0) || 0;
+                const checkinCount = clampDisplayedCheckinCount(team.checkin_count ?? team.manual_checkin_count);
                 const linkedCount = Array.isArray(team.player_account_ids) ? team.player_account_ids.length : 0;
                 const withdrawn = team.is_withdrawn === true;
                 return `
@@ -4608,7 +4608,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         if (!await requireAdminRole()) return;
         const teamNo = parseInt(document.getElementById('adm-checkin-team-no')?.value, 10);
         const teamName = document.getElementById('adm-checkin-team-name')?.value.trim();
-        const manualCount = Math.max(0, Math.min(CHECKIN_POINTS.length, parseInt(document.getElementById('adm-checkin-team-count')?.value, 10) || 0));
+        const manualCount = clampManualCheckinCount(parseInt(document.getElementById('adm-checkin-team-count')?.value, 10) || 0);
         const isWithdrawn = document.getElementById('adm-checkin-team-withdrawn')?.checked === true;
         if (!teamNo || !teamName) return alert('队号和队名必填');
         showLoading();
@@ -4660,8 +4660,12 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         return result;
     }
 
-    function clampCheckinCount(value) {
+    function clampDisplayedCheckinCount(value) {
         return Math.max(0, Math.min(CHECKIN_POINTS.length, Number(value) || 0));
+    }
+
+    function clampManualCheckinCount(value) {
+        return Math.max(-CHECKIN_POINTS.length, Math.min(CHECKIN_POINTS.length, Number(value) || 0));
     }
 
     async function ensureAdminLeaderboardTeamsLoaded() {
@@ -4692,7 +4696,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             const rows = affected.map(team => ({
                 team_no: team.team_no,
                 team_name: team.team_name,
-                manual_checkin_count: clampCheckinCount((Number(team.manual_checkin_count) || 0) + delta),
+                manual_checkin_count: clampManualCheckinCount((Number(team.manual_checkin_count) || 0) + delta),
                 is_withdrawn: team.is_withdrawn === true,
                 members: normalizeTeamMembers(team.members),
                 updated_by: myId,
@@ -4743,7 +4747,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         try {
             const teams = await loadLeaderboardTeamsForBatchCountMatch();
             const affected = teams.filter(team => {
-                const total = Number(team.checkin_count ?? team.manual_checkin_count ?? 0) || 0;
+                const total = clampDisplayedCheckinCount(team.checkin_count ?? team.manual_checkin_count);
                 return total === matchCount;
             });
             if (affected.length === 0) throw new Error(`当前没有总打卡数为 ${matchCount} 的队伍。`);
@@ -4753,7 +4757,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             const rows = affected.map(team => ({
                 team_no: team.team_no,
                 team_name: team.team_name,
-                manual_checkin_count: clampCheckinCount((Number(team.manual_checkin_count) || 0) + matchCount),
+                manual_checkin_count: clampManualCheckinCount((Number(team.manual_checkin_count) || 0) + matchCount),
                 is_withdrawn: team.is_withdrawn === true,
                 members: normalizeTeamMembers(team.members),
                 updated_by: myId,
@@ -4794,7 +4798,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             const rows = affected.map(team => ({
                 team_no: team.team_no,
                 team_name: team.team_name,
-                manual_checkin_count: clampCheckinCount(team.manual_checkin_count),
+                manual_checkin_count: clampManualCheckinCount(team.manual_checkin_count),
                 is_withdrawn: isWithdrawn === true,
                 members: normalizeTeamMembers(team.members),
                 updated_by: myId,

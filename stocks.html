@@ -225,6 +225,29 @@
         }
         canvas:active { cursor: grabbing; }
         .comparison-panel { margin-bottom: 16px; }
+        .economy-panel { margin-bottom: 16px; }
+        .economy-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .bank-card {
+            border: 1px solid #edf0f5;
+            border-radius: 6px;
+            background: #fbfcfe;
+            padding: 10px 11px;
+            min-width: 0;
+        }
+        .bank-actions {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: 8px;
+            align-items: center;
+        }
+        .bank-actions button {
+            min-width: 82px;
+        }
         .comparison-chart { height: 260px; }
         .chart-zoom-tools {
             display: flex;
@@ -306,7 +329,7 @@
         @media (max-width: 900px) {
             header { flex-direction: column; align-items: flex-start; }
             .panel-head { align-items: flex-start; flex-direction: column; }
-            .status-strip, .layout, .dm-grid { grid-template-columns: 1fr; }
+            .status-strip, .layout, .dm-grid, .economy-grid, .bank-actions { grid-template-columns: 1fr; }
             main { padding: 14px; }
             th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7) { display: none; }
         }
@@ -365,6 +388,37 @@
             <div class="label">当前视角</div>
             <div id="viewer-label" class="value">--</div>
         </div>
+    </section>
+
+    <section class="panel economy-panel">
+        <div class="panel-head">
+            <h2>经济</h2>
+            <span class="tiny">大陆银行活期账户 · 年利率 1.35%</span>
+        </div>
+        <div class="economy-grid">
+            <div class="bank-card">
+                <div class="label">银行余额</div>
+                <div id="bank-balance" class="value">-- GP</div>
+            </div>
+            <div class="bank-card">
+                <div class="label">年利率</div>
+                <div id="bank-rate" class="value">1.35%</div>
+            </div>
+            <div class="bank-card">
+                <div class="label">累计利息</div>
+                <div id="bank-interest" class="value">-- GP</div>
+            </div>
+            <div class="bank-card">
+                <div class="label">上次结息</div>
+                <div id="bank-settled-date" class="value">--</div>
+            </div>
+        </div>
+        <div class="bank-actions">
+            <input id="bank-amount" type="number" min="0.01" step="0.01" placeholder="金额 GP">
+            <button id="bank-deposit-btn" class="buy" onclick="transferBankFunds('deposit')">存入</button>
+            <button id="bank-withdraw-btn" class="secondary" onclick="transferBankFunds('withdraw')">取出</button>
+        </div>
+        <div id="bank-note" class="tiny" style="margin-top:8px;">活期年利率 1.35%，刷新、存入或取出时按当前世界日期结息。</div>
     </section>
 
     <section id="closed-message" class="message" style="display:none;"></section>
@@ -508,6 +562,7 @@
     let currentRole = 'player';
     let accountId = null;
     let accountProfile = null;
+    let bankAccount = null;
     let snapshot = null;
     let selectedStockId = null;
     let selectedHistoryDays = 360;
@@ -570,6 +625,102 @@
     function formatRate(value) {
         const pct = Number(value || 0) * 100;
         return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+    }
+
+    function formatAnnualRate(value) {
+        return `${(Number(value || 0) * 100).toFixed(2)}%`;
+    }
+
+    function formatBankDate(date) {
+        if (!date || !accountProfile) return '--';
+        const calendarSystem = accountProfile.calendar_system || (accountProfile.campaign_type === 'coc' ? 'ce' : 'dr');
+        return BaichengStocks.formatDate(date, calendarSystem, accountProfile.campaign_type);
+    }
+
+    function renderBankPanel(account = bankAccount) {
+        document.getElementById('bank-balance').textContent = formatMoney(account?.balance || 0);
+        document.getElementById('bank-rate').textContent = formatAnnualRate(account?.annualRate ?? 0.0135);
+        document.getElementById('bank-interest').textContent = formatMoney(account?.totalInterest || 0);
+        document.getElementById('bank-settled-date').textContent = formatBankDate(account?.lastInterestDate);
+    }
+
+    function setBankBusy(isBusy) {
+        const depositBtn = document.getElementById('bank-deposit-btn');
+        const withdrawBtn = document.getElementById('bank-withdraw-btn');
+        if (depositBtn) {
+            depositBtn.disabled = isBusy;
+            depositBtn.textContent = isBusy ? '提交中' : '存入';
+        }
+        if (withdrawBtn) {
+            withdrawBtn.disabled = isBusy;
+            withdrawBtn.textContent = isBusy ? '提交中' : '取出';
+        }
+    }
+
+    async function refreshBankPanel({ silent = true } = {}) {
+        const note = document.getElementById('bank-note');
+        if (!accountProfile?.world_date || !window.BaichengStocks?.getBankAccount) return;
+        try {
+            bankAccount = await BaichengStocks.getBankAccount({
+                client: supabaseClient,
+                accountId,
+                currentDate: accountProfile.world_date
+            });
+            renderBankPanel(bankAccount);
+            if (note) {
+                const settled = Number(bankAccount.settledInterest || 0);
+                note.textContent = settled > 0
+                    ? `已按当前世界日期结息 ${formatMoney(settled)}。`
+                    : '活期年利率 1.35%，刷新、存入或取出时按当前世界日期结息。';
+                note.style.color = '';
+            }
+        } catch (e) {
+            if (note) {
+                note.textContent = e.message || '银行账户加载失败。';
+                note.style.color = 'var(--red)';
+            }
+            if (!silent) alert(e.message || '银行账户加载失败');
+        }
+    }
+
+    async function transferBankFunds(type) {
+        const amount = Number(document.getElementById('bank-amount')?.value || 0);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            alert('请输入大于 0 的金额。');
+            return;
+        }
+        if (!accountProfile?.world_date) {
+            alert('缺少当前世界日期，无法办理银行业务。');
+            return;
+        }
+        setBankBusy(true);
+        try {
+            const result = await BaichengStocks.transferBankFunds({
+                client: supabaseClient,
+                accountId,
+                amount,
+                type,
+                currentDate: accountProfile.world_date
+            });
+            bankAccount = result;
+            renderBankPanel(result);
+            if (Number.isFinite(Number(result.gold))) {
+                accountProfile.gold_gp = Number(result.gold);
+                document.getElementById('gold-value').textContent = formatMoney(accountProfile.gold_gp);
+            }
+            const amountInput = document.getElementById('bank-amount');
+            if (amountInput) amountInput.value = '';
+            const note = document.getElementById('bank-note');
+            if (note) {
+                const verb = type === 'deposit' ? '存入' : '取出';
+                note.textContent = `${verb}成功：${formatMoney(result.amount || amount)}。`;
+                note.style.color = '';
+            }
+        } catch (e) {
+            alert(e.message || '银行操作失败');
+        } finally {
+            setBankBusy(false);
+        }
     }
 
     function getLastChange(stockId) {
@@ -672,6 +823,7 @@
         document.getElementById('world-date').textContent = BaichengStocks.formatDate(currentDate, calendarSystem, profile.campaign_type);
         document.getElementById('gold-value').textContent = formatMoney(profile.gold_gp);
         document.getElementById('viewer-label').textContent = profile.email || accountId;
+        await refreshBankPanel({ silent: true });
 
         try {
             const snapshotOptions = {
