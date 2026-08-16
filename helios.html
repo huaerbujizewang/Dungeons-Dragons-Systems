@@ -1901,6 +1901,15 @@
             text-align: left;
         }
 
+        .asset-slot.country-identity {
+            display: grid;
+            gap: 14px;
+            aspect-ratio: auto;
+            padding: 14px;
+            text-align: left;
+            background: var(--paper);
+        }
+
         .asset-map-item + .asset-map-item {
             margin-top: 16px;
         }
@@ -1923,6 +1932,34 @@
             width: 100%;
             height: 100%;
             display: block;
+            object-fit: contain;
+        }
+
+        .asset-country-hero,
+        .asset-country-flag {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #0f1419;
+        }
+
+        .asset-country-hero img,
+        .asset-country-flag img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .asset-country-hero img {
+            object-fit: cover;
+        }
+
+        .asset-country-flag {
+            width: min(260px, 58%);
+            background: #f8fafc;
+        }
+
+        .asset-country-flag img {
             object-fit: contain;
         }
 
@@ -2576,6 +2613,8 @@
                     content: node && typeof node === "object" ? node.content || [] : [],
                     image: node && typeof node === "object" ? node.image || "" : "",
                     images: node && typeof node === "object" ? node.images || [] : [],
+                    flag: node && typeof node === "object" ? node.flag || null : null,
+                    heroImage: node && typeof node === "object" ? node.heroImage || null : null,
                     imageAspect: node && typeof node === "object" ? node.imageAspect || "" : "",
                     markdown: node && typeof node === "object" ? node.markdown || "" : "",
                     profileSections: node && typeof node === "object" ? node.profileSections || [] : [],
@@ -2637,7 +2676,7 @@
 
         function hasOwnVisualAsset(node) {
             if (!node || typeof node !== "object") return false;
-            return Boolean(node.image || node.images && node.images.length);
+            return Boolean(node.image || node.images && node.images.length || node.flag || node.heroImage);
         }
 
         function expandActivePath(nodeId) {
@@ -3751,8 +3790,29 @@
 
             if (assetType === "country") {
                 assetSlot.classList.add("map", "country");
-                assetTitle.textContent = "地理图";
-                if (state.current.images && state.current.images.length) {
+                assetTitle.textContent = "国家图像";
+                if (state.current.heroImage || state.current.flag) {
+                    assetSlot.classList.add("has-image", "country-identity");
+                    assetSlot.style.aspectRatio = "";
+                    assetSlot.innerHTML = `
+                        ${state.current.heroImage ? `
+                            <div class="asset-map-item">
+                                <div class="asset-map-label">${escapeHTML(state.current.heroImage.label || "场景实拍")}</div>
+                                <div class="asset-country-hero" style="aspect-ratio:${escapeAttribute(state.current.heroImage.aspect || "16 / 9")}">
+                                    <img src="${escapeAttribute(state.current.heroImage.src || "")}" alt="${escapeAttribute(state.current.heroImage.alt || state.current.name)}">
+                                </div>
+                            </div>
+                        ` : ""}
+                        ${state.current.flag ? `
+                            <div class="asset-map-item">
+                                <div class="asset-map-label">${escapeHTML(state.current.flag.label || "国旗")}</div>
+                                <div class="asset-country-flag" style="aspect-ratio:${escapeAttribute(state.current.flag.aspect || "3 / 2")}">
+                                    <img src="${escapeAttribute(state.current.flag.src || "")}" alt="${escapeAttribute(state.current.flag.alt || state.current.name + "国旗")}">
+                                </div>
+                            </div>
+                        ` : ""}
+                    `;
+                } else if (state.current.images && state.current.images.length) {
                     assetSlot.classList.add("has-image", "multi-map");
                     assetSlot.style.aspectRatio = "";
                     assetSlot.innerHTML = state.current.images.map(image => `
