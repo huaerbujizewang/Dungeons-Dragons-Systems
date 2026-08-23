@@ -2463,7 +2463,7 @@
                     <input type="text" id="adm-shop-name" placeholder="商品名称" style="grid-column: 1/3;">
                     <select id="adm-shop-rarity"><option>普通</option><option>非普通</option><option>珍稀</option><option>极珍稀</option><option>传说</option><option>神器</option></select>
                     <select id="adm-shop-cat"><option>魔法物品</option><option>装备</option><option>卷轴</option><option>药水</option><option>材料</option></select>
-                    <input type="number" id="adm-shop-price" placeholder="价格">
+                    <input type="number" id="adm-shop-price" step="0.01" placeholder="价格">
                     <input type="number" id="adm-shop-stock" placeholder="库存">
                     <select id="adm-shop-target" style="grid-column: 1/3;"><option value="public">🌐 全服公共</option><option value="private">👤 仅当前选中的玩家</option></select>
                     <textarea id="adm-shop-desc" placeholder="描述..." style="grid-column: 1/3; height:50px;"></textarea>
@@ -2491,7 +2491,7 @@
                 <!-- 单个添加 -->
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
                     <input type="text" id="adm-wanted-name" placeholder="姓名" style="grid-column: 1/3;">
-                    <input type="number" id="adm-wanted-amount" placeholder="赏金金额">
+                    <input type="number" id="adm-wanted-amount" step="0.01" placeholder="赏金金额">
                     <select id="adm-wanted-status">
                         <option value="DEAD OR ALIVE">DEAD OR ALIVE</option>
                         <option value="CAPTURED">CAPTURED (已捕获)</option>
@@ -2523,7 +2523,7 @@
                             <option value="DEAD OR ALIVE">DEAD OR ALIVE (通缉中)</option>
                             <option value="REVOKED">REVOKED (已撤销)</option>
                         </select>
-                        <input type="number" id="adm-wanted-bulk-amount" placeholder="新赏金" style="padding:5px;">
+                        <input type="number" id="adm-wanted-bulk-amount" step="0.01" placeholder="新赏金" style="padding:5px;">
                     </div>
                     <button onclick="bulkUpdateWantedPosters()" style="width:100%; margin-top:5px; background:#34495e; color:white; border:none; padding:6px; border-radius:4px;">批量应用修改</button>
                 </div>
@@ -2640,7 +2640,7 @@
                         </select>
                     </div>
                     <div style="margin-bottom:10px;">
-                        💰 资金: <input type="number" id="adm-user-gold" style="width:80px"> <span id="adm-user-currency-label">GP</span> <button onclick="updateUserGold()">修改</button>
+                        💰 资金: <input type="number" id="adm-user-gold" step="0.01" style="width:80px"> <span id="adm-user-currency-label">GP</span> <button onclick="updateUserGold()">修改</button>
                     </div>
                     <!-- Root 专用：分配负责 DM -->
                     <div id="root-assign-dm" style="display:none; margin-bottom:10px; padding:10px; border:1px dashed #3498db;">
@@ -2735,7 +2735,7 @@
                     <input id="new-emp-name" type="text" placeholder="姓名" style="grid-column:1/3; padding:6px;">
                     <select id="new-emp-role" onchange="syncNewEmployeeRoleDefaults()" style="padding:6px;"></select>
                     <select id="new-emp-status" style="padding:6px;"></select>
-                    <input id="new-emp-salary" type="number" placeholder="薪资 / 资金" style="padding:6px;">
+                    <input id="new-emp-salary" type="number" step="0.01" placeholder="薪资 / 资金" style="padding:6px;">
                     <input id="new-emp-rarity" type="number" min="1" max="6" value="3" placeholder="星级" style="padding:6px;">
                     <input id="new-emp-avatar-url" type="text" placeholder="头像 URL（可空）" style="grid-column:1/3; padding:6px;">
                     <input id="new-emp-stand-url" type="text" placeholder="立绘 URL，可用英文逗号分隔（可空）" style="grid-column:1/3; padding:6px;">
@@ -3635,10 +3635,32 @@ function getCurrencyUnit() {
     return isCocCampaign() ? '美元' : 'GP';
 }
 
-function formatCurrency(value) {
+function roundCurrency(value) {
     const num = Number(value);
-    const displayValue = Number.isFinite(num) ? num.toLocaleString() : String(value ?? 0);
-    return `${displayValue} ${getCurrencyUnit()}`;
+    return Number.isFinite(num) ? Math.round(num * 100) / 100 : 0;
+}
+
+function parseCurrencyInput(value) {
+    const cleaned = String(value ?? '').replace(/,/g, '').trim();
+    const num = Number(cleaned);
+    return Number.isFinite(num) ? roundCurrency(num) : NaN;
+}
+
+function readDisplayedCurrency(id) {
+    return parseCurrencyInput(document.getElementById(id)?.innerText || '0');
+}
+
+function formatCurrencyNumber(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return String(value ?? 0);
+    return roundCurrency(num).toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
+}
+
+function formatCurrency(value) {
+    return `${formatCurrencyNumber(value)} ${getCurrencyUnit()}`;
 }
 
 function convertCalendarYear(year, calendarSystem = viewingCalendarSystem) {
@@ -6406,7 +6428,7 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
             
             if (netIncome !== 0) {
                 const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
-                const newGold = prof.gold_gp + netIncome; 
+                const newGold = roundCurrency(Number(prof.gold_gp || 0) + netIncome); 
                 
                 await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
                 
@@ -6507,7 +6529,7 @@ async function loadGold() {
         }
         applyCampaignVisibility();
         refreshHeaderLocaleLabels();
-        document.getElementById('gold-amount').innerText = profile.gold_gp.toLocaleString();
+        document.getElementById('gold-amount').innerText = formatCurrencyNumber(profile.gold_gp);
         const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
         if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
     }
@@ -7338,7 +7360,7 @@ async function buy(id, p, n, c) {
         const { data, error } = await supabaseClient.rpc('atomic_buy_item', {
             p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
             p_item_id: parseInt(id),  // 确保是数字
-            p_price: parseFloat(p),   // 确保支持小数数字
+            p_price: roundCurrency(p),   // 确保支持两位小数数字
             p_item_name: n,
             p_category: c || '杂项'    // 确保不为 null
         });
@@ -7705,7 +7727,7 @@ async function buy(id, p, n, c) {
 async function updateUserGold() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return;
-        const newGold = Number(document.getElementById('adm-user-gold').value);
+        const newGold = parseCurrencyInput(document.getElementById('adm-user-gold').value);
         if (Number.isNaN(newGold)) return alert('资金必须是数字，可以为负数');
         showLoading();
         await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', selectedUserId);
@@ -8044,7 +8066,7 @@ async function advanceTime() {
 
                 if (netIncome !== 0) {
                     const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
-                    const newGold = prof.gold_gp + netIncome; 
+                    const newGold = roundCurrency(Number(prof.gold_gp || 0) + netIncome); 
                     
                     await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
                     
@@ -8206,12 +8228,12 @@ async function calculateCityNetIncome(targetUserId) {
         const name = document.getElementById('adm-shop-name').value;
         const rarity = document.getElementById('adm-shop-rarity').value;
         const category = document.getElementById('adm-shop-cat').value;
-        const price = parseFloat(document.getElementById('adm-shop-price').value);
+        const price = parseCurrencyInput(document.getElementById('adm-shop-price').value);
         const stock = parseInt(document.getElementById('adm-shop-stock').value);
         const description = document.getElementById('adm-shop-desc').value;
         const targetType = document.getElementById('adm-shop-target').value;
 
-        if (!name || isNaN(price)) return alert('名称和价格必填');
+        if (!name || Number.isNaN(price)) return alert('名称和价格必填');
 
         // 【核心修复】双重保险获取目标玩家ID
         // 如果 selectedUserId 为空，尝试直接从下拉框再取一次
@@ -8764,7 +8786,7 @@ async function loadLoginLogs() {
                 const payload = {
                     user_id: selectedUserId,
                     target_name: name,
-                    bounty_amount: parseInt(amount, 10) || 0,
+                    bounty_amount: parseCurrencyInput(amount) || 0,
                     source_org: source || 'UNKNOWN',
                     status_text: normalizeWantedStatus(status)
                 };
@@ -8866,8 +8888,8 @@ async function loadLoginLogs() {
 
         if (statusRaw) patch.status_text = normalizeWantedStatus(statusRaw);
         if (amountRaw !== '') {
-            const amount = parseInt(amountRaw, 10);
-            if (Number.isNaN(amount) || amount < 0) return alert('赏金必须是非负整数');
+            const amount = parseCurrencyInput(amountRaw);
+            if (Number.isNaN(amount) || amount < 0) return alert('赏金必须是非负数字，最多两位小数');
             patch.bounty_amount = amount;
         }
 
@@ -8905,7 +8927,7 @@ async function loadLoginLogs() {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择玩家');
         const name = document.getElementById('adm-wanted-name').value.trim();
-        const amount = parseInt(document.getElementById('adm-wanted-amount').value, 10);
+        const amount = parseCurrencyInput(document.getElementById('adm-wanted-amount').value);
         const status = normalizeWantedStatus(document.getElementById('adm-wanted-status').value);
         const source = document.getElementById('adm-wanted-source').value.trim();
         const avatarEl = document.getElementById('adm-wanted-avatar');
@@ -9072,7 +9094,7 @@ async function loadLoginLogs() {
             }
 
             // 3. 增加玩家金币
-            const newGold = Math.round((userProfile.gold_gp + totalPrice) * 100) / 100;
+            const newGold = roundCurrency(Number(userProfile.gold_gp || 0) + totalPrice);
             await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
 
             // 4. 记录日志
@@ -9766,7 +9788,7 @@ async function getRobustIP() {
         const { data, error } = await supabaseClient.rpc('rpc_spin_wheel', {
             p_user_id: viewingUserId,
             p_item_name: currentWheelTarget.name,
-            p_base_price: parseInt(currentWheelPrice)
+            p_base_price: roundCurrency(currentWheelPrice)
         });
 
         // 2. 错误处理
@@ -10137,7 +10159,7 @@ async function getRobustIP() {
             name,
             role,
             status,
-            salary: isPlayerCharacterRole(role) ? -1 : (salaryText === '' ? 0 : Number(salaryText)),
+            salary: isPlayerCharacterRole(role) ? -1 : (salaryText === '' ? 0 : parseCurrencyInput(salaryText)),
             rarity: Number.isFinite(rarity) ? Math.max(1, Math.min(6, rarity)) : 3,
             is_in_party: false,
             avatar_url: avatarUrl,
@@ -10530,7 +10552,7 @@ async function getRobustIP() {
 // ✅ 处理发货、扣钱、记录日志的通用函数
     async function processGachaTransaction(results, totalCost) {
         // 1. 扣除金币
-        const currentGold = parseInt(document.getElementById('gold-amount').innerText.replace(/,/g, '')) || 0;
+        const currentGold = readDisplayedCurrency('gold-amount') || 0;
         if (currentGold < totalCost) throw new Error("资金不足");
 
         // 2. 计算新保底数
@@ -10546,7 +10568,7 @@ async function getRobustIP() {
 
         // 4. 更新数据库：金币和保底
         await supabaseClient.from('profiles').update({
-            gold_gp: currentGold - totalCost,
+            gold_gp: roundCurrency(currentGold - totalCost),
             pity_count: newPity
         }).eq('id', viewingUserId);
 
