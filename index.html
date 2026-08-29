@@ -602,8 +602,11 @@
         .checkin-withdrawn-tag { display:inline-flex; align-items:center; margin-left:6px; padding:1px 6px; border-radius:4px; background:#7f8c8d; color:#fff; font-size:0.75em; font-weight:bold; vertical-align:middle; white-space:nowrap; }
         .checkin-member-grid { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; }
         .checkin-member-chip { display:grid; grid-template-columns:auto 1fr; gap:5px 7px; align-items:center; padding:7px 8px; border:1px solid #e2e8e5; border-radius:6px; background:#fff; color:#34423f; line-height:1.35; min-width:170px; max-width:100%; }
+        .checkin-member-chip.dead { border-color:#d5b3ad; background:#fff7f6; color:#8a4b43; }
+        .checkin-member-chip.dead .checkin-member-name { color:#7d3027; text-decoration:line-through; text-decoration-thickness:1px; }
         .checkin-member-name { font-weight:bold; color:#25322f; overflow-wrap:anywhere; }
         .checkin-member-meta { grid-column:2; color:#667; font-size:0.82em; overflow-wrap:anywhere; }
+        .checkin-dead-tag { display:inline-flex; align-items:center; justify-content:center; padding:1px 5px; border-radius:4px; background:#c0392b; color:#fff; font-size:0.72em; font-weight:bold; white-space:nowrap; }
         .checkin-badge { display:inline-flex; align-items:center; justify-content:center; min-width:38px; padding:2px 6px; border-radius:4px; font-size:0.78em; font-weight:bold; border:1px solid transparent; white-space:nowrap; }
         .checkin-badge-white { background:#fff; color:#6f7c80; border-color:#cfd8dc; }
         .checkin-badge-copper { background:#b87333; color:#fff; border-color:#9a5b24; }
@@ -619,6 +622,15 @@
         .admin-checkin-row button { padding:5px 6px; border:none; border-radius:4px; background:#16a085; color:#fff; cursor:pointer; }
         .admin-checkin-head { position:sticky; top:0; z-index:1; background:#eaf6f3; font-weight:bold; color:#24564f; }
         .admin-leaderboard-form input, .admin-leaderboard-form textarea, .admin-leaderboard-form select { box-sizing:border-box; width:100%; padding:6px; border:1px solid #ccd8d5; border-radius:4px; font-family:inherit; }
+        .admin-team-member-editor { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+        .admin-team-member-row { display:grid; grid-template-columns:90px minmax(120px,1.2fr) 62px minmax(90px,1fr) minmax(90px,1fr) 74px 58px; gap:6px; align-items:center; padding:7px; border:1px solid #edf2f0; border-radius:6px; background:#fbfdfc; }
+        .admin-team-member-row.dead { background:#fff7f6; border-color:#e5c9c3; }
+        .admin-team-member-row button { border:none; border-radius:4px; padding:6px 7px; color:#fff; cursor:pointer; font-size:0.78em; }
+        .admin-team-member-dead-btn { background:#c0392b; }
+        .admin-team-member-restore-btn { background:#27ae60; }
+        .admin-team-member-remove-btn { background:#7f8c8d; }
+        .admin-team-member-tools { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+        .admin-team-member-tools button { border:none; border-radius:4px; padding:7px 10px; color:#fff; cursor:pointer; }
         
         .info-bar { margin-left: auto; text-align: right; font-size: 0.9em; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
         
@@ -2696,7 +2708,12 @@
                         <input id="adm-checkin-team-withdrawn" type="checkbox">
                         <span>退赛，固定沉到排行榜底部</span>
                     </label>
-                    <textarea id="adm-checkin-team-members" style="height:120px; font-family:monospace; font-size:0.78em;" placeholder='成员 JSON，例如 [{"name":"安妮特","gender":"女","race":"魅魔","class":"战士","badge":"铁牌"}]'></textarea>
+                    <div id="adm-checkin-team-member-editor" class="admin-team-member-editor"></div>
+                    <div class="admin-team-member-tools">
+                        <button onclick="addAdminTeamMember()" style="background:#117864;">加入成员</button>
+                        <button onclick="syncAdminTeamMemberEditorFromTextarea()" style="background:#5d6d7e;">从 JSON 重新载入</button>
+                    </div>
+                    <textarea id="adm-checkin-team-members" style="height:86px; font-family:monospace; font-size:0.78em; margin-top:8px;" placeholder='成员 JSON，例如 [{"name":"安妮特","gender":"女","race":"魅魔","class":"战士","badge":"铁牌","is_dead":false}]'></textarea>
                     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
                         <button onclick="saveAdminLeaderboardTeam()" style="background:#16a085; color:white; border:none; padding:7px 10px; border-radius:4px;">保存/新建队伍</button>
                         <button onclick="deleteAdminLeaderboardTeam()" style="background:#c0392b; color:white; border:none; padding:7px 10px; border-radius:4px;">删除队伍</button>
@@ -4184,6 +4201,8 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     let checkinRecords = [];
     let checkinLeaderboardTeams = [];
     let adminLeaderboardTeams = [];
+    let adminTeamMemberDraft = [];
+    const CHECKIN_BADGE_NAMES = ['白牌', '铜牌', '铁牌', '银牌', '金牌', '黑牌'];
     const CHECKIN_BADGE_WEIGHTS = {
         '白牌': 0,
         '铜牌': 1,
@@ -4218,13 +4237,24 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         return map;
     }
 
+    function normalizeTeamMember(member = {}) {
+        const normalized = { ...(member && typeof member === 'object' ? member : {}) };
+        normalized.name = String(normalized.name || '').trim();
+        normalized.gender = String(normalized.gender || '').trim();
+        normalized.race = String(normalized.race || '').trim();
+        normalized.class = String(normalized.class || '').trim();
+        normalized.badge = normalizeBadgeName(normalized.badge);
+        normalized.is_dead = normalized.is_dead === true || normalized.dead === true || normalized.status === '死亡';
+        return normalized;
+    }
+
     function normalizeTeamMembers(members) {
-        if (Array.isArray(members)) return members;
+        if (Array.isArray(members)) return members.map(normalizeTeamMember);
         if (!members) return [];
         if (typeof members === 'string') {
             try {
                 const parsed = JSON.parse(members);
-                return Array.isArray(parsed) ? parsed : [];
+                return Array.isArray(parsed) ? parsed.map(normalizeTeamMember) : [];
             } catch {
                 return [];
             }
@@ -4300,10 +4330,11 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 ${list.map(member => {
                     const badge = normalizeBadgeName(member.badge);
                     const meta = [member.gender, member.race, member.class].filter(Boolean).join(' / ');
+                    const isDead = member.is_dead === true;
                     return `
-                        <div class="checkin-member-chip">
+                        <div class="checkin-member-chip ${isDead ? 'dead' : ''}">
                             <span class="checkin-badge ${getBadgeClass(badge)}">${escapeHTML(badge)}</span>
-                            <span class="checkin-member-name">${escapeHTML(member.name || '未命名')}</span>
+                            <span class="checkin-member-name">${escapeHTML(member.name || '未命名')}${isDead ? ' <span class="checkin-dead-tag">死亡</span>' : ''}</span>
                             <span class="checkin-member-meta">${escapeHTML(meta || '资料未录入')}</span>
                         </div>
                     `;
@@ -4616,14 +4647,115 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         if (nameInput) nameInput.value = team.team_name || '';
         if (countInput) countInput.value = Number(team.manual_checkin_count || 0);
         if (withdrawnInput) withdrawnInput.checked = team.is_withdrawn === true;
-        if (membersInput) membersInput.value = JSON.stringify(normalizeTeamMembers(team.members), null, 2);
+        adminTeamMemberDraft = normalizeTeamMembers(team.members);
+        if (membersInput) membersInput.value = JSON.stringify(adminTeamMemberDraft, null, 2);
+        renderAdminTeamMemberEditor(adminTeamMemberDraft);
     }
 
-    function collectAdminTeamMembers() {
+    function renderBadgeOptions(selectedBadge) {
+        const selected = normalizeBadgeName(selectedBadge);
+        return CHECKIN_BADGE_NAMES.map(badge => {
+            const attr = badge === selected ? 'selected' : '';
+            return `<option value="${escapeHTML(badge)}" ${attr}>${escapeHTML(badge)}</option>`;
+        }).join('');
+    }
+
+    function renderAdminTeamMemberEditor(members = adminTeamMemberDraft) {
+        const box = document.getElementById('adm-checkin-team-member-editor');
+        if (!box) return;
+        adminTeamMemberDraft = normalizeTeamMembers(members);
+        if (adminTeamMemberDraft.length === 0) {
+            box.innerHTML = '<div style="color:#999; padding:8px; border:1px dashed #dbe6e2; border-radius:6px;">暂无成员，点击“加入成员”添加。</div>';
+            return;
+        }
+
+        box.innerHTML = adminTeamMemberDraft.map((member, index) => {
+            const isDead = member.is_dead === true;
+            return `
+                <div class="admin-team-member-row ${isDead ? 'dead' : ''}" data-member-index="${index}">
+                    <select class="adm-team-member-badge" onchange="syncAdminTeamMembersTextareaFromEditor()">${renderBadgeOptions(member.badge)}</select>
+                    <input class="adm-team-member-name" type="text" value="${escapeHTML(member.name)}" placeholder="姓名" oninput="syncAdminTeamMembersTextareaFromEditor()">
+                    <input class="adm-team-member-gender" type="text" value="${escapeHTML(member.gender)}" placeholder="性别" oninput="syncAdminTeamMembersTextareaFromEditor()">
+                    <input class="adm-team-member-race" type="text" value="${escapeHTML(member.race)}" placeholder="种族" oninput="syncAdminTeamMembersTextareaFromEditor()">
+                    <input class="adm-team-member-class" type="text" value="${escapeHTML(member.class)}" placeholder="职业" oninput="syncAdminTeamMembersTextareaFromEditor()">
+                    <button class="${isDead ? 'admin-team-member-restore-btn' : 'admin-team-member-dead-btn'}" onclick="toggleAdminTeamMemberDeath(${index})">${isDead ? '撤销死亡' : '标记死亡'}</button>
+                    <button class="admin-team-member-remove-btn" onclick="removeAdminTeamMember(${index})">移除</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function readAdminTeamMemberEditorRows() {
+        const rows = [...document.querySelectorAll('#adm-checkin-team-member-editor .admin-team-member-row')];
+        return rows.map((row, index) => {
+            const previous = adminTeamMemberDraft[index] || {};
+            return normalizeTeamMember({
+                ...previous,
+                badge: row.querySelector('.adm-team-member-badge')?.value || previous.badge,
+                name: row.querySelector('.adm-team-member-name')?.value || '',
+                gender: row.querySelector('.adm-team-member-gender')?.value || '',
+                race: row.querySelector('.adm-team-member-race')?.value || '',
+                class: row.querySelector('.adm-team-member-class')?.value || '',
+                is_dead: previous.is_dead === true
+            });
+        });
+    }
+
+    function syncAdminTeamMembersTextareaFromEditor() {
+        const membersInput = document.getElementById('adm-checkin-team-members');
+        adminTeamMemberDraft = readAdminTeamMemberEditorRows();
+        if (membersInput) membersInput.value = JSON.stringify(adminTeamMemberDraft, null, 2);
+    }
+
+    function syncAdminTeamMemberEditorFromTextarea() {
+        try {
+            const members = collectAdminTeamMembersFromTextarea();
+            adminTeamMemberDraft = members;
+            renderAdminTeamMemberEditor(adminTeamMemberDraft);
+        } catch (e) {
+            alert('成员 JSON 格式有误：' + (e.message || e));
+        }
+    }
+
+    function addAdminTeamMember() {
+        syncAdminTeamMembersTextareaFromEditor();
+        adminTeamMemberDraft.push(normalizeTeamMember({ badge: '铁牌', name: '', gender: '', race: '', class: '', is_dead: false }));
+        renderAdminTeamMemberEditor(adminTeamMemberDraft);
+        const membersInput = document.getElementById('adm-checkin-team-members');
+        if (membersInput) membersInput.value = JSON.stringify(adminTeamMemberDraft, null, 2);
+    }
+
+    function removeAdminTeamMember(index) {
+        syncAdminTeamMembersTextareaFromEditor();
+        const member = adminTeamMemberDraft[index];
+        if (!member) return;
+        if (member.name && !confirm(`确定从队伍中移除「${member.name}」吗？`)) return;
+        adminTeamMemberDraft.splice(index, 1);
+        renderAdminTeamMemberEditor(adminTeamMemberDraft);
+        const membersInput = document.getElementById('adm-checkin-team-members');
+        if (membersInput) membersInput.value = JSON.stringify(adminTeamMemberDraft, null, 2);
+    }
+
+    function toggleAdminTeamMemberDeath(index) {
+        syncAdminTeamMembersTextareaFromEditor();
+        const member = adminTeamMemberDraft[index];
+        if (!member) return;
+        member.is_dead = member.is_dead !== true;
+        renderAdminTeamMemberEditor(adminTeamMemberDraft);
+        const membersInput = document.getElementById('adm-checkin-team-members');
+        if (membersInput) membersInput.value = JSON.stringify(adminTeamMemberDraft, null, 2);
+    }
+
+    function collectAdminTeamMembersFromTextarea() {
         const text = document.getElementById('adm-checkin-team-members')?.value.trim() || '[]';
         const members = JSON.parse(text);
         if (!Array.isArray(members)) throw new Error('成员资料必须是 JSON 数组');
-        return members;
+        return members.map(normalizeTeamMember);
+    }
+
+    function collectAdminTeamMembers() {
+        syncAdminTeamMembersTextareaFromEditor();
+        return collectAdminTeamMembersFromTextarea();
     }
 
     async function saveAdminLeaderboardTeam() {
