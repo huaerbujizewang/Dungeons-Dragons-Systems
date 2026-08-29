@@ -5097,8 +5097,10 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             // 1. 监听金币和时间变动 (Profiles表)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${targetId}` }, (payload) => {
                 console.log('检测到资产/时间变动');
-                loadGold();
+                if (payload?.new) applyProfileAssetSnapshot(payload.new);
+                else loadGold();
                 loadUserDate();
+                if (isCurrentAdmin()) loadStockAdminPanel();
             })
             // 2. 监听集市变动 (Shop 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_items' }, (payload) => {
@@ -6652,6 +6654,11 @@ async function loadGold() {
             return;
         }
 
+        applyProfileAssetSnapshot(profile);
+    }
+
+    function applyProfileAssetSnapshot(profile) {
+        if (!profile) return;
         userProfile = profile; // 赋值给全局变量供其他函数使用
         viewingCampaignType = normalizeCampaignType(profile.campaign_type);
         viewingCalendarSystem = normalizeCalendarSystem(profile.calendar_system, viewingCampaignType);
@@ -6662,6 +6669,12 @@ async function loadGold() {
         applyCampaignVisibility();
         refreshHeaderLocaleLabels();
         document.getElementById('gold-amount').innerText = formatCurrencyNumber(profile.gold_gp);
+        const gachaGoldDisplay = document.getElementById('gacha-gold-display');
+        if (gachaGoldDisplay) gachaGoldDisplay.innerText = formatCurrencyNumber(profile.gold_gp);
+        const adminGoldInput = document.getElementById('adm-user-gold');
+        if (adminGoldInput && selectedUserId === profile.id && document.activeElement !== adminGoldInput) {
+            adminGoldInput.value = profile.gold_gp;
+        }
         const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
         if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
     }
@@ -7866,6 +7879,7 @@ async function updateUserGold() {
         
         // 记录日志
         await logAction('DM操作', `修改了玩家(ID:${selectedUserId})的资金为 ${formatCurrency(newGold)}`);
+        if (selectedUserId === viewingUserId) await loadGold();
         
         hideLoading(); alert('资金已修改');
     }

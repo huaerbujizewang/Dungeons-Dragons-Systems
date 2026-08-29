@@ -868,6 +868,15 @@ async function castVoteV1(proposalId, voteType) {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes' }, () => {
             if(currentVoter) loadProposals(targetId);
         })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${targetId}` }, payload => {
+            const gold = payload?.new?.gold_gp;
+            if (gold !== undefined) {
+                document.getElementById('current-gold').innerText = Number(gold || 0).toLocaleString();
+                if (userProfile) userProfile.gold_gp = gold;
+            } else {
+                refreshGoldDisplay(targetId);
+            }
+        })
         .subscribe();
 }
 

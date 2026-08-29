@@ -567,6 +567,8 @@
     let selectedStockId = null;
     let selectedHistoryDays = 360;
     let presenceChannel = null;
+    let financeRealtimeChannel = null;
+    let financeRefreshTimer = null;
     let autoRepairAttempted = false;
     let comparisonZoom = null;
     let comparisonDrag = null;
@@ -616,10 +618,79 @@
 
     window.addEventListener('beforeunload', () => {
         if (presenceChannel) presenceChannel.untrack();
+        if (financeRealtimeChannel) supabaseClient.removeChannel(financeRealtimeChannel);
     });
 
     function formatMoney(value) {
         return `${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} GP`;
+    }
+
+    function applyProfileMoneySnapshot(profile) {
+        if (!profile) return;
+        accountProfile = { ...(accountProfile || {}), ...profile };
+        document.getElementById('gold-value').textContent = formatMoney(accountProfile.gold_gp);
+        const currentDate = accountProfile.world_date || { year: 1494, month: 2, day: 12 };
+        const calendarSystem = accountProfile.calendar_system || (accountProfile.campaign_type === 'coc' ? 'ce' : 'dr');
+        document.getElementById('world-date').textContent = BaichengStocks.formatDate(currentDate, calendarSystem, accountProfile.campaign_type);
+        document.getElementById('viewer-label').textContent = accountProfile.email || accountId;
+    }
+
+    function isSameWorldDate(a, b) {
+        return Number(a?.year) === Number(b?.year)
+            && Number(a?.month) === Number(b?.month)
+            && Number(a?.day) === Number(b?.day);
+    }
+
+    async function refreshProfileMoney() {
+        if (!accountId) return;
+        const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', accountId)
+            .single();
+        if (error) {
+            console.warn('资产刷新失败:', error);
+            return;
+        }
+        applyProfileMoneySnapshot(profile);
+    }
+
+    function scheduleFinanceRefresh(reason = 'asset-change') {
+        clearTimeout(financeRefreshTimer);
+        financeRefreshTimer = setTimeout(async () => {
+            financeRefreshTimer = null;
+            console.log(`资产相关数据有更新：${reason}`);
+            await refreshPage();
+        }, 220);
+    }
+
+    function setupFinanceRealtime() {
+        if (!accountId) return;
+        if (financeRealtimeChannel) supabaseClient.removeChannel(financeRealtimeChannel);
+
+        financeRealtimeChannel = supabaseClient.channel(`finance_sync_${accountId}`);
+        financeRealtimeChannel
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${accountId}` }, async payload => {
+                console.log('账号资金/日期有更新');
+                const previousDate = accountProfile?.world_date;
+                if (payload?.new) applyProfileMoneySnapshot(payload.new);
+                else await refreshProfileMoney();
+                await refreshBankPanel({ silent: true });
+                if (!isSameWorldDate(previousDate, accountProfile?.world_date)) scheduleFinanceRefresh('profile-date');
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_accounts', filter: `account_id=eq.${accountId}` }, () => {
+                console.log('银行余额有更新');
+                refreshBankPanel({ silent: true });
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bank_transactions', filter: `account_id=eq.${accountId}` }, () => {
+                console.log('银行流水有更新');
+                refreshProfileMoney();
+                refreshBankPanel({ silent: true });
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'account_stock_state', filter: `account_id=eq.${accountId}` }, () => scheduleFinanceRefresh('stock-prices'))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_holdings', filter: `account_id=eq.${accountId}` }, () => scheduleFinanceRefresh('stock-holdings'))
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_transactions', filter: `account_id=eq.${accountId}` }, () => scheduleFinanceRefresh('stock-transactions'))
+            .subscribe();
     }
 
     function formatRate(value) {
@@ -865,6 +936,7 @@
         currentRole = roleData?.role_level || 'player';
         accountId = ADMIN_ROLES.includes(currentRole) && params.get('uid') ? params.get('uid') : user.id;
         initPresenceSystem(user.email || '', currentRole);
+        setupFinanceRealtime();
         document.getElementById('back-link').href = `index.html${accountId ? `?uid=${encodeURIComponent(accountId)}` : ''}`;
         await refreshPage();
     }
