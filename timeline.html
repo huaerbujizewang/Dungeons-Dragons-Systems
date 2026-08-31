@@ -165,7 +165,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/timeline.json';
+        const JSON_URL = '';
         const LOCAL_TIMELINE_EVENTS = [
             {
                 date: '环陆大赏1',
@@ -274,6 +274,7 @@
         }
 
         async function fetchRemoteTimelineData() {
+            if (!JSON_URL) return [];
             try {
                 const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
                 if (!response.ok) {
