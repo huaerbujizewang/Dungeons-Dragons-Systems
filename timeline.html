@@ -165,7 +165,14 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/timelinea.json';
+        const JSON_URL = 'https://raw.githubusercontent.com/huaerbujizewang/Dungeons-Dragons-Systems/main/timeline.json';
+        const LOCAL_TIMELINE_EVENTS = [
+            {
+                date: '环陆大赏1',
+                image: 'assets/helios/环陆大赏1.png',
+                allowed_emails: ['mrdog01@helios.com']
+            }
+        ];
 
         // --- 核心交互：丝滑滚轮 + 鼠标拖拽 ---
         const viewport = document.getElementById('gallery-viewport');
@@ -236,14 +243,18 @@
             try {
                 const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
                 if (!response.ok) throw new Error("无法读取时间线数据");
-                const allData = await response.json();
+                const remoteData = await response.json();
+                const allData = Array.isArray(remoteData)
+                    ? remoteData.concat(LOCAL_TIMELINE_EVENTS)
+                    : LOCAL_TIMELINE_EVENTS.slice();
+                const viewerEmail = normalizeEmail(user.email);
 
                 // --- 核心判定逻辑注入：只保留你有权看到的剧情 ---
                 const filteredData = allData.filter(ev => {
                     // 如果该剧情没设权限字段，默认所有人（已登录）可见
                     if (!ev.allowed_emails || ev.allowed_emails.length === 0) return true;
                     // 如果设置了权限，检查当前登录账号是否在白名单内
-                    return ev.allowed_emails.includes(user.email);
+                    return ev.allowed_emails.map(normalizeEmail).includes(viewerEmail);
                 });
 
                 if (!filteredData || filteredData.length === 0) {
@@ -283,6 +294,10 @@
                 `;
                 track.innerHTML += html;
             });
+        }
+
+        function normalizeEmail(value) {
+            return String(value || '').trim().toLowerCase();
         }
 
         // --- 剧场模式 ---
