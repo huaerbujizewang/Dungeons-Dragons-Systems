@@ -241,9 +241,7 @@
             const statusMsg = document.getElementById('status-msg');
 
             try {
-                const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error("无法读取时间线数据");
-                const remoteData = await response.json();
+                const remoteData = await fetchRemoteTimelineData();
                 const allData = Array.isArray(remoteData)
                     ? remoteData.concat(LOCAL_TIMELINE_EVENTS)
                     : LOCAL_TIMELINE_EVENTS.slice();
@@ -272,6 +270,21 @@
                     <div style="color:#e74c3c;">链接中断</div>
                     <div style="font-size:0.7em; margin-top:10px;">${error.message}</div>
                 `;
+            }
+        }
+
+        async function fetchRemoteTimelineData() {
+            try {
+                const response = await fetch(`${JSON_URL}?t=${new Date().getTime()}`);
+                if (!response.ok) {
+                    console.warn(`远端时间线数据读取失败：${response.status} ${response.statusText}`);
+                    return [];
+                }
+                const data = await response.json();
+                return Array.isArray(data) ? data : [];
+            } catch (error) {
+                console.warn('远端时间线数据读取失败，本地编年史仍会显示。', error);
+                return [];
             }
         }
 
