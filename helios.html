@@ -1366,6 +1366,34 @@
         .country-badge.amazigh { background: #5b7896; }
         .country-badge.guild { background: #4f5d75; }
         .country-badge.secret { background: #5b4b8a; }
+        .country-badge.kalindia { background: #4b5f9f; }
+        .country-badge.uruk { background: #5a2430; }
+        .country-badge.nozeria { background: #476b8e; }
+        .country-badge.vishensa { background: #2f5f54; }
+
+        .item-owner-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 2px 0 18px;
+        }
+
+        .item-owner-label {
+            color: #7a6f61;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+
+        .item-owner-row .country-badge {
+            min-height: 24px;
+            padding: 4px 10px;
+            font-size: 12px;
+            box-shadow:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+                0 5px 14px rgba(43, 35, 25, 0.12);
+        }
 
         .section-meta {
             margin-top: 12px;
@@ -2760,6 +2788,17 @@
             return `<span class="country-badge-row">${badges}</span>`;
         }
 
+        function renderOwnerBadge(value) {
+            const badgeMap = typeof countryBadgeClassMap !== "undefined" ? countryBadgeClassMap : {};
+            const labels = String(value || "").split(/[，,]/).map(label => label.trim()).filter(Boolean);
+            if (!labels.length) return "";
+            const badges = labels.map(label => {
+                const badgeClass = badgeMap[label] || "";
+                return `<span class="country-badge ${badgeClass}">${escapeHTML(label)}</span>`;
+            }).join("");
+            return `<div class="item-owner-row"><span class="item-owner-label">归属</span>${badges}</div>`;
+        }
+
         function selectNode(nodeId) {
             if (nodeId === "home") {
                 state.current = {
@@ -3335,6 +3374,14 @@
                     if (preview) {
                         const src = escapeAttribute(preview[1]);
                         html.push(`<div class="pdf-preview"><iframe src="${src}" title="PDF 预览"></iframe></div>`);
+                        continue;
+                    }
+                }
+
+                if (line.startsWith("[[owner:")) {
+                    const owner = line.match(/^\[\[owner:(.+?)\]\]$/);
+                    if (owner) {
+                        html.push(renderOwnerBadge(owner[1]));
                         continue;
                     }
                 }
