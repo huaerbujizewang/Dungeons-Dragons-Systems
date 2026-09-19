@@ -1370,6 +1370,7 @@
         .country-badge.uruk { background: #5a2430; }
         .country-badge.nozeria { background: #476b8e; }
         .country-badge.vishensa { background: #2f5f54; }
+        .country-badge.canggu { background: #59636b; }
 
         .item-owner-row {
             display: flex;
@@ -2151,10 +2152,328 @@
             line-height: 1.6;
         }
 
+        .religion-heading-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 30px 0 12px;
+            padding-bottom: 9px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .religion-heading-row .sub-heading {
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+
+        .religion-detail-button {
+            flex: 0 0 auto;
+            min-height: 36px;
+            padding: 5px 10px 5px 7px;
+            border: 1px solid rgba(121, 93, 66, 0.28);
+            border-radius: 6px;
+            background: rgba(255, 252, 244, 0.92);
+            color: #574838;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .religion-detail-button:hover,
+        .religion-detail-button:focus-visible {
+            border-color: var(--gold);
+            background: #fff8e9;
+            outline: none;
+        }
+
+        .religion-detail-button img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .religion-detail-button .religion-button-arrow {
+            color: var(--gold);
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .religion-drawer-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(520px, 640px);
+        }
+
+        .religion-drawer-shell[hidden] {
+            display: none;
+        }
+
+        .religion-drawer-backdrop {
+            border: 0;
+            background: rgba(23, 28, 34, 0.54);
+            cursor: default;
+        }
+
+        .religion-drawer {
+            min-width: 0;
+            height: 100vh;
+            overflow: hidden;
+            border-left: 1px solid rgba(79, 66, 53, 0.24);
+            background: #fffdf8;
+            box-shadow: -20px 0 52px rgba(21, 27, 34, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .religion-drawer-hero {
+            position: relative;
+            min-height: 232px;
+            overflow: hidden;
+            border-bottom: 1px solid var(--line);
+            background: #252d34;
+            color: #fffdf8;
+        }
+
+        .religion-drawer-portrait {
+            position: absolute;
+            inset: 0 0 0 42%;
+            width: 58%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 22%;
+            opacity: 0.78;
+        }
+
+        .religion-drawer-hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(24, 29, 35, 0.98) 0%, rgba(24, 29, 35, 0.92) 42%, rgba(24, 29, 35, 0.2) 78%, rgba(24, 29, 35, 0.08) 100%);
+            pointer-events: none;
+        }
+
+        .religion-drawer-close {
+            position: absolute;
+            z-index: 3;
+            top: 14px;
+            right: 14px;
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(255, 255, 255, 0.34);
+            border-radius: 50%;
+            background: rgba(20, 25, 30, 0.56);
+            color: white;
+            cursor: pointer;
+            font: inherit;
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .religion-drawer-close:hover,
+        .religion-drawer-close:focus-visible {
+            background: rgba(115, 58, 58, 0.92);
+            outline: none;
+        }
+
+        .religion-drawer-identity {
+            position: relative;
+            z-index: 2;
+            width: min(72%, 430px);
+            min-height: 232px;
+            padding: 38px 34px 28px;
+            display: flex;
+            align-items: flex-end;
+            gap: 18px;
+        }
+
+        .religion-drawer-emblem {
+            width: 78px;
+            height: 78px;
+            flex: 0 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.44);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            object-fit: cover;
+        }
+
+        .religion-drawer-kicker {
+            margin-bottom: 6px;
+            color: #d9b76d;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .religion-drawer-title {
+            margin: 0;
+            font-size: 30px;
+            line-height: 1.2;
+            letter-spacing: 0;
+        }
+
+        .religion-drawer-meta {
+            margin-top: 8px;
+            color: rgba(255, 255, 255, 0.76);
+            font-size: 12px;
+            line-height: 1.65;
+        }
+
+        .religion-deity-strip {
+            position: relative;
+            z-index: 2;
+            min-height: 232px;
+            padding: 38px 60px 26px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .religion-deity-strip .religion-drawer-title {
+            margin-bottom: 18px;
+        }
+
+        .religion-deity-emblems {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .religion-deity-emblem {
+            min-width: 0;
+            text-align: center;
+        }
+
+        .religion-deity-emblem img {
+            width: 48px;
+            height: 48px;
+            border: 1px solid rgba(255, 255, 255, 0.42);
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .religion-deity-emblem span {
+            display: block;
+            margin-top: 5px;
+            overflow: hidden;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 10px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .religion-tabs {
+            flex: 0 0 auto;
+            padding: 0 28px;
+            border-bottom: 1px solid var(--line);
+            background: #f8f5ed;
+            display: flex;
+            gap: 2px;
+            overflow-x: auto;
+        }
+
+        .religion-tab {
+            min-width: max-content;
+            min-height: 48px;
+            padding: 0 14px;
+            border: 0;
+            border-bottom: 3px solid transparent;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .religion-tab:hover,
+        .religion-tab:focus-visible {
+            color: var(--ink);
+            outline: none;
+        }
+
+        .religion-tab.active {
+            border-bottom-color: var(--wine);
+            color: var(--wine);
+        }
+
+        .religion-drawer-content {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 28px 34px 48px;
+        }
+
+        .religion-drawer-content .section-heading {
+            margin-top: 8px;
+        }
+
+        .religion-drawer-content .sub-heading {
+            margin-top: 24px;
+        }
+
+        .religion-drawer-content p,
+        .religion-drawer-content li {
+            line-height: 1.85;
+        }
+
+        .religion-deity-directory {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .religion-deity-entry {
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #faf7f0;
+            display: grid;
+            grid-template-columns: 52px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+        }
+
+        .religion-deity-entry img {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .religion-deity-entry strong,
+        .religion-deity-entry span {
+            display: block;
+        }
+
+        .religion-deity-entry span {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        html.religion-drawer-open,
+        body.religion-drawer-open {
+            overflow: hidden;
+        }
+
         @media (max-width: 980px) {
+            html,
             body {
+                max-width: 100%;
                 height: auto;
-                overflow: auto;
+                overflow-x: hidden;
+                overflow-y: auto;
             }
 
             .page-shell {
@@ -2215,6 +2534,85 @@
             .stat-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+
+            .religion-heading-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .religion-detail-button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .religion-drawer-shell {
+                inset: 0;
+                width: auto;
+                max-width: none;
+                display: block;
+                overflow: hidden;
+            }
+
+            .religion-drawer-backdrop {
+                display: none;
+            }
+
+            .religion-drawer {
+                position: absolute;
+                inset: 0;
+                width: auto;
+                max-width: none;
+                border-left: 0;
+            }
+
+            .religion-drawer-hero,
+            .religion-drawer-identity,
+            .religion-deity-strip {
+                min-height: 210px;
+            }
+
+            .religion-drawer-identity {
+                width: 82%;
+                padding: 34px 20px 24px;
+            }
+
+            .religion-drawer-emblem {
+                width: 62px;
+                height: 62px;
+            }
+
+            .religion-drawer-title {
+                font-size: 25px;
+            }
+
+            .religion-deity-strip {
+                padding: 34px 46px 22px 18px;
+            }
+
+            .religion-deity-emblems {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                row-gap: 10px;
+            }
+
+            .religion-deity-emblem:nth-child(n + 4) span {
+                display: none;
+            }
+
+            .religion-tabs {
+                padding-inline: 10px;
+            }
+
+            .religion-tab {
+                padding-inline: 11px;
+            }
+
+            .religion-drawer-content {
+                padding: 22px 18px 40px;
+            }
+
+            .religion-deity-directory {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -2272,9 +2670,19 @@
         </main>
     </div>
 
+    <div class="religion-drawer-shell" id="religion-drawer-shell" aria-hidden="true" hidden>
+        <button class="religion-drawer-backdrop" type="button" data-religion-close aria-label="关闭宗教详情"></button>
+        <aside class="religion-drawer" role="dialog" aria-modal="true" aria-labelledby="religion-drawer-title">
+            <div class="religion-drawer-hero" id="religion-drawer-hero"></div>
+            <nav class="religion-tabs" id="religion-tabs" aria-label="宗教详情栏目"></nav>
+            <div class="religion-drawer-content intro-copy" id="religion-drawer-content"></div>
+        </aside>
+    </div>
+
     <script>        let archive = [];
         let helios528Archive = [];
         let helios1112Archive = [];
+        let religionDetails = {};
         let personCountryMap = {};
         let countryBadgeClassMap = {};
         let searchIndex = [];
@@ -2284,14 +2692,16 @@
             "528": "home",
             "1112": "intro"
         };
-        const HELIOS_DATA_VERSION = "2026-09-11-blauhaven";
+        const HELIOS_DATA_VERSION = "2026-09-19-religions";
         const HELIOS_DATA_URL = `helios-data.json?v=${HELIOS_DATA_VERSION}`;
         const HELIOS_1112_DATA_URL = `helios-1112-data.json?v=${HELIOS_DATA_VERSION}`;
+        const HELIOS_RELIGION_DATA_URL = `helios-religions.json?v=${HELIOS_DATA_VERSION}`;
 
         async function loadHeliosData() {
-            const [response, response1112] = await Promise.all([
+            const [response, response1112, religionResponse] = await Promise.all([
                 fetch(HELIOS_DATA_URL, { cache: "no-store" }),
-                fetch(HELIOS_1112_DATA_URL, { cache: "no-store" })
+                fetch(HELIOS_1112_DATA_URL, { cache: "no-store" }),
+                fetch(HELIOS_RELIGION_DATA_URL, { cache: "no-store" })
             ]);
             if (!response.ok) {
                 throw new Error("无法加载档案数据：" + response.status + " " + response.statusText);
@@ -2299,13 +2709,18 @@
             if (!response1112.ok) {
                 throw new Error("无法加载1112档案数据：" + response1112.status + " " + response1112.statusText);
             }
+            if (!religionResponse.ok) {
+                throw new Error("无法加载宗教档案数据：" + religionResponse.status + " " + religionResponse.statusText);
+            }
             const data = await response.json();
             const data1112 = await response1112.json();
+            const religionData = await religionResponse.json();
             helios528Archive = Array.isArray(data.archive) ? data.archive : [];
             personCountryMap = data.personCountryMap || {};
             countryBadgeClassMap = data.countryBadgeClassMap || {};
             helios1112Data = data1112 && typeof data1112 === "object" ? data1112 : { archive: [] };
             helios1112Archive = Array.isArray(helios1112Data.archive) ? helios1112Data.archive : [];
+            religionDetails = religionData && religionData.religions ? religionData.religions : {};
             archive = helios528Archive;
         }
 
@@ -2350,6 +2765,13 @@
         const archiveSearchBox = document.querySelector(".archive-search");
         const contentKicker = document.querySelector(".kicker");
         const pageTitle = document.querySelector(".page-title");
+        const religionDrawerShell = document.getElementById("religion-drawer-shell");
+        const religionDrawerHero = document.getElementById("religion-drawer-hero");
+        const religionTabs = document.getElementById("religion-tabs");
+        const religionDrawerContent = document.getElementById("religion-drawer-content");
+        let activeReligionKey = "";
+        let activeReligionTab = "概览";
+        let religionDrawerReturnFocus = null;
 
         const policyTooltip = document.createElement("div");
         policyTooltip.className = "policy-floating-tooltip";
@@ -2393,6 +2815,12 @@
             });
 
             panelBody.addEventListener("click", event => {
+                const religionButton = event.target.closest("[data-religion-detail]");
+                if (religionButton) {
+                    openReligionDetail(religionButton.dataset.religionDetail, religionButton);
+                    return;
+                }
+
                 const countryMapArea = event.target.closest("[data-country-map-area]");
                 if (countryMapArea) {
                     selectInteractiveCountryMapArea(countryMapArea);
@@ -2454,6 +2882,22 @@
 
             window.addEventListener("resize", repositionPolicyTooltip);
             document.addEventListener("scroll", repositionPolicyTooltip, true);
+
+            religionDrawerShell.addEventListener("click", event => {
+                if (event.target.closest("[data-religion-close]")) {
+                    closeReligionDetail();
+                    return;
+                }
+
+                const tab = event.target.closest("[data-religion-tab]");
+                if (!tab) return;
+                activeReligionTab = tab.dataset.religionTab;
+                renderReligionDrawer();
+            });
+
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape" && !religionDrawerShell.hidden) closeReligionDetail();
+            });
         }
 
         function renderEraSidebar() {
@@ -3824,9 +4268,144 @@
             return `<p${className}>${text}</p>`;
         }
 
+        function getReligionKeyFromHeading(value) {
+            const label = String(value || "").replace(/^\d+\.\s*/, "").trim();
+            if (label === "哥伦比娅信仰") return "哥伦比娅教";
+            return label;
+        }
+
+        function renderReligionDetailButton(religionKey) {
+            const detail = religionDetails[religionKey];
+            if (!detail) return "";
+            const emblem = detail.emblem
+                ? `<img src="${escapeAttribute(detail.emblem)}" alt="" aria-hidden="true">`
+                : "";
+            return `
+                <button class="religion-detail-button" type="button" data-religion-detail="${escapeAttribute(religionKey)}">
+                    ${emblem}
+                    <span>宗教详情</span>
+                    <span class="religion-button-arrow" aria-hidden="true">›</span>
+                </button>
+            `;
+        }
+
         function renderContentHeading(heading) {
             const className = heading.level === 2 ? "section-heading" : "sub-heading";
+            const religionKey = getReligionKeyFromHeading(heading.text);
+            if (state.current.name === "奥斯坎大陆宗教" && heading.level === 3 && religionDetails[religionKey]) {
+                return `
+                    <div class="religion-heading-row">
+                        <div class="${className}">${escapeHTML(heading.text)}</div>
+                        ${renderReligionDetailButton(religionKey)}
+                    </div>
+                `;
+            }
             return `<div class="${className}">${escapeHTML(heading.text)}</div>`;
+        }
+
+        function openReligionDetail(religionKey, trigger) {
+            if (!religionDetails[religionKey]) return;
+            activeReligionKey = religionKey;
+            activeReligionTab = "概览";
+            religionDrawerReturnFocus = trigger || document.activeElement;
+            renderReligionDrawer();
+            religionDrawerShell.hidden = false;
+            religionDrawerShell.setAttribute("aria-hidden", "false");
+            document.documentElement.classList.add("religion-drawer-open");
+            document.body.classList.add("religion-drawer-open");
+            window.scrollTo({ left: 0, top: window.scrollY, behavior: "instant" });
+            requestAnimationFrame(() => {
+                const closeButton = religionDrawerShell.querySelector(".religion-drawer-close");
+                if (closeButton) closeButton.focus();
+            });
+        }
+
+        function closeReligionDetail() {
+            religionDrawerShell.hidden = true;
+            religionDrawerShell.setAttribute("aria-hidden", "true");
+            document.documentElement.classList.remove("religion-drawer-open");
+            document.body.classList.remove("religion-drawer-open");
+            activeReligionKey = "";
+            if (religionDrawerReturnFocus && document.contains(religionDrawerReturnFocus)) {
+                religionDrawerReturnFocus.focus();
+            }
+            religionDrawerReturnFocus = null;
+        }
+
+        function renderReligionDeityEmblems(deities) {
+            return `
+                <div class="religion-deity-emblems">
+                    ${deities.map(deity => `
+                        <div class="religion-deity-emblem" title="${escapeAttribute(`${deity.name}：${deity.domain}`)}">
+                            <img src="${escapeAttribute(deity.emblem)}" alt="${escapeAttribute(deity.name)}圣徽">
+                            <span>${escapeHTML(deity.name)}</span>
+                        </div>
+                    `).join("")}
+                </div>
+            `;
+        }
+
+        function renderReligionDeityDirectory(deities) {
+            return `
+                <div class="religion-deity-directory">
+                    ${deities.map(deity => `
+                        <div class="religion-deity-entry">
+                            <img src="${escapeAttribute(deity.emblem)}" alt="${escapeAttribute(deity.name)}圣徽">
+                            <div>
+                                <strong>${escapeHTML(deity.name)}</strong>
+                                <span>${escapeHTML(deity.domain)}</span>
+                            </div>
+                        </div>
+                    `).join("")}
+                </div>
+            `;
+        }
+
+        function renderReligionDrawer() {
+            const detail = religionDetails[activeReligionKey];
+            if (!detail) return;
+
+            const tabs = ["概览", "神话", "教会体系", "圣所与人物"]
+                .filter(tab => detail.tabs && detail.tabs[tab]);
+            if (!tabs.includes(activeReligionTab)) activeReligionTab = tabs[0] || "概览";
+
+            const closeButton = `<button class="religion-drawer-close" type="button" data-religion-close aria-label="关闭宗教详情" title="关闭">×</button>`;
+            if (Array.isArray(detail.deities) && detail.deities.length) {
+                religionDrawerHero.innerHTML = `
+                    ${closeButton}
+                    <div class="religion-deity-strip">
+                        <div class="religion-drawer-kicker">${escapeHTML(detail.type || "宗教档案")}</div>
+                        <h2 class="religion-drawer-title" id="religion-drawer-title">${escapeHTML(detail.title)}</h2>
+                        ${renderReligionDeityEmblems(detail.deities)}
+                    </div>
+                `;
+            } else {
+                religionDrawerHero.innerHTML = `
+                    ${detail.portrait ? `<img class="religion-drawer-portrait" src="${escapeAttribute(detail.portrait)}" alt="${escapeAttribute(detail.deity || detail.title)}立绘">` : ""}
+                    ${closeButton}
+                    <div class="religion-drawer-identity">
+                        ${detail.emblem ? `<img class="religion-drawer-emblem" src="${escapeAttribute(detail.emblem)}" alt="${escapeAttribute(detail.title)}圣徽">` : ""}
+                        <div>
+                            <div class="religion-drawer-kicker">${escapeHTML(detail.type || "宗教档案")}</div>
+                            <h2 class="religion-drawer-title" id="religion-drawer-title">${escapeHTML(detail.title)}</h2>
+                            <div class="religion-drawer-meta">
+                                ${detail.deity ? `主神：${escapeHTML(detail.deity)}<br>` : ""}
+                                ${detail.distribution ? `主要分布：${escapeHTML(detail.distribution)}` : ""}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            religionTabs.innerHTML = tabs.map(tab => `
+                <button class="religion-tab ${tab === activeReligionTab ? "active" : ""}" type="button" data-religion-tab="${escapeAttribute(tab)}" role="tab" aria-selected="${tab === activeReligionTab ? "true" : "false"}">${escapeHTML(tab)}</button>
+            `).join("");
+
+            const deityDirectory = activeReligionTab === "圣所与人物" && Array.isArray(detail.deities)
+                ? renderReligionDeityDirectory(detail.deities)
+                : "";
+            religionDrawerContent.innerHTML = `${renderMarkdown(detail.tabs[activeReligionTab] || "")}${deityDirectory}`;
+            religionDrawerContent.scrollTop = 0;
         }
 
         function renderContentTable(table) {
