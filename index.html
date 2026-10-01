@@ -1525,6 +1525,26 @@
 .dossier-stand-img {
     transition: opacity 0.3s ease, transform 0.3s;
 }
+    .mount-panel { margin: 0 0 38px; border: 1px solid #b8c6c2; border-radius: 6px; background: #fff; overflow: hidden; }
+    .mount-profile { display: grid; grid-template-columns: minmax(130px, 220px) minmax(0, 1fr); gap: 22px; padding: 20px; align-items: start; }
+    .mount-portrait { width: 100%; max-height: 300px; object-fit: contain; background: #edf1ee; border-radius: 4px; cursor: pointer; }
+    .mount-portrait-fallback { display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 5; background: #edf1ee; color: #53716b; font-size: 2.5rem; }
+    .mount-profile h3 { margin: 0 0 10px; font-size: 1.2rem; }
+    .mount-stats { display: flex; flex-wrap: wrap; gap: 7px 18px; margin: 10px 0; color: #30423e; }
+    .mount-progress { height: 8px; background: #e3e9e6; border-radius: 4px; overflow: hidden; margin: 9px 0; }
+    .mount-progress span { display: block; height: 100%; background: #278a79; }
+    .mount-table-wrap { overflow-x: auto; border-top: 1px solid #dce5e1; }
+    .mount-table { width: 100%; border-collapse: collapse; min-width: 650px; font-size: 0.86rem; }
+    .mount-table th, .mount-table td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #edf1ef; }
+    .mount-table th { background: #f4f7f5; color: #425b54; }
+    .mount-table tr.current { background: #e7f5f0; font-weight: 600; }
+    .mount-art-modal { position: fixed; inset: 0; z-index: 12000; background: rgba(12, 21, 20, .88); display: none; align-items: center; justify-content: center; padding: 40px; }
+    .mount-art-modal img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .mount-art-close { position: absolute; top: 12px; right: 18px; background: transparent; border: 0; color: white; font-size: 2rem; cursor: pointer; }
+    .mount-admin-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+    .mount-admin-fields label { display: grid; gap: 4px; font-size: .84rem; }
+    .mount-admin-fields input, .mount-admin-fields select { padding: 7px; min-width: 0; }
+    @media (max-width: 620px) { .mount-profile { grid-template-columns: 1fr; } .mount-portrait, .mount-portrait-fallback { max-width: 220px; } }
     </style>
 </head>
 <body>
@@ -1822,6 +1842,10 @@
     <!-- 雇员中心 -->
     <div id="employees-section" class="section">
         <div id="emp-container"></div>
+    </div>
+    <div id="mount-art-modal" class="mount-art-modal" onclick="closeMountArt()" role="dialog" aria-label="坐骑立绘">
+        <button type="button" class="mount-art-close" onclick="closeMountArt()" aria-label="关闭">×</button>
+        <img id="mount-art-image" alt="坐骑全身立绘">
     </div>
 
     <!-- 其他内容板块 -->
@@ -2752,6 +2776,26 @@
                 </div>
                 <div id="adm-checkin-list" class="admin-checkin-list">
                     <div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>
+                </div>
+            </div>
+
+            <div class="admin-box" style="border:1px solid #278a79; padding:15px; border-radius:6px; background:#f6faf8;">
+                <h3 style="margin-top:0; color:#236a5e;">坐骑管理</h3>
+                <div id="adm-mount-status" style="font-size:0.82em; color:#52645e;">请先选择玩家</div>
+                <div class="mount-admin-fields">
+                    <label style="display:flex; align-items:center; gap:6px;"><input id="adm-mount-enabled" type="checkbox"> 开启坐骑</label>
+                    <label>累计光耀环数<input id="adm-mount-rings" type="number" min="0" step="1" value="0"></label>
+                    <label>已确认突破至<select id="adm-mount-cap"><option value="3">III（未突破）</option><option value="4">IV</option><option value="5">V</option><option value="7">VII</option><option value="8">VIII</option></select></label>
+                </div>
+                <button type="button" onclick="saveAdminMount()" style="background:#278a79; color:white; border:0; padding:8px 12px; border-radius:4px; cursor:pointer;">保存坐骑与进度</button>
+                <div style="font-size:0.78em; color:#52645e; margin-top:7px;">IV、V、VII、VIII 的材料由 DM 核对并从背包处理；此处确认突破阶段。</div>
+                <div class="mount-admin-fields">
+                    <label>头像<input id="adm-mount-avatar-file" type="file" accept="image/*"></label>
+                    <label>全身立绘<input id="adm-mount-stand-file" type="file" accept="image/*"></label>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" onclick="uploadAdminMountImage('avatar')">上传头像</button>
+                    <button type="button" onclick="uploadAdminMountImage('stand')">上传立绘</button>
                 </div>
             </div>
 
@@ -5133,6 +5177,10 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 }
             })
             // 5. 监听角色评价变动
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'player_mounts', filter: `user_id=eq.${targetId}` }, () => {
+                loadEmployees();
+                if (isCurrentAdmin() && selectedUserId === targetId) loadAdminMount(targetId);
+            })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_reviews', filter: `employee_owner_id=eq.${targetId}` }, (payload) => {
                 console.log('角色评价有更新');
                 if (currentReviewTarget.employeeId) loadEmployeeReviews(currentReviewTarget.employeeId);
@@ -5277,6 +5325,173 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         if (document.getElementById('character-bag-modal').style.display === 'flex') {
             await renderCharacterBagSlots();
         }
+    }
+
+    const MOUNT_STAGES = [
+        { name: 'I', rings: 0, size: '—', ac: '—', hp: '—', speed: '—', requirement: '无' },
+        { name: 'II', rings: 50, size: '中型', ac: 14, hp: 28, speed: '50尺，悬浮', requirement: '无' },
+        { name: 'III', rings: 350, size: '中型', ac: 15, hp: 48, speed: '60尺，悬浮', requirement: '无' },
+        { name: 'IV', rings: 750, size: '中型', ac: 16, hp: 76, speed: '80尺，悬浮', requirement: '一件非普通光耀类魔法物品，突破时消耗' },
+        { name: 'V', rings: 1200, size: '大型', ac: 17, hp: 112, speed: '100尺，悬浮', requirement: '一件珍稀光耀类魔法物品，突破时消耗' },
+        { name: 'VI', rings: 2000, size: '大型', ac: 18, hp: 156, speed: '110尺，悬浮', requirement: '无' },
+        { name: 'VII', rings: 3900, size: '巨型', ac: 19, hp: 214, speed: '120尺，悬浮', requirement: '一件极珍稀光耀类魔法物品，突破时消耗' },
+        { name: 'VIII', rings: 6800, size: '巨型', ac: 20, hp: 280, speed: '120尺，悬浮', requirement: '一件传说级光耀类魔法物品作为核心，突破时消耗' }
+    ];
+
+    function currentMountStage(mount) {
+        const rings = Math.max(0, Number(mount.radiant_rings) || 0);
+        const breakthroughCap = Number(mount.breakthrough_cap) || 3;
+        const cap = breakthroughCap === 5 ? 6 : breakthroughCap;
+        let stage = 0;
+        MOUNT_STAGES.forEach((entry, index) => {
+            if (rings >= entry.rings && index + 1 <= cap) stage = index;
+        });
+        return stage;
+    }
+
+    async function readMount(userId) {
+        if (!userId) return null;
+        const { data, error } = await supabaseClient.from('player_mounts').select('*').eq('user_id', userId).maybeSingle();
+        if (error) throw error;
+        return data;
+    }
+
+    async function loadAdminMount(userId = selectedUserId) {
+        const status = document.getElementById('adm-mount-status');
+        if (!status || !userId || !isCurrentAdmin()) return;
+        status.textContent = '正在读取坐骑...';
+        try {
+            const mount = await readMount(userId);
+            if (userId !== selectedUserId) return;
+            document.getElementById('adm-mount-enabled').checked = mount?.enabled === true;
+            document.getElementById('adm-mount-rings').value = mount?.radiant_rings ?? 0;
+            document.getElementById('adm-mount-cap').value = mount?.breakthrough_cap ?? 3;
+            status.textContent = mount
+                ? `当前阶段 ${MOUNT_STAGES[currentMountStage(mount)].name} · 累计 ${Number(mount.radiant_rings).toLocaleString('zh-CN')} 环`
+                : '默认关闭，尚未创建坐骑记录';
+        } catch (error) {
+            status.textContent = '读取失败：' + (error.message || error);
+        }
+    }
+
+    async function saveAdminMount() {
+        if (!await requireAdminRole()) return;
+        const userId = selectedUserId;
+        if (!userId) return alert('请先选择玩家');
+        const rings = Number(document.getElementById('adm-mount-rings').value);
+        const cap = Number(document.getElementById('adm-mount-cap').value);
+        if (!Number.isSafeInteger(rings) || rings < 0) return alert('累计光耀环数必须是非负整数');
+        if (![3, 4, 5, 7, 8].includes(cap)) return alert('突破阶段无效');
+        showLoading();
+        let saved = false;
+        try {
+            const previous = await readMount(userId);
+            const oldCap = Number(previous?.breakthrough_cap) || 3;
+            if (cap > oldCap) {
+                const target = MOUNT_STAGES[cap - 1];
+                if (rings < target.rings) return alert(`确认阶段 ${target.name} 前需累计 ${target.rings} 环`);
+                const requirements = MOUNT_STAGES.slice(oldCap, cap).filter(stage => stage.requirement !== '无');
+                if (requirements.length && !confirm(`确认已消耗以下突破材料？\n${requirements.map(stage => `${stage.name}：${stage.requirement}`).join('\n')}`)) return;
+            }
+            const values = {
+                enabled: document.getElementById('adm-mount-enabled').checked,
+                radiant_rings: rings,
+                breakthrough_cap: cap,
+                updated_at: new Date().toISOString()
+            };
+            const result = previous
+                ? await supabaseClient.from('player_mounts').update(values).eq('user_id', userId)
+                : await supabaseClient.from('player_mounts').insert({ user_id: userId, ...values });
+            if (result.error) throw result.error;
+            saved = true;
+            await Promise.all([loadAdminMount(userId), loadEmployees()]);
+            await logAction('DM操作', `更新玩家(ID:${userId})坐骑：${values.enabled ? '开启' : '关闭'}，累计${rings}环，突破上限${cap}`);
+        } catch (error) {
+            alert(`坐骑${saved ? '已保存，但后续刷新失败' : '保存失败'}：${error.message || error}`);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function uploadAdminMountImage(kind) {
+        if (!await requireAdminRole()) return;
+        const userId = selectedUserId;
+        if (!userId) return alert('请先选择玩家');
+        const fileId = kind === 'avatar' ? 'adm-mount-avatar-file' : 'adm-mount-stand-file';
+        const column = kind === 'avatar' ? 'avatar_url' : 'stand_url';
+        const input = document.getElementById(fileId);
+        const file = input?.files?.[0];
+        if (!file || !file.type.startsWith('image/')) return alert('请选择图片文件');
+        showLoading();
+        let uploadedUrl = '';
+        let saved = false;
+        try {
+            const previous = await readMount(userId);
+            const path = `mount_${kind}_${userId}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            const uploaded = await supabaseClient.storage.from('avatars').upload(path, file);
+            if (uploaded.error) throw uploaded.error;
+            uploadedUrl = supabaseClient.storage.from('avatars').getPublicUrl(uploaded.data.path).data.publicUrl;
+            const result = previous
+                ? await supabaseClient.from('player_mounts').update({ [column]: uploadedUrl, updated_at: new Date().toISOString() }).eq('user_id', userId)
+                : await supabaseClient.from('player_mounts').insert({ user_id: userId, [column]: uploadedUrl });
+            if (result.error) throw result.error;
+            saved = true;
+            input.value = '';
+            await removeAvatarStorageUrls([previous?.[column]]);
+            await Promise.all([loadAdminMount(userId), loadEmployees()]);
+            await logAction('DM操作', `更新玩家(ID:${userId})坐骑${kind === 'avatar' ? '头像' : '全身立绘'}`);
+        } catch (error) {
+            if (uploadedUrl && !saved) await removeAvatarStorageUrls([uploadedUrl]);
+            alert(`坐骑图片${saved ? '已保存，但后续刷新失败' : '上传失败'}：${error.message || error}`);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function renderMountCard(userId) {
+        try {
+            const mount = await readMount(userId);
+            if (!mount?.enabled || userId !== viewingUserId) return '';
+            window.currentMountStandUrl = mount.stand_url || '';
+            const index = currentMountStage(mount);
+            const stage = MOUNT_STAGES[index];
+            const rings = Number(mount.radiant_rings) || 0;
+            const next = MOUNT_STAGES[index + 1];
+            const needBreakthrough = next && rings >= next.rings && [3, 4, 6, 7].includes(index + 1) && Number(mount.breakthrough_cap) < index + 2;
+            const progress = next ? Math.min(100, Math.round((rings - stage.rings) / (next.rings - stage.rings) * 100)) : 100;
+            const portrait = mount.avatar_url
+                ? `<img class="mount-portrait" src="${escapeHTML(mount.avatar_url)}" alt="光耀坐骑头像" ${mount.stand_url ? 'onclick="openMountArt()" title="查看全身立绘"' : ''}>`
+                : `<div class="mount-portrait-fallback" aria-label="光耀坐骑">✦</div>`;
+            return `<div class="section-title">光耀坐骑</div>
+                <section class="mount-panel">
+                    <div class="mount-profile">
+                        <div>${portrait}${mount.stand_url ? '<button type="button" onclick="openMountArt()" style="margin-top:8px;">查看全身立绘</button>' : ''}</div>
+                        <div>
+                            <h3>阶段 ${stage.name}</h3>
+                            <strong>累计光耀环数：${rings.toLocaleString('zh-CN')}</strong>
+                            <div class="mount-stats"><span>体型 ${stage.size}</span><span>AC ${stage.ac}</span><span>HP ${stage.hp}</span><span>飞行 ${stage.speed}</span></div>
+                            ${next ? `<div>下阶段 ${next.name}：${next.rings.toLocaleString('zh-CN')} 环${needBreakthrough ? ' · 待 DM 确认突破' : ''}</div><div class="mount-progress"><span style="width:${progress}%"></span></div>` : '<div>已达到最高阶段</div>'}
+                        </div>
+                    </div>
+                    <div class="mount-table-wrap"><table class="mount-table"><thead><tr><th>阶段</th><th>总累计光耀环数</th><th>体型</th><th>AC</th><th>HP</th><th>飞行速度</th><th>突破要求</th></tr></thead><tbody>
+                        ${MOUNT_STAGES.map((entry, row) => `<tr class="${row === index ? 'current' : ''}"><td>${entry.name}</td><td>${entry.rings.toLocaleString('zh-CN')}</td><td>${entry.size}</td><td>${entry.ac}</td><td>${entry.hp}</td><td>${entry.speed}</td><td>${entry.requirement}</td></tr>`).join('')}
+                    </tbody></table></div>
+                </section>`;
+        } catch (error) {
+            console.warn('坐骑读取失败', error);
+            return isCurrentAdmin() ? '<div style="color:#b24736; margin-bottom:16px;">坐骑数据不可用，请先运行 player_mounts.sql。</div>' : '';
+        }
+    }
+
+    function openMountArt() {
+        const modal = document.getElementById('mount-art-modal');
+        if (!modal || !window.currentMountStandUrl) return;
+        document.getElementById('mount-art-image').src = window.currentMountStandUrl;
+        modal.style.display = 'flex';
+    }
+
+    function closeMountArt() {
+        document.getElementById('mount-art-modal').style.display = 'none';
     }
 
     // --- 雇员系统 ---
@@ -5454,6 +5669,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         };
 
 
+        const mountCard = await renderMountCard(viewingUserId);
         container.innerHTML = `
             <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; margin-bottom:30px; text-align:center; border-radius:8px;">
                 <h3 style="margin:0; color:#d35400;">📉 每月薪资总支出: ${formatCurrency(totalSalary)}</h3>
@@ -5464,6 +5680,8 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             
             <div class="section-title">🛡️ 雇员 / 随从</div>
             <div class="shop-grid" style="margin-bottom:40px;">${renderGrid(hirelings)}</div>
+
+            ${mountCard}
 
             <div class="section-title">⚖️ 中立与社会连结</div>
             <div class="shop-grid">${renderGrid(socialConnections)}</div>
@@ -6861,6 +7079,9 @@ async function loadGold() {
         if (tab === 'checkins') {
             loadCheckinPoints();
         }
+        if (tab === 'employees') {
+            loadEmployees();
+        }
     }
 
     function getWarBgmAudio() {
@@ -7718,6 +7939,10 @@ async function buy(id, p, n, c) {
             const checkinTeamInput = document.getElementById('adm-checkin-player-team-no');
             if (checkinTeamInput) checkinTeamInput.value = 100;
             if (checkinList) checkinList.innerHTML = '<div style="color:#999; text-align:center; padding:18px;">请选择玩家后加载打卡点。</div>';
+            document.getElementById('adm-mount-status').textContent = '请先选择玩家';
+            document.getElementById('adm-mount-enabled').checked = false;
+            document.getElementById('adm-mount-rings').value = 0;
+            document.getElementById('adm-mount-cap').value = 3;
             loadStockAdminPanel();
             return;
         }
@@ -7728,6 +7953,7 @@ async function buy(id, p, n, c) {
         renderWantedPosterSearchResults([]);
         viewingUserId = selectedUserId;
         await refreshAllData();
+        await loadAdminMount(selectedUserId);
         setupMainRealtime(viewingUserId); // 切换视角后，重新挂载对应的实时监听
 
         const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', selectedUserId).single();
