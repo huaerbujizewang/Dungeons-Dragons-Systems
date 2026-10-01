@@ -7177,7 +7177,9 @@ async function loadGold() {
 // --- 集市加载 ---
     
     let shopPriceTableCache = null;
+    let shopPriceTablePromise = null;
     let shopPriceTableVisible = false;
+    let shopPriceLookupRequest = 0;
 
     function getShopPriceSearchBlob(item) {
         return [
@@ -7219,62 +7221,61 @@ async function loadGold() {
 
     async function loadShopPriceTable(force = false) {
         if (!force && shopPriceTableCache) return shopPriceTableCache;
-        const allItems = [];
-        const pageSize = 1000;
-        for (let start = 0; ; start += pageSize) {
-            const { data, error } = await supabaseClient
-                .from('compendium_items')
-                .select('name, category, rarity, price, description')
-                .order('name')
-                .range(start, start + pageSize - 1);
-            if (error) throw error;
-            allItems.push(...(data || []));
-            if (!data || data.length < pageSize) break;
+        if (!force && shopPriceTablePromise) return shopPriceTablePromise;
+        const request = (async () => {
+            const allItems = [];
+            const pageSize = 1000;
+            for (let start = 0; ; start += pageSize) {
+                const { data, error } = await supabaseClient
+                    .from('compendium_items')
+                    .select('name, category, rarity, price, description')
+                    .order('name')
+                    .range(start, start + pageSize - 1);
+                if (error) throw error;
+                allItems.push(...(data || []));
+                if (!data || data.length < pageSize) break;
+            }
+            const sorted = allItems.sort((a, b) => {
+                const priceDiff = Number(b.price || 0) - Number(a.price || 0);
+                if (priceDiff) return priceDiff;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
+            });
+            if (shopPriceTablePromise === request) shopPriceTableCache = sorted;
+            return sorted;
+        })();
+        shopPriceTablePromise = request;
+        try {
+            return await request;
+        } finally {
+            if (shopPriceTablePromise === request) shopPriceTablePromise = null;
         }
-        shopPriceTableCache = allItems.sort((a, b) => {
-            const priceDiff = Number(b.price || 0) - Number(a.price || 0);
-            if (priceDiff) return priceDiff;
-            return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
-        });
-        return shopPriceTableCache;
     }
 
     async function refreshShopPriceLookup() {
         const input = document.getElementById('shop-price-search-input');
         const resultBox = document.getElementById('shop-price-lookup-results');
-        if (!input || !resultBox) return;
+        const panel = document.getElementById('shop-price-table-panel');
+        if (!input || !resultBox || !panel) return;
+        const requestId = ++shopPriceLookupRequest;
         const query = input.value.trim().toLowerCase();
-        if (!query) {
-            resultBox.style.display = 'none';
+        const showTable = shopPriceTableVisible;
+        resultBox.style.display = !showTable && query ? 'block' : 'none';
+        panel.style.display = showTable ? 'block' : 'none';
+        if (!query && !showTable) {
             resultBox.innerHTML = '';
-            if (shopPriceTableVisible) renderShopPriceTable();
             return;
         }
-        resultBox.style.display = 'block';
-        resultBox.innerHTML = '<div style="padding:8px; color:#999;">正在查询价格...</div>';
+        const target = showTable ? panel : resultBox;
+        target.innerHTML = '<div style="padding:8px; color:#999;">正在查询价格...</div>';
         try {
             const items = await loadShopPriceTable();
-            const matches = items.filter(item => getShopPriceSearchBlob(item).includes(query)).slice(0, 30);
-            resultBox.innerHTML = formatShopPriceRows(matches, { compact: true });
-            if (shopPriceTableVisible) renderShopPriceTable();
+            if (requestId !== shopPriceLookupRequest) return;
+            const matches = query ? items.filter(item => getShopPriceSearchBlob(item).includes(query)) : items;
+            target.innerHTML = formatShopPriceRows(showTable ? matches : matches.slice(0, 30), { compact: !showTable });
         } catch (e) {
+            if (requestId !== shopPriceLookupRequest) return;
             console.error('价格查询失败:', e);
-            resultBox.innerHTML = `<div style="padding:8px; color:#c0392b;">价格查询失败：${escapeHTML(e.message || e)}</div>`;
-        }
-    }
-
-    async function renderShopPriceTable() {
-        const panel = document.getElementById('shop-price-table-panel');
-        if (!panel) return;
-        panel.innerHTML = '<div style="padding:8px; color:#999;">正在读取完整价格表...</div>';
-        try {
-            const query = (document.getElementById('shop-price-search-input')?.value || '').trim().toLowerCase();
-            const items = await loadShopPriceTable();
-            const filtered = query ? items.filter(item => getShopPriceSearchBlob(item).includes(query)) : items;
-            panel.innerHTML = formatShopPriceRows(filtered);
-        } catch (e) {
-            console.error('价格表加载失败:', e);
-            panel.innerHTML = `<div style="padding:8px; color:#c0392b;">价格表加载失败：${escapeHTML(e.message || e)}</div>`;
+            target.innerHTML = `<div style="padding:8px; color:#c0392b;">价格查询失败：${escapeHTML(e.message || e)}</div>`;
         }
     }
 
@@ -7283,9 +7284,8 @@ async function loadGold() {
         const btn = document.getElementById('shop-price-table-btn');
         if (!panel) return;
         shopPriceTableVisible = !shopPriceTableVisible;
-        panel.style.display = shopPriceTableVisible ? 'block' : 'none';
         if (btn) btn.innerText = shopPriceTableVisible ? '收起价格表' : '价格表';
-        if (shopPriceTableVisible) await renderShopPriceTable();
+        await refreshShopPriceLookup();
     }
 
     async function loadShop() {
@@ -9161,7 +9161,6 @@ async function loadLoginLogs() {
             if (insertError) throw insertError;
 
             // 3. 记录日志
-            shopPriceTableCache = null;
             await logAction('DM随机进货', `执行了自定义随机进货 (目标: ${targetName})：${describeRestockPlan(plan)}；实际上架 ${rowsToInsert.length} 种`);
 
             const warning = shortageNotes.length ? `\n\n库存池不足：${shortageNotes.join('；')}` : '';
