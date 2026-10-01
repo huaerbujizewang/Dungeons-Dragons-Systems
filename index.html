@@ -5496,9 +5496,9 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             const progress = next ? Math.min(100, Math.round((total - stage.progress) / (next.progress - stage.progress) * 100)) : 100;
             const artAttribute = mount.stand_url ? `onclick="openMountArt(this.dataset.mountArt)" data-mount-art="${escapeHTML(mount.stand_url)}" title="查看全身立绘"` : '';
             const portrait = mount.avatar_url
-                ? `<img class="mount-portrait" src="${escapeHTML(mount.avatar_url)}" alt="${preset.name}头像" ${artAttribute}>`
-                : `<div class="mount-portrait-fallback" aria-label="${preset.name}">✦</div>`;
-            return `<div class="section-title">${preset.name} · ${preset.title}</div>
+                ? `<img class="mount-portrait" src="${escapeHTML(mount.avatar_url)}" alt="${preset.title}头像" ${artAttribute}>`
+                : `<div class="mount-portrait-fallback" aria-label="${preset.title}">✦</div>`;
+            return `<div class="section-title">${preset.title}</div>
                 <section class="mount-panel">
                     <div class="mount-profile">
                         <div>${portrait}${mount.stand_url ? `<button type="button" ${artAttribute} style="margin-top:8px;">查看全身立绘</button>` : ''}</div>
