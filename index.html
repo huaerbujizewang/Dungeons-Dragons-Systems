@@ -1525,6 +1525,186 @@
 .dossier-stand-img {
     transition: opacity 0.3s ease, transform 0.3s;
 }
+    .finance-balance-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 0;
+        border-bottom: 1px solid transparent;
+        background: transparent;
+        color: #d35400;
+        font: inherit;
+        font-weight: 800;
+        padding: 2px 0;
+        cursor: pointer;
+    }
+    .finance-balance-trigger:hover,
+    .finance-balance-trigger:focus-visible {
+        border-bottom-color: currentColor;
+        outline: none;
+    }
+    .finance-ledger-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 12500;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(16, 24, 22, 0.72);
+    }
+    .finance-ledger-modal.open { display: flex; }
+    .finance-ledger-dialog {
+        width: min(920px, 100%);
+        max-height: min(820px, calc(100vh - 48px));
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto auto minmax(220px, 1fr);
+        border: 1px solid #b9c8c3;
+        border-radius: 7px;
+        background: #fff;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+    }
+    .finance-ledger-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 20px 22px;
+        border-bottom: 1px solid #dbe4e1;
+        background: #f4f8f6;
+    }
+    .finance-ledger-header h2 { margin: 0; font-size: 1.35rem; color: #1d3c35; }
+    .finance-ledger-account { margin-top: 4px; color: #657a74; font-size: 0.82rem; }
+    .finance-ledger-balance { margin-top: 10px; color: #b64d16; font-size: 1.22rem; font-weight: 900; }
+    .finance-ledger-close {
+        width: 34px;
+        height: 34px;
+        border: 1px solid #becac6;
+        border-radius: 4px;
+        background: #fff;
+        color: #30423e;
+        font-size: 1.25rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .finance-request-panel {
+        display: grid;
+        grid-template-columns: 150px minmax(120px, 170px) minmax(180px, 1fr) auto;
+        gap: 10px;
+        align-items: end;
+        padding: 16px 22px;
+        border-bottom: 1px solid #dbe4e1;
+        background: #fbfcfb;
+    }
+    .finance-request-panel label,
+    .finance-request-note {
+        display: grid;
+        gap: 5px;
+        color: #50655f;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+    .finance-request-panel input,
+    .finance-request-panel select,
+    .finance-request-note textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #bcc9c5;
+        border-radius: 4px;
+        background: #fff;
+        padding: 9px 10px;
+        color: #263934;
+        font: inherit;
+    }
+    .finance-request-note {
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr;
+    }
+    .finance-request-note textarea { min-height: 58px; resize: vertical; }
+    .finance-request-submit {
+        border: 1px solid #226d5d;
+        border-radius: 4px;
+        background: #287f6c;
+        color: #fff;
+        padding: 10px 15px;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .finance-ledger-history {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    .finance-ledger-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 22px;
+        border-bottom: 1px solid #e5ebe9;
+    }
+    .finance-ledger-toolbar strong { color: #263934; }
+    .finance-ledger-toolbar button {
+        border: 1px solid #b9c8c3;
+        border-radius: 4px;
+        background: #fff;
+        color: #30423e;
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+    .finance-ledger-list { min-height: 0; overflow-y: auto; padding: 0 22px 18px; }
+    .finance-ledger-entry {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px 18px;
+        padding: 14px 0;
+        border-bottom: 1px solid #e7ecea;
+    }
+    .finance-ledger-entry:last-child { border-bottom: 0; }
+    .finance-entry-title { color: #1f312d; font-weight: 850; word-break: break-word; }
+    .finance-entry-meta,
+    .finance-entry-note,
+    .finance-entry-balance { color: #6a7c77; font-size: 0.78rem; line-height: 1.55; }
+    .finance-entry-note { margin-top: 4px; color: #455b55; }
+    .finance-entry-amount { font-weight: 900; text-align: right; white-space: nowrap; }
+    .finance-entry-amount.positive { color: #18825f; }
+    .finance-entry-amount.negative { color: #c34232; }
+    .finance-entry-amount.neutral { color: #657a74; }
+    .finance-entry-status {
+        display: inline-block;
+        margin-left: 7px;
+        border: 1px solid #c8d2cf;
+        border-radius: 3px;
+        padding: 1px 6px;
+        color: #657a74;
+        font-size: 0.7rem;
+        font-weight: 800;
+    }
+    .finance-entry-status.pending { border-color: #d8a74d; color: #9a6710; background: #fff8e8; }
+    .finance-entry-status.approved { border-color: #6fb79f; color: #226d5d; background: #edf8f4; }
+    .finance-entry-status.rejected { border-color: #c8c8c8; color: #777; background: #f4f4f4; }
+    .finance-admin-panel {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding: 10px;
+        border: 1px solid #d7e2de;
+        border-radius: 5px;
+        background: #fff;
+    }
+    .finance-admin-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .finance-admin-row input { min-width: 0; padding: 6px; border: 1px solid #bbb; border-radius: 4px; }
+    .finance-admin-row .finance-admin-amount { width: 105px; }
+    .finance-admin-row .finance-admin-note { flex: 1; min-width: 180px; }
+    @media (max-width: 720px) {
+        .finance-ledger-modal { padding: 0; align-items: stretch; }
+        .finance-ledger-dialog { max-height: none; height: 100%; border: 0; border-radius: 0; }
+        .finance-request-panel { grid-template-columns: 1fr 1fr; }
+        .finance-request-panel label:nth-child(3) { grid-column: 1 / -1; }
+        .finance-request-submit { width: 100%; }
+    }
     .mount-panel { margin: 0 0 38px; border: 1px solid #b8c6c2; border-radius: 6px; background: #fff; overflow: hidden; }
     .mount-profile { display: grid; grid-template-columns: minmax(130px, 220px) minmax(0, 1fr); gap: 22px; padding: 20px; align-items: start; }
     .mount-portrait { width: 100%; max-height: 300px; object-fit: contain; background: #edf1ee; border-radius: 4px; cursor: pointer; }
@@ -1624,7 +1804,11 @@
             
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                 <div id="date-text" style="font-weight:bold; background:#f1c40f; color:#333; padding:4px 10px; border-radius:4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">日期加载中...</div>
-                <div style="color:#d35400; font-weight:bold; margin-top:4px;">💰 <span id="gold-amount">0</span> <span id="currency-label">GP</span></div>
+                <button class="finance-balance-trigger" type="button" onclick="openFinanceLedger()" title="打开资金账本">
+                    <span>资金</span>
+                    <span id="gold-amount">0</span>
+                    <span id="currency-label">GP</span>
+                </button>
                 <a href="#" onclick="logout()" style="color:#999; font-size:0.8em; text-decoration: underline;">退出登录</a>
             </div>
         </div>
@@ -2428,6 +2612,54 @@
     </div>
 </div>
 
+<!-- 玩家资金账本 -->
+<div id="finance-ledger-modal" class="finance-ledger-modal" onclick="handleFinanceLedgerBackdrop(event)" aria-hidden="true">
+    <section class="finance-ledger-dialog" role="dialog" aria-modal="true" aria-labelledby="finance-ledger-title">
+        <header class="finance-ledger-header">
+            <div>
+                <h2 id="finance-ledger-title">资金账本</h2>
+                <div id="finance-ledger-account-label" class="finance-ledger-account"></div>
+                <div class="finance-ledger-balance">当前余额：<span id="finance-ledger-balance">0 GP</span></div>
+            </div>
+            <button class="finance-ledger-close" type="button" onclick="closeFinanceLedger()" aria-label="关闭资金账本" title="关闭">×</button>
+        </header>
+
+        <form id="finance-request-panel" class="finance-request-panel" onsubmit="event.preventDefault(); submitFundLedgerRequest();">
+            <label>
+                申请类型
+                <select id="finance-request-type" onchange="syncFinanceRequestForm()">
+                    <option value="expense">支出</option>
+                    <option value="income">收入</option>
+                    <option value="memo">仅记账</option>
+                </select>
+            </label>
+            <label>
+                金额
+                <input id="finance-request-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
+            </label>
+            <label>
+                事项
+                <input id="finance-request-title" type="text" maxlength="120" placeholder="例如：购买施法材料" required>
+            </label>
+            <button class="finance-request-submit" type="submit">提交审批</button>
+            <label class="finance-request-note">
+                备注
+                <textarea id="finance-request-note" maxlength="1000" placeholder="补充用途、来源或相关说明"></textarea>
+            </label>
+        </form>
+
+        <div class="finance-ledger-history">
+            <div class="finance-ledger-toolbar">
+                <strong>流水记录</strong>
+                <button type="button" onclick="loadFinanceLedger()">刷新</button>
+            </div>
+            <div id="finance-ledger-list" class="finance-ledger-list">
+                <div style="padding:18px 0; color:#7a8b86;">读取账本中...</div>
+            </div>
+        </div>
+    </section>
+</div>
+
 <!-- DM 上帝控制台 -->
 <div id="admin-panel">
     <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
@@ -2685,8 +2917,24 @@
                             <option value="ce">公元</option>
                         </select>
                     </div>
-                    <div style="margin-bottom:10px;">
-                        💰 资金: <input type="number" id="adm-user-gold" step="0.01" style="width:80px"> <span id="adm-user-currency-label">GP</span> <button onclick="updateUserGold()">修改</button>
+                    <div class="finance-admin-panel">
+                        <div style="font-size:0.85em; font-weight:bold; color:#30423e;">资金账本操作</div>
+                        <div class="finance-admin-row">
+                            <span>余额设为</span>
+                            <input class="finance-admin-amount" type="number" id="adm-user-gold" step="0.01">
+                            <span id="adm-user-currency-label">GP</span>
+                            <button type="button" onclick="updateUserGold()">设定并记账</button>
+                        </div>
+                        <div class="finance-admin-row">
+                            <span>变动金额</span>
+                            <input class="finance-admin-amount" type="number" id="adm-user-gold-delta" min="0.01" step="0.01" placeholder="0.00">
+                            <button type="button" onclick="adjustUserGold(1)" style="background:#278a79; color:#fff; border:0; padding:7px 10px; border-radius:4px;">发放</button>
+                            <button type="button" onclick="adjustUserGold(-1)" style="background:#b94a3c; color:#fff; border:0; padding:7px 10px; border-radius:4px;">扣除</button>
+                        </div>
+                        <div class="finance-admin-row">
+                            <input class="finance-admin-note" type="text" id="adm-user-gold-note" maxlength="120" placeholder="记账事项（必填）">
+                            <button type="button" onclick="openFinanceLedger()">查看该玩家账本</button>
+                        </div>
                     </div>
                     <!-- Root 专用：分配负责 DM -->
                     <div id="root-assign-dm" style="display:none; margin-bottom:10px; padding:10px; border:1px dashed #3498db;">
@@ -3000,6 +3248,7 @@
     let viewingCampaignType = 'dnd';
     let currentCalendarSystem = '';
     let viewingCalendarSystem = '';
+    let currentFinanceLedgerAccountId = null;
     let isSellMode = false;
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
@@ -3734,6 +3983,193 @@ function formatCurrencyNumber(value) {
 function formatCurrency(value) {
     return `${formatCurrencyNumber(value)} ${getCurrencyUnit()}`;
 }
+
+const FINANCE_ENTRY_LABELS = {
+    income: '收入申请',
+    expense: '支出申请',
+    memo: '记账事项',
+    dm_set: 'DM设定余额',
+    dm_adjust: 'DM资金调整',
+    system: '系统资金变动',
+    opening_balance: '期初余额'
+};
+
+const FINANCE_STATUS_LABELS = {
+    pending: '待审批',
+    approved: '已入账',
+    rejected: '已驳回'
+};
+
+function isFinanceLedgerOpen() {
+    return document.getElementById('finance-ledger-modal')?.classList.contains('open') === true;
+}
+
+function getFinanceLedgerAccountLabel(accountId) {
+    if (selectedUserId && selectedUserId === accountId) {
+        return getSelectedAdminPlayerEmail() || accountId;
+    }
+    return currentUserEmail || accountId || '';
+}
+
+function syncFinanceRequestForm() {
+    const type = document.getElementById('finance-request-type')?.value || 'expense';
+    const amount = document.getElementById('finance-request-amount');
+    if (!amount) return;
+    const isMemo = type === 'memo';
+    amount.disabled = isMemo;
+    amount.required = !isMemo;
+    amount.value = isMemo ? '' : amount.value;
+    amount.placeholder = isMemo ? '不影响余额' : '0.00';
+}
+
+async function openFinanceLedger() {
+    const accountId = viewingUserId || myId;
+    if (!accountId) return alert('尚未识别当前账号。');
+
+    currentFinanceLedgerAccountId = accountId;
+    const modal = document.getElementById('finance-ledger-modal');
+    const requestPanel = document.getElementById('finance-request-panel');
+    const accountLabel = document.getElementById('finance-ledger-account-label');
+    if (!modal) return;
+
+    if (accountLabel) accountLabel.textContent = getFinanceLedgerAccountLabel(accountId);
+    if (requestPanel) requestPanel.style.display = accountId === myId ? 'grid' : 'none';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    syncFinanceRequestForm();
+    await loadFinanceLedger(accountId);
+}
+
+function closeFinanceLedger() {
+    const modal = document.getElementById('finance-ledger-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function handleFinanceLedgerBackdrop(event) {
+    if (event.target?.id === 'finance-ledger-modal') closeFinanceLedger();
+}
+
+function financeEntryAmountHTML(entry) {
+    const amount = Number(entry.amount) || 0;
+    const unit = entry.currency_unit || getCurrencyUnit();
+    const className = amount > 0 ? 'positive' : amount < 0 ? 'negative' : 'neutral';
+    const prefix = amount > 0 ? '+' : '';
+    const text = amount === 0 ? '不影响余额' : `${prefix}${formatCurrencyNumber(amount)} ${unit}`;
+    return `<div class="finance-entry-amount ${className}">${escapeHTML(text)}</div>`;
+}
+
+function renderFinanceLedger(entries) {
+    const list = document.getElementById('finance-ledger-list');
+    if (!list) return;
+    if (!entries || entries.length === 0) {
+        list.innerHTML = '<div style="padding:18px 0; color:#7a8b86;">暂无账本记录。</div>';
+        return;
+    }
+
+    list.innerHTML = entries.map(entry => {
+        const status = FINANCE_STATUS_LABELS[entry.status] || entry.status || '未知';
+        const type = FINANCE_ENTRY_LABELS[entry.entry_type] || entry.entry_type || '资金记录';
+        const createdAt = entry.created_at
+            ? new Date(entry.created_at).toLocaleString('zh-CN', { hour12: false })
+            : '';
+        const worldDate = entry.world_date && typeof entry.world_date === 'object'
+            ? formatWorldDate(entry.world_date)
+            : '';
+        const balanceBefore = Number(entry.balance_before);
+        const balanceAfter = Number(entry.balance_after);
+        const unit = entry.currency_unit || getCurrencyUnit();
+        const balanceText = Number.isFinite(balanceBefore) && Number.isFinite(balanceAfter)
+            ? `余额 ${formatCurrencyNumber(balanceBefore)} → ${formatCurrencyNumber(balanceAfter)} ${unit}`
+            : '';
+        const reviewer = entry.reviewer_email ? `审批人：${entry.reviewer_email}` : '';
+        const noteParts = [entry.note, entry.review_note ? `审批备注：${entry.review_note}` : ''].filter(Boolean);
+        const metaParts = [type, worldDate, createdAt, reviewer].filter(Boolean);
+
+        return `
+            <article class="finance-ledger-entry">
+                <div>
+                    <div class="finance-entry-title">
+                        ${escapeHTML(entry.title || type)}
+                        <span class="finance-entry-status ${escapeHTML(entry.status || '')}">${escapeHTML(status)}</span>
+                    </div>
+                    <div class="finance-entry-meta">${metaParts.map(escapeHTML).join(' · ')}</div>
+                    ${noteParts.length ? `<div class="finance-entry-note">${noteParts.map(escapeHTML).join('<br>')}</div>` : ''}
+                </div>
+                <div>
+                    ${financeEntryAmountHTML(entry)}
+                    ${balanceText ? `<div class="finance-entry-balance">${escapeHTML(balanceText)}</div>` : ''}
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+async function loadFinanceLedger(accountId = currentFinanceLedgerAccountId) {
+    if (!accountId) return;
+    currentFinanceLedgerAccountId = accountId;
+    const list = document.getElementById('finance-ledger-list');
+    if (list) list.innerHTML = '<div style="padding:18px 0; color:#7a8b86;">读取账本中...</div>';
+
+    const { data, error } = await supabaseClient
+        .from('player_finance_ledger')
+        .select('*')
+        .eq('account_id', accountId)
+        .order('created_at', { ascending: false })
+        .limit(150);
+
+    if (error) {
+        if (list) list.innerHTML = `<div style="padding:18px 0; color:#b94a3c;">账本读取失败：${escapeHTML(error.message)}。请确认 player_finance_ledger.sql 已执行。</div>`;
+        return;
+    }
+
+    renderFinanceLedger(data || []);
+
+    const balance = document.getElementById('finance-ledger-balance');
+    const headerAmount = readDisplayedCurrency('gold-amount');
+    if (balance) balance.textContent = `${formatCurrencyNumber(headerAmount)} ${getCurrencyUnit()}`;
+}
+
+async function submitFundLedgerRequest() {
+    if (!myId || currentFinanceLedgerAccountId !== myId) return alert('只能为自己的账号提交资金申请。');
+    const type = document.getElementById('finance-request-type')?.value || 'expense';
+    const amount = type === 'memo'
+        ? 0
+        : parseCurrencyInput(document.getElementById('finance-request-amount')?.value);
+    const title = document.getElementById('finance-request-title')?.value.trim() || '';
+    const note = document.getElementById('finance-request-note')?.value.trim() || '';
+
+    if (type !== 'memo' && (!Number.isFinite(amount) || amount <= 0)) return alert('请输入大于 0 的金额。');
+    if (!title) return alert('请填写记账事项。');
+
+    showLoading();
+    try {
+        const { error } = await supabaseClient.rpc('submit_fund_ledger_request', {
+            p_entry_type: type,
+            p_amount: amount,
+            p_title: title,
+            p_note: note || null
+        });
+        if (error) throw error;
+
+        document.getElementById('finance-request-amount').value = '';
+        document.getElementById('finance-request-title').value = '';
+        document.getElementById('finance-request-note').value = '';
+        await logAction('资金申请', `提交${FINANCE_ENTRY_LABELS[type] || type}：${title}${type === 'memo' ? '' : `，金额 ${formatCurrency(amount)}`}`);
+        await loadFinanceLedger(myId);
+        alert('申请已提交，等待 DM 审批。');
+    } catch (error) {
+        console.error('资金申请提交失败:', error);
+        alert('提交失败：' + (error.message || '请确认 player_finance_ledger.sql 已执行'));
+    } finally {
+        hideLoading();
+    }
+}
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && isFinanceLedgerOpen()) closeFinanceLedger();
+});
 
 function convertCalendarYear(year, calendarSystem = viewingCalendarSystem) {
     if (!Number.isFinite(Number(year))) return year ?? '----';
@@ -5156,6 +5592,11 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 else loadGold();
                 loadUserDate();
                 if (isCurrentAdmin()) loadStockAdminPanel();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'player_finance_ledger', filter: `account_id=eq.${targetId}` }, () => {
+                console.log('资金账本有更新');
+                if (isFinanceLedgerOpen() && currentFinanceLedgerAccountId === targetId) loadFinanceLedger(targetId);
+                if (isCurrentAdmin()) loadPendingRequests();
             })
             // 2. 监听集市变动 (Shop 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_items' }, (payload) => {
@@ -6950,6 +7391,10 @@ async function loadGold() {
         }
         const adminCurrencyLabel = document.getElementById('adm-user-currency-label');
         if (adminCurrencyLabel) adminCurrencyLabel.innerText = getCurrencyUnit();
+        const ledgerBalance = document.getElementById('finance-ledger-balance');
+        if (ledgerBalance && currentFinanceLedgerAccountId === profile.id) {
+            ledgerBalance.textContent = `${formatCurrencyNumber(profile.gold_gp)} ${getCurrencyUnit()}`;
+        }
     }
 
     async function applyStockDateChange(oldDate, newDate) {
@@ -7519,13 +7964,26 @@ async function loadGold() {
             html += `<div style="color:red; font-size:0.8em; padding:8px;">雇员状态申请加载失败: ${escapeHTML(error.message)}。请确认 employee_status_change_requests.sql 已执行。</div>`;
         }
 
-        const statusRequestUserIds = [...new Set((statusRequestData || []).map(item => item.employee_owner_id).filter(Boolean))];
+        const { data: financeRequestData, error: financeError } = await supabaseClient
+            .from('player_finance_ledger')
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true });
+
+        if (financeError) {
+            html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">资金账本审批未就绪：${escapeHTML(financeError.message)}。请确认 player_finance_ledger.sql 已执行。</div>`;
+        }
+
+        const pendingRequestUserIds = [...new Set([
+            ...(statusRequestData || []).map(item => item.employee_owner_id),
+            ...(financeRequestData || []).map(item => item.account_id)
+        ].filter(Boolean))];
         const profileEmailMap = {};
-        if (statusRequestUserIds.length > 0) {
+        if (pendingRequestUserIds.length > 0) {
             const { data: profiles, error: profileError } = await supabaseClient
                 .from('profiles')
                 .select('id, email')
-                .in('id', statusRequestUserIds);
+                .in('id', pendingRequestUserIds);
             if (profileError) {
                 html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">玩家邮箱加载失败: ${escapeHTML(profileError.message)}</div>`;
             } else {
@@ -7551,6 +8009,31 @@ async function loadGold() {
                     <div style="display:flex; gap:5px; flex:none;">
                         <button onclick="handleEmployeeStatusRequest(${req.id}, true)" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">${escapeHTML(statusConfig?.approveLabel || '批准')}</button>
                         <button onclick="handleEmployeeStatusRequest(${req.id}, false)" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        (financeRequestData || []).forEach(req => {
+            const playerEmail = profileEmailMap[req.account_id] || req.requester_email || req.account_id || '未知玩家';
+            const amount = Number(req.amount) || 0;
+            const unit = req.currency_unit || 'GP';
+            const amountText = amount === 0
+                ? '不影响余额'
+                : `${amount > 0 ? '+' : ''}${formatCurrencyNumber(amount)} ${unit}`;
+            const amountColor = amount > 0 ? '#18825f' : amount < 0 ? '#c34232' : '#657a74';
+            const typeLabel = FINANCE_ENTRY_LABELS[req.entry_type] || req.entry_type || '资金申请';
+            html += `
+                <div style="background:#fff; padding:10px; border:1px solid #dfe8e5; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <div style="min-width:0;">
+                        <div style="font-weight:bold;">资金申请：${escapeHTML(req.title || typeLabel)}</div>
+                        <div style="font-size:0.78em; color:${amountColor}; font-weight:bold; margin-top:3px;">${escapeHTML(typeLabel)} · ${escapeHTML(amountText)}</div>
+                        <div style="font-size:0.75em; color:#888;">所属玩家：${escapeHTML(playerEmail)} · ${escapeHTML(new Date(req.created_at).toLocaleString('zh-CN', { hour12:false }))}</div>
+                        ${req.note ? `<div style="font-size:0.8em; color:#52645e; margin-top:5px; line-height:1.45;">${escapeHTML(req.note)}</div>` : ''}
+                    </div>
+                    <div style="display:flex; gap:5px; flex:none;">
+                        <button onclick="reviewFundLedgerRequest(${req.id}, true)" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">批准入账</button>
+                        <button onclick="reviewFundLedgerRequest(${req.id}, false)" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
                     </div>
                 </div>
             `;
@@ -7625,6 +8108,41 @@ async function loadGold() {
         if (!html) html = '<div style="color:#999; font-size:0.85em; padding:10px;">暂无待处理审批。</div>';
         listDiv.innerHTML = html;
         if (box) box.style.display = 'block';
+    }
+
+    async function reviewFundLedgerRequest(entryId, approved) {
+        if (!await requireAdminRole()) return;
+        let reviewNote = '';
+        if (!approved) {
+            const input = prompt('驳回原因（可以留空）', '');
+            if (input === null) return;
+            reviewNote = input.trim();
+        }
+
+        showLoading();
+        try {
+            const { data, error } = await supabaseClient.rpc('review_fund_ledger_request', {
+                p_entry_id: entryId,
+                p_approved: approved,
+                p_review_note: reviewNote || null
+            });
+            if (error) throw error;
+
+            await logAction('资金审批', `${approved ? '批准' : '驳回'}了资金账本申请(ID:${entryId})`);
+            await Promise.all([loadPendingRequests(), loadGold()]);
+            if (isFinanceLedgerOpen() && currentFinanceLedgerAccountId) {
+                await loadFinanceLedger(currentFinanceLedgerAccountId);
+            }
+            const balanceText = approved && data && Number.isFinite(Number(data.balance))
+                ? `，当前余额 ${formatCurrency(data.balance)}`
+                : '';
+            alert(`${approved ? '已批准入账' : '已驳回'}${balanceText}。`);
+        } catch (error) {
+            console.error('资金审批失败:', error);
+            alert('资金审批失败：' + (error.message || '请确认 player_finance_ledger.sql 已执行'));
+        } finally {
+            hideLoading();
+        }
     }
 
     function handleFireRequest(empId, action) {
@@ -8229,14 +8747,65 @@ async function updateUserGold() {
         if (!selectedUserId) return;
         const newGold = parseCurrencyInput(document.getElementById('adm-user-gold').value);
         if (Number.isNaN(newGold)) return alert('资金必须是数字，可以为负数');
+        const note = document.getElementById('adm-user-gold-note')?.value.trim() || '';
+        if (!note) return alert('请填写记账事项。');
         showLoading();
-        await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', selectedUserId);
-        
-        // 记录日志
-        await logAction('DM操作', `修改了玩家(ID:${selectedUserId})的资金为 ${formatCurrency(newGold)}`);
-        if (selectedUserId === viewingUserId) await loadGold();
-        
-        hideLoading(); alert('资金已修改');
+        try {
+            const { data, error } = await supabaseClient.rpc('dm_adjust_player_funds', {
+                p_account_id: selectedUserId,
+                p_mode: 'set',
+                p_amount: newGold,
+                p_title: note,
+                p_note: 'DM 后台设定余额'
+            });
+            if (error) throw error;
+
+            await logAction('DM操作', `通过账本将玩家(ID:${selectedUserId})的资金设为 ${formatCurrency(newGold)}，事项：${note}`);
+            document.getElementById('adm-user-gold-note').value = '';
+            if (selectedUserId === viewingUserId) await loadGold();
+            if (isFinanceLedgerOpen() && currentFinanceLedgerAccountId === selectedUserId) await loadFinanceLedger(selectedUserId);
+            alert(`资金已修改并入账，当前余额 ${formatCurrency(data?.balance ?? newGold)}。`);
+        } catch (error) {
+            console.error('DM资金设定失败:', error);
+            alert('资金修改失败：' + (error.message || '请确认 player_finance_ledger.sql 已执行'));
+        } finally {
+            hideLoading();
+        }
+    }
+
+async function adjustUserGold(direction) {
+        if (!await requireAdminRole()) return;
+        if (!selectedUserId) return alert('请先选择玩家。');
+        const rawAmount = parseCurrencyInput(document.getElementById('adm-user-gold-delta')?.value);
+        const note = document.getElementById('adm-user-gold-note')?.value.trim() || '';
+        if (!Number.isFinite(rawAmount) || rawAmount <= 0) return alert('请输入大于 0 的变动金额。');
+        if (!note) return alert('请填写记账事项。');
+
+        const signedAmount = direction < 0 ? -rawAmount : rawAmount;
+        const actionLabel = signedAmount > 0 ? '发放' : '扣除';
+        showLoading();
+        try {
+            const { data, error } = await supabaseClient.rpc('dm_adjust_player_funds', {
+                p_account_id: selectedUserId,
+                p_mode: 'adjust',
+                p_amount: signedAmount,
+                p_title: note,
+                p_note: `DM 后台${actionLabel}资金`
+            });
+            if (error) throw error;
+
+            await logAction('DM操作', `通过账本为玩家(ID:${selectedUserId})${actionLabel} ${formatCurrency(rawAmount)}，事项：${note}`);
+            document.getElementById('adm-user-gold-delta').value = '';
+            document.getElementById('adm-user-gold-note').value = '';
+            if (selectedUserId === viewingUserId) await loadGold();
+            if (isFinanceLedgerOpen() && currentFinanceLedgerAccountId === selectedUserId) await loadFinanceLedger(selectedUserId);
+            alert(`${actionLabel}完成并已入账，当前余额 ${formatCurrency(data?.balance ?? 0)}。`);
+        } catch (error) {
+            console.error(`DM资金${actionLabel}失败:`, error);
+            alert(`${actionLabel}失败：` + (error.message || '请确认 player_finance_ledger.sql 已执行'));
+        } finally {
+            hideLoading();
+        }
     }
 
     const GRANT_CATEGORIES = ['魔法物品', '装备', '卷轴', '药水', '材料', '凭证', '杂项'];
