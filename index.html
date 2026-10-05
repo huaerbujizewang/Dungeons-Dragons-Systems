@@ -1632,6 +1632,25 @@
         font-size: 0.92rem;
         font-weight: 900;
     }
+    .finance-request-preview-note {
+        display: none;
+        grid-column: 1 / -1;
+        padding: 9px 11px;
+        border: 1px solid #c8d8d3;
+        border-radius: 4px;
+        background: #eef6f3;
+        color: #3f5f56;
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+    .finance-request-panel.is-admin-preview .finance-request-preview-note { display: block; }
+    .finance-request-panel.is-admin-preview .finance-request-kind,
+    .finance-request-panel.is-admin-preview input,
+    .finance-request-panel.is-admin-preview textarea,
+    .finance-request-panel.is-admin-preview .finance-request-submit {
+        cursor: not-allowed;
+        opacity: 0.72;
+    }
     .finance-request-kinds {
         grid-column: 1 / -1;
         display: grid;
@@ -2658,6 +2677,7 @@
 
         <form id="finance-request-panel" class="finance-request-panel" onsubmit="event.preventDefault(); submitFundLedgerRequest();">
             <div class="finance-request-heading">提交资金变更申请</div>
+            <div id="finance-request-preview-note" class="finance-request-preview-note">这是该玩家看到的申请区域。DM 当前为只读预览；请在 DM 面板使用“发放”“扣除”或“设定并记账”直接管理资金。</div>
             <input id="finance-request-type" type="hidden" value="expense">
             <div class="finance-request-kinds" aria-label="资金申请类型">
                 <button class="finance-request-kind active" type="button" data-finance-request-type="expense" onclick="setFinanceRequestType('expense')">申请减少资金</button>
@@ -2934,6 +2954,10 @@
                 <select id="adm-user-list" onchange="loadUserDetail()" style="width:100%; padding:10px; margin-bottom:10px; border:2px solid #333;"></select>
                 
                 <div id="user-detail" style="display:none;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                        <button type="button" onclick="showSelectedPlayerView()" style="padding:9px; border:1px solid #355f55; border-radius:4px; background:#355f55; color:#fff; font-weight:bold; cursor:pointer;">打开完整玩家主页</button>
+                        <button type="button" onclick="openSelectedPlayerFinance()" style="padding:9px; border:1px solid #78958d; border-radius:4px; background:#fff; color:#294b43; font-weight:bold; cursor:pointer;">打开玩家资金账本</button>
+                    </div>
                     <div style="margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                         <span>🎲 团类型:</span>
                         <select id="adm-user-campaign-type" onchange="changeSelectedUserCampaignType()" style="padding:5px; border:1px solid #aaa; border-radius:4px;">
@@ -2964,7 +2988,7 @@
                         </div>
                         <div class="finance-admin-row">
                             <input class="finance-admin-note" type="text" id="adm-user-gold-note" maxlength="120" placeholder="记账事项（必填）">
-                            <button type="button" onclick="openFinanceLedger()">查看该玩家账本</button>
+                            <button type="button" onclick="openSelectedPlayerFinance()">查看该玩家账本</button>
                         </div>
                     </div>
                     <!-- Root 专用：分配负责 DM -->
@@ -4064,8 +4088,8 @@ function syncFinanceRequestForm() {
     amount.placeholder = isMemo ? '不影响余额' : '0.00';
 }
 
-async function openFinanceLedger() {
-    const accountId = viewingUserId || myId;
+async function openFinanceLedger(accountIdOverride = null) {
+    const accountId = accountIdOverride || viewingUserId || myId;
     if (!accountId) return alert('尚未识别当前账号。');
 
     currentFinanceLedgerAccountId = accountId;
@@ -4074,12 +4098,44 @@ async function openFinanceLedger() {
     const accountLabel = document.getElementById('finance-ledger-account-label');
     if (!modal) return;
 
+    const isOwner = accountId === myId;
+    const isAdminPreview = !isOwner && isCurrentAdmin();
     if (accountLabel) accountLabel.textContent = getFinanceLedgerAccountLabel(accountId);
-    if (requestPanel) requestPanel.style.display = accountId === myId ? 'grid' : 'none';
+    if (requestPanel) {
+        requestPanel.style.display = isOwner || isAdminPreview ? 'grid' : 'none';
+        requestPanel.classList.toggle('is-admin-preview', isAdminPreview);
+        requestPanel.querySelectorAll('button, input, textarea').forEach(control => {
+            control.disabled = false;
+        });
+    }
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     syncFinanceRequestForm();
+    if (requestPanel && isAdminPreview) {
+        requestPanel.querySelectorAll('button, input, textarea').forEach(control => {
+            control.disabled = true;
+        });
+    }
     await loadFinanceLedger(accountId);
+}
+
+async function openSelectedPlayerFinance() {
+    if (!await requireAdminRole()) return;
+    if (!selectedUserId) return alert('请先选择玩家。');
+    await openFinanceLedger(selectedUserId);
+}
+
+async function showSelectedPlayerView() {
+    if (!await requireAdminRole()) return;
+    if (!selectedUserId) return alert('请先选择玩家。');
+
+    if (viewingUserId !== selectedUserId) {
+        viewingUserId = selectedUserId;
+        await refreshAllData();
+        setupMainRealtime(viewingUserId);
+    }
+    document.getElementById('admin-panel').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function closeFinanceLedger() {
