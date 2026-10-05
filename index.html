@@ -1526,23 +1526,27 @@
     transition: opacity 0.3s ease, transform 0.3s;
 }
     .finance-balance-trigger {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        border: 0;
-        border-bottom: 1px solid transparent;
-        background: transparent;
-        color: #d35400;
+        display: grid;
+        justify-items: end;
+        gap: 2px;
+        border: 1px solid #d8b48e;
+        border-radius: 5px;
+        background: #fff8ef;
+        color: #a74416;
         font: inherit;
         font-weight: 800;
-        padding: 2px 0;
+        padding: 6px 10px;
         cursor: pointer;
+        box-shadow: 0 2px 5px rgba(104, 62, 32, 0.08);
     }
     .finance-balance-trigger:hover,
     .finance-balance-trigger:focus-visible {
-        border-bottom-color: currentColor;
+        border-color: #b95a22;
+        background: #fff1df;
         outline: none;
     }
+    .finance-trigger-label { color: #795548; font-size: 0.72rem; line-height: 1; }
+    .finance-trigger-value { font-size: 0.95rem; line-height: 1.2; }
     .finance-ledger-modal {
         display: none;
         position: fixed;
@@ -1590,7 +1594,7 @@
     }
     .finance-request-panel {
         display: grid;
-        grid-template-columns: 150px minmax(120px, 170px) minmax(180px, 1fr) auto;
+        grid-template-columns: minmax(120px, 170px) minmax(180px, 1fr) auto;
         gap: 10px;
         align-items: end;
         padding: 16px 22px;
@@ -1622,6 +1626,35 @@
         grid-template-columns: 1fr;
     }
     .finance-request-note textarea { min-height: 58px; resize: vertical; }
+    .finance-request-heading {
+        grid-column: 1 / -1;
+        color: #263934;
+        font-size: 0.92rem;
+        font-weight: 900;
+    }
+    .finance-request-kinds {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        border: 1px solid #b9c8c3;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .finance-request-kind {
+        border: 0;
+        border-right: 1px solid #b9c8c3;
+        background: #fff;
+        color: #4f635d;
+        padding: 10px 8px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .finance-request-kind:last-child { border-right: 0; }
+    .finance-request-kind.active {
+        background: #287f6c;
+        color: #fff;
+    }
     .finance-request-submit {
         border: 1px solid #226d5d;
         border-radius: 4px;
@@ -1702,7 +1735,7 @@
         .finance-ledger-modal { padding: 0; align-items: stretch; }
         .finance-ledger-dialog { max-height: none; height: 100%; border: 0; border-radius: 0; }
         .finance-request-panel { grid-template-columns: 1fr 1fr; }
-        .finance-request-panel label:nth-child(3) { grid-column: 1 / -1; }
+        .finance-request-panel > label:nth-of-type(2) { grid-column: 1 / -1; }
         .finance-request-submit { width: 100%; }
     }
     .mount-panel { margin: 0 0 38px; border: 1px solid #b8c6c2; border-radius: 6px; background: #fff; overflow: hidden; }
@@ -1804,10 +1837,9 @@
             
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                 <div id="date-text" style="font-weight:bold; background:#f1c40f; color:#333; padding:4px 10px; border-radius:4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">日期加载中...</div>
-                <button class="finance-balance-trigger" type="button" onclick="openFinanceLedger()" title="打开资金账本">
-                    <span>资金</span>
-                    <span id="gold-amount">0</span>
-                    <span id="currency-label">GP</span>
+                <button class="finance-balance-trigger" type="button" onclick="openFinanceLedger()" title="打开资金账本并申请资金变更">
+                    <span class="finance-trigger-label">资金账本 / 申请变更</span>
+                    <span class="finance-trigger-value"><span id="gold-amount">0</span> <span id="currency-label">GP</span></span>
                 </button>
                 <a href="#" onclick="logout()" style="color:#999; font-size:0.8em; text-decoration: underline;">退出登录</a>
             </div>
@@ -2625,14 +2657,13 @@
         </header>
 
         <form id="finance-request-panel" class="finance-request-panel" onsubmit="event.preventDefault(); submitFundLedgerRequest();">
-            <label>
-                申请类型
-                <select id="finance-request-type" onchange="syncFinanceRequestForm()">
-                    <option value="expense">支出</option>
-                    <option value="income">收入</option>
-                    <option value="memo">仅记账</option>
-                </select>
-            </label>
+            <div class="finance-request-heading">提交资金变更申请</div>
+            <input id="finance-request-type" type="hidden" value="expense">
+            <div class="finance-request-kinds" aria-label="资金申请类型">
+                <button class="finance-request-kind active" type="button" data-finance-request-type="expense" onclick="setFinanceRequestType('expense')">申请减少资金</button>
+                <button class="finance-request-kind" type="button" data-finance-request-type="income" onclick="setFinanceRequestType('income')">申请增加资金</button>
+                <button class="finance-request-kind" type="button" data-finance-request-type="memo" onclick="setFinanceRequestType('memo')">仅记账</button>
+            </div>
             <label>
                 金额
                 <input id="finance-request-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
@@ -4009,6 +4040,17 @@ function getFinanceLedgerAccountLabel(accountId) {
         return getSelectedAdminPlayerEmail() || accountId;
     }
     return currentUserEmail || accountId || '';
+}
+
+function setFinanceRequestType(type) {
+    const allowedTypes = ['expense', 'income', 'memo'];
+    const nextType = allowedTypes.includes(type) ? type : 'expense';
+    const typeInput = document.getElementById('finance-request-type');
+    if (typeInput) typeInput.value = nextType;
+    document.querySelectorAll('[data-finance-request-type]').forEach(button => {
+        button.classList.toggle('active', button.dataset.financeRequestType === nextType);
+    });
+    syncFinanceRequestForm();
 }
 
 function syncFinanceRequestForm() {
