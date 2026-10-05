@@ -1707,6 +1707,9 @@
         cursor: pointer;
     }
     .finance-ledger-list { min-height: 0; overflow-y: auto; padding: 0 22px 18px; }
+    .finance-ledger-more { display: block; width: 100%; padding: 12px; border: 0; background: #eef6f3; color: #226d5d; font-weight: 800; cursor: pointer; }
+    .finance-ledger-more:disabled { color: #738680; cursor: default; }
+    .finance-ledger-end { padding: 12px 0; text-align: center; color: #738680; font-size: 0.8rem; }
     .finance-ledger-entry {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -2704,7 +2707,7 @@
                 <strong>流水记录</strong>
                 <button type="button" onclick="loadFinanceLedger()">刷新</button>
             </div>
-            <div id="finance-ledger-list" class="finance-ledger-list">
+            <div id="finance-ledger-list" class="finance-ledger-list" onscroll="handleFinanceLedgerScroll(this)">
                 <div style="padding:18px 0; color:#7a8b86;">读取账本中...</div>
             </div>
         </div>
@@ -3304,6 +3307,21 @@
     let currentCalendarSystem = '';
     let viewingCalendarSystem = '';
     let currentFinanceLedgerAccountId = null;
+    const FINANCE_LEDGER_PAGE_SIZE = 100;
+    const financeLedgerState = {
+        accountId: null,
+        entries: new Map(),
+        oldestCursor: null,
+        hasMore: true,
+        loadingOlder: false,
+        loadError: null,
+        syncing: false,
+        generation: 0,
+        timer: null
+    };
+    let financeRequestKey = null;
+    let financeRequestSubmitting = false;
+    let financeApprovalTimer = null;
     let isSellMode = false;
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
@@ -4063,7 +4081,7 @@ function getFinanceLedgerAccountLabel(accountId) {
     if (selectedUserId && selectedUserId === accountId) {
         return getSelectedAdminPlayerEmail() || accountId;
     }
-    return currentUserEmail || accountId || '';
+    return accountId === myId ? (currentUserEmail || accountId) : accountId || '';
 }
 
 function setFinanceRequestType(type) {
@@ -4116,7 +4134,11 @@ async function openFinanceLedger(accountIdOverride = null) {
             control.disabled = true;
         });
     }
-    await loadFinanceLedger(accountId);
+    await Promise.all([loadFinanceLedger(accountId), refreshFinanceLedgerBalance(accountId)]);
+    if (financeLedgerState.timer) clearInterval(financeLedgerState.timer);
+    financeLedgerState.timer = setInterval(() => {
+        if (isFinanceLedgerOpen() && document.visibilityState === 'visible') loadFinanceLedger();
+    }, 30000);
 }
 
 async function openSelectedPlayerFinance() {
@@ -4135,6 +4157,8 @@ async function showSelectedPlayerView() {
         setupMainRealtime(viewingUserId);
     }
     document.getElementById('admin-panel').style.display = 'none';
+    if (financeApprovalTimer) clearInterval(financeApprovalTimer);
+    financeApprovalTimer = null;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -4143,6 +4167,8 @@ function closeFinanceLedger() {
     if (!modal) return;
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
+    if (financeLedgerState.timer) clearInterval(financeLedgerState.timer);
+    financeLedgerState.timer = null;
 }
 
 function handleFinanceLedgerBackdrop(event) {
@@ -4158,11 +4184,19 @@ function financeEntryAmountHTML(entry) {
     return `<div class="finance-entry-amount ${className}">${escapeHTML(text)}</div>`;
 }
 
-function renderFinanceLedger(entries) {
+function renderFinanceLedger(entries, preserveNewEntries = false) {
     const list = document.getElementById('finance-ledger-list');
     if (!list) return;
+    const previousTop = list.scrollTop;
+    const previousHeight = list.scrollHeight;
     if (!entries || entries.length === 0) {
-        list.innerHTML = '<div style="padding:18px 0; color:#7a8b86;">暂无账本记录。</div>';
+        if (financeLedgerState.loadingOlder) {
+            list.innerHTML = '<div class="finance-ledger-end">读取中...</div>';
+        } else if (financeLedgerState.loadError) {
+            list.innerHTML = `<div class="finance-ledger-end">读取失败：${escapeHTML(financeLedgerState.loadError)}</div><button class="finance-ledger-more" type="button" onclick="loadOlderFinanceLedger()">重试</button>`;
+        } else {
+            list.innerHTML = '<div style="padding:18px 0; color:#7a8b86;">暂无账本记录。</div>';
+        }
         return;
     }
 
@@ -4178,7 +4212,8 @@ function renderFinanceLedger(entries) {
         const balanceBefore = Number(entry.balance_before);
         const balanceAfter = Number(entry.balance_after);
         const unit = entry.currency_unit || getCurrencyUnit();
-        const balanceText = Number.isFinite(balanceBefore) && Number.isFinite(balanceAfter)
+        const balanceText = entry.balance_before != null && entry.balance_after != null &&
+            Number.isFinite(balanceBefore) && Number.isFinite(balanceAfter)
             ? `余额 ${formatCurrencyNumber(balanceBefore)} → ${formatCurrencyNumber(balanceAfter)} ${unit}`
             : '';
         const reviewer = entry.reviewer_email ? `审批人：${entry.reviewer_email}` : '';
@@ -4202,35 +4237,179 @@ function renderFinanceLedger(entries) {
             </article>
         `;
     }).join('');
+    const footer = document.createElement('div');
+    if (financeLedgerState.hasMore) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'finance-ledger-more';
+        button.textContent = financeLedgerState.loadingOlder ? '读取中...' : financeLedgerState.loadError ? '读取失败，重试' : '加载更早账目';
+        button.disabled = financeLedgerState.loadingOlder;
+        button.onclick = () => loadOlderFinanceLedger();
+        footer.appendChild(button);
+    } else {
+        footer.className = 'finance-ledger-end';
+        footer.textContent = '已到最早一条账目';
+    }
+    list.appendChild(footer);
+    if (preserveNewEntries && previousTop > 64) list.scrollTop = previousTop + Math.max(0, list.scrollHeight - previousHeight);
+    else list.scrollTop = previousTop;
+}
+
+function financeLedgerRows() {
+    return [...financeLedgerState.entries.values()].sort((a, b) =>
+        b.created_at.localeCompare(a.created_at) || Number(b.id) - Number(a.id));
+}
+
+function mergeFinanceLedger(rows) {
+    const previousNewest = financeLedgerRows()[0];
+    const hasNewer = previousNewest && rows.some(row =>
+        row.created_at > previousNewest.created_at ||
+        (row.created_at === previousNewest.created_at && Number(row.id) > Number(previousNewest.id)));
+    rows.forEach(row => financeLedgerState.entries.set(String(row.id), row));
+    renderFinanceLedger(financeLedgerRows(), hasNewer);
+}
+
+function financeLedgerQuery(accountId) {
+    return supabaseClient
+        .from('player_finance_ledger')
+        .select('*')
+        .eq('account_id', accountId);
+}
+
+async function refreshFinanceLedgerBalance(accountId) {
+    const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('gold_gp, campaign_type')
+        .eq('id', accountId)
+        .maybeSingle();
+    if (error || currentFinanceLedgerAccountId !== accountId || !data) return;
+    const unit = normalizeCampaignType(data.campaign_type) === 'coc' ? '美元' : 'GP';
+    const balance = document.getElementById('finance-ledger-balance');
+    if (balance) balance.textContent = `${formatCurrencyNumber(data.gold_gp)} ${unit}`;
+}
+
+async function applyFinanceLedgerRealtime(payload, accountId) {
+    if (!isFinanceLedgerOpen() || currentFinanceLedgerAccountId !== accountId) return;
+    const entryId = payload?.new?.id || payload?.old?.id;
+    if (!entryId) return loadFinanceLedger(accountId);
+    const { data, error } = await financeLedgerQuery(accountId).eq('id', entryId).maybeSingle();
+    if (error) {
+        console.warn('实时账目同步失败:', error);
+        return;
+    }
+    if (data && financeLedgerState.accountId === accountId) mergeFinanceLedger([data]);
+    await refreshFinanceLedgerBalance(accountId);
+}
+
+function financeLedgerOlderFilter(cursor) {
+    return `created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`;
+}
+
+function handleFinanceLedgerScroll(list) {
+    if (list.scrollTop + list.clientHeight >= list.scrollHeight - 120) loadOlderFinanceLedger();
+}
+
+async function loadOlderFinanceLedger() {
+    const state = financeLedgerState;
+    if (!state.accountId || !state.hasMore || state.loadingOlder) return;
+    state.loadingOlder = true;
+    const generation = state.generation;
+    const cursor = state.oldestCursor;
+    renderFinanceLedger(financeLedgerRows());
+    try {
+        let query = financeLedgerQuery(state.accountId)
+            .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
+            .limit(FINANCE_LEDGER_PAGE_SIZE + 1);
+        if (cursor) query = query.or(financeLedgerOlderFilter(cursor));
+        const { data, error } = await query;
+        if (error) throw error;
+        if (generation !== state.generation) return;
+        state.loadError = null;
+        const rows = (data || []).slice(0, FINANCE_LEDGER_PAGE_SIZE);
+        state.hasMore = (data || []).length > FINANCE_LEDGER_PAGE_SIZE;
+        if (rows.length) {
+            const oldest = rows[rows.length - 1];
+            state.oldestCursor = { created_at: oldest.created_at, id: oldest.id };
+        }
+        mergeFinanceLedger(rows);
+    } catch (error) {
+        if (generation === state.generation) {
+            console.error('读取更早账目失败:', error);
+            state.loadError = error.message || '网络错误';
+        }
+    } finally {
+        if (generation === state.generation) {
+            state.loadingOlder = false;
+            renderFinanceLedger(financeLedgerRows());
+        }
+    }
 }
 
 async function loadFinanceLedger(accountId = currentFinanceLedgerAccountId) {
     if (!accountId) return;
     currentFinanceLedgerAccountId = accountId;
-    const list = document.getElementById('finance-ledger-list');
-    if (list) list.innerHTML = '<div style="padding:18px 0; color:#7a8b86;">读取账本中...</div>';
-
-    const { data, error } = await supabaseClient
-        .from('player_finance_ledger')
-        .select('*')
-        .eq('account_id', accountId)
-        .order('created_at', { ascending: false })
-        .limit(150);
-
-    if (error) {
-        if (list) list.innerHTML = `<div style="padding:18px 0; color:#b94a3c;">账本读取失败：${escapeHTML(error.message)}。请确认 player_finance_ledger.sql 已执行。</div>`;
+    const state = financeLedgerState;
+    if (state.accountId !== accountId) {
+        state.accountId = accountId;
+        state.entries.clear();
+        state.oldestCursor = null;
+        state.hasMore = true;
+        state.loadingOlder = false;
+        state.loadError = null;
+        state.syncing = false;
+        state.generation++;
+        const list = document.getElementById('finance-ledger-list');
+        if (list) list.innerHTML = '<div class="finance-ledger-end">读取账本中...</div>';
+        await loadOlderFinanceLedger();
         return;
     }
-
-    renderFinanceLedger(data || []);
-
-    const balance = document.getElementById('finance-ledger-balance');
-    const headerAmount = readDisplayedCurrency('gold-amount');
-    if (balance) balance.textContent = `${formatCurrencyNumber(headerAmount)} ${getCurrencyUnit()}`;
+    if (state.syncing || state.loadingOlder) return;
+    state.syncing = true;
+    const generation = state.generation;
+    try {
+        const newest = financeLedgerRows()[0];
+        if (!newest) {
+            state.syncing = false;
+            state.hasMore = true;
+            await loadOlderFinanceLedger();
+            return;
+        }
+        let cursor = { created_at: newest.created_at, id: newest.id };
+        while (true) {
+            const { data, error } = await financeLedgerQuery(accountId)
+                .or(`created_at.gt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.gt.${cursor.id})`)
+                .order('created_at', { ascending: true })
+                .order('id', { ascending: true })
+                .limit(FINANCE_LEDGER_PAGE_SIZE);
+            if (error) throw error;
+            if (generation !== state.generation) return;
+            const rows = data || [];
+            if (!rows.length) break;
+            mergeFinanceLedger(rows);
+            const last = rows[rows.length - 1];
+            cursor = { created_at: last.created_at, id: last.id };
+            if (rows.length < FINANCE_LEDGER_PAGE_SIZE) break;
+        }
+        const { data: recent, error: recentError } = await financeLedgerQuery(accountId)
+            .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
+            .limit(FINANCE_LEDGER_PAGE_SIZE);
+        if (recentError) throw recentError;
+        if (generation === state.generation) {
+            mergeFinanceLedger(recent || []);
+            await refreshFinanceLedgerBalance(accountId);
+        }
+    } catch (error) {
+        if (generation === state.generation) console.error('同步账本失败:', error);
+    } finally {
+        if (generation === state.generation) state.syncing = false;
+    }
 }
 
 async function submitFundLedgerRequest() {
     if (!myId || currentFinanceLedgerAccountId !== myId) return alert('只能为自己的账号提交资金申请。');
+    if (financeRequestSubmitting) return;
     const type = document.getElementById('finance-request-type')?.value || 'expense';
     const amount = type === 'memo'
         ? 0
@@ -4241,26 +4420,50 @@ async function submitFundLedgerRequest() {
     if (type !== 'memo' && (!Number.isFinite(amount) || amount <= 0)) return alert('请输入大于 0 的金额。');
     if (!title) return alert('请填写记账事项。');
 
+    const fingerprint = JSON.stringify([type, amount, title, note]);
+    if (!financeRequestKey) {
+        try {
+            financeRequestKey = JSON.parse(sessionStorage.getItem('finance-request-key') || 'null');
+        } catch (_) {
+            financeRequestKey = null;
+        }
+    }
+    if (financeRequestKey?.fingerprint !== fingerprint) {
+        financeRequestKey = { fingerprint, key: crypto.randomUUID() };
+    }
+    sessionStorage.setItem('finance-request-key', JSON.stringify(financeRequestKey));
+    financeRequestSubmitting = true;
+    const submitButton = document.querySelector('#finance-request-panel .finance-request-submit');
+    if (submitButton) submitButton.disabled = true;
     showLoading();
     try {
-        const { error } = await supabaseClient.rpc('submit_fund_ledger_request', {
+        const { error } = await supabaseClient.rpc('submit_fund_ledger_request_v2', {
             p_entry_type: type,
             p_amount: amount,
             p_title: title,
-            p_note: note || null
+            p_note: note || null,
+            p_request_key: financeRequestKey.key
         });
         if (error) throw error;
 
+        financeRequestKey = null;
+        sessionStorage.removeItem('finance-request-key');
         document.getElementById('finance-request-amount').value = '';
         document.getElementById('finance-request-title').value = '';
         document.getElementById('finance-request-note').value = '';
-        await logAction('资金申请', `提交${FINANCE_ENTRY_LABELS[type] || type}：${title}${type === 'memo' ? '' : `，金额 ${formatCurrency(amount)}`}`);
+        try {
+            await logAction('资金申请', `提交${FINANCE_ENTRY_LABELS[type] || type}：${title}${type === 'memo' ? '' : `，金额 ${formatCurrency(amount)}`}`);
+        } catch (logError) {
+            console.warn('资金申请操作日志未写入:', logError);
+        }
         await loadFinanceLedger(myId);
         alert('申请已提交，等待 DM 审批。');
     } catch (error) {
         console.error('资金申请提交失败:', error);
         alert('提交失败：' + (error.message || '请确认 player_finance_ledger.sql 已执行'));
     } finally {
+        financeRequestSubmitting = false;
+        if (submitButton) submitButton.disabled = false;
         hideLoading();
     }
 }
@@ -5691,9 +5894,9 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 loadUserDate();
                 if (isCurrentAdmin()) loadStockAdminPanel();
             })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'player_finance_ledger', filter: `account_id=eq.${targetId}` }, () => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'player_finance_ledger', filter: `account_id=eq.${targetId}` }, (payload) => {
                 console.log('资金账本有更新');
-                if (isFinanceLedgerOpen() && currentFinanceLedgerAccountId === targetId) loadFinanceLedger(targetId);
+                applyFinanceLedgerRealtime(payload, targetId);
                 if (isCurrentAdmin()) loadPendingRequests();
             })
             // 2. 监听集市变动 (Shop 表)
@@ -7715,6 +7918,13 @@ async function loadGold() {
             loadStockAdminPanel();
             loadAdminCheckins(selectedUserId);
             loadAdminLeaderboardTeams();
+            if (financeApprovalTimer) clearInterval(financeApprovalTimer);
+            financeApprovalTimer = setInterval(() => {
+                if (p.style.display === 'block' && document.visibilityState === 'visible') loadPendingRequests();
+            }, 30000);
+        } else if (financeApprovalTimer) {
+            clearInterval(financeApprovalTimer);
+            financeApprovalTimer = null;
         }
     }
 // --- 集市加载 ---
@@ -8043,6 +8253,30 @@ async function loadGold() {
     }
     
 
+    async function loadAllPendingFinanceRequests() {
+        const results = [];
+        let cursor = null;
+        while (true) {
+            let query = supabaseClient.from('player_finance_ledger')
+                .select('*')
+                .eq('status', 'pending')
+                .order('created_at', { ascending: true })
+                .order('id', { ascending: true })
+                .limit(250);
+            if (cursor) {
+                query = query.or(`created_at.gt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.gt.${cursor.id})`);
+            }
+            const { data, error } = await query;
+            if (error) throw error;
+            const rows = data || [];
+            results.push(...rows);
+            if (rows.length < 250) break;
+            const last = rows[rows.length - 1];
+            cursor = { created_at: last.created_at, id: last.id };
+        }
+        return results;
+    }
+
     // --- 加载待审批请求 ---
     async function loadPendingRequests() {
         if (!await requireAdminRole()) return;
@@ -8062,13 +8296,10 @@ async function loadGold() {
             html += `<div style="color:red; font-size:0.8em; padding:8px;">雇员状态申请加载失败: ${escapeHTML(error.message)}。请确认 employee_status_change_requests.sql 已执行。</div>`;
         }
 
-        const { data: financeRequestData, error: financeError } = await supabaseClient
-            .from('player_finance_ledger')
-            .select('*')
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true });
-
-        if (financeError) {
+        let financeRequestData = [];
+        try {
+            financeRequestData = await loadAllPendingFinanceRequests();
+        } catch (financeError) {
             html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">资金账本审批未就绪：${escapeHTML(financeError.message)}。请确认 player_finance_ledger.sql 已执行。</div>`;
         }
 
@@ -8078,13 +8309,15 @@ async function loadGold() {
         ].filter(Boolean))];
         const profileEmailMap = {};
         if (pendingRequestUserIds.length > 0) {
-            const { data: profiles, error: profileError } = await supabaseClient
-                .from('profiles')
-                .select('id, email')
-                .in('id', pendingRequestUserIds);
-            if (profileError) {
-                html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">玩家邮箱加载失败: ${escapeHTML(profileError.message)}</div>`;
-            } else {
+            for (let offset = 0; offset < pendingRequestUserIds.length; offset += 100) {
+                const { data: profiles, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('id, email')
+                    .in('id', pendingRequestUserIds.slice(offset, offset + 100));
+                if (profileError) {
+                    html += `<div style="color:#e67e22; font-size:0.8em; padding:8px;">玩家邮箱加载失败: ${escapeHTML(profileError.message)}</div>`;
+                    break;
+                }
                 (profiles || []).forEach(profile => {
                     profileEmailMap[profile.id] = profile.email;
                 });
