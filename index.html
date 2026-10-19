@@ -4407,6 +4407,38 @@ async function loadFinanceLedger(accountId = currentFinanceLedgerAccountId) {
     }
 }
 
+function isMissingFinanceLedgerRpcError(error, functionName) {
+    const message = String(error?.message || '');
+    return error?.code === 'PGRST202' || (
+        message.includes(functionName) &&
+        /could not find the function|function .* does not exist/i.test(message)
+    );
+}
+
+async function submitFinanceLedgerEntry(request, client = supabaseClient) {
+    const parameters = {
+        p_entry_type: request.type,
+        p_amount: request.amount,
+        p_title: request.title,
+        p_note: request.note || null
+    };
+    let result = await client.rpc('submit_fund_ledger_request_v2', {
+        ...parameters,
+        p_request_key: request.requestKey
+    });
+
+    // A missing RPC has not executed; other failures may already have committed.
+    if (isMissingFinanceLedgerRpcError(result.error, 'submit_fund_ledger_request_v2')) {
+        result = await client.rpc('submit_fund_ledger_request', parameters);
+        if (isMissingFinanceLedgerRpcError(result.error, 'submit_fund_ledger_request')) {
+            throw new Error('资金申请接口尚未部署。请 DM 在 Supabase SQL 编辑器完整执行 player_finance_ledger.sql 后再提交。');
+        }
+    }
+
+    if (result.error) throw result.error;
+    return result.data;
+}
+
 async function submitFundLedgerRequest() {
     if (!myId || currentFinanceLedgerAccountId !== myId) return alert('只能为自己的账号提交资金申请。');
     if (financeRequestSubmitting) return;
@@ -4437,14 +4469,13 @@ async function submitFundLedgerRequest() {
     if (submitButton) submitButton.disabled = true;
     showLoading();
     try {
-        const { error } = await supabaseClient.rpc('submit_fund_ledger_request_v2', {
-            p_entry_type: type,
-            p_amount: amount,
-            p_title: title,
-            p_note: note || null,
-            p_request_key: financeRequestKey.key
+        await submitFinanceLedgerEntry({
+            type,
+            amount,
+            title,
+            note,
+            requestKey: financeRequestKey.key
         });
-        if (error) throw error;
 
         financeRequestKey = null;
         sessionStorage.removeItem('finance-request-key');
