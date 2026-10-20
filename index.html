@@ -10523,53 +10523,62 @@ async function loadLoginLogs() {
         });
     }
 
+    const pendingItemSales = new Map();
+    let itemSaleInProgress = false;
+
     // --- 执行出售 ---
     async function sellItem(invId, itemName, unitPrice, maxQty) {
+        if (itemSaleInProgress) return;
         const qtyStr = prompt(`出售 [${itemName}] (单价: ${formatCurrency(unitPrice)})\n当前拥有: ${maxQty}\n\n请输入出售数量:`, "1");
         if (qtyStr === null) return;
-        const qty = parseInt(qtyStr);
+        const qty = Number(qtyStr);
 
-        if (isNaN(qty) || qty <= 0) return alert("数量无效");
+        if (!Number.isSafeInteger(qty) || qty <= 0) return alert("数量无效");
         if (qty > maxQty) return alert("库存不足");
 
+        const accountId = viewingUserId;
+        const saleKey = `${accountId}:${invId}`;
+        const pending = pendingItemSales.get(saleKey);
+        if (pending && (pending.p_quantity !== qty || pending.p_expected_unit_price !== unitPrice)) {
+            return alert('上一笔出售尚未确认，请先用原数量和报价重试，避免重复出售。');
+        }
+        const request = pending || {
+            p_account_id: accountId, p_inventory_id: invId, p_quantity: qty,
+            p_expected_unit_price: unitPrice, p_request_key: crypto.randomUUID()
+        };
+        pendingItemSales.set(saleKey, request);
+        itemSaleInProgress = true;
         showLoading();
         try {
-            // 1. 再次确认金币 (防止 userProfile 没加载)
-            if (!userProfile) await loadGold();
-
-            const totalPrice = Math.round(unitPrice * qty * 100) / 100;
-            const financeClient = await FinanceLedger.withContext(supabaseClient, {
-                source: 'item_sale', title: `出售物品：${itemName}`,
-                note: `出售 ${itemName} ×${qty}，单价 ${formatCurrency(unitPrice)}，收入 ${formatCurrency(totalPrice)}。`,
-                details: { inventory_id: invId, item_name: itemName, quantity: qty, unit_price: unitPrice }
-            });
-
-            // 2. 扣除背包物品
-            if (qty === maxQty) {
-                const { error } = await supabaseClient.from('user_inventory').delete().eq('id', invId);
-                if (error) throw error;
-            } else {
-                const { error } = await supabaseClient.from('user_inventory').update({ quantity: maxQty - qty }).eq('id', invId);
-                if (error) throw error;
+            const { data: receipt, error } = await supabaseClient.rpc('sell_inventory_item', request);
+            if (error) {
+                // A database rejection has rolled back; a transport failure may have committed.
+                if (/^[0-9A-Z]{5}$/.test(error.code || '')) pendingItemSales.delete(saleKey);
+                if (isMissingFinanceLedgerRpcError(error, 'sell_inventory_item')) {
+                    pendingItemSales.delete(saleKey);
+                    throw new Error('数据库尚未安装新版出售函数，请执行完整的 player_finance_ledger.sql；尚未扣除物品或变更资金。');
+                }
+                throw error;
             }
-
-            // 3. 增加玩家金币
-            const newGold = roundCurrency(Number(userProfile.gold_gp || 0) + totalPrice);
-            const { error: fundsError } = await financeClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
-            if (fundsError) throw fundsError;
-
-            // 4. 记录日志
-            await logAction('出售物品', `以 ${formatCurrency(unitPrice)} 的单价出售了 [${itemName}] x${qty}，获利 ${formatCurrency(totalPrice)}`);
-
-            alert(`出售成功！获得 ${formatCurrency(totalPrice)}`);
-            
-            // 刷新
-            await loadGold(); // 更新右上角金币
-            loadSellShop();   // 刷新列表状态
+            pendingItemSales.delete(saleKey);
+            alert(`出售成功！获得 ${formatCurrency(receipt.amount)}`);
+            try {
+                await logAction('出售物品', `以 ${formatCurrency(unitPrice)} 的单价出售了 [${receipt.item_name}] x${qty}，获利 ${formatCurrency(receipt.amount)}；账本编号 ${receipt.entry_id}`);
+            } catch (logError) {
+                console.warn('辅助操作日志写入失败，出售明细已保存于资金账本。', logError);
+            }
+            try {
+                await loadGold();
+                await loadSellShop();
+            } catch (refreshError) {
+                console.error(refreshError);
+                alert('出售已完成并入账，但界面刷新失败，请刷新页面查看。');
+            }
         } catch (e) {
             console.error(e);
-            alert("交易失败，请稍后重试");
+            alert(e.message || '未收到出售结果，请用相同数量重试确认，勿重复提交其他数量。');
         } finally {
+            itemSaleInProgress = false;
             hideLoading();
         }
     }
