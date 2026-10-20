@@ -16,7 +16,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D 小队管理系统</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="stocks.js"></script>
+    <script src="finance-ledger.js?v=20261020"></script>
+    <script src="stocks.js?v=20261020-ledger"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
@@ -3326,6 +3327,7 @@
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    FinanceLedger.configure({ url: SUPABASE_URL, key: SUPABASE_KEY });
     const ACTIVITY_AREA_LABELS = {
         checkins: '打卡点',
         war: '战局',
@@ -4202,7 +4204,7 @@ function renderFinanceLedger(entries, preserveNewEntries = false) {
 
     list.innerHTML = entries.map(entry => {
         const status = FINANCE_STATUS_LABELS[entry.status] || entry.status || '未知';
-        const type = FINANCE_ENTRY_LABELS[entry.entry_type] || entry.entry_type || '资金记录';
+        const type = FinanceLedger.sourceLabels[entry.metadata?.source] || FINANCE_ENTRY_LABELS[entry.entry_type] || entry.entry_type || '资金记录';
         const createdAt = entry.created_at
             ? new Date(entry.created_at).toLocaleString('zh-CN', { hour12: false })
             : '';
@@ -4214,11 +4216,11 @@ function renderFinanceLedger(entries, preserveNewEntries = false) {
         const unit = entry.currency_unit || getCurrencyUnit();
         const balanceText = entry.balance_before != null && entry.balance_after != null &&
             Number.isFinite(balanceBefore) && Number.isFinite(balanceAfter)
-            ? `余额 ${formatCurrencyNumber(balanceBefore)} → ${formatCurrencyNumber(balanceAfter)} ${unit}`
+            ? `${entry.metadata?.asset === 'bank' ? '银行余额' : '余额'} ${formatCurrencyNumber(balanceBefore)} → ${formatCurrencyNumber(balanceAfter)} ${unit}`
             : '';
-        const reviewer = entry.reviewer_email ? `审批人：${entry.reviewer_email}` : '';
+        const participants = FinanceLedger.participantLabels(entry);
         const noteParts = [entry.note, entry.review_note ? `审批备注：${entry.review_note}` : ''].filter(Boolean);
-        const metaParts = [type, worldDate, createdAt, reviewer].filter(Boolean);
+        const metaParts = [type, worldDate, createdAt, ...participants].filter(Boolean);
 
         return `
             <article class="finance-ledger-entry">
@@ -7604,22 +7606,25 @@ let currentDate = { year: 1494, month: 2, day: 12 }; // 默认值
         
         if (confirmPay) {
             showLoading(); 
-            const netIncome = await calculateCityNetIncome(viewingUserId);
-            
-            if (netIncome !== 0) {
-                const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
-                const newGold = roundCurrency(Number(prof.gold_gp || 0) + netIncome); 
-                
-                await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
-                
-                const logMsg = netIncome > 0 
-                    ? `时间跃迁触发结算：城市盈利，资金增加 ${formatCurrency(netIncome)}` 
-                    : `时间跃迁触发结算：城市赤字，资金扣除 ${formatCurrency(Math.abs(netIncome))}`;
-                    
-                await logAction('系统结算', logMsg);
-                alert(logMsg);
-            } else {
-                alert(`本月城市收支平衡，净利润为 ${formatCurrency(0)}。`);
+            try {
+                const netIncome = await calculateCityNetIncome(viewingUserId);
+
+                if (netIncome !== 0) {
+                    await settleCityFunds(netIncome, { year: nY, month: nM, day: nD }, '手动跨月结算');
+
+                    const logMsg = netIncome > 0
+                        ? `时间跃迁触发结算：城市盈利，资金增加 ${formatCurrency(netIncome)}`
+                        : `时间跃迁触发结算：城市赤字，资金扣除 ${formatCurrency(Math.abs(netIncome))}`;
+
+                    await logAction('系统结算', logMsg);
+                    alert(logMsg);
+                } else {
+                    alert(`本月城市收支平衡，净利润为 ${formatCurrency(0)}。`);
+                }
+            } catch (error) {
+                hideLoading();
+                alert('城市财务结算失败：' + (error.message || '网络错误'));
+                return;
             }
         }
     }
@@ -8732,7 +8737,12 @@ async function loadGold() {
 async function buy(id, p, n, c) {
     showLoading();
     try {
-        const { data, error } = await supabaseClient.rpc('atomic_buy_item', {
+        const financeClient = await FinanceLedger.withContext(supabaseClient, {
+            source: 'shop_purchase', title: `购买物品：${n}`,
+            note: `购买 ${n} ×1，单价 ${formatCurrency(p)}。`,
+            details: { item_id: id, item_name: n, quantity: 1, unit_price: roundCurrency(p), category: c || '杂项' }
+        });
+        const { data, error } = await financeClient.rpc('atomic_buy_item', {
             p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
             p_item_id: parseInt(id),  // 确保是数字
             p_price: roundCurrency(p),   // 确保支持两位小数数字
@@ -9476,6 +9486,21 @@ async function advanceTechTreeResearch(targetUserId, daysPassed) {
     return { completed, advanced };
 }
 
+async function settleCityFunds(netIncome, settlementDate, reason) {
+    const { data: profile, error } = await supabaseClient.from('profiles')
+        .select('gold_gp').eq('id', viewingUserId).single();
+    if (error) throw error;
+    const financeClient = await FinanceLedger.withContext(supabaseClient, {
+        source: 'city_settlement', title: '城市月度财务结算',
+        note: `${reason}：${formatWorldDate(settlementDate)}，包含税收、贸易、基建与人员薪资。`,
+        details: { settlement_date: settlementDate, reason, net_income: netIncome }
+    });
+    const { error: updateError } = await financeClient.from('profiles')
+        .update({ gold_gp: roundCurrency(Number(profile.gold_gp || 0) + netIncome) })
+        .eq('id', viewingUserId);
+    if (updateError) throw updateError;
+}
+
 // --- 真正的推进时间逻辑 ---
 async function advanceTime() {
         if (!confirm(`确定推进 [当前视角] 的时间吗？\n(1号将自动扣除该玩家的薪资)`)) return;
@@ -9497,10 +9522,7 @@ async function advanceTime() {
                 
 
                 if (netIncome !== 0) {
-                    const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingUserId).single();
-                    const newGold = roundCurrency(Number(prof.gold_gp || 0) + netIncome); 
-                    
-                    await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
+                    await settleCityFunds(netIncome, nextDate, '日期推进结算');
                     
                     const logMsg = netIncome > 0 
                         ? `新月结算：城市盈利，资金增加 ${formatCurrency(netIncome)}` 
@@ -10516,17 +10538,25 @@ async function loadLoginLogs() {
             if (!userProfile) await loadGold();
 
             const totalPrice = Math.round(unitPrice * qty * 100) / 100;
+            const financeClient = await FinanceLedger.withContext(supabaseClient, {
+                source: 'item_sale', title: `出售物品：${itemName}`,
+                note: `出售 ${itemName} ×${qty}，单价 ${formatCurrency(unitPrice)}，收入 ${formatCurrency(totalPrice)}。`,
+                details: { inventory_id: invId, item_name: itemName, quantity: qty, unit_price: unitPrice }
+            });
 
             // 2. 扣除背包物品
             if (qty === maxQty) {
-                await supabaseClient.from('user_inventory').delete().eq('id', invId);
+                const { error } = await supabaseClient.from('user_inventory').delete().eq('id', invId);
+                if (error) throw error;
             } else {
-                await supabaseClient.from('user_inventory').update({ quantity: maxQty - qty }).eq('id', invId);
+                const { error } = await supabaseClient.from('user_inventory').update({ quantity: maxQty - qty }).eq('id', invId);
+                if (error) throw error;
             }
 
             // 3. 增加玩家金币
             const newGold = roundCurrency(Number(userProfile.gold_gp || 0) + totalPrice);
-            await supabaseClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
+            const { error: fundsError } = await financeClient.from('profiles').update({ gold_gp: newGold }).eq('id', viewingUserId);
+            if (fundsError) throw fundsError;
 
             // 4. 记录日志
             await logAction('出售物品', `以 ${formatCurrency(unitPrice)} 的单价出售了 [${itemName}] x${qty}，获利 ${formatCurrency(totalPrice)}`);
@@ -11216,11 +11246,23 @@ async function getRobustIP() {
         btn.disabled = true;
 
         // 1. 调用后端接口
-        const { data, error } = await supabaseClient.rpc('rpc_spin_wheel', {
-            p_user_id: viewingUserId,
-            p_item_name: currentWheelTarget.name,
-            p_base_price: roundCurrency(currentWheelPrice)
-        });
+        let data, error;
+        try {
+            const financeClient = await FinanceLedger.withContext(supabaseClient, {
+                source: 'wheel', title: `军械库转盘：${currentWheelTarget.name}`,
+                note: `目标物品：${currentWheelTarget.name}；第 ${document.getElementById('wheel-step').innerText} 次转盘。`,
+                details: { item_name: currentWheelTarget.name, step: Number(document.getElementById('wheel-step').innerText), base_price: roundCurrency(currentWheelPrice) }
+            });
+            const result = await financeClient.rpc('rpc_spin_wheel', {
+                p_user_id: viewingUserId,
+                p_item_name: currentWheelTarget.name,
+                p_base_price: roundCurrency(currentWheelPrice)
+            });
+            data = result.data;
+            error = result.error;
+        } catch (requestError) {
+            error = requestError;
+        }
 
         // 2. 错误处理
         if (error || (data && data.status === 'error')) {
@@ -11996,27 +12038,36 @@ async function getRobustIP() {
         // 3. 统计获得的凭证数量
         const counts = {};
         results.forEach(r => counts[r.name] = (counts[r.name] || 0) + 1);
+        const financeClient = await FinanceLedger.withContext(supabaseClient, {
+            source: 'gacha', title: results.length === 1 ? '干员寻访：单抽' : `干员寻访：${results.length}连抽`,
+            note: `本次寻访结果：${Object.entries(counts).map(([name, quantity]) => `${name} ×${quantity}`).join('；')}。`,
+            details: { pool_type: 'operator', draw_count: results.length, results: results.map(r => ({ name: r.name, rarity: r.rarity })) }
+        });
 
         // 4. 更新数据库：金币和保底
-        await supabaseClient.from('profiles').update({
+        const { error: fundsError } = await financeClient.from('profiles').update({
             gold_gp: roundCurrency(currentGold - totalCost),
             pity_count: newPity
         }).eq('id', viewingUserId);
+        if (fundsError) throw fundsError;
 
         // 5. 更新数据库：发放凭证到背包
         const itemNames = Object.keys(counts);
-        const { data: existItems } = await supabaseClient.from('user_inventory')
+        const { data: existItems, error: inventoryError } = await supabaseClient.from('user_inventory')
             .select('*').eq('user_id', viewingUserId).in('item_name', itemNames);
+        if (inventoryError) throw inventoryError;
             
         for (const name of itemNames) {
             const qtyToAdd = counts[name];
             const existing = existItems.find(i => i.item_name === name);
             if (existing) {
-                await supabaseClient.from('user_inventory').update({ quantity: existing.quantity + qtyToAdd }).eq('id', existing.id);
+                const { error } = await supabaseClient.from('user_inventory').update({ quantity: existing.quantity + qtyToAdd }).eq('id', existing.id);
+                if (error) throw error;
             } else {
-                await supabaseClient.from('user_inventory').insert([{
+                const { error } = await supabaseClient.from('user_inventory').insert([{
                     user_id: viewingUserId, item_name: name, quantity: qtyToAdd, category: '凭证'
                 }]);
+                if (error) throw error;
             }
         }
 
@@ -12028,7 +12079,8 @@ async function getRobustIP() {
             item_name: r.name,
             rarity: r.rarity
         }));
-        await supabaseClient.from('gacha_records').insert(logs);
+        const { error: historyError } = await supabaseClient.from('gacha_records').insert(logs);
+        if (historyError) throw historyError;
 
         return newPity;
     }

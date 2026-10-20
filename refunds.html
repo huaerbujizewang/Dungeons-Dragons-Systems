@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>退货中心 - 艾尔莫瑞尔</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="finance-ledger.js?v=20261020"></script>
     <style>
         body { font-family: "PingFang SC", sans-serif; background-color: #f4f1ea; padding: 40px; color: #333; }
         .container { max-width: 700px; margin: 0 auto; }
@@ -33,6 +34,7 @@
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    FinanceLedger.configure({ url: SUPABASE_URL, key: SUPABASE_KEY });
 
     let viewingId = null;
 
@@ -103,16 +105,26 @@
 
         // 2. 执行逆向操作
         try {
+            const financeClient = await FinanceLedger.withContext(supabaseClient, {
+                source: 'refund', title: `购买退款：${order.item_name}`,
+                note: `退回 ${order.item_name} ×1，退还 ${Number(order.price_paid)} GP。`,
+                details: { order_id: order.id, item_name: order.item_name, quantity: 1, shop_item_id: order.shop_item_id }
+            });
             // A. 背包扣除
             if (invItem.quantity > 1) {
-                await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invItem.id);
+                const { error } = await supabaseClient.from('user_inventory').update({ quantity: invItem.quantity - 1 }).eq('id', invItem.id);
+                if (error) throw error;
             } else {
-                await supabaseClient.from('user_inventory').delete().eq('id', invItem.id);
+                const { error } = await supabaseClient.from('user_inventory').delete().eq('id', invItem.id);
+                if (error) throw error;
             }
 
             // B. 金币退还
-            const { data: prof } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingId).single();
-            await supabaseClient.from('profiles').update({ gold_gp: prof.gold_gp + order.price_paid }).eq('id', viewingId);
+            const { data: prof, error: profileError } = await supabaseClient.from('profiles').select('gold_gp').eq('id', viewingId).single();
+            if (profileError) throw profileError;
+            const refundBalance = Math.round((Number(prof.gold_gp) + Number(order.price_paid)) * 100) / 100;
+            const { error: fundsError } = await financeClient.from('profiles').update({ gold_gp: refundBalance }).eq('id', viewingId);
+            if (fundsError) throw fundsError;
 
             // C. 集市库存加回 (如果原商品还在)
             if (order.shop_item_id) {
@@ -123,7 +135,8 @@
             }
 
             // D. 标记订单已退款
-            await supabaseClient.from('purchase_history').update({ status: 'refunded' }).eq('id', order.id);
+            const { error: orderError } = await supabaseClient.from('purchase_history').update({ status: 'refunded' }).eq('id', order.id);
+            if (orderError) throw orderError;
 
             alert("时空回溯成功！金币已退回。");
             loadOrders();

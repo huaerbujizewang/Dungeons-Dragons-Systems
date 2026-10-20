@@ -14,7 +14,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>白城证券交易所</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="stocks.js?v=20260815-bank2"></script>
+    <script src="finance-ledger.js?v=20261020"></script>
+    <script src="stocks.js?v=20261020-ledger"></script>
     <style>
         :root {
             --ink: #1f2933;
@@ -556,6 +557,7 @@
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    FinanceLedger.configure({ url: SUPABASE_URL, key: SUPABASE_KEY });
     const ADMIN_ROLES = ['dm', 'root'];
 
     let currentUser = null;
@@ -766,12 +768,15 @@
                 currentDate: accountProfile.world_date
             });
         }
-        const { data, error } = await supabaseClient.rpc('get_bank_account', {
+        const financeClient = await FinanceLedger.withContext(supabaseClient, {
+            source: 'bank_interest', title: '银行活期利息结算'
+        });
+        const { data, error } = await financeClient.rpc('get_bank_account', {
             p_account_id: accountId,
             p_current_date: normalizeBankDate(accountProfile.world_date)
         });
         if (error) {
-            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行 bank_accounts.sql。');
             throw error;
         }
         return normalizeBankPayload(data || {});
@@ -787,14 +792,20 @@
                 currentDate: accountProfile.world_date
             });
         }
-        const { data, error } = await supabaseClient.rpc('transfer_bank_funds', {
+        const financeClient = await FinanceLedger.withContext(supabaseClient, {
+            source: type === 'deposit' ? 'bank_deposit' : 'bank_withdraw',
+            title: type === 'deposit' ? '银行活期存款' : '银行活期取款',
+            note: `${type === 'deposit' ? '存入银行' : '从银行取出'} ${amount}。`,
+            details: { amount: Number(amount) }
+        });
+        const { data, error } = await financeClient.rpc('transfer_bank_funds', {
             p_account_id: accountId,
             p_amount: Math.round(Number(amount || 0) * 100) / 100,
             p_type: type,
             p_current_date: normalizeBankDate(accountProfile.world_date)
         });
         if (error) {
-            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行 bank_accounts.sql。');
             throw error;
         }
         return normalizeBankPayload(data || {});

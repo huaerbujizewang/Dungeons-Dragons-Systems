@@ -1306,12 +1306,15 @@
         const { client, accountId, currentDate } = options;
         assertClient(client);
         if (!accountId) throw new Error('缺少账号。');
-        const { data, error } = await client.rpc('get_bank_account', {
+        const financeClient = await FinanceLedger.withContext(client, {
+            source: 'bank_interest', title: '银行活期利息结算', details: { settlement_date: normalizeDate(currentDate) }
+        });
+        const { data, error } = await financeClient.rpc('get_bank_account', {
             p_account_id: accountId,
             p_current_date: normalizeDate(currentDate)
         });
         if (error) {
-            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行 bank_accounts.sql。');
             throw error;
         }
         return normalizeBankAccountPayload(data || {});
@@ -1324,14 +1327,20 @@
         const safeAmount = roundMoney(amount);
         if (!Number.isFinite(safeAmount) || safeAmount <= 0) throw new Error('金额必须大于 0。');
         if (!['deposit', 'withdraw'].includes(type)) throw new Error('银行操作类型无效。');
-        const { data, error } = await client.rpc('transfer_bank_funds', {
+        const financeClient = await FinanceLedger.withContext(client, {
+            source: type === 'deposit' ? 'bank_deposit' : 'bank_withdraw',
+            title: type === 'deposit' ? '银行活期存款' : '银行活期取款',
+            note: `${type === 'deposit' ? '存入银行' : '从银行取出'} ${safeAmount}。`,
+            details: { amount: safeAmount, date: normalizeDate(currentDate) }
+        });
+        const { data, error } = await financeClient.rpc('transfer_bank_funds', {
             p_account_id: accountId,
             p_amount: safeAmount,
             p_type: type,
             p_current_date: normalizeDate(currentDate)
         });
         if (error) {
-            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行新版 stock_market.sql。');
+            if (isMissingBankRpcError(error)) throw new Error('银行功能尚未部署，请先执行 bank_accounts.sql。');
             throw error;
         }
         return normalizeBankAccountPayload(data || {});
@@ -1364,7 +1373,13 @@
         const qty = parseInt(quantity, 10);
         if (!Number.isInteger(qty) || qty <= 0) throw new Error('买入数量必须是正整数。');
         await assertStockNotHalted(client, accountId, stockId, currentDate);
-        const rpcResult = await tradeStockRpc(client, accountId, stockId, qty, currentDate, 'buy');
+        const stockName = STOCK_DEFINITIONS.find(stock => stock.id === stockId)?.name || stockId;
+        const financeClient = await FinanceLedger.withContext(client, {
+            source: 'stock_buy', title: `买入股票：${stockName}`,
+            note: `买入 ${stockName}（${stockId}）×${qty} 股。`,
+            details: { stock_id: stockId, stock_name: stockName, quantity: qty, date: normalizeDate(currentDate) }
+        });
+        const rpcResult = await tradeStockRpc(financeClient, accountId, stockId, qty, currentDate, 'buy');
         if (rpcResult) return rpcResult;
 
         const state = await getTradableState(client, accountId, stockId, currentDate);
@@ -1387,7 +1402,12 @@
             .maybeSingle();
         if (holdError) throw holdError;
 
-        await changeGold(client, accountId, -total);
+        const settlementClient = await FinanceLedger.withContext(client, {
+            source: 'stock_buy', title: `买入股票：${stockName}`,
+            note: `买入 ${stockName}（${stockId}）×${qty} 股，单价 ${price}，成交额 ${total}。`,
+            details: { stock_id: stockId, stock_name: stockName, quantity: qty, price, total_amount: total, date: normalizeDate(currentDate) }
+        });
+        await changeGold(settlementClient, accountId, -total);
         const oldQty = toNumber(holding?.quantity, 0);
         const oldCost = toNumber(holding?.average_cost, 0);
         const newQty = oldQty + qty;
@@ -1413,7 +1433,13 @@
         const qty = parseInt(quantity, 10);
         if (!Number.isInteger(qty) || qty <= 0) throw new Error('卖出数量必须是正整数。');
         await assertStockNotHalted(client, accountId, stockId, currentDate);
-        const rpcResult = await tradeStockRpc(client, accountId, stockId, qty, currentDate, 'sell');
+        const stockName = STOCK_DEFINITIONS.find(stock => stock.id === stockId)?.name || stockId;
+        const financeClient = await FinanceLedger.withContext(client, {
+            source: 'stock_sell', title: `卖出股票：${stockName}`,
+            note: `卖出 ${stockName}（${stockId}）×${qty} 股。`,
+            details: { stock_id: stockId, stock_name: stockName, quantity: qty, date: normalizeDate(currentDate) }
+        });
+        const rpcResult = await tradeStockRpc(financeClient, accountId, stockId, qty, currentDate, 'sell');
         if (rpcResult) return rpcResult;
 
         const state = await getTradableState(client, accountId, stockId, currentDate);
@@ -1446,7 +1472,12 @@
             if (updateError) throw updateError;
         }
 
-        await changeGold(client, accountId, total);
+        const settlementClient = await FinanceLedger.withContext(client, {
+            source: 'stock_sell', title: `卖出股票：${stockName}`,
+            note: `卖出 ${stockName}（${stockId}）×${qty} 股，单价 ${price}，成交额 ${total}。`,
+            details: { stock_id: stockId, stock_name: stockName, quantity: qty, price, total_amount: total, date: normalizeDate(currentDate) }
+        });
+        await changeGold(settlementClient, accountId, total);
         await insertTransaction(client, accountId, stockId, currentDate, 'sell', qty, price, total);
         await recordOrderImpact(client, accountId, stockId, currentDate, 'sell', total);
         return { price, total, quantity: qty };
@@ -1856,7 +1887,12 @@
 
         for (const tx of futureTransactions || []) {
             const amount = toNumber(tx.total_amount, 0);
-            await changeGold(client, accountId, tx.type === 'buy' ? amount : -amount);
+            const financeClient = await FinanceLedger.withContext(client, {
+                source: 'stock_reversal', title: `股票交易撤回：${tx.stock_id}`,
+                note: `时间回退至 ${formatDisplayDate(targetDate)}，撤回${tx.type === 'buy' ? '买入' : '卖出'} ${tx.stock_id} ×${tx.quantity} 股。`,
+                details: { transaction_id: tx.id, stock_id: tx.stock_id, quantity: tx.quantity, price: tx.price, original_type: tx.type, target_date: targetDate }
+            });
+            await changeGold(financeClient, accountId, tx.type === 'buy' ? amount : -amount);
         }
 
         for (const table of ['stock_transactions', 'stock_price_history', 'stock_daily_order_totals', 'stock_dm_adjustments', 'stock_news', 'stock_trading_halts']) {

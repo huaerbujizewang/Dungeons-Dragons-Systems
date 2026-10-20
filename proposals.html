@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>政务厅 - 艾尔莫瑞尔 (V2)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="finance-ledger.js?v=20261020"></script>
     <style>
         :root { --bg-color: #f4f1ea; --card-bg: #fff; --text: #2c3e50; --border: #dcd6cc; }
         body { font-family: "PingFang SC", "Microsoft YaHei", serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 40px; }
@@ -138,6 +139,7 @@
     const SUPABASE_URL = 'https://vbzfpgucpciqgaakqndz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiemZwZ3VjcGNpcWdhYWtxbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1OTc2MzMsImV4cCI6MjA4MzE3MzYzM30.fBVDirEJ52bvrYJZ5DNv7fVDLNgCwITKwdKqT6YJDYw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    FinanceLedger.configure({ url: SUPABASE_URL, key: SUPABASE_KEY });
 
     let userProfile = null;
     let employeeMap = {}; 
@@ -222,7 +224,12 @@
             return { finalDecision, finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
         }
 
-        const { data: rpcResult, error: rpcErr } = await supabaseClient.rpc('rpc_settle_proposal_budget', {
+        const financeClient = await FinanceLedger.withContext(supabaseClient, {
+            source: 'proposal_budget', title: `议案预算：${proposal.title}`,
+            note: `通过议案《${proposal.title}》${selectedOptionText ? `；方案：${selectedOptionText}` : ''}；${cost > 0 ? '支出' : '收入'} ${Math.abs(cost)} GP。`,
+            details: { proposal_id: proposal.id, table: tableName, cost, option: selectedOptionText }
+        });
+        const { data: rpcResult, error: rpcErr } = await financeClient.rpc('rpc_settle_proposal_budget', {
             p_user_id: userProfile.id,
             p_cost: cost
         });
@@ -246,7 +253,10 @@
             return { finalDecision, finalReason: `${finalReason}\n${budgetNote}`, budgetNote };
         }
 
-        console.warn('预算 RPC 不可用，回退直接更新 profiles:', rpcErr);
+        if (!rpcErr || rpcErr.code !== 'PGRST202') {
+            throw rpcErr || new Error('议案预算结算结果未确认，请检查账本后再操作。');
+        }
+        console.warn('预算 RPC 未部署，回退直接更新 profiles:', rpcErr);
 
         const { data: currentProf, error: fetchGoldErr } = await supabaseClient
             .from('profiles')
@@ -268,7 +278,7 @@
         }
 
         const newGold = Math.round((oldGold - cost) * 100) / 100;
-        const { error: updateGoldErr } = await supabaseClient
+        const { error: updateGoldErr } = await financeClient
             .from('profiles')
             .update({ gold_gp: newGold })
             .eq('id', userProfile.id);
