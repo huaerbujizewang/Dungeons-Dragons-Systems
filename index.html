@@ -19,8 +19,8 @@
     <script src="finance-ledger.js?v=20261020"></script>
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
-    <script src="shop-item-details.js?v=20261021-identity"></script>
-    <link rel="stylesheet" href="shop-item-details.css?v=20261021">
+    <script src="shop-item-details.js?v=20261021-details2"></script>
+    <link rel="stylesheet" href="shop-item-details.css?v=20261021-details2">
     <script src="shop-source-books.js?v=20261021-books"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -8157,7 +8157,6 @@ async function loadGold() {
             const safeName = escapeHTML(i.name);
             const safeCategory = escapeHTML(i.category || '杂项');
             const safeRarity = escapeHTML(i.rarity || '普通');
-            const safeDescription = escapeHTML(String(i.description || '').trim() || '暂无描述');
             const nameArg = jsStringAttr(i.name);
             const categoryArg = jsStringAttr(i.category);
             
@@ -8177,7 +8176,7 @@ async function loadGold() {
             const cardStyle = `position:relative; padding-top:25px; ${isOut ? 'opacity:0.6; background:#f9f9f9;' : ''}`;
 
             return `
-                <div class="card" style="${cardStyle}">
+                <div class="card shop-card" style="${cardStyle}">
                     <!-- 右上角稀有度标签 -->
                     <span class="rarity-tag" style="
                         background:${color}; 
@@ -8196,18 +8195,15 @@ async function loadGold() {
                     ${specialTag}
                     <div class="shop-source-label">${escapeHTML(ShopSources.label(i.source_book))}</div>
                     
-                    <b style="font-size:1.1em;">${safeName}</b>
+                    <b class="shop-item-name" style="font-size:1.1em;">${safeName}</b>
                     
                     <div style="font-size:0.8em; color:#666; margin:5px 0;">
                         [${safeCategory}]
                     </div>
                     
-                    <div class="shop-description-preview">
-                        ${safeDescription}
-                    </div>
                     <button class="shop-detail-trigger" type="button" onclick="openShopItemDetails(${i.id})" title="查看完整物品描述">查看描述</button>
                     
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                    <div class="shop-card-pricing" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
                         <span style="color:#d35400; font-weight:bold; font-size:1.1em;">💰 ${formatCurrency(i.price)}</span>
                         <span style="font-size:0.8em; color:${isOut ? 'red' : '#27ae60'};">
                             ${isOut ? '❌ 售罄' : `库存: ${i.stock}`}

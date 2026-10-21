@@ -1,32 +1,30 @@
-.shop-description-preview {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-    height: 54px;
-    margin: 6px 0;
-    font-size: 12px;
-    line-height: 18px;
-    color: #666;
-}
+.shop-card { display: flex; flex-direction: column; min-width: 0; }
+.shop-item-name { display: block; min-height: 2.8em; line-height: 1.4; overflow-wrap: anywhere; }
+.shop-card-pricing { flex-wrap: wrap; gap: 6px 10px; }
 .shop-detail-trigger {
-    padding: 2px 0;
-    border: 0;
-    background: none;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    margin-top: auto;
+    border: 1px solid #b7d2ca;
+    border-radius: 4px;
+    background: #eff7f3;
     color: #277b6e;
     font: inherit;
-    font-size: 12px;
-    text-decoration: underline;
-    text-underline-offset: 3px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
     cursor: pointer;
 }
+.shop-detail-trigger:hover { background: #e1f0e9; border-color: #77a795; }
 .shop-detail-trigger:focus-visible,
-.shop-item-dialog-close:focus-visible { outline: 2px solid #277b6e; outline-offset: 3px; }
+.shop-item-dialog-close:focus-visible,
+.shop-item-source-link:focus-visible { outline: 2px solid #277b6e; outline-offset: 3px; }
 .shop-item-dialog {
     box-sizing: border-box;
-    width: min(760px, calc(100% - 32px));
-    max-height: min(850px, calc(100dvh - 40px));
+    width: min(960px, calc(100% - 32px));
+    max-height: calc(100dvh - 40px);
     padding: 0;
     overflow: hidden;
     border: 1px solid #b8c9c5;
@@ -54,9 +52,9 @@
     color: #245d50;
 }
 .shop-item-dialog-close {
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
     padding: 0;
     border: 1px solid #d3dfdc;
     border-radius: 4px;
@@ -70,14 +68,32 @@
 .shop-item-dialog-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 16px;
+    align-items: center;
+    gap: 10px 16px;
     padding: 0 24px 16px;
     border-bottom: 1px solid #e0e8e5;
     font-size: 13px;
+    line-height: 1.6;
     color: #60746e;
     flex: none;
 }
 .shop-item-dialog-meta a, .shop-item-dialog-body a { color: #227b69; overflow-wrap: anywhere; }
+.shop-item-dialog-meta .shop-item-source-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 44px;
+    margin-left: auto;
+    padding: 9px 16px;
+    border: 1px solid #b7d2ca;
+    border-radius: 4px;
+    background: #eff7f3;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+.shop-item-dialog-meta .shop-item-source-link:hover { background: #e1f0e9; border-color: #77a795; }
 .shop-item-dialog-status { padding: 8px 24px; font-size: 12px; color: #8a652f; flex: none; }
 .shop-item-dialog-status:empty { display: none; }
 .shop-item-dialog-body {
@@ -102,16 +118,18 @@
 .shop-item-dialog-body blockquote { margin: 14px 0; padding-left: 16px; border-left: 3px solid #acc9bd; color: #53665e; }
 .shop-item-dialog-body pre { white-space: pre-wrap; padding: 12px; background: #f2f5f3; }
 .shop-item-plain-text { white-space: pre-wrap; }
-.shop-item-table-scroll { max-width: 100%; overflow-x: auto; }
-.shop-item-table-scroll table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.shop-item-table-scroll th, .shop-item-table-scroll td { padding: 8px 12px; border: 1px solid #dce5e0; text-align: left; }
-.shop-item-table-scroll th { background: #f1f6f3; }
+.shop-item-table-scroll { max-width: 100%; overflow-x: auto; margin: 16px 0; }
+.shop-item-table-scroll table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.6; }
+.shop-item-table-scroll th, .shop-item-table-scroll td { padding: 11px 14px; border: 1px solid #dce5e0; text-align: left; vertical-align: top; }
+.shop-item-table-scroll th { background: #f1f6f3; white-space: nowrap; }
+.shop-item-table-scroll tbody tr:nth-child(even) { background: #f8faf9; }
 .shop-item-empty { color: #87958f; }
 @media (max-width: 540px) {
     .shop-item-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 24px); }
     .shop-item-dialog-header { padding: 16px 16px 10px; gap: 10px; }
     .shop-item-dialog-header h2 { font-size: 20px; }
     .shop-item-dialog-meta { padding: 0 16px 12px; }
+    .shop-item-dialog-meta .shop-item-source-link { margin-left: 0; }
     .shop-item-dialog-body { padding: 4px 16px 20px; }
     .shop-item-dialog-status { padding: 8px 16px; }
 }

@@ -226,10 +226,11 @@
         if (item.source_book) meta.append(element('span', bookNames[item.source_book] || item.source_book));
         const source = safeLink(item.source_url);
         if (item.source_url && source) {
-            const link = element('a', '\u89c4\u5219\u51fa\u5904');
+            const link = element('a', '\u89c4\u5219\u51fa\u5904', 'shop-item-source-link');
             link.href = source;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
+            link.title = '\u5728\u65b0\u6807\u7b7e\u9875\u6253\u5f00\u89c4\u5219\u51fa\u5904';
             meta.append(link);
         }
         const body = dialog.querySelector('.shop-item-dialog-body');
