@@ -21,6 +21,8 @@
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-item-details.js?v=20261021-identity"></script>
     <link rel="stylesheet" href="shop-item-details.css?v=20261021">
+    <script src="shop-source-books.js?v=20261021-books"></script>
+    <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
@@ -2059,6 +2061,7 @@
         <div style="margin-bottom:12px; display:flex; gap:10px; align-items:center; background:#f8f9fa; padding:10px; border-radius:8px; flex-wrap:wrap;">
             <button id="shop-mode-btn" onclick="toggleShopMode()" style="padding:10px 20px; background:#333; color:#fff; border:none; border-radius:4px; white-space:nowrap;">🔄 切换：我要出售</button>
             <input type="text" id="shop-search-input" placeholder="🔍 搜索..." oninput="refreshShopView()" style="flex:1 1 260px; padding:10px; font-size:1em; border:1px solid #ccc; border-radius:6px;">
+            <select id="shop-source-filter" class="shop-source-select" aria-label="来源书籍" onchange="refreshShopView()"><option value="">全部书籍</option></select>
         </div>
         <div style="margin-bottom:18px; background:#fff; border:1px solid #e1e7eb; border-radius:8px; padding:10px;">
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -2777,12 +2780,15 @@
             <!-- 集市进货 -->
             <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
                 <h3 style="margin-top:0">🏬 物资上架</h3>
+                <h4 style="margin:12px 0 8px;">我的商城来源</h4>
+                <div id="shop-source-books-panel"></div>
             <!-- 查库区域 -->
                 <div style="background:#f0f8ff; padding:10px; border-radius:4px; margin-bottom:15px; border:1px dashed #3498db;">
                     <div style="display:flex; gap:5px;">
                         <input type="text" id="compendium-search" placeholder="🔍 搜索图鉴库..." style="flex:1; padding:6px;">
                         <button onclick="searchCompendium()" style="padding:6px 12px;">查找</button>
                     </div>
+                    <select id="compendium-source-filter" class="shop-source-select" aria-label="图鉴来源书籍" onchange="searchCompendium()" style="width:100%; margin-top:6px;"><option value="">全部书籍</option></select>
                     <div id="compendium-results" style="max-height:100px; overflow-y:auto; margin-top:5px; background:#fff; border:1px solid #eee;"></div>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
@@ -7973,6 +7979,7 @@ async function loadGold() {
     let shopPriceTablePromise = null;
     let shopPriceTableVisible = false;
     let shopPriceLookupRequest = 0;
+    let shopLoadGeneration = 0;
 
     function getShopPriceSearchBlob(item) {
         return [
@@ -8082,6 +8089,8 @@ async function loadGold() {
     }
 
     async function loadShop() {
+        const request = ++shopLoadGeneration;
+        const accountId = viewingUserId;
         const grid = document.getElementById('shop-grid');
         const searchInput = document.getElementById('shop-search-input');
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
@@ -8093,7 +8102,9 @@ async function loadGold() {
         const { data, error } = await supabaseClient
             .from('shop_items')
             .select('*')
-            .or(`user_id.is.null,user_id.eq.${viewingUserId}`);
+            .or(`user_id.is.null,user_id.eq.${accountId}`);
+
+        if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
 
         if (error) {
             console.error('集市加载失败:', error);
@@ -8101,10 +8112,20 @@ async function loadGold() {
             return;
         }
 
-        ShopItemDetails.setItems(data || []);
+        let available;
+        try {
+            document.getElementById('shop-source-filter').hidden = false;
+            available = await ShopSources.filterListings(supabaseClient, data || [], accountId);
+            if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
+        } catch (error) {
+            if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
+            grid.textContent = '商城书籍设置加载失败，请执行 compendium_update.sql 后重试：' + error.message;
+            return;
+        }
+        ShopItemDetails.setItems(available);
 
         // 2. 前端过滤 (搜索框)
-        const filteredData = data.filter(i => {
+        const filteredData = available.filter(i => {
             if (!searchTerm) return true;
             return (i.name && i.name.toLowerCase().includes(searchTerm)) || 
                    (i.category && i.category.toLowerCase().includes(searchTerm));
@@ -8173,6 +8194,7 @@ async function loadGold() {
                     </span>
 
                     ${specialTag}
+                    <div class="shop-source-label">${escapeHTML(ShopSources.label(i.source_book))}</div>
                     
                     <b style="font-size:1.1em;">${safeName}</b>
                     
@@ -8800,6 +8822,11 @@ async function buy(id, p, n, c) {
     // 加载管理员所需数据
     async function loadAdminData() {
         if (!await requireAdminRole()) return;
+        ShopSources.loadAdmin(supabaseClient, async () => {
+            if (isSellMode) await loadSellShop();
+            else await loadShop();
+            if (document.getElementById('compendium-search').value.trim()) await searchCompendium();
+        });
         const ulist = document.getElementById('adm-user-list');
         ulist.innerHTML = '<option value="">加载中...</option>';
 
@@ -9892,24 +9919,25 @@ async function loadLoginLogs() {
         if (!await requireAdminRole()) return;
         const query = document.getElementById('compendium-search').value;
         const resultBox = document.getElementById('compendium-results');
+        const source = document.getElementById('compendium-source-filter').value;
         
-        if (!query) return;
+        if (!query && !source) { resultBox.replaceChildren(); return; }
         resultBox.innerHTML = '查找中...';
 
-        // 使用 ilike 进行模糊搜索
-        const { data } = await supabaseClient
-            .from('compendium_items')
-            .select('*')
-            .ilike('name', `%${query}%`)
-            .limit(10);
+        let available;
+        try {
+            const data = await ShopSources.catalog(supabaseClient, { query, source });
+            available = await ShopSources.filterCatalog(supabaseClient, data, selectedUserId || myId, 'compendium-source-filter');
+        }
+        catch (error) { resultBox.textContent = '书籍设置读取失败：' + error.message; return; }
 
-        if (!data || data.length === 0) {
+        if (!available.length) {
             resultBox.innerHTML = '<div style="padding:5px; color:#999">未找到相关物品</div>';
             return;
         }
 
-        compendiumSearchResults = data;
-        resultBox.innerHTML = data.map((item, index) => `
+        compendiumSearchResults = available;
+        resultBox.innerHTML = available.map((item, index) => `
             <div onclick="fillShopFormByIndex(${index})" 
                  style="padding:5px; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9em; display:flex; justify-content:space-between;">
                 <span>${escapeHTML(item.name)}</span>
@@ -10107,14 +10135,8 @@ async function loadLoginLogs() {
             const shortageNotes = [];
 
             for (const row of plan) {
-                const { data, error } = await supabaseClient
-                    .from('compendium_items')
-                    .select('id, name, rarity, category, price, description')
-                    .eq('rarity', row.rarity);
-
-                if (error) throw error;
-
-                const pool = data || [];
+                const data = await ShopSources.catalog(supabaseClient, { rarity: row.rarity });
+                const pool = await ShopSources.filterCatalog(supabaseClient, data, targetId || myId);
                 const picked = shuffleItems(pool).slice(0, row.count);
                 if (picked.length < row.count) {
                     shortageNotes.push(`${row.rarity} 仅找到 ${picked.length}/${row.count} 种`);
@@ -10468,6 +10490,8 @@ async function loadLoginLogs() {
 
     // --- 加载出售界面 ---
     async function loadSellShop() {
+        shopLoadGeneration++;
+        document.getElementById('shop-source-filter').hidden = true;
         const grid = document.getElementById('shop-grid');
         const searchTerm = document.getElementById('shop-search-input').value.toLowerCase();
         grid.innerHTML = '正在估价中...';

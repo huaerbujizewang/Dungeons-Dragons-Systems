@@ -1,0 +1,11 @@
+.shop-source-book-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr)); gap: 0 16px; max-height: 320px; overflow: auto; border-block: 1px solid #dce4e1; }
+.shop-source-book-option { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid #edf1ef; font-size: 13px; line-height: 1.45; }
+.shop-source-book-option input { width: 16px; height: 16px; margin: 0; accent-color: #287d69; }
+.shop-source-book-option span { overflow-wrap: anywhere; }
+.shop-source-book-option small { color: #68766f; font-size: 11px; }
+.shop-source-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.shop-source-actions button { border: 1px solid #287d69; background: #287d69; color: white; padding: 8px 14px; border-radius: 4px; cursor: pointer; }
+.shop-source-actions button:disabled { opacity: .6; cursor: wait; }
+.shop-source-status { font-size: 12px; color: #52645c; overflow-wrap: anywhere; }
+.shop-source-select { min-width: 0; max-width: 100%; flex: 1 1 180px; padding: 9px; border: 1px solid #bccbc5; border-radius: 4px; background: white; color: #31483e; }
+.shop-source-label { font-size: 11px; line-height: 1.4; color: #527265; margin: 4px 0; overflow-wrap: anywhere; }
