@@ -14,7 +14,9 @@
 #shop-section #shop-source-filter { flex:0 1 210px; width:210px; }
 #shop-section #shop-rarity-filter { width:116px; }
 #shop-section #shop-sort-filter { width:132px; }
-#shop-section #shop-price-table-btn { flex-shrink:0; }
+#shop-section #shop-price-table-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; min-width:128px; min-height:42px; padding:10px 14px; border:1px solid #24634f; background:#286d57; color:#fff; font-size:13px; font-weight:700; line-height:20px; white-space:nowrap; box-shadow:0 1px 2px #183d2420; transition:background-color .15s,border-color .15s; }
+#shop-section #shop-price-table-btn:hover { background:#205a47; border-color:#194c3b; }
+#shop-section #shop-price-table-btn:active, #shop-section #shop-price-table-btn[aria-expanded="true"] { background:#194c3b; border-color:#194c3b; box-shadow:inset 0 1px 2px #102c3020; }
 #shop-section #shop-price-tools { padding:12px; background:#f5f8f5; border-bottom:1px solid #dce5df; }
 #shop-section #shop-price-search-input { width:100%; }
 #shop-section .shop-scope-tabs { display:flex; gap:22px; border-bottom:1px solid #dce5df; margin-bottom:20px; }

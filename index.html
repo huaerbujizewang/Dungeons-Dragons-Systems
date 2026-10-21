@@ -22,7 +22,7 @@
     <script src="shop-item-details.js?v=20261021-details2"></script>
     <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
     <script src="shop-shelf.js?v=20261021-shelf1"></script>
-    <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf1">
+    <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf2">
     <script src="shop-source-books.js?v=20261021-shelf1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -2072,7 +2072,7 @@
             <select id="shop-source-filter" class="shop-source-select" aria-label="来源书籍"><option value="">全部书籍</option></select>
             <select id="shop-rarity-filter" aria-label="稀有度"><option value="">全部稀有度</option><option>普通</option><option>非普通</option><option>珍稀</option><option>极珍稀</option><option>传说</option><option>神器</option></select>
             <select id="shop-sort-filter" aria-label="排序方式"><option value="rarity">稀有度优先</option><option value="price-asc">价格从低到高</option><option value="price-desc">价格从高到低</option><option value="name">名称排序</option></select>
-            <button id="shop-price-table-btn" type="button" onclick="toggleShopPriceTable()" aria-expanded="false" aria-controls="shop-price-tools">价格表</button>
+            <button id="shop-price-table-btn" type="button" onclick="toggleShopPriceTable()" aria-expanded="false" aria-controls="shop-price-tools"><svg class="shop-shelf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="assets/vendor/lucide/shop-icons.svg#scroll-text"></use></svg><span class="shop-price-table-label">查看价格表</span></button>
         </div>
         <div id="shop-price-tools" hidden>
             <input type="search" id="shop-price-search-input" placeholder="查询图鉴原价：物品、分类或稀有度" aria-label="查询图鉴原价" oninput="refreshShopPriceLookup()">
@@ -8109,7 +8109,7 @@ async function loadGold() {
         shopPriceTableVisible = !shopPriceTableVisible;
         document.getElementById('shop-price-tools').hidden = !shopPriceTableVisible;
         if (btn) {
-            btn.innerText = shopPriceTableVisible ? '收起价格表' : '价格表';
+            btn.querySelector('.shop-price-table-label').textContent = shopPriceTableVisible ? '收起价格表' : '查看价格表';
             btn.setAttribute('aria-expanded', String(shopPriceTableVisible));
         }
         await refreshShopPriceLookup();
