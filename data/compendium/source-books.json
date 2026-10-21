@@ -3,35 +3,35 @@
     "code": "DMG24",
     "name": "地下城主指南2024",
     "official": true,
-    "item_count": 757,
+    "item_count": 462,
     "matched_page_count": 83
   },
   {
     "code": "PHB24",
     "name": "玩家手册2024",
     "official": true,
-    "item_count": 356,
+    "item_count": 570,
     "matched_page_count": 25
   },
   {
     "code": "XGE",
     "name": "珊娜萨的万事指南",
     "official": true,
-    "item_count": 53,
+    "item_count": 100,
     "matched_page_count": 14
   },
   {
     "code": "TCE",
     "name": "塔莎的万事坩埚",
     "official": true,
-    "item_count": 52,
+    "item_count": 56,
     "matched_page_count": 16
   },
   {
     "code": "FTD",
     "name": "费资本的巨龙宝库",
     "official": true,
-    "item_count": 24,
+    "item_count": 30,
     "matched_page_count": 5
   },
   {
@@ -45,7 +45,7 @@
     "code": "BoMT",
     "name": "万象无常书",
     "official": true,
-    "item_count": 58,
+    "item_count": 60,
     "matched_page_count": 192
   },
   {
@@ -87,14 +87,14 @@
     "code": "SJA",
     "name": "星界冒险者指南",
     "official": true,
-    "item_count": 1,
+    "item_count": 2,
     "matched_page_count": 2
   },
   {
     "code": "SatO",
     "name": "印记城与外域",
     "official": true,
-    "item_count": 1,
+    "item_count": 2,
     "matched_page_count": 2
   },
   {
@@ -143,7 +143,7 @@
     "code": "AU",
     "name": "启封奥秘",
     "official": true,
-    "item_count": 6,
+    "item_count": 61,
     "matched_page_count": 22
   },
   {
@@ -157,14 +157,14 @@
     "code": "LLK",
     "name": "夸力许的失落实验室",
     "official": true,
-    "item_count": 2,
+    "item_count": 4,
     "matched_page_count": 2
   },
   {
     "code": "AI",
     "name": "艾奎兹玄有限责任公司",
     "official": true,
-    "item_count": 3,
+    "item_count": 6,
     "matched_page_count": 2
   },
   {
@@ -179,6 +179,13 @@
     "name": "私设",
     "official": false,
     "item_count": 4,
+    "matched_page_count": 0
+  },
+  {
+    "code": "GENERAL",
+    "name": "通用",
+    "official": true,
+    "item_count": 10,
     "matched_page_count": 0
   }
 ]
