@@ -20,7 +20,7 @@
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-item-details.js?v=20261021-details2"></script>
-    <link rel="stylesheet" href="shop-item-details.css?v=20261021-details2">
+    <link rel="stylesheet" href="shop-item-details.css?v=20261021-card-b">
     <script src="shop-source-books.js?v=20261021-books"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -8150,6 +8150,8 @@ async function loadGold() {
 
         // 4. 渲染卡片
         const canManage = isCurrentAdmin();
+        const rarityInk = { '普通': '#657679', '非普通': '#1d7f43', '珍稀': '#2672ac',
+            '极珍稀': '#8253a3', '传说': '#947008', '神器': '#b94036' };
         
         grid.innerHTML = filteredData.map(i => {
             const color = rarityColors[i.rarity] || '#ccc';
@@ -8161,62 +8163,33 @@ async function loadGold() {
             const categoryArg = jsStringAttr(i.category);
             
             // 下架按钮 (仅管理员可见)
-            const deleteBtn = canManage ? 
-                `<button onclick="deleteShopItem(${i.id}, ${nameArg})" 
-                    style="background:#e74c3c; color:white; border:none; margin-top:8px; font-size:0.8em; padding:5px; width:100%; border-radius:4px; opacity:0.8;">
-                    🗑️ 下架商品
-                </button>` : '';
-
-            // 特供标识
-            const specialTag = i.user_id ? 
-                `<div style="font-size:0.7em; color:#3498db; margin-bottom:4px; font-weight:bold;">👤 特供物资</div>` : 
-                `<div style="font-size:0.7em; color:#999; margin-bottom:4px;">🌐 公共物资</div>`;
-
-            // 卡片样式 (售罄变灰)
-            const cardStyle = `position:relative; padding-top:25px; ${isOut ? 'opacity:0.6; background:#f9f9f9;' : ''}`;
+            const deleteBtn = canManage ?
+                `<button class="shop-card-remove" type="button" onclick="deleteShopItem(${i.id}, ${nameArg})">下架商品</button>` : '';
+            const cardStyle = `--shop-rarity:${color}; --shop-rarity-ink:${rarityInk[i.rarity] || '#657679'};`;
 
             return `
-                <div class="card shop-card" style="${cardStyle}">
-                    <!-- 右上角稀有度标签 -->
-                    <span class="rarity-tag" style="
-                        background:${color}; 
-                        color:white; 
-                        font-size:0.7em; 
-                        padding:2px 8px; 
-                        border-radius:2px; 
-                        position:absolute; 
-                        top:8px; 
-                        right:8px; 
-                        font-weight:bold; 
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        ${safeRarity}
-                    </span>
-
-                    ${specialTag}
-                    <div class="shop-source-label">${escapeHTML(ShopSources.label(i.source_book))}</div>
-                    
-                    <b class="shop-item-name" style="font-size:1.1em;">${safeName}</b>
-                    
-                    <div style="font-size:0.8em; color:#666; margin:5px 0;">
-                        [${safeCategory}]
+                <div class="card shop-card${isOut ? ' shop-card-out' : ''}" style="${cardStyle}">
+                    <div class="shop-card-heading">
+                        <b class="shop-item-name">${safeName}</b>
+                        <span class="shop-card-rarity">${safeRarity}</span>
                     </div>
-                    
-                    <button class="shop-detail-trigger" type="button" onclick="openShopItemDetails(${i.id})" title="查看完整物品描述">查看描述</button>
-                    
-                    <div class="shop-card-pricing" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-                        <span style="color:#d35400; font-weight:bold; font-size:1.1em;">💰 ${formatCurrency(i.price)}</span>
-                        <span style="font-size:0.8em; color:${isOut ? 'red' : '#27ae60'};">
-                            ${isOut ? '❌ 售罄' : `库存: ${i.stock}`}
-                        </span>
+                    <div class="shop-card-supply${i.user_id ? ' is-special' : ''}">${i.user_id ? '特供物资' : '公共物资'}</div>
+                    <dl class="shop-card-facts">
+                        <div><dt>类型</dt><dd>${safeCategory}</dd></div>
+                        <div><dt>来源</dt><dd class="shop-source-label">${escapeHTML(ShopSources.label(i.source_book))}</dd></div>
+                    </dl>
+                    <div class="shop-card-footer">
+                        <div class="shop-card-pricing">
+                            <span class="shop-card-price">${formatCurrency(i.price)}</span>
+                            <span class="shop-card-stock">${isOut ? '售罄' : `库存 ${i.stock}`}</span>
+                        </div>
+                        <div class="shop-card-actions">
+                            <button class="shop-detail-trigger" type="button" onclick="openShopItemDetails(${i.id})" title="查看完整物品描述">查看描述</button>
+                            <button class="btn-buy" type="button"
+                                onclick="buy(${i.id}, ${i.price}, ${nameArg}, ${categoryArg})"
+                                ${isOut ? 'disabled' : ''}>${isOut ? '缺货' : '确认购买'}</button>
+                        </div>
                     </div>
-                    
-                    <button class="btn-buy" 
-                        onclick="buy(${i.id}, ${i.price}, ${nameArg}, ${categoryArg})" 
-                        ${isOut ? 'disabled' : ''}
-                        style="margin-top:10px;">
-                        ${isOut ? '缺货' : '确认购买'}
-                    </button>
-                    
                     ${deleteBtn}
                 </div>`;
         }).join('');
