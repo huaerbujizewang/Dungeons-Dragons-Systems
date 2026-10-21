@@ -18,6 +18,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="finance-ledger.js?v=20261020"></script>
     <script src="stocks.js?v=20261020-ledger"></script>
+    <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
+    <script src="shop-item-details.js?v=20261021-identity"></script>
+    <link rel="stylesheet" href="shop-item-details.css?v=20261021">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
@@ -2790,6 +2793,7 @@
                     <input type="number" id="adm-shop-stock" placeholder="库存">
                     <select id="adm-shop-target" style="grid-column: 1/3;"><option value="public">🌐 全服公共</option><option value="private">👤 仅当前选中的玩家</option></select>
                     <textarea id="adm-shop-desc" placeholder="描述..." style="grid-column: 1/3; height:50px;"></textarea>
+                    <label style="grid-column: 1/3;"><input type="checkbox" id="adm-shop-description-override"> 保留商品独立描述</label>
                 </div>
                 <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:10px;">确认上架</button>
                 <div style="margin-top:12px; padding:10px; background:#fff7f7; border:1px dashed #e74c3c; border-radius:6px;">
@@ -8097,6 +8101,8 @@ async function loadGold() {
             return;
         }
 
+        ShopItemDetails.setItems(data || []);
+
         // 2. 前端过滤 (搜索框)
         const filteredData = data.filter(i => {
             if (!searchTerm) return true;
@@ -8130,7 +8136,7 @@ async function loadGold() {
             const safeName = escapeHTML(i.name);
             const safeCategory = escapeHTML(i.category || '杂项');
             const safeRarity = escapeHTML(i.rarity || '普通');
-            const safeDescription = escapeHTML(i.description || '暂无描述');
+            const safeDescription = escapeHTML(String(i.description || '').trim() || '暂无描述');
             const nameArg = jsStringAttr(i.name);
             const categoryArg = jsStringAttr(i.category);
             
@@ -8174,9 +8180,10 @@ async function loadGold() {
                         [${safeCategory}]
                     </div>
                     
-                    <div style="font-size:0.75em; color:#777; margin:5px 0; line-height:1.4; min-height:2.8em;">
+                    <div class="shop-description-preview">
                         ${safeDescription}
                     </div>
+                    <button class="shop-detail-trigger" type="button" onclick="openShopItemDetails(${i.id})" title="查看完整物品描述">查看描述</button>
                     
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
                         <span style="color:#d35400; font-weight:bold; font-size:1.1em;">💰 ${formatCurrency(i.price)}</span>
@@ -8195,6 +8202,10 @@ async function loadGold() {
                     ${deleteBtn}
                 </div>`;
         }).join('');
+    }
+
+    async function openShopItemDetails(id) {
+        await ShopItemDetails.open(id, (_name, item) => CompendiumIdentity.lookup(supabaseClient, item));
     }
 
     // 3. ：下架商品逻辑
@@ -8742,7 +8753,7 @@ async function buy(id, p, n, c) {
             note: `购买 ${n} ×1，单价 ${formatCurrency(p)}。`,
             details: { item_id: id, item_name: n, quantity: 1, unit_price: roundCurrency(p), category: c || '杂项' }
         });
-        const { data, error } = await financeClient.rpc('atomic_buy_item', {
+        const { data, error } = await financeClient.rpc('atomic_buy_item_identity', {
             p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
             p_item_id: parseInt(id),  // 确保是数字
             p_price: roundCurrency(p),   // 确保支持两位小数数字
@@ -9221,6 +9232,7 @@ async function adjustUserGold(direction) {
             grantQueue[index].category = normalizeGrantCategory(value);
         } else {
             grantQueue[index].name = value;
+            grantQueue[index].compendium_item_id = null;
         }
     }
 
@@ -9229,17 +9241,18 @@ async function adjustUserGold(direction) {
         renderGrantQueue();
     }
 
-    function addGrantQueueItem(name, category = '杂项', quantity = 1) {
+    function addGrantQueueItem(name, category = '杂项', quantity = 1, compendiumItemId = null) {
         const cleanName = String(name || '').trim();
         if (!cleanName) return alert('请输入物品名');
 
         const cleanCategory = normalizeGrantCategory(category);
         const cleanQuantity = Math.max(1, parseInt(quantity, 10) || 1);
-        const existing = grantQueue.find(item => item.name === cleanName && item.category === cleanCategory);
+        const identity = CompendiumIdentity.key({ name: cleanName, compendium_item_id: compendiumItemId });
+        const existing = grantQueue.find(item => CompendiumIdentity.key(item) === identity && item.category === cleanCategory);
         if (existing) {
             existing.quantity += cleanQuantity;
         } else {
-            grantQueue.push({ name: cleanName, category: cleanCategory, quantity: cleanQuantity });
+            grantQueue.push({ name: cleanName, category: cleanCategory, quantity: cleanQuantity, compendium_item_id: compendiumItemId });
         }
 
         renderGrantQueue();
@@ -9256,7 +9269,7 @@ async function adjustUserGold(direction) {
     function addGrantQueueFromResult(index) {
         const item = grantSearchResults[index];
         if (!item) return;
-        addGrantQueueItem(item.name, item.category || '杂项', 1);
+        addGrantQueueItem(item.name, item.category || '杂项', 1, item.id);
     }
 
     function searchGrantItems() {
@@ -9281,7 +9294,7 @@ async function adjustUserGold(direction) {
 
         const { data, error } = await supabaseClient
             .from('compendium_items')
-            .select('name, category, price, rarity')
+            .select('id, name, category, price, rarity')
             .ilike('name', `%${query}%`)
             .limit(12);
 
@@ -9309,54 +9322,56 @@ async function adjustUserGold(direction) {
         if (!await requireAdminRole()) return;
         if (!selectedUserId) return alert('请先选择一个玩家');
 
+        showLoading();
+        try {
         const normalized = new Map();
-        grantQueue.forEach(item => {
+        for (const item of grantQueue) {
             const name = String(item.name || '').trim();
             const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
-            if (!name) return;
+            if (!name) continue;
+            const compendiumItemId = item.compendium_item_id ?? await CompendiumIdentity.resolveName(supabaseClient, name);
+            const identity = CompendiumIdentity.key({ name, compendium_item_id: compendiumItemId });
 
-            if (normalized.has(name)) {
-                normalized.get(name).quantity += quantity;
+            if (normalized.has(identity)) {
+                normalized.get(identity).quantity += quantity;
             } else {
-                normalized.set(name, {
+                normalized.set(identity, {
                     item_name: name,
+                    compendium_item_id: compendiumItemId,
                     quantity,
                     category: normalizeGrantCategory(item.category)
                 });
             }
-        });
+        }
 
         const itemsToGrant = [...normalized.values()];
-        if (itemsToGrant.length === 0) return alert('发放清单为空');
+        if (itemsToGrant.length === 0) { hideLoading(); return alert('发放清单为空'); }
 
-        showLoading();
-        try {
-            const itemNames = itemsToGrant.map(item => item.item_name);
             const { data: existingItems, error: fetchErr } = await supabaseClient
                 .from('user_inventory')
-                .select('id, item_name, quantity')
-                .eq('user_id', selectedUserId)
-                .in('item_name', itemNames);
+                .select('id, item_name, quantity, compendium_item_id')
+                .eq('user_id', selectedUserId);
 
             if (fetchErr) throw fetchErr;
 
-            const existingMap = new Map((existingItems || []).map(item => [item.item_name, item]));
+            const existingMap = new Map((existingItems || []).map(item => [CompendiumIdentity.key(item), item]));
             const inserts = [];
             const updateTasks = [];
 
             itemsToGrant.forEach(item => {
-                const existing = existingMap.get(item.item_name);
+                const existing = existingMap.get(CompendiumIdentity.key(item));
                 if (existing) {
                     updateTasks.push(
                         supabaseClient
                             .from('user_inventory')
-                            .update({ quantity: (existing.quantity || 0) + item.quantity })
+                            .update({ quantity: (existing.quantity || 0) + item.quantity, compendium_item_id: item.compendium_item_id })
                             .eq('id', existing.id)
                     );
                 } else {
                     inserts.push({
                         user_id: selectedUserId,
                         item_name: item.item_name,
+                        compendium_item_id: item.compendium_item_id,
                         quantity: item.quantity,
                         category: item.category
                     });
@@ -9685,6 +9700,7 @@ async function calculateCityNetIncome(targetUserId) {
         const price = parseCurrencyInput(document.getElementById('adm-shop-price').value);
         const stock = parseInt(document.getElementById('adm-shop-stock').value);
         const description = document.getElementById('adm-shop-desc').value;
+        const descriptionOverride = document.getElementById('adm-shop-description-override').checked;
         const targetType = document.getElementById('adm-shop-target').value;
 
         if (!name || Number.isNaN(price)) return alert('名称和价格必填');
@@ -9705,8 +9721,12 @@ async function calculateCityNetIncome(targetUserId) {
 
         showLoading();
         try {
+            const compendiumItemId = selectedShopCompendiumItem?.name === name ? selectedShopCompendiumItem.id :
+                await CompendiumIdentity.resolveName(supabaseClient, name);
             const { error } = await supabaseClient.from('shop_items').insert([{
                 name, rarity, category, price, stock, description,
+                compendium_item_id: compendiumItemId,
+                description_override: descriptionOverride,
                 user_id: targetUserId // 写入归属
             }]);
 
@@ -9719,6 +9739,8 @@ async function calculateCityNetIncome(targetUserId) {
             document.getElementById('adm-shop-name').value = '';
             document.getElementById('adm-shop-price').value = '';
             document.getElementById('adm-shop-desc').value = '';
+            selectedShopCompendiumItem = null;
+            document.getElementById('adm-shop-description-override').checked = false;
             loadShop();
         } catch (e) {
             console.error(e);
@@ -9864,6 +9886,7 @@ async function loadLoginLogs() {
     }
     // --- 图鉴搜索功能 ---
     let compendiumSearchResults = [];
+    let selectedShopCompendiumItem = null;
 
     async function searchCompendium() {
         if (!await requireAdminRole()) return;
@@ -9902,6 +9925,8 @@ async function loadLoginLogs() {
 
     // 选中后自动填表
     function fillShopForm(item) {
+        selectedShopCompendiumItem = { id: item.id, name: item.name };
+        document.getElementById('adm-shop-description-override').checked = false;
         document.getElementById('adm-shop-name').value = item.name;
         document.getElementById('adm-shop-price').value = item.price;
         document.getElementById('adm-shop-desc').value = item.description || '';
@@ -10084,7 +10109,7 @@ async function loadLoginLogs() {
             for (const row of plan) {
                 const { data, error } = await supabaseClient
                     .from('compendium_items')
-                    .select('name, rarity, category, price, description')
+                    .select('id, name, rarity, category, price, description')
                     .eq('rarity', row.rarity);
 
                 if (error) throw error;
@@ -10098,6 +10123,7 @@ async function loadLoginLogs() {
                 picked.forEach(item => {
                     rowsToInsert.push({
                         name: item.name,
+                        compendium_item_id: item.id,
                         rarity: item.rarity,
                         category: item.category,
                         price: item.price,
@@ -10457,17 +10483,13 @@ async function loadLoginLogs() {
             return;
         }
 
-        // 2. 提取物品名字列表，去 compendium_items (图鉴) 查基础价格
-        const itemNames = inventory.map(i => i.item_name);
-        const { data: prices } = await supabaseClient
-            .from('compendium_items')
-            .select('name, price, rarity')
-            .in('name', itemNames);
-
-        // 3. 构建价格字典 (名字 -> 价格对象)
-        const priceMap = {};
-        if (prices) {
-            prices.forEach(p => priceMap[p.name] = p);
+        let priceMap;
+        try {
+            priceMap = await CompendiumIdentity.lookupMany(supabaseClient, inventory);
+        } catch (error) {
+            console.error('Inventory identity lookup failed:', error);
+            grid.innerHTML = '<div style="color:red; padding:20px;">物品估价失败，请确认 compendium_upgrade.sql 已执行后重试。</div>';
+            return;
         }
 
         grid.innerHTML = '';
@@ -10477,7 +10499,7 @@ async function loadLoginLogs() {
             // 搜索过滤
             if (searchTerm && !item.item_name.toLowerCase().includes(searchTerm)) return;
 
-            const baseInfo = priceMap[item.item_name];
+            const baseInfo = priceMap.get(CompendiumIdentity.key(item));
             let sellHtml = '';
             let cardStyle = '';
 
@@ -10493,7 +10515,7 @@ async function loadLoginLogs() {
                         回收价: ${formatCurrency(sellPrice)} <span style="font-size:0.7em; color:#666;">(${discount}%)</span>
                     </div>
                     <div style="font-size:0.75em; color:#aaa; margin-bottom:5px;">今日汇率已锁定</div>
-                    <button class="btn-buy" onclick="sellItem(${item.id}, '${item.item_name}', ${sellPrice}, ${item.quantity})" style="border-color:#e67e22; color:#e67e22;">
+                    <button class="btn-buy" onclick="sellItem(${item.id}, ${jsStringAttr(item.item_name)}, ${sellPrice}, ${item.quantity})" style="border-color:#e67e22; color:#e67e22;">
                         出售
                     </button>
                 `;
@@ -10514,7 +10536,7 @@ async function loadLoginLogs() {
             // 渲染
             grid.innerHTML += `
                 <div class="card" style="text-align:center; ${cardStyle}">
-                    <div style="font-weight:bold; font-size:1.1em;">${item.item_name}</div>
+                    <div style="font-weight:bold; font-size:1.1em;">${escapeHTML(item.item_name)}</div>
                     <div style="color:#666; font-size:0.9em;">库存: ${item.quantity}</div>
                     <hr style="margin:10px 0; border:0; border-top:1px dashed #eee;">
                     ${sellHtml}
@@ -12047,6 +12069,11 @@ async function getRobustIP() {
         // 3. 统计获得的凭证数量
         const counts = {};
         results.forEach(r => counts[r.name] = (counts[r.name] || 0) + 1);
+        const grants = [];
+        for (const name of Object.keys(counts)) {
+            grants.push({ item_name: name, quantity: counts[name],
+                compendium_item_id: await CompendiumIdentity.resolveName(supabaseClient, name) });
+        }
         const financeClient = await FinanceLedger.withContext(supabaseClient, {
             source: 'gacha', title: results.length === 1 ? '干员寻访：单抽' : `干员寻访：${results.length}连抽`,
             note: `本次寻访结果：${Object.entries(counts).map(([name, quantity]) => `${name} ×${quantity}`).join('；')}。`,
@@ -12061,20 +12088,22 @@ async function getRobustIP() {
         if (fundsError) throw fundsError;
 
         // 5. 更新数据库：发放凭证到背包
-        const itemNames = Object.keys(counts);
         const { data: existItems, error: inventoryError } = await supabaseClient.from('user_inventory')
-            .select('*').eq('user_id', viewingUserId).in('item_name', itemNames);
+            .select('*').eq('user_id', viewingUserId);
         if (inventoryError) throw inventoryError;
             
-        for (const name of itemNames) {
-            const qtyToAdd = counts[name];
-            const existing = existItems.find(i => i.item_name === name);
+        for (const grant of grants) {
+            const name = grant.item_name;
+            const qtyToAdd = grant.quantity;
+            const existing = existItems.find(i => CompendiumIdentity.key(i) === CompendiumIdentity.key(grant));
             if (existing) {
-                const { error } = await supabaseClient.from('user_inventory').update({ quantity: existing.quantity + qtyToAdd }).eq('id', existing.id);
+                const { error } = await supabaseClient.from('user_inventory').update({ quantity: existing.quantity + qtyToAdd,
+                    compendium_item_id: grant.compendium_item_id }).eq('id', existing.id);
                 if (error) throw error;
             } else {
                 const { error } = await supabaseClient.from('user_inventory').insert([{
-                    user_id: viewingUserId, item_name: name, quantity: qtyToAdd, category: '凭证'
+                    user_id: viewingUserId, item_name: name, quantity: qtyToAdd, category: '凭证',
+                    compendium_item_id: grant.compendium_item_id
                 }]);
                 if (error) throw error;
             }
