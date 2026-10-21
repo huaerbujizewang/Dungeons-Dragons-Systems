@@ -20,8 +20,10 @@
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-item-details.js?v=20261021-details2"></script>
-    <link rel="stylesheet" href="shop-item-details.css?v=20261021-card-b">
-    <script src="shop-source-books.js?v=20261021-books"></script>
+    <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
+    <script src="shop-shelf.js?v=20261021-shelf1"></script>
+    <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf1">
+    <script src="shop-source-books.js?v=20261021-shelf1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
@@ -2058,20 +2060,41 @@
 
     <!-- 集市 -->
      <div id="shop-section" class="section active">
-        <div style="margin-bottom:12px; display:flex; gap:10px; align-items:center; background:#f8f9fa; padding:10px; border-radius:8px; flex-wrap:wrap;">
-            <button id="shop-mode-btn" onclick="toggleShopMode()" style="padding:10px 20px; background:#333; color:#fff; border:none; border-radius:4px; white-space:nowrap;">🔄 切换：我要出售</button>
-            <input type="text" id="shop-search-input" placeholder="🔍 搜索..." oninput="refreshShopView()" style="flex:1 1 260px; padding:10px; font-size:1em; border:1px solid #ccc; border-radius:6px;">
-            <select id="shop-source-filter" class="shop-source-select" aria-label="来源书籍" onchange="refreshShopView()"><option value="">全部书籍</option></select>
-        </div>
-        <div style="margin-bottom:18px; background:#fff; border:1px solid #e1e7eb; border-radius:8px; padding:10px;">
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <input type="text" id="shop-price-search-input" placeholder="🔎 价格查询：输入物品、分类或稀有度" oninput="refreshShopPriceLookup()" onfocus="refreshShopPriceLookup()" style="flex:1 1 280px; padding:10px; font-size:0.95em; border:1px solid #ccc; border-radius:6px;">
-                <button id="shop-price-table-btn" onclick="toggleShopPriceTable()" style="padding:10px 14px; background:#5d6d7e; color:white; border:none; border-radius:4px;">价格表</button>
+        <div class="shop-header">
+            <h2>位面集市</h2>
+            <div class="shop-mode-tabs" aria-label="交易模式">
+                <button id="shop-buy-mode-btn" type="button" onclick="setShopMode(false)" aria-pressed="true">购买商品</button>
+                <button id="shop-mode-btn" type="button" onclick="setShopMode(true)" aria-pressed="false">出售物品</button>
             </div>
+        </div>
+        <div class="shop-toolbar">
+            <input type="search" id="shop-search-input" placeholder="搜索商品名称、类型…" aria-label="搜索商品">
+            <select id="shop-source-filter" class="shop-source-select" aria-label="来源书籍"><option value="">全部书籍</option></select>
+            <select id="shop-rarity-filter" aria-label="稀有度"><option value="">全部稀有度</option><option>普通</option><option>非普通</option><option>珍稀</option><option>极珍稀</option><option>传说</option><option>神器</option></select>
+            <select id="shop-sort-filter" aria-label="排序方式"><option value="rarity">稀有度优先</option><option value="price-asc">价格从低到高</option><option value="price-desc">价格从高到低</option><option value="name">名称排序</option></select>
+            <button id="shop-price-table-btn" type="button" onclick="toggleShopPriceTable()" aria-expanded="false" aria-controls="shop-price-tools">价格表</button>
+        </div>
+        <div id="shop-price-tools" hidden>
+            <input type="search" id="shop-price-search-input" placeholder="查询图鉴原价：物品、分类或稀有度" aria-label="查询图鉴原价" oninput="refreshShopPriceLookup()">
             <div id="shop-price-lookup-results" style="display:none; margin-top:8px;"></div>
             <div id="shop-price-table-panel" style="display:none; margin-top:10px; max-height:420px; overflow:auto; border-top:1px solid #edf3f8; padding-top:8px;"></div>
         </div>
-        <div id="shop-grid" class="shop-grid"></div>
+        <div class="shop-scope-tabs" aria-label="供货范围">
+            <button type="button" data-shop-scope="all" aria-pressed="true">全部供货</button>
+            <button type="button" data-shop-scope="public" aria-pressed="false">全服公共</button>
+            <button type="button" data-shop-scope="private" aria-pressed="false">当前特供</button>
+        </div>
+        <div class="shop-shell">
+            <aside class="shop-category-rail" aria-label="商品分类"><h3>商品分类</h3><nav id="shop-category-nav"></nav></aside>
+            <div class="shop-shelf-main">
+                <div class="shop-shelf-topline">
+                    <h3 id="shop-shelf-heading">全部商品</h3>
+                    <select id="shop-category-mobile" aria-label="商品分类"></select>
+                    <span id="shop-shelf-count" role="status"></span>
+                </div>
+                <div id="shop-grid" class="shop-grid" aria-live="polite"></div>
+            </div>
+        </div>
     </div>
 
     <!-- 队伍面板 -->
@@ -8084,25 +8107,46 @@ async function loadGold() {
         const btn = document.getElementById('shop-price-table-btn');
         if (!panel) return;
         shopPriceTableVisible = !shopPriceTableVisible;
-        if (btn) btn.innerText = shopPriceTableVisible ? '收起价格表' : '价格表';
+        document.getElementById('shop-price-tools').hidden = !shopPriceTableVisible;
+        if (btn) {
+            btn.innerText = shopPriceTableVisible ? '收起价格表' : '价格表';
+            btn.setAttribute('aria-expanded', String(shopPriceTableVisible));
+        }
         await refreshShopPriceLookup();
     }
 
+    let shopShelfBuyRows = [];
+    let shopShelfSellRows = [];
+    let shopShelfAccountId = null;
+
+    function refreshShopFilters() {
+        if (shopShelfAccountId !== viewingUserId) return;
+        if (isSellMode) renderSellShopItems(shopShelfSellRows);
+        else renderShopItems(shopShelfBuyRows);
+    }
+
     async function loadShop() {
+        if (isSellMode) return loadSellShop();
         const request = ++shopLoadGeneration;
         const accountId = viewingUserId;
         const grid = document.getElementById('shop-grid');
-        const searchInput = document.getElementById('shop-search-input');
-        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        ShopShelf.mount(refreshShopFilters);
+        ShopShelf.setMode(false);
         
         grid.innerHTML = '正在连接位面集市...';
 
         // 1. 数据库查询 (隔离逻辑)
         // 查询条件：(user_id 为空) OR (user_id 等于当前视角)
-        const { data, error } = await supabaseClient
-            .from('shop_items')
-            .select('*')
-            .or(`user_id.is.null,user_id.eq.${accountId}`);
+        const data = [];
+        let error;
+        for (let start = 0; ; start += 1000) {
+            const page = await supabaseClient.from('shop_items').select('*')
+                .or(`user_id.is.null,user_id.eq.${accountId}`).order('id').range(start, start + 999);
+            if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
+            if (page.error) { error = page.error; break; }
+            data.push(...(page.data || []));
+            if (!page.data || page.data.length < 1000) break;
+        }
 
         if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
 
@@ -8115,7 +8159,7 @@ async function loadGold() {
         let available;
         try {
             document.getElementById('shop-source-filter').hidden = false;
-            available = await ShopSources.filterListings(supabaseClient, data || [], accountId);
+            available = await ShopSources.filterListings(supabaseClient, data || [], accountId, { allBooks:true });
             if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
         } catch (error) {
             if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
@@ -8123,32 +8167,19 @@ async function loadGold() {
             return;
         }
         ShopItemDetails.setItems(available);
+        shopShelfAccountId = accountId;
+        shopShelfBuyRows = available;
+        renderShopItems(available);
+    }
 
-        // 2. 前端过滤 (搜索框)
-        const filteredData = available.filter(i => {
-            if (!searchTerm) return true;
-            return (i.name && i.name.toLowerCase().includes(searchTerm)) || 
-                   (i.category && i.category.toLowerCase().includes(searchTerm));
-        });
-
+    function renderShopItems(rows) {
+        const grid = document.getElementById('shop-grid');
+        const filteredData = ShopShelf.filter(rows);
         if (filteredData.length === 0) {
             grid.innerHTML = '<div style="color:#999; padding:20px; grid-column:1/-1; text-align:center;">暂无符合条件的商品</div>';
             return;
         }
 
-        // 3. 权重排序 (稀有度 > 价格)
-        const rarityWeight = { '神器': 6, '传说': 5, '极珍稀': 4, '珍稀': 3, '非普通': 2, '普通': 1 };
-        
-        filteredData.sort((a, b) => {
-            const weightA = rarityWeight[a.rarity] || 0;
-            const weightB = rarityWeight[b.rarity] || 0;
-            // 先比稀有度 (大到小)
-            if (weightA !== weightB) return weightB - weightA;
-            // 再比价格 (高到低)
-            return b.price - a.price;
-        });
-
-        // 4. 渲染卡片
         const canManage = isCurrentAdmin();
         const rarityInk = { '普通': '#657679', '非普通': '#1d7f43', '珍稀': '#2672ac',
             '极珍稀': '#8253a3', '传说': '#947008', '神器': '#b94036' };
@@ -8157,27 +8188,27 @@ async function loadGold() {
             const color = rarityColors[i.rarity] || '#ccc';
             const isOut = i.stock <= 0;
             const safeName = escapeHTML(i.name);
-            const safeCategory = escapeHTML(i.category || '杂项');
+            const safeCategory = escapeHTML(ShopShelf.label(i.shop_shelf_category || ShopShelf.classify(i)));
             const safeRarity = escapeHTML(i.rarity || '普通');
             const nameArg = jsStringAttr(i.name);
             const categoryArg = jsStringAttr(i.category);
             
             // 下架按钮 (仅管理员可见)
             const deleteBtn = canManage ?
-                `<button class="shop-card-remove" type="button" onclick="deleteShopItem(${i.id}, ${nameArg})">下架商品</button>` : '';
+                `<details class="shop-item-admin-menu"><summary aria-label="管理 ${safeName}" title="管理商品">${ShopShelf.icon('ellipsis')}</summary><div><button class="shop-card-remove" type="button" onclick="deleteShopItem(${i.id}, ${nameArg})">下架商品</button></div></details>` : '';
             const cardStyle = `--shop-rarity:${color}; --shop-rarity-ink:${rarityInk[i.rarity] || '#657679'};`;
 
             return `
                 <div class="card shop-card${isOut ? ' shop-card-out' : ''}" style="${cardStyle}">
+                    <div class="shop-card-topline">
+                        <span class="shop-card-supply${i.user_id ? ' is-special' : ''}">${i.user_id ? '特供' : '公共'}</span>
+                        <span class="shop-card-rarity">${safeRarity}</span>
+                        ${deleteBtn}
+                    </div>
                     <div class="shop-card-heading">
                         <b class="shop-item-name">${safeName}</b>
-                        <span class="shop-card-rarity">${safeRarity}</span>
                     </div>
-                    <div class="shop-card-supply${i.user_id ? ' is-special' : ''}">${i.user_id ? '特供物资' : '公共物资'}</div>
-                    <dl class="shop-card-facts">
-                        <div><dt>类型</dt><dd>${safeCategory}</dd></div>
-                        <div><dt>来源</dt><dd class="shop-source-label">${escapeHTML(ShopSources.label(i.source_book))}</dd></div>
-                    </dl>
+                    <div class="shop-card-category" title="${escapeHTML(ShopSources.label(i.source_book))}">${safeCategory}</div>
                     <div class="shop-card-footer">
                         <div class="shop-card-pricing">
                             <span class="shop-card-price">${formatCurrency(i.price)}</span>
@@ -8187,10 +8218,9 @@ async function loadGold() {
                             <button class="shop-detail-trigger" type="button" onclick="openShopItemDetails(${i.id})" title="查看完整物品描述">查看描述</button>
                             <button class="btn-buy" type="button"
                                 onclick="buy(${i.id}, ${i.price}, ${nameArg}, ${categoryArg})"
-                                ${isOut ? 'disabled' : ''}>${isOut ? '缺货' : '确认购买'}</button>
+                                ${isOut ? 'disabled' : ''}>${isOut ? '缺货' : '购买'}</button>
                         </div>
                     </div>
-                    ${deleteBtn}
                 </div>`;
         }).join('');
     }
@@ -10443,19 +10473,14 @@ async function loadLoginLogs() {
 
     function toggleShopMode() {
         isSellMode = !isSellMode;
-        const btn = document.getElementById('shop-mode-btn');
         const input = document.getElementById('shop-search-input');
-        
-        if (isSellMode) {
-            btn.innerText = "🔙 返回：我要购买";
-            btn.style.background = "#e67e22"; // 橙色表示出售状态
-            input.placeholder = "🔍 搜索背包里的物品...";
-        } else {
-            btn.innerText = "🔄 切换：我要出售";
-            btn.style.background = "#333";
-            input.placeholder = "🔍 搜索集市商品...";
-        }
-        refreshShopView(); // 刷新显示
+        ShopShelf.setMode(isSellMode);
+        input.placeholder = isSellMode ? '搜索背包物品名称、类型…' : '搜索商品名称、类型…';
+        refreshShopView();
+    }
+
+    function setShopMode(sell) {
+        if (isSellMode !== sell) toggleShopMode();
     }
 
     // 统一的刷新入口
@@ -10469,20 +10494,29 @@ async function loadLoginLogs() {
 
     // --- 加载出售界面 ---
     async function loadSellShop() {
-        shopLoadGeneration++;
-        document.getElementById('shop-source-filter').hidden = true;
+        const request = ++shopLoadGeneration;
+        const accountId = viewingUserId;
+        ShopShelf.mount(refreshShopFilters);
+        ShopShelf.setMode(true);
         const grid = document.getElementById('shop-grid');
-        const searchTerm = document.getElementById('shop-search-input').value.toLowerCase();
         grid.innerHTML = '正在估价中...';
 
         // 1. 获取玩家背包
-        const { data: inventory } = await supabaseClient
+        const { data: inventory, error: inventoryError } = await supabaseClient
             .from('user_inventory')
             .select('*')
-            .eq('user_id', viewingUserId);
+            .eq('user_id', accountId);
+
+        if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
+        if (inventoryError) {
+            grid.textContent = '背包加载失败：' + inventoryError.message;
+            return;
+        }
 
         if (!inventory || inventory.length === 0) {
-            grid.innerHTML = '<div style="color:#999; padding:20px;">背包里空空如也，没东西可卖。</div>';
+            shopShelfAccountId = accountId;
+            shopShelfSellRows = [];
+            renderSellShopItems([]);
             return;
         }
 
@@ -10490,62 +10524,45 @@ async function loadLoginLogs() {
         try {
             priceMap = await CompendiumIdentity.lookupMany(supabaseClient, inventory);
         } catch (error) {
+            if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
             console.error('Inventory identity lookup failed:', error);
             grid.innerHTML = '<div style="color:red; padding:20px;">物品估价失败，请确认 compendium_upgrade.sql 已执行后重试。</div>';
             return;
         }
-
-        grid.innerHTML = '';
-
-        // 4. 渲染卡片
-        inventory.forEach(item => {
-            // 搜索过滤
-            if (searchTerm && !item.item_name.toLowerCase().includes(searchTerm)) return;
-
+        if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
+        shopShelfAccountId = accountId;
+        shopShelfSellRows = inventory.map(item => {
             const baseInfo = priceMap.get(CompendiumIdentity.key(item));
-            let sellHtml = '';
-            let cardStyle = '';
-
-            if (baseInfo && baseInfo.price) {
-                // --- 有图鉴数据，可以卖 ---
-                const ratio = getDailySellRatio(item.item_name); // 获取今日折扣
-                const sellPrice = Math.round(baseInfo.price * ratio * 100) / 100; // 保留两位小数
-                const discount = Math.round(ratio * 100); // 显示百分比
-
-                sellHtml = `
-                    <div style="font-size:0.8em; color:#999;">原价: ${formatCurrency(baseInfo.price)}</div>
-                    <div style="color:#e67e22; font-weight:bold; font-size:1.1em; margin:5px 0;">
-                        回收价: ${formatCurrency(sellPrice)} <span style="font-size:0.7em; color:#666;">(${discount}%)</span>
-                    </div>
-                    <div style="font-size:0.75em; color:#aaa; margin-bottom:5px;">今日汇率已锁定</div>
-                    <button class="btn-buy" onclick="sellItem(${item.id}, ${jsStringAttr(item.item_name)}, ${sellPrice}, ${item.quantity})" style="border-color:#e67e22; color:#e67e22;">
-                        出售
-                    </button>
-                `;
-            } else {
-                // --- 无图鉴数据，不可卖 ---
-                cardStyle = 'opacity: 0.6; background:#f9f9f9;';
-                sellHtml = `
-                    <div style="color:#999; margin:10px 0; font-size:0.9em;">
-                        无法估价<br>
-                        <span style="font-size:0.8em">(图鉴中未收录此物品)</span>
-                    </div>
-                    <button disabled style="width:100%; padding:8px; border:1px solid #ddd; background:#eee; color:#aaa; border-radius:4px; cursor:not-allowed;">
-                        不可出售
-                    </button>
-                `;
-            }
-
-            // 渲染
-            grid.innerHTML += `
-                <div class="card" style="text-align:center; ${cardStyle}">
-                    <div style="font-weight:bold; font-size:1.1em;">${escapeHTML(item.item_name)}</div>
-                    <div style="color:#666; font-size:0.9em;">库存: ${item.quantity}</div>
-                    <hr style="margin:10px 0; border:0; border-top:1px dashed #eee;">
-                    ${sellHtml}
-                </div>
-            `;
+            const ratio = getDailySellRatio(item.item_name);
+            return { ...baseInfo, ...item, name:item.item_name, source_book:baseInfo?.source_book,
+                rarity:baseInfo?.rarity || item.rarity, category:baseInfo?.category || item.category,
+                shop_shelf_category:ShopShelf.classify(baseInfo || item),
+                shop_search_terms:baseInfo?.source_metadata?.english_name || '',
+                shop_shelf_price:baseInfo?.price ? Math.round(baseInfo.price * ratio * 100) / 100 : null,
+                shop_sell_discount:Math.round(ratio * 100), shop_base_price:baseInfo?.price };
         });
+        renderSellShopItems(shopShelfSellRows);
+    }
+
+    function renderSellShopItems(rows) {
+        const grid = document.getElementById('shop-grid');
+        const items = ShopShelf.filter(rows);
+        if (!items.length) {
+            grid.innerHTML = '<div class="shop-empty">暂无符合条件的背包物品</div>';
+            return;
+        }
+        grid.innerHTML = items.map(item => {
+            const sellable = item.shop_shelf_price !== null;
+            return `<div class="card shop-card${sellable ? '' : ' shop-card-out'}" style="--shop-rarity:${rarityColors[item.rarity] || '#bac7c0'}">
+                <div class="shop-card-topline"><span class="shop-card-supply">我的背包</span><span class="shop-card-rarity">${escapeHTML(item.rarity || '')}</span></div>
+                <div class="shop-card-heading"><b class="shop-item-name">${escapeHTML(item.item_name)}</b></div>
+                <div class="shop-card-category">${escapeHTML(ShopShelf.label(item.shop_shelf_category))}</div>
+                <div class="shop-card-footer">
+                    <div class="shop-card-pricing"><span class="shop-card-price">${sellable ? formatCurrency(item.shop_shelf_price) : '无法估价'}</span><span class="shop-card-stock">持有 ${item.quantity}</span></div>
+                    <div class="shop-sell-quote">${sellable ? `原价 ${formatCurrency(item.shop_base_price)} · 今日 ${item.shop_sell_discount}%` : '图鉴中未收录此物品'}</div>
+                    <button class="btn-buy" type="button" ${sellable ? `onclick="sellItem(${item.id}, ${jsStringAttr(item.item_name)}, ${item.shop_shelf_price}, ${item.quantity})"` : 'disabled'}>${sellable ? '出售物品' : '不可出售'}</button>
+                </div></div>`;
+        }).join('');
     }
 
     const pendingItemSales = new Map();

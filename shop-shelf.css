@@ -1,0 +1,93 @@
+#shop-section { max-width: 1400px; color: #253b35; }
+#shop-section [hidden] { display: none !important; }
+#shop-section .shop-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:6px 0 18px; }
+#shop-section .shop-header h2 { margin:0; font-size:24px; color:#254c3d; }
+#shop-section button, #shop-section input, #shop-section select { font:inherit; letter-spacing:0; box-sizing:border-box; }
+#shop-section button { cursor:pointer; }
+#shop-section button:focus-visible, #shop-section summary:focus-visible, #shop-section select:focus-visible, #shop-section input:focus-visible { outline:2px solid #2b7963; outline-offset:3px; }
+#shop-section .shop-mode-tabs { display:flex; border:1px solid #bfcfc7; border-radius:4px; overflow:hidden; }
+#shop-section .shop-mode-tabs button { min-height:38px; padding:7px 20px; border:0; background:white; color:#52645c; font-size:13px; }
+#shop-section .shop-mode-tabs button[aria-pressed="true"] { background:#285f4e; color:white; }
+#shop-section .shop-toolbar { display:flex; gap:8px; align-items:center; padding:12px 0; border-top:1px solid #dce5df; border-bottom:1px solid #dce5df; }
+#shop-section .shop-toolbar input, #shop-section .shop-toolbar select, #shop-section .shop-toolbar button, #shop-section #shop-category-mobile, #shop-section #shop-price-search-input { min-height:38px; padding:8px 10px; background:#fff; border:1px solid #cdd8d1; border-radius:4px; color:#455b50; font-size:12px; min-width:0; }
+#shop-section .shop-toolbar input { flex:1 1 250px; }
+#shop-section #shop-source-filter { flex:0 1 210px; width:210px; }
+#shop-section #shop-rarity-filter { width:116px; }
+#shop-section #shop-sort-filter { width:132px; }
+#shop-section #shop-price-table-btn { flex-shrink:0; }
+#shop-section #shop-price-tools { padding:12px; background:#f5f8f5; border-bottom:1px solid #dce5df; }
+#shop-section #shop-price-search-input { width:100%; }
+#shop-section .shop-scope-tabs { display:flex; gap:22px; border-bottom:1px solid #dce5df; margin-bottom:20px; }
+#shop-section .shop-scope-tabs button { padding:13px 2px 11px; min-height:44px; border:0; border-bottom:2px solid transparent; background:none; color:#68786d; font-size:13px; }
+#shop-section .shop-scope-tabs button[aria-pressed="true"] { border-bottom-color:#2a7158; color:#225b44; font-weight:700; }
+#shop-section .shop-shell { display:grid; grid-template-columns:190px minmax(0,1fr); gap:24px; align-items:start; }
+#shop-section .shop-category-rail { position:sticky; top:18px; padding:0 14px 12px 0; border-right:1px solid #dce5df; }
+#shop-section .shop-category-rail h3 { margin:0 0 12px 10px; color:#718177; font-size:12px; font-weight:500; }
+#shop-section #shop-category-nav { display:grid; gap:3px; }
+#shop-section .shop-category-button { display:flex; gap:9px; align-items:center; min-height:40px; padding:8px 10px; width:100%; border:0; border-radius:4px; background:none; color:#53645a; text-align:left; font-size:13px; }
+#shop-section .shop-category-button:hover { background:#f0f5f0; }
+#shop-section .shop-category-button[aria-pressed="true"] { background:#e5f0e8; color:#22583d; font-weight:700; }
+#shop-section .shop-shelf-icon { width:17px; height:17px; flex:0 0 17px; }
+#shop-section .shop-category-count { margin-left:auto; color:#839086; font-size:11px; font-weight:400; }
+#shop-section .shop-shelf-main { min-width:0; }
+#shop-section .shop-shelf-topline { display:flex; align-items:center; min-height:30px; gap:12px; margin:0 0 12px; }
+#shop-section .shop-shelf-topline h3 { margin:0; font-size:15px; color:#2e493a; }
+#shop-section #shop-shelf-count { margin-left:auto; font-size:12px; color:#819086; }
+#shop-section #shop-category-mobile { display:none; }
+#shop-section .shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:12px; }
+#shop-section .shop-card { position:relative; display:flex; flex-direction:column; min-width:0; min-height:181px; padding:11px 12px 12px; border:1px solid #dbe3dc; border-top:2px solid var(--shop-rarity,#b7c9bc); border-left:1px solid #dbe3dc; border-radius:4px; background:white; box-shadow:none; text-align:left; transform:none; }
+#shop-section .shop-card:hover { border-color:#b6c7b8; border-top-color:var(--shop-rarity,#b7c9bc); box-shadow:0 2px 8px #29412c0a; transform:none; }
+#shop-section .shop-card-topline { display:flex; align-items:center; gap:6px; height:20px; margin:0 0 7px; }
+#shop-section .shop-card-supply { margin:0; color:#7d8a81; font-size:10px; line-height:16px; }
+#shop-section .shop-card-supply.is-special { color:#7c56a0; }
+#shop-section .shop-card-rarity { margin-left:auto; padding:0; max-width:none; min-width:0; background:none; color:var(--shop-rarity-ink,#758079); font-size:10px; line-height:16px; overflow-wrap:anywhere; }
+#shop-section .shop-card-heading { display:block; min-height:38px; margin:0; padding:0; }
+#shop-section .shop-item-name { display:block; margin:0; font-size:14px; line-height:19px; color:#253f32; overflow-wrap:anywhere; }
+#shop-section .shop-card-category { font-size:11px; line-height:17px; color:#889287; margin:3px 0 9px; }
+#shop-section .shop-card-footer { margin-top:auto; padding:0; border:0; }
+#shop-section .shop-card-pricing { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px; margin:0 0 10px; }
+#shop-section .shop-card-price { color:#af542c; font-size:15px; font-weight:700; line-height:20px; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+#shop-section .shop-card-stock { margin-left:auto; font-size:10px; color:#7b8f79; white-space:nowrap; }
+#shop-section .shop-card-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+#shop-section .shop-card .shop-detail-trigger, #shop-section .shop-card .btn-buy { display:block; width:100%; min-height:32px; padding:6px 5px; margin:0; border:1px solid #b5caba; border-radius:3px; background:#fff; color:#3d6851; font-size:11px; font-weight:600; line-height:17px; text-align:center; }
+#shop-section .shop-card .btn-buy { background:#315f49; border-color:#315f49; color:#fff; }
+#shop-section .shop-card .btn-buy:hover:not(:disabled) { background:#244d3b; }
+#shop-section .shop-card .shop-detail-trigger:hover { background:#edf5ed; }
+#shop-section .shop-card .btn-buy:disabled { background:#edf0ec; border-color:#d7dfd4; color:#9aa397; cursor:not-allowed; }
+#shop-section .shop-card-out { background:#fafbf9; }
+#shop-section .shop-item-admin-menu { position:relative; flex:0 0 20px; height:20px; }
+#shop-section .shop-item-admin-menu summary { list-style:none; cursor:pointer; color:#87918a; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:3px; }
+#shop-section .shop-item-admin-menu summary::-webkit-details-marker { display:none; }
+#shop-section .shop-item-admin-menu summary:hover { background:#e9efea; color:#315f49; }
+#shop-section .shop-item-admin-menu[open] { z-index:2; }
+#shop-section .shop-item-admin-menu>div { position:absolute; top:25px; right:0; min-width:110px; padding:4px; border:1px solid #d6dfd7; border-radius:4px; background:#fff; box-shadow:0 4px 15px #162b2220; }
+#shop-section .shop-item-admin-menu .shop-card-remove { display:block; width:100%; margin:0; padding:9px; border:0; background:#fff; color:#ac4940; font-size:12px; }
+#shop-section .shop-item-admin-menu .shop-card-remove:hover { background:#fcf1ee; }
+#shop-section .shop-sell-quote { margin:-4px 0 8px; color:#829084; font-size:10px; line-height:16px; }
+#shop-section .shop-empty { grid-column:1/-1; padding:50px 12px; text-align:center; color:#829084; font-size:13px; }
+@media(max-width:1000px) {
+    #shop-section .shop-shell { grid-template-columns:165px minmax(0,1fr); gap:16px; }
+    #shop-section .shop-toolbar { flex-wrap:wrap; }
+    #shop-section .shop-toolbar input { flex-basis:220px; }
+    #shop-section #shop-source-filter { flex:1 1 180px; }
+}
+@media(max-width:640px) {
+    #shop-section .shop-header { margin:6px 0 12px; gap:8px; }
+    #shop-section .shop-header h2 { font-size:20px; }
+    #shop-section .shop-mode-tabs button { padding:7px 12px; font-size:12px; }
+    #shop-section .shop-toolbar { gap:6px; }
+    #shop-section .shop-toolbar input { flex:1 1 100%; }
+    #shop-section #shop-source-filter { flex:1 1 52%; width:auto; }
+    #shop-section #shop-rarity-filter { flex:1 1 40%; width:auto; }
+    #shop-section #shop-sort-filter { flex:1; }
+    #shop-section .shop-scope-tabs { margin-bottom:12px; gap:20px; }
+    #shop-section .shop-category-rail { display:none; }
+    #shop-section .shop-shell { display:block; }
+    #shop-section #shop-category-mobile { display:block; max-width:72%; }
+    #shop-section .shop-shelf-topline h3 { display:none; }
+    #shop-section .shop-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    #shop-section .shop-card { padding:9px; min-height:184px; }
+    #shop-section .shop-item-name { font-size:13px; }
+    #shop-section .shop-card-price { font-size:14px; }
+}
+@media(max-width:350px) { #shop-section .shop-grid { grid-template-columns:1fr; } }

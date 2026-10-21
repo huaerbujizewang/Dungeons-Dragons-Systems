@@ -50,15 +50,18 @@
         if ([...select.options].some(option => option.value === previous)) select.value = previous;
     }
 
-    async function filterListings(client, rows, accountId) {
+    async function filterListings(client, rows, accountId, { allBooks = false } = {}) {
         const context = await settings(client, accountId);
         fillSelect('shop-source-filter', context);
         const masters = await root.CompendiumIdentity.lookupMany(client, rows);
         const selected = document.getElementById('shop-source-filter')?.value || '';
         return rows.flatMap(item => {
             const master = masters.get(root.CompendiumIdentity.key(item));
-            if (!allowed(master, context) || (selected && (master?.source_book || 'HOMEBREW') !== selected)) return [];
+            if (!allowed(master, context) || (!allBooks && selected && (master?.source_book || 'HOMEBREW') !== selected)) return [];
             return [{ ...item, source_book: master?.source_book || 'HOMEBREW',
+                shop_shelf_category: root.ShopShelf?.classify(master || item),
+                shop_search_terms: [master?.source_metadata?.canonical_name, master?.source_metadata?.english_name,
+                    master?.source_metadata?.spell_name].filter(Boolean).join(' '),
                 source_url: master?.source_url, description: root.CompendiumIdentity.description(item, master) }];
         });
     }
