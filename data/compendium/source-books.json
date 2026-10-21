@@ -1,0 +1,184 @@
+[
+  {
+    "code": "DMG24",
+    "name": "地下城主指南2024",
+    "official": true,
+    "item_count": 757,
+    "matched_page_count": 83
+  },
+  {
+    "code": "PHB24",
+    "name": "玩家手册2024",
+    "official": true,
+    "item_count": 356,
+    "matched_page_count": 25
+  },
+  {
+    "code": "XGE",
+    "name": "珊娜萨的万事指南",
+    "official": true,
+    "item_count": 53,
+    "matched_page_count": 14
+  },
+  {
+    "code": "TCE",
+    "name": "塔莎的万事坩埚",
+    "official": true,
+    "item_count": 52,
+    "matched_page_count": 16
+  },
+  {
+    "code": "FTD",
+    "name": "费资本的巨龙宝库",
+    "official": true,
+    "item_count": 24,
+    "matched_page_count": 5
+  },
+  {
+    "code": "BPGG",
+    "name": "毕格比巨献：巨人之荣耀",
+    "official": true,
+    "item_count": 27,
+    "matched_page_count": 16
+  },
+  {
+    "code": "BoMT",
+    "name": "万象无常书",
+    "official": true,
+    "item_count": 58,
+    "matched_page_count": 192
+  },
+  {
+    "code": "GGtR",
+    "name": "拉尼卡公会长指南",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 3
+  },
+  {
+    "code": "ERLW",
+    "name": "艾伯伦：终末战争崛起",
+    "official": true,
+    "item_count": 25,
+    "matched_page_count": 11
+  },
+  {
+    "code": "EGW",
+    "name": "荒洲探险家指南",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 5
+  },
+  {
+    "code": "MOT",
+    "name": "塞洛斯的神话奥德赛",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 9
+  },
+  {
+    "code": "SCC",
+    "name": "斯翠海文：混沌研习",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 2
+  },
+  {
+    "code": "SJA",
+    "name": "星界冒险者指南",
+    "official": true,
+    "item_count": 1,
+    "matched_page_count": 2
+  },
+  {
+    "code": "SatO",
+    "name": "印记城与外域",
+    "official": true,
+    "item_count": 1,
+    "matched_page_count": 2
+  },
+  {
+    "code": "FRHoF",
+    "name": "被遗忘的国度：费伦英雄",
+    "official": true,
+    "item_count": 2,
+    "matched_page_count": 42
+  },
+  {
+    "code": "FRAiF",
+    "name": "被遗忘的国度：费伦冒险",
+    "official": true,
+    "item_count": 8,
+    "matched_page_count": 57
+  },
+  {
+    "code": "LFL",
+    "name": "洛温：初光",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 20
+  },
+  {
+    "code": "NF",
+    "name": "耐瑟瑞尔之陨",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 11
+  },
+  {
+    "code": "EFA",
+    "name": "艾伯伦：奇械锻炉",
+    "official": true,
+    "item_count": 9,
+    "matched_page_count": 1
+  },
+  {
+    "code": "RHW",
+    "name": "鸦阁魔域：魔障深藏",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 67
+  },
+  {
+    "code": "AU",
+    "name": "启封奥秘",
+    "official": true,
+    "item_count": 6,
+    "matched_page_count": 22
+  },
+  {
+    "code": "DSDQ",
+    "name": "龙枪：龙后之影",
+    "official": true,
+    "item_count": 0,
+    "matched_page_count": 4
+  },
+  {
+    "code": "LLK",
+    "name": "夸力许的失落实验室",
+    "official": true,
+    "item_count": 2,
+    "matched_page_count": 2
+  },
+  {
+    "code": "AI",
+    "name": "艾奎兹玄有限责任公司",
+    "official": true,
+    "item_count": 3,
+    "matched_page_count": 2
+  },
+  {
+    "code": "HELIOS",
+    "name": "赫里奥斯",
+    "official": false,
+    "item_count": 11,
+    "matched_page_count": 0
+  },
+  {
+    "code": "HOMEBREW",
+    "name": "私设",
+    "official": false,
+    "item_count": 4,
+    "matched_page_count": 0
+  }
+]
