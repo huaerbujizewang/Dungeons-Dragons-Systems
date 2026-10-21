@@ -10085,9 +10085,13 @@ async function loadLoginLogs() {
         return plan.map(row => `${row.rarity} ${row.count}种 × 库存${row.stock}`).join('；');
     }
 
+    let randomRestockInFlight = false;
+
     // --- 随机进货功能 ---
     async function randomRestock() {
+        if (randomRestockInFlight) return;
         if (!await requireAdminRole()) return;
+        if (randomRestockInFlight) return;
         // 1. 确定进货目标
         // 如果 selectedUserId 有值，说明 DM 选中了某个玩家，进货给他
         // 如果没值 (null)，说明是公共进货
@@ -10096,11 +10100,12 @@ async function loadLoginLogs() {
         const plan = getRestockPlan();
 
         if (plan.length === 0) return alert('请至少设置一种稀有度的进货数量。');
-        if (!confirm(`确定要执行随机进货吗？\n\n目标: ${targetName}\n内容: ${describeRestockPlan(plan)}\n\n(注意：这会直接添加到集市，不会覆盖已有商品)`)) return;
+        if (!confirm(`确定要执行随机进货吗？\n\n目标: ${targetName}\n内容: ${describeRestockPlan(plan)}\n\n同ID、同供货范围的商品会累加库存；特供与全服公共商品分别计算。`)) return;
 
+        randomRestockInFlight = true;
         showLoading();
         try {
-            const rowsToInsert = [];
+            const restockItems = [];
             const shortageNotes = [];
 
             for (const row of plan) {
@@ -10112,34 +10117,39 @@ async function loadLoginLogs() {
                 }
 
                 picked.forEach(item => {
-                    rowsToInsert.push({
-                        name: item.name,
+                    restockItems.push({
                         compendium_item_id: item.id,
-                        rarity: item.rarity,
-                        category: item.category,
-                        price: item.price,
-                        description: item.description,
-                        stock: row.stock,
-                        user_id: targetId
+                        stock: row.stock
                     });
                 });
             }
 
-            if (rowsToInsert.length === 0) throw new Error('没有从图鉴库中抽到任何可上架物品。');
+            if (restockItems.length === 0) throw new Error('没有从图鉴库中抽到任何可上架物品。');
 
-            const { error: insertError } = await supabaseClient.from('shop_items').insert(rowsToInsert);
-            if (insertError) throw insertError;
+            const { data: result, error: restockError } = await supabaseClient.rpc('restock_shop_items', {
+                p_target_user_id: targetId,
+                p_items: restockItems
+            });
+            if (restockError) {
+                if (restockError.code === 'PGRST202' || restockError.code === '42883') {
+                    throw new Error('请先在Supabase运行 shop_restock.sql，安装库存合并功能。');
+                }
+                throw restockError;
+            }
 
             // 3. 记录日志
-            await logAction('DM随机进货', `执行了自定义随机进货 (目标: ${targetName})：${describeRestockPlan(plan)}；实际上架 ${rowsToInsert.length} 种`);
+            try {
+                await logAction('DM随机进货', `执行了自定义随机进货 (目标: ${targetName})：${describeRestockPlan(plan)}；新增 ${result.created} 种，补充库存 ${result.restocked} 种，共 ${result.units} 件`);
+            } catch (error) { console.warn('进货已完成，但日志写入失败:', error); }
 
             const warning = shortageNotes.length ? `\n\n库存池不足：${shortageNotes.join('；')}` : '';
-            alert(`进货完成！共计上架 ${rowsToInsert.length} 种物品。${warning}`);
-            loadShop(); // 刷新集市显示
+            alert(`进货完成！新增 ${result.created} 种，补充库存 ${result.restocked} 种，共 ${result.units} 件。${warning}`);
+            try { await loadShop(); } catch (error) { console.warn('进货已完成，但商城刷新失败:', error); }
         } catch (e) {
             console.error(e);
             alert('进货失败: ' + e.message);
         } finally {
+            randomRestockInFlight = false;
             hideLoading();
         }
     }
