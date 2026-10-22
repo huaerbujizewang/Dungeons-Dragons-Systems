@@ -19,12 +19,19 @@
     <script src="finance-ledger.js?v=20261020"></script>
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
-    <script src="shop-item-details.js?v=20261021-details2"></script>
+    <script src="shop-item-details.js?v=20261022-merchants1"></script>
+    <script src="shop-merchants.js?v=20261022-dialogue1"></script>
+    <script src="shop-dialogue.js?v=20261022-dialogue1"></script>
     <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
     <script src="shop-shelf.js?v=20261021-shelf1"></script>
     <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf2">
-    <script src="shop-source-books.js?v=20261021-shelf1"></script>
+    <script src="shop-source-books.js?v=20261022-basics1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
+    <link rel="stylesheet" href="shop-scene.css?v=20261022-dialogue1">
+    <link rel="stylesheet" href="admin-console.css?v=20261022-console1">
+    <script src="admin-console.js?v=20261022-console1"></script>
+    <script src="shop-supply.js?v=20261022-console1"></script>
+    <script src="shop-scene.js?v=20261022-dialogue1" defer></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
@@ -2060,13 +2067,35 @@
 
     <!-- 集市 -->
      <div id="shop-section" class="section active">
+        <div class="shop-scene-backdrop" aria-hidden="true"></div>
+        <nav class="shop-merchant-tabs" aria-label="选择商铺">
+            <button type="button" data-shop-merchant="moon" aria-pressed="true"><strong>满月杂货铺</strong><span>FULL MOON GENERAL STORE</span></button>
+            <button type="button" data-shop-merchant="lemonia" aria-pressed="false"><strong>莱蒙尼亚商社</strong><span>LEMONIA TRADING COMPANY</span></button>
+        </nav>
+        <div class="shop-stage">
+        <aside class="shop-keeper" aria-label="满月杂货铺店主">
+            <div class="shop-brand">
+                <span class="shop-brand-moon" aria-hidden="true"></span>
+                <div><h2>满月杂货铺</h2><p>FULL MOON GENERAL STORE</p></div>
+            </div>
+            <div class="shop-keeper-message"><span class="shop-keeper-message-label">露娜·赫丝</span><p id="shop-keeper-greeting" aria-live="polite" aria-atomic="true">欢迎来到满月杂货铺~ 想找什么有趣的东西？</p></div>
+            <button class="shop-keeper-portrait" type="button" aria-label="与店主打招呼" title="与店主打招呼">
+                <span class="shop-keeper-breath"><img id="shop-keeper-image" data-src="商城系统素材/一般立绘睁眼.png" alt="" width="1024" height="1536" decoding="async" draggable="false"></span>
+            </button>
+            <div class="shop-scene-controls">
+                <label class="shop-motion-control"><input id="shop-scene-motion" type="checkbox" checked><span>场景动态</span></label>
+                <label class="shop-view-control" for="shop-scene-view" hidden><span>视角</span><input id="shop-scene-view" type="range" min="-100" max="100" value="0" aria-label="店铺横向视角"></label>
+            </div>
+        </aside>
+        <div class="shop-paper-panel">
         <div class="shop-header">
-            <h2>位面集市</h2>
+            <div class="shop-catalog-title"><span>THE MOONLIT COLLECTION</span><h2>今夜的货架</h2></div>
             <div class="shop-mode-tabs" aria-label="交易模式">
                 <button id="shop-buy-mode-btn" type="button" onclick="setShopMode(false)" aria-pressed="true">购买商品</button>
                 <button id="shop-mode-btn" type="button" onclick="setShopMode(true)" aria-pressed="false">出售物品</button>
             </div>
         </div>
+        <div id="shop-transaction-status" class="shop-transaction-status" role="status" aria-live="polite"></div>
         <div class="shop-toolbar">
             <input type="search" id="shop-search-input" placeholder="搜索商品名称、类型…" aria-label="搜索商品">
             <select id="shop-source-filter" class="shop-source-select" aria-label="来源书籍"><option value="">全部书籍</option></select>
@@ -2092,8 +2121,10 @@
                     <select id="shop-category-mobile" aria-label="商品分类"></select>
                     <span id="shop-shelf-count" role="status"></span>
                 </div>
-                <div id="shop-grid" class="shop-grid" aria-live="polite"></div>
+                <div id="shop-grid" class="shop-grid" aria-live="polite" tabindex="0" role="region" aria-label="商品货架"></div>
             </div>
+        </div>
+        </div>
         </div>
     </div>
 
@@ -2746,18 +2777,25 @@
 
 <!-- DM 上帝控制台 -->
 <div id="admin-panel">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
+    <div class="admin-shell-header">
         <h2 style="margin:0;">DM 控制台 <span id="role-badge" style="font-size:0.5em; background:#333; color:white; padding:2px 8px; border-radius:12px; font-weight:normal;"></span></h2>
         <button onclick="toggleAdmin()" style="background:#e74c3c; color:white; border:none; padding:8px 20px; border-radius:6px; font-weight:bold;">关闭</button>
     </div>
     
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:25px; overflow-y:auto;">
+    <div class="admin-shell-layout">
+        <aside class="admin-navigation" aria-label="DM管理栏目"><nav id="admin-navigation"></nav></aside>
+        <div class="admin-shell-main">
+            <div class="admin-target-bar"><label for="adm-user-list">目标玩家</label><div id="admin-target-slot"></div><select id="admin-page-mobile" aria-label="管理栏目"></select></div>
+            <div id="admin-page-host"></div>
+        </div>
+    </div>
+    <div id="admin-legacy-layout" style="display:grid; grid-template-columns: 1fr 1fr; gap:25px; overflow-y:auto;">
         
         <!-- 左侧列 -->
         <div style="display:flex; flex-direction:column; gap:20px;">
 
             <!-- 事务审批中心 -->
-            <div id="approval-box" class="admin-box" style="border:1px solid #e67e22; padding:15px; border-radius:8px; background:#fffcf0; display:none;">
+            <div id="approval-box" class="admin-box" data-admin-page="approvals" style="border:1px solid #e67e22; padding:15px; border-radius:8px; background:#fffcf0; display:none;">
                 <h3 style="margin-top:0; color:#d35400;">⚖️ 待办审批</h3>
                 <div id="approval-list" style="font-size:0.9em;">
                     正在加载请求...
@@ -2765,7 +2803,7 @@
             </div>
 
             <!-- 时间控制 -->
-            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+            <div class="admin-box" data-admin-page="economy" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
                 <h3 style="margin-top:0">⏳ 时间线操控</h3>
                 <div style="display:flex; gap:5px; margin-bottom:10px;">
                     <input type="number" id="time-year" style="width:70px"> 年 
@@ -2775,9 +2813,9 @@
                 <button onclick="updateTimeManual()" style="width:100%; padding:10px; background:#34495e; color:white; border:none;">同步时空</button>
             </div>
 
-            <div class="admin-box" style="border:1px solid #2f6f9f; padding:15px; border-radius:8px; background:#f2f8fc;">
+            <div class="admin-box" data-admin-page="economy" style="border:1px solid #2f6f9f; padding:15px; border-radius:8px; background:#f2f8fc;">
                 <h3 style="margin-top:0; color:#2f6f9f;">▥ 经济</h3>
-                <div style="font-size:0.8em; color:#666; margin-bottom:10px;">先在右侧【玩家资产操控】选择目标玩家；证券与银行日期跟随该玩家当前世界日期。</div>
+                <div style="font-size:0.8em; color:#666; margin-bottom:10px;">证券与银行日期跟随顶部所选玩家的当前世界日期。</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:end;">
                     <label style="font-size:0.85em;">市场状态
                         <select id="adm-stock-enabled" style="width:100%; padding:6px;">
@@ -2801,10 +2839,14 @@
             </div>
 
             <!-- 集市进货 -->
-            <div class="admin-box" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+            <div class="admin-box" data-admin-page="shop" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
                 <h3 style="margin-top:0">🏬 物资上架</h3>
-                <h4 style="margin:12px 0 8px;">我的商城来源</h4>
+                <label for="adm-shop-merchant">操作商铺</label>
+                <select id="adm-shop-merchant" style="width:100%; margin:6px 0 12px;"><option value="moon">满月杂货铺</option><option value="lemonia">莱蒙尼亚商社</option></select>
+                <details class="admin-shop-fold"><summary>来源书籍开关</summary>
                 <div id="shop-source-books-panel"></div>
+                </details>
+                <details class="admin-shop-fold"><summary>手动上架商品</summary>
             <!-- 查库区域 -->
                 <div style="background:#f0f8ff; padding:10px; border-radius:4px; margin-bottom:15px; border:1px dashed #3498db;">
                     <div style="display:flex; gap:5px;">
@@ -2820,23 +2862,35 @@
                     <select id="adm-shop-cat"><option>魔法物品</option><option>装备</option><option>卷轴</option><option>药水</option><option>材料</option></select>
                     <input type="number" id="adm-shop-price" step="0.01" placeholder="价格">
                     <input type="number" id="adm-shop-stock" placeholder="库存">
+                    <label style="grid-column:1/3;"><input type="checkbox" id="adm-shop-unlimited" onchange="document.getElementById('adm-shop-stock').disabled=this.checked"> 不限量供货</label>
                     <select id="adm-shop-target" style="grid-column: 1/3;"><option value="public">🌐 全服公共</option><option value="private">👤 仅当前选中的玩家</option></select>
                     <textarea id="adm-shop-desc" placeholder="描述..." style="grid-column: 1/3; height:50px;"></textarea>
                     <label style="grid-column: 1/3;"><input type="checkbox" id="adm-shop-description-override"> 保留商品独立描述</label>
                 </div>
                 <button onclick="adminAddItem()" style="width:100%; margin-top:10px; background:#2ecc71; color:white; border:none; padding:10px;">确认上架</button>
+                </details>
+                <details class="admin-shop-fold"><summary>下架与清空</summary>
                 <div style="margin-top:12px; padding:10px; background:#fff7f7; border:1px dashed #e74c3c; border-radius:6px;">
                     <div style="font-weight:bold; color:#c0392b; margin-bottom:6px;">🧹 清空商城</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                        <button onclick="clearShopItems('public')" style="background:#7f8c8d; color:white; border:none; padding:8px; border-radius:4px;">清空公共商城</button>
+                        <button onclick="clearShopItems('public')" style="background:#7f8c8d; color:white; border:none; padding:8px; border-radius:4px;">清空本店公共货物</button>
                         <button onclick="clearShopItems('selected')" style="background:#e67e22; color:white; border:none; padding:8px; border-radius:4px;">清空当前玩家特供</button>
                         <button onclick="clearShopItems('selected_with_public')" style="background:#d35400; color:white; border:none; padding:8px; border-radius:4px;">清空当前玩家可见</button>
-                        <button onclick="clearShopItems('all')" style="background:#c0392b; color:white; border:none; padding:8px; border-radius:4px;">清空全服商城</button>
+                        <button onclick="clearShopItems('all')" style="background:#c0392b; color:white; border:none; padding:8px; border-radius:4px;">清空本店全部货物</button>
                     </div>
-                    <div style="font-size:0.78em; color:#666; text-align:center; margin-top:6px;">“当前玩家可见”会同时清空公共商品与该玩家特供；全服清空仅 root 可用。</div>
+                    <div style="font-size:0.78em; color:#666; text-align:center; margin-top:6px;">仅操作上方所选商铺。“当前玩家可见”包含本店公共货物与该玩家特供；清空本店全部货物仅 root 可用。</div>
                 </div>
-                <div style="margin-top:12px; padding:10px; background:#faf5ff; border:1px dashed #8e44ad; border-radius:6px;">
+                </details>
+                <div class="admin-supply-panel">
                     <div style="font-weight:bold; color:#8e44ad; margin-bottom:6px;">🎲 随机进货配方</div>
+                    <div class="admin-supply-toolbar"><button type="button" id="supply-reload">重新读取设置</button><span id="supply-status" role="status"></span></div>
+                    <fieldset id="supply-fields" disabled>
+                    <div class="admin-supply-filters">
+                        <label>供货范围<select id="adm-restock-target"><option value="public">全服公共</option><option value="private">当前玩家特供</option></select></label>
+                        <label>来源书籍<select id="adm-restock-source"><option value="">全部已启用书籍</option></select></label>
+                    </div>
+                    <div class="admin-supply-category-heading"><strong>商品类型</strong><button type="button" id="supply-select-all">全选</button><button type="button" id="supply-select-none">清空选择</button></div>
+                    <div id="supply-categories" class="admin-supply-categories"></div>
                     <div class="restock-grid">
                         <div class="restock-head">稀有度</div><div class="restock-head">种类数</div><div class="restock-head">每件库存</div>
                         <label>传说</label><input id="restock-count-legendary" type="number" min="0" step="1" value="2"><input id="restock-stock-legendary" type="number" min="1" step="1" value="1">
@@ -2845,13 +2899,14 @@
                         <label>非普通</label><input id="restock-count-uncommon" type="number" min="0" step="1" value="30"><input id="restock-stock-uncommon" type="number" min="1" step="1" value="1">
                         <label>普通</label><input id="restock-count-common" type="number" min="0" step="1" value="20"><input id="restock-stock-common" type="number" min="1" step="1" value="1">
                     </div>
-                    <button onclick="randomRestock()" style="width:100%; margin-top:10px; background:#8e44ad; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold;">执行随机进货</button>
-                    <div style="font-size:0.78em; color:#666; text-align:center; margin-top:5px;">目标仍跟随“全服公共 / 当前玩家特供”的选择逻辑。</div>
+                    <div class="admin-supply-actions"><button type="button" id="supply-save">保存本店配方</button><button type="button" id="supply-preview">预览候选池</button><button type="button" onclick="randomRestock()">执行随机进货</button></div>
+                    <div id="supply-preview-result" role="status"></div>
+                    </fieldset>
                 </div>
             </div>
             
 
-            <div class="admin-box" style="border:1px solid #c0392b; padding:15px; border-radius:8px; background:#fff;">
+            <div class="admin-box" data-admin-page="wanted" style="border:1px solid #c0392b; padding:15px; border-radius:8px; background:#fff;">
                 <h3 style="margin-top:0; color:#c0392b;">☠️ 签发通缉令</h3>
     
                 <!-- 单个添加 -->
@@ -2895,7 +2950,7 @@
                 </div>
            </div>
 
-<div class="admin-box" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fffcf0; margin-top:20px;">
+<div class="admin-box" data-admin-page="monsters" style="border:1px solid #e74c3c; padding:15px; border-radius:8px; background:#fffcf0; margin-top:20px;">
                 <h3 style="margin-top:0; color:#e74c3c;">💀 怪物图鉴在线编辑器</h3>
                 
                 <input type="text" id="adm-monster-search" placeholder="搜索怪物名、势力、身份标签或 CR..." oninput="renderAdminMonsterOptions()" style="width:100%; box-sizing:border-box; padding:7px; border:1px solid #ccc; border-radius:4px; margin-bottom:8px;">
@@ -2953,7 +3008,7 @@
             </div>
 
 
-            <div class="admin-box" style="border:1px solid #3498db; padding:15px; border-radius:8px; background:#f0f9ff; margin-top:20px;">
+            <div class="admin-box" data-admin-page="research" style="border:1px solid #3498db; padding:15px; border-radius:8px; background:#f0f9ff; margin-top:20px;">
                 <h3 style="margin-top:0; color:#2980b9;">🔬 科研与工程委派控制台</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:12px;">提示：请先在上方【玩家资产操控】选定目标玩家。雇员一旦调入科研，将被强制锁死无法参战。</div>
                 
@@ -2986,11 +3041,16 @@
         <!-- 右侧列 -->
         <div style="display:flex; flex-direction:column; gap:20px;">
             <!-- 玩家资产控制 -->
-            <div class="admin-box" style="border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
+            <div class="admin-box" data-admin-page="players" style="border:1px solid #333; padding:15px; border-radius:8px; background:#fafafa;">
                 <h3 style="margin-top:0">👤 玩家资产操控 (视角切换)</h3>
                 <select id="adm-user-list" onchange="loadUserDetail()" style="width:100%; padding:10px; margin-bottom:10px; border:2px solid #333;"></select>
                 
                 <div id="user-detail" style="display:none;">
+                    <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <input type="checkbox" id="adm-user-crafter" onchange="saveSelectedPlayerCrafter(this)">
+                        具有巧匠（两店非魔法物品八折，不含宝石）
+                        <span id="adm-user-crafter-status" role="status" style="font-size:12px; color:#48665d;"></span>
+                    </label>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
                         <button type="button" onclick="showSelectedPlayerView()" style="padding:9px; border:1px solid #355f55; border-radius:4px; background:#355f55; color:#fff; font-weight:bold; cursor:pointer;">打开完整玩家主页</button>
                         <button type="button" onclick="openSelectedPlayerFinance()" style="padding:9px; border:1px solid #78958d; border-radius:4px; background:#fff; color:#294b43; font-weight:bold; cursor:pointer;">打开玩家资金账本</button>
@@ -3048,7 +3108,7 @@
                 </div>
             </div>
 
-            <div class="admin-box" style="border:1px solid #16a085; padding:15px; border-radius:8px; background:#f5fffc;">
+            <div class="admin-box" data-admin-page="checkins" style="border:1px solid #16a085; padding:15px; border-radius:8px; background:#f5fffc;">
                 <h3 style="margin-top:0; color:#117864;">◎ 环陆大赏打卡管理</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:8px;">先在上方选择玩家；打卡日期默认使用该玩家当前世界时间，可手动改写。</div>
                 <label style="display:flex; align-items:center; gap:7px; font-size:0.9em; margin-bottom:8px;">
@@ -3119,7 +3179,7 @@
                 </div>
             </div>
 
-            <div class="admin-box" style="border:1px solid #278a79; padding:15px; border-radius:6px; background:#f6faf8;">
+            <div class="admin-box" data-admin-page="players" style="border:1px solid #278a79; padding:15px; border-radius:6px; background:#f6faf8;">
                 <h3 style="margin-top:0; color:#236a5e;">坐骑管理</h3>
                 <div id="adm-mount-status" style="font-size:0.82em; color:#52645e;">请先选择玩家</div>
                 <div class="mount-admin-fields">
@@ -3140,7 +3200,7 @@
                 </div>
             </div>
 
-            <div class="admin-box" style="border:1px solid #16a085; padding:15px; border-radius:8px; background:#f0fffb;">
+            <div class="admin-box" data-admin-page="personnel" style="border:1px solid #16a085; padding:15px; border-radius:8px; background:#f0fffb;">
                 <h3 style="margin-top:0; color:#16a085;">➕ 新增人员 / 社会连结</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:8px;">先在上方选择玩家；可创建雇员、玩家角色或社会连结，并设置是否对玩家可见。</div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
@@ -3169,7 +3229,7 @@
                 <button onclick="createEmployeeFromAdmin()" style="width:100%; margin-top:8px; background:#16a085; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">创建人员档案</button>
             </div>
 
-            <div class="admin-box" style="border:1px solid #34495e; padding:15px; border-radius:8px; background:#f4f6f8;">
+            <div class="admin-box" data-admin-page="personnel" style="border:1px solid #34495e; padding:15px; border-radius:8px; background:#f4f6f8;">
                 <h3 style="margin-top:0; color:#34495e;">👁️ 人员显示 / 情报遮罩</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:5px;">玩家列表显示关闭后，该人员或社会连结会直接从玩家界面消失；DM/root 仍会显示。情报遮罩只隐藏战斗属性。</div>
                 <select id="adm-visibility-emp-list" onchange="syncAdminVisibilityValue()" style="width:100%; margin-bottom:6px; padding:6px;"></select>
@@ -3188,7 +3248,7 @@
                 <button onclick="updateEmpVisibilityFromAdmin()" style="width:100%; margin-top:8px; background:#34495e; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold;">保存显示 / 遮罩</button>
             </div>
 
-            <div class="admin-box" style="border:1px solid #f1c40f; padding:15px; border-radius:8px; background:#fffff0;">
+            <div class="admin-box" data-admin-page="personnel" style="border:1px solid #f1c40f; padding:15px; border-radius:8px; background:#fffff0;">
                 <h3 style="margin-top:0; color:#f39c12;">🌟 人员星级调整</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选人员</div>
                 <div style="display:flex; gap:5px;">
@@ -3205,7 +3265,7 @@
                 <button onclick="updateEmpRarity()" style="width:100%; margin-top:5px; background:#f1c40f; border:none; color:#fff; padding:5px; font-weight:bold;">更新星级</button>
             </div>
 
-            <div class="admin-box" style="border:1px solid #2ecc71; padding:15px; border-radius:8px; background:#f0fff4;">
+            <div class="admin-box" data-admin-page="personnel" style="border:1px solid #2ecc71; padding:15px; border-radius:8px; background:#f0fff4;">
                 <h3 style="margin-top:0; color:#27ae60;">📌 人员状态调整</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:5px;">先在上方[玩家资产]选择玩家，再选人员</div>
                 <div style="display:flex; gap:5px;">
@@ -3215,7 +3275,7 @@
                 <button onclick="updateEmpStatusFromAdmin()" style="width:100%; margin-top:5px; background:#2ecc71; border:none; color:#fff; padding:5px; font-weight:bold;">更新状态</button>
             </div>
 
-            <div class="admin-box" style="border:1px solid #7f8c8d; padding:15px; border-radius:8px; background:#f8f9fa;">
+            <div class="admin-box" data-admin-page="personnel" style="border:1px solid #7f8c8d; padding:15px; border-radius:8px; background:#f8f9fa;">
                 <h3 style="margin-top:0; color:#566573;">⚖️ 人员分类调整</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:5px;">用于切换核心队友、雇员/随从、社会连结分栏</div>
                 <div style="display:flex; gap:5px;">
@@ -3225,7 +3285,7 @@
                 <button onclick="updateEmpRoleFromAdmin()" style="width:100%; margin-top:5px; background:#566573; border:none; color:#fff; padding:5px; font-weight:bold;">更新分类</button>
             </div>
 
-            <div class="admin-box" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#faf0ff;">
+            <div class="admin-box" data-admin-page="images" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#faf0ff;">
                 <h3 style="margin-top:0; color:#8e44ad;">🎲 卡池头像上传</h3>
                 <div style="margin-bottom:5px;">
                     <input type="text" id="adm-pool-search" placeholder="输入卡池角色名..." onblur="searchPoolChar()" style="width:100%;">
@@ -3239,7 +3299,7 @@
             </div>
 
             <!-- 人员头像 -->
-            <div class="admin-box" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#fbf0ff;">
+            <div class="admin-box" data-admin-page="images" style="border:1px solid #9b59b6; padding:15px; border-radius:8px; background:#fbf0ff;">
                 <h3 style="margin-top:0; color:#8e44ad;">🎨 人员图片管理</h3>
                 <div style="font-size:0.8em; color:#666; margin-bottom:10px;">
                     先在上方 [玩家资产操控] 选择玩家，再在此处选择人员、玩家角色或社会连结
@@ -3278,7 +3338,7 @@
                 </div>
             </div>
 
-            <div class="admin-box" style="border:1px solid #1abc9c; padding:15px; border-radius:8px; background:#fafffd; margin-top:20px;">
+            <div class="admin-box" data-admin-page="images" style="border:1px solid #1abc9c; padding:15px; border-radius:8px; background:#fafffd; margin-top:20px;">
     <h3 style="margin-top:0; color:#16a085;">🖼️ 干员全幅立绘上传</h3>
     <div style="font-size:0.8em; color:#666; margin-bottom:5px;">建议比例 3:5 的纵向立绘（全身像）</div>
     <div style="margin-bottom:10px;">
@@ -3292,7 +3352,7 @@
     </div>
 </div>
 
-            <div class="admin-box" style="border:1px solid #822000; padding:15px; border-radius:8px; background:#fffcf0;">
+            <div class="admin-box" data-admin-page="personnel" style="border:1px solid #822000; padding:15px; border-radius:8px; background:#fffcf0;">
                 <h3 style="margin-top:0; color:#822000;">📜 人员 / 社会连结 JSON</h3>
                 <select id="adm-sheet-list" onchange="updateStatBlockSelect()" style="width:100%; margin-bottom:10px;"></select>
                 <textarea id="adm-sheet-json" placeholder="在此粘贴 JSON 数据..." style="width:100%; height:150px; font-family:monospace; font-size:0.8em;"></textarea>
@@ -5957,7 +6017,9 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                 console.log('检测到资产/时间变动');
                 if (payload?.new) applyProfileAssetSnapshot(payload.new);
                 else loadGold();
-                loadUserDate();
+                loadUserDate().then(() => {
+                    if (isSellMode) return loadSellShop();
+                }).catch(error => console.warn('角色日期或回收报价刷新失败', error));
                 if (isCurrentAdmin()) loadStockAdminPanel();
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'player_finance_ledger', filter: `account_id=eq.${targetId}` }, (payload) => {
@@ -7743,7 +7805,17 @@ async function loadGold() {
 
     function applyProfileAssetSnapshot(profile) {
         if (!profile) return;
+        if (profile.id !== viewingUserId) return;
+        const accountChanged = userProfile?.id !== profile.id;
+        const crafterChanged = accountChanged || userProfile?.has_crafter !== profile.has_crafter;
         userProfile = profile; // 赋值给全局变量供其他函数使用
+        if (accountChanged) document.dispatchEvent(new CustomEvent('shop:account-changed'));
+        const crafterInput = document.getElementById('adm-user-crafter');
+        if (crafterInput && selectedUserId === profile.id && !crafterInput.disabled) {
+            crafterInput.checked = profile.has_crafter === true;
+            crafterInput.dataset.saved = String(crafterInput.checked);
+        }
+        if (crafterChanged && shopShelfAccountId === profile.id && !isSellMode) refreshShopFilters();
         viewingCampaignType = normalizeCampaignType(profile.campaign_type);
         viewingCalendarSystem = normalizeCalendarSystem(profile.calendar_system, viewingCampaignType);
         if (viewingUserId === myId) {
@@ -7973,6 +8045,8 @@ async function loadGold() {
         p.style.display = p.style.display === 'block' ? 'none' : 'block';
 
         if (p.style.display === 'block') {
+            AdminConsole.open();
+            ShopSupply.open(supabaseClient, myId, () => selectedUserId);
             initNewEmployeeForm();
             if (typeof loadPendingRequests === 'function') {
                 loadPendingRequests(); 
@@ -8118,17 +8192,30 @@ async function loadGold() {
     let shopShelfBuyRows = [];
     let shopShelfSellRows = [];
     let shopShelfAccountId = null;
+    let shopShelfMerchantId = null;
+
+    document.addEventListener('shop:merchant-changed', () => {
+        shopShelfAccountId = null;
+        refreshShopView();
+    });
 
     function refreshShopFilters() {
-        if (shopShelfAccountId !== viewingUserId) return;
+        if (shopShelfAccountId !== viewingUserId || shopShelfMerchantId !== ShopMerchants.current().id) return;
         if (isSellMode) renderSellShopItems(shopShelfSellRows);
         else renderShopItems(shopShelfBuyRows);
     }
 
+    function shopInteractionDetail(id, name) {
+        const item = shopShelfBuyRows.find(row => Number(row.id) === Number(id));
+        return { itemKey: String(item?.compendium_item_id || 'listing:' + id), itemName: name || item?.name || '' };
+    }
+
     async function loadShop() {
+        window.ShopDialogue?.sync();
         if (isSellMode) return loadSellShop();
         const request = ++shopLoadGeneration;
         const accountId = viewingUserId;
+        const merchantId = ShopMerchants.current().id;
         const grid = document.getElementById('shop-grid');
         ShopShelf.mount(refreshShopFilters);
         ShopShelf.setMode(false);
@@ -8140,7 +8227,7 @@ async function loadGold() {
         const data = [];
         let error;
         for (let start = 0; ; start += 1000) {
-            const page = await supabaseClient.from('shop_items').select('*')
+            const page = await supabaseClient.from('shop_items').select('*').eq('shop_id', merchantId)
                 .or(`user_id.is.null,user_id.eq.${accountId}`).order('id').range(start, start + 999);
             if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
             if (page.error) { error = page.error; break; }
@@ -8152,7 +8239,7 @@ async function loadGold() {
 
         if (error) {
             console.error('集市加载失败:', error);
-            grid.innerHTML = '<div style="color:red; padding:20px;">集市连接中断</div>';
+            grid.textContent = /shop_id/.test(error.message || '') ? '请先运行 shop_merchants.sql，安装双商铺功能。' : '集市连接中断，请稍后重试。';
             return;
         }
 
@@ -8168,17 +8255,22 @@ async function loadGold() {
         }
         ShopItemDetails.setItems(available);
         shopShelfAccountId = accountId;
+        shopShelfMerchantId = merchantId;
         shopShelfBuyRows = available;
         renderShopItems(available);
     }
 
     function renderShopItems(rows) {
         const grid = document.getElementById('shop-grid');
-        const filteredData = ShopShelf.filter(rows);
+        const profile = typeof userProfile !== 'undefined' && userProfile?.id === viewingUserId ? userProfile : null;
+        const filteredData = ShopShelf.filter(rows.map(item => ({ ...item, shop_shelf_price: ShopMerchants.purchasePrice(item, profile) })));
         if (filteredData.length === 0) {
-            grid.innerHTML = '<div style="color:#999; padding:20px; grid-column:1/-1; text-align:center;">暂无符合条件的商品</div>';
+            grid.innerHTML = '<div class="shop-empty">本店暂无符合条件的商品</div>';
+            const query = document.getElementById('shop-search-input').value.trim();
+            ShopMerchants.signal(query ? 'search_empty' : 'search_results', { query });
             return;
         }
+        ShopMerchants.signal('search_results');
 
         const canManage = isCurrentAdmin();
         const rarityInk = { '普通': '#657679', '非普通': '#1d7f43', '珍稀': '#2672ac',
@@ -8186,7 +8278,8 @@ async function loadGold() {
         
         grid.innerHTML = filteredData.map(i => {
             const color = rarityColors[i.rarity] || '#ccc';
-            const isOut = i.stock <= 0;
+            const isOut = !i.unlimited_stock && i.stock <= 0;
+            const discounted = profile?.has_crafter === true && i.is_nonmagical === true;
             const safeName = escapeHTML(i.name);
             const safeCategory = escapeHTML(ShopShelf.label(i.shop_shelf_category || ShopShelf.classify(i)));
             const safeRarity = escapeHTML(i.rarity || '普通');
@@ -8210,15 +8303,16 @@ async function loadGold() {
                     </div>
                     <div class="shop-card-category" title="${escapeHTML(ShopSources.label(i.source_book))}">${safeCategory}</div>
                     <div class="shop-card-footer">
+                        ${discounted ? `<div class="shop-card-discount"><span>巧匠八折</span><del>${formatCurrency(i.price)}</del></div>` : ''}
                         <div class="shop-card-pricing">
-                            <span class="shop-card-price">${formatCurrency(i.price)}</span>
-                            <span class="shop-card-stock">${isOut ? '售罄' : `库存 ${i.stock}`}</span>
+                            <span class="shop-card-price">${formatCurrency(i.shop_shelf_price)}</span>
+                            <span class="shop-card-stock">${i.unlimited_stock ? '不限量' : isOut ? '售罄' : `库存 ${i.stock}`}</span>
                         </div>
                         <div class="shop-card-actions">
                             <button class="shop-detail-trigger" type="button" onclick="openShopItemDetails(${i.id})" title="查看完整物品描述">查看描述</button>
                             <button class="btn-buy" type="button"
-                                onclick="buy(${i.id}, ${i.price}, ${nameArg}, ${categoryArg})"
-                                ${isOut ? 'disabled' : ''}>${isOut ? '缺货' : '购买'}</button>
+                                onclick="buy(${i.id}, ${i.shop_shelf_price}, ${nameArg}, ${categoryArg})"
+                                ${isOut ? 'aria-disabled="true"' : ''}>${isOut ? '缺货' : '购买'}</button>
                         </div>
                     </div>
                 </div>`;
@@ -8226,16 +8320,18 @@ async function loadGold() {
     }
 
     async function openShopItemDetails(id) {
+        ShopMerchants.signal('details', shopInteractionDetail(id));
         await ShopItemDetails.open(id, (_name, item) => CompendiumIdentity.lookup(supabaseClient, item));
     }
 
     // 3. ：下架商品逻辑
     async function deleteShopItem(id, name) {
+        const merchantId = ShopMerchants.current().id;
         if (!await requireAdminRole()) return;
         if (!confirm(`确定要将 [${name}] 永久下架吗？`)) return;
         
         showLoading();
-        const { error } = await supabaseClient.from('shop_items').delete().eq('id', id);
+        const { error } = await supabaseClient.from('shop_items').delete().eq('id', id).eq('shop_id', merchantId);
         
         if (error) {
             alert('下架失败：' + error.message);
@@ -8260,6 +8356,12 @@ async function loadGold() {
         return label && !label.startsWith('--') ? label : '当前玩家';
     }
 
+    function getAdminShopId() {
+        const id = document.getElementById('adm-shop-merchant')?.value || 'moon';
+        if (!ShopMerchants.merchants.some(shop => shop.id === id)) throw new Error('未知商铺');
+        return id;
+    }
+
     async function clearShopItems(scope) {
         if (scope === 'all') {
             if (!await requireAdminRole(['root'], true)) return;
@@ -8269,11 +8371,13 @@ async function loadGold() {
 
         const targetUserId = selectedUserId || document.getElementById('adm-user-list')?.value || '';
         const targetLabel = getSelectedAdminUserLabel();
+        const merchantId = getAdminShopId();
+        const merchantName = ShopMerchants.merchants.find(shop => shop.id === merchantId).name;
         const scopeLabels = {
-            public: '公共商城',
-            selected: `${targetLabel} 的特供商城`,
-            selected_with_public: `${targetLabel} 可见的商城（公共 + 特供）`,
-            all: '全服商城'
+            public: `${merchantName}公共货物`,
+            selected: `${merchantName} · ${targetLabel} 的特供货物`,
+            selected_with_public: `${merchantName} · ${targetLabel} 可见的货物（公共 + 特供）`,
+            all: `${merchantName}全部货物（全服）`
         };
 
         if ((scope === 'selected' || scope === 'selected_with_public') && !targetUserId) {
@@ -8283,7 +8387,7 @@ async function loadGold() {
         showLoading();
         try {
             const countQuery = applyShopClearScope(
-                supabaseClient.from('shop_items').select('id', { count: 'exact', head: true }),
+                supabaseClient.from('shop_items').select('id', { count: 'exact', head: true }).eq('shop_id', merchantId),
                 scope,
                 targetUserId
             );
@@ -8302,7 +8406,7 @@ async function loadGold() {
             if (!confirm(confirmText)) return;
 
             const deleteQuery = applyShopClearScope(
-                supabaseClient.from('shop_items').delete(),
+                supabaseClient.from('shop_items').delete().eq('shop_id', merchantId),
                 scope,
                 targetUserId
             );
@@ -8767,15 +8871,31 @@ async function loadGold() {
 
 // --- 购买逻辑 (支持30分钟退货记录) ---
 async function buy(id, p, n, c) {
-    showLoading();
+    if (ShopMerchants.isBusy()) return;
+    const item = shopShelfBuyRows.find(row => Number(row.id) === Number(id));
+    const interaction = shopInteractionDetail(id, n);
+    if (item && !item.unlimited_stock && item.stock <= 0) {
+        ShopMerchants.signal('sold_out', interaction);
+        return;
+    }
+    if (!ShopMerchants.setBusy(true)) return;
+    const merchant = ShopMerchants.current();
+    const accountId = viewingUserId;
     try {
+        const confirmed = await ShopMerchants.confirmPurchase(n, formatCurrency(p), merchant);
+        if (!confirmed || accountId !== viewingUserId) {
+            ShopMerchants.signal('cancelled', { ...interaction, shopId: merchant.id, accountId });
+            return;
+        }
+        showLoading();
         const financeClient = await FinanceLedger.withContext(supabaseClient, {
             source: 'shop_purchase', title: `购买物品：${n}`,
-            note: `购买 ${n} ×1，单价 ${formatCurrency(p)}。`,
-            details: { item_id: id, item_name: n, quantity: 1, unit_price: roundCurrency(p), category: c || '杂项' }
+            note: `在${merchant.name}购买 ${n} ×1，单价 ${formatCurrency(p)}。`,
+            details: { shop_id: merchant.id, shop_name: merchant.name, item_id: id, item_name: n, quantity: 1, unit_price: roundCurrency(p), category: c || '杂项' }
         });
-        const { data, error } = await financeClient.rpc('atomic_buy_item_identity', {
-            p_user_id: viewingUserId, // 确保这是有效的 UUID 字符串
+        const { data, error } = await financeClient.rpc('buy_shop_item', {
+            p_user_id: accountId,
+            p_shop_id: merchant.id,
             p_item_id: parseInt(id),  // 确保是数字
             p_price: roundCurrency(p),   // 确保支持两位小数数字
             p_item_name: n,
@@ -8788,18 +8908,34 @@ async function buy(id, p, n, c) {
         }
 
         if (data && data.startsWith('success')) {
-            // 将 loadShop() 加入并发刷新队列
-            await Promise.all([loadGold(), loadInventory(), loadShop()]);
-            alert(`[${n}] 购买成功！`);
+            if (accountId === viewingUserId) {
+                ShopMerchants.status(`已从${merchant.name}购入 ${n}。`);
+                document.dispatchEvent(new CustomEvent('shop:purchase-completed', { detail: { ...interaction, shopId: merchant.id, accountId } }));
+                const refreshed = await Promise.allSettled([loadGold(), loadInventory(), loadShop()]);
+                if (refreshed.some(result => result.status === 'rejected')) ShopMerchants.status(`购买已完成并入账，界面刷新失败，请刷新查看。`);
+            }
         } else {
+            reportShopPurchaseFailure(data || '', interaction, merchant.id, accountId);
             alert(data ? data.replace('error:', '') : '未知错误');
             loadShop(); 
         }
     } catch (e) {
         console.error("Full Error Info:", e);
-        alert('交易失败：' + (e.message || '请检查网络'));
+        reportShopPurchaseFailure(e.message || '', interaction, merchant.id, accountId);
+        alert('交易失败：' + (['PGRST202', '42883'].includes(e.code) ? '请运行 shop_merchants.sql 安装双商铺交易函数。' : (e.message || '请检查网络')));
     } finally {
+        ShopMerchants.setBusy(false);
         hideLoading();
+    }
+}
+
+function reportShopPurchaseFailure(message, interaction, shopId, accountId) {
+    if (accountId !== viewingUserId) return;
+    const detail = { ...interaction, shopId, accountId };
+    if (/库存不足|已售罄|out of stock/i.test(message)) ShopMerchants.signal('sold_out', detail);
+    if (/余额不足|金币不足|insufficient.*funds/i.test(message)) {
+        const balance = typeof userProfile !== 'undefined' && userProfile?.id === accountId ? userProfile.gold_gp : null;
+        ShopMerchants.signal('insufficient', { ...detail, balance });
     }
 }
 
@@ -8874,6 +9010,35 @@ async function buy(id, p, n, c) {
     // 2. 选中玩家后，加载详细信息
      // ================== 修复后的 DM 背包读取 ==================
     let selectedUserId = null;
+    async function saveSelectedPlayerCrafter(input) {
+        const accountId = selectedUserId;
+        if (!accountId || !await requireAdminRole()) return;
+        const previous = input.dataset.saved === 'true';
+        const enabled = input.checked;
+        const status = document.getElementById('adm-user-crafter-status');
+        input.disabled = true;
+        status.textContent = '保存中...';
+        let saved = false;
+        try {
+            const { data, error } = await supabaseClient.rpc('set_player_crafter', { p_account_id: accountId, p_enabled: enabled });
+            if (error) throw error;
+            saved = true;
+            if (selectedUserId === accountId) {
+                input.checked = data === true;
+                input.dataset.saved = String(input.checked);
+                status.textContent = '已保存';
+            }
+            if (viewingUserId === accountId) {
+                await loadGold();
+                if (!isSellMode) refreshShopFilters();
+            }
+        } catch (error) {
+            if (selectedUserId === accountId) {
+                if (!saved) input.checked = previous;
+                status.textContent = saved ? '资格已保存，界面刷新失败' : ['PGRST202','42883'].includes(error.code) ? '请先执行 shop_merchants.sql' : '保存失败：' + error.message;
+            }
+        } finally { input.disabled = false; }
+    }
 // --- 加载玩家详情 ---
     async function loadUserDetail() {
         if (!await requireAdminRole()) return;
@@ -8930,6 +9095,12 @@ async function buy(id, p, n, c) {
 
         const { data: prof } = await supabaseClient.from('profiles').select('*').eq('id', selectedUserId).single();
         if (prof) {
+            if (prof.id === selectedUserId) {
+                const crafterInput = document.getElementById('adm-user-crafter');
+                crafterInput.checked = prof.has_crafter === true;
+                crafterInput.dataset.saved = String(crafterInput.checked);
+                document.getElementById('adm-user-crafter-status').textContent = '';
+            }
             document.getElementById('adm-user-gold').value = prof.gold_gp;
             viewingCampaignType = normalizeCampaignType(prof.campaign_type);
             viewingCalendarSystem = normalizeCalendarSystem(prof.calendar_system, viewingCampaignType);
@@ -9724,12 +9895,15 @@ async function calculateCityNetIncome(targetUserId) {
         const rarity = document.getElementById('adm-shop-rarity').value;
         const category = document.getElementById('adm-shop-cat').value;
         const price = parseCurrencyInput(document.getElementById('adm-shop-price').value);
-        const stock = parseInt(document.getElementById('adm-shop-stock').value);
+        const unlimitedStock = document.getElementById('adm-shop-unlimited').checked;
+        const stock = unlimitedStock ? 0 : parseInt(document.getElementById('adm-shop-stock').value);
         const description = document.getElementById('adm-shop-desc').value;
         const descriptionOverride = document.getElementById('adm-shop-description-override').checked;
         const targetType = document.getElementById('adm-shop-target').value;
+        const merchantId = getAdminShopId();
 
         if (!name || Number.isNaN(price)) return alert('名称和价格必填');
+        if (!unlimitedStock && (!Number.isInteger(stock) || stock < 1)) return alert('请填写正整数库存，或勾选不限量供货');
 
         // 【核心修复】双重保险获取目标玩家ID
         // 如果 selectedUserId 为空，尝试直接从下拉框再取一次
@@ -9750,7 +9924,8 @@ async function calculateCityNetIncome(targetUserId) {
             const compendiumItemId = selectedShopCompendiumItem?.name === name ? selectedShopCompendiumItem.id :
                 await CompendiumIdentity.resolveName(supabaseClient, name);
             const { error } = await supabaseClient.from('shop_items').insert([{
-                name, rarity, category, price, stock, description,
+                name, rarity, category, price, stock, description, shop_id: merchantId,
+                unlimited_stock: unlimitedStock,
                 compendium_item_id: compendiumItemId,
                 description_override: descriptionOverride,
                 user_id: targetUserId // 写入归属
@@ -9758,7 +9933,7 @@ async function calculateCityNetIncome(targetUserId) {
 
             if (error) throw error;
 
-            await logAction('DM进货', `上架了 [${name}] (${targetType === 'private' ? '特供' : '公开'})`);
+            await logAction('DM进货', `在${ShopMerchants.merchants.find(shop => shop.id === merchantId).name}上架了 [${name}] (${targetType === 'private' ? '特供' : '公开'})`);
             alert('上架成功');
             
             // 清空输入
@@ -10119,28 +10294,32 @@ async function loadLoginLogs() {
 
     // --- 随机进货功能 ---
     async function randomRestock() {
+        const merchantId = getAdminShopId();
         if (randomRestockInFlight) return;
         if (!await requireAdminRole()) return;
         if (randomRestockInFlight) return;
-        // 1. 确定进货目标
-        // 如果 selectedUserId 有值，说明 DM 选中了某个玩家，进货给他
-        // 如果没值 (null)，说明是公共进货
-        let targetId = selectedUserId || null;
+        let supplyRule;
+        try { if (typeof ShopSupply !== 'undefined') supplyRule = ShopSupply.read(); }
+        catch (error) { return alert(error.message); }
+        const targetId = supplyRule ? (supplyRule.scope === 'private' ? selectedUserId : null) : selectedUserId || null;
+        if (supplyRule?.scope === 'private' && !targetId) return alert('请先在顶部选择特供玩家。');
         let targetName = targetId ? '指定玩家特供' : '全服公共';
         const plan = getRestockPlan();
 
         if (plan.length === 0) return alert('请至少设置一种稀有度的进货数量。');
-        if (!confirm(`确定要执行随机进货吗？\n\n目标: ${targetName}\n内容: ${describeRestockPlan(plan)}\n\n同ID、同供货范围的商品会累加库存；特供与全服公共商品分别计算。`)) return;
+        if (!confirm(`确定要执行随机进货吗？\n\n商铺: ${ShopMerchants.merchants.find(shop => shop.id === merchantId).name}\n目标: ${targetName}\n范围: ${supplyRule ? ShopSupply.describe(supplyRule) : '全部类型'}\n内容: ${describeRestockPlan(plan)}\n\n同店、同ID、同供货范围的商品会累加库存；两家商铺、特供和公共库存分别计算。`)) return;
 
         randomRestockInFlight = true;
+        if (supplyRule) ShopSupply.setBusy(true);
         showLoading();
         try {
             const restockItems = [];
             const shortageNotes = [];
 
             for (const row of plan) {
-                const data = await ShopSources.catalog(supabaseClient, { rarity: row.rarity });
-                const pool = await ShopSources.filterCatalog(supabaseClient, data, targetId || myId);
+                const data = await ShopSources.catalog(supabaseClient, { rarity: row.rarity, source: supplyRule?.source_book || '' });
+                const allowed = await ShopSources.filterCatalog(supabaseClient, data, targetId || myId);
+                const pool = supplyRule ? ShopSupply.filterPool(allowed, supplyRule) : allowed;
                 const picked = shuffleItems(pool).slice(0, row.count);
                 if (picked.length < row.count) {
                     shortageNotes.push(`${row.rarity} 仅找到 ${picked.length}/${row.count} 种`);
@@ -10156,20 +10335,21 @@ async function loadLoginLogs() {
 
             if (restockItems.length === 0) throw new Error('没有从图鉴库中抽到任何可上架物品。');
 
-            const { data: result, error: restockError } = await supabaseClient.rpc('restock_shop_items', {
+            const { data: result, error: restockError } = await supabaseClient.rpc('restock_shop_items_at_shop', {
                 p_target_user_id: targetId,
+                p_shop_id: merchantId,
                 p_items: restockItems
             });
             if (restockError) {
                 if (restockError.code === 'PGRST202' || restockError.code === '42883') {
-                    throw new Error('请先在Supabase运行 shop_restock.sql，安装库存合并功能。');
+                    throw new Error('请先在Supabase运行 shop_merchants.sql，安装分店库存功能。');
                 }
                 throw restockError;
             }
 
             // 3. 记录日志
             try {
-                await logAction('DM随机进货', `执行了自定义随机进货 (目标: ${targetName})：${describeRestockPlan(plan)}；新增 ${result.created} 种，补充库存 ${result.restocked} 种，共 ${result.units} 件`);
+                await logAction('DM随机进货', `${ShopMerchants.merchants.find(shop => shop.id === merchantId).name}随机进货 (目标: ${targetName})：${describeRestockPlan(plan)}；新增 ${result.created} 种，补充库存 ${result.restocked} 种，共 ${result.units} 件`);
             } catch (error) { console.warn('进货已完成，但日志写入失败:', error); }
 
             const warning = shortageNotes.length ? `\n\n库存池不足：${shortageNotes.join('；')}` : '';
@@ -10180,6 +10360,7 @@ async function loadLoginLogs() {
             alert('进货失败: ' + e.message);
         } finally {
             randomRestockInFlight = false;
+            if (supplyRule) ShopSupply.setBusy(false);
             hideLoading();
         }
     }
@@ -10223,13 +10404,13 @@ async function loadLoginLogs() {
     }
 
     // --- 根据日期和物品名生成固定的随机折扣 ---
-    function getDailySellRatio(itemName) {
+    function getDailySellRatio(itemName, shopId = 'moon') {
         // 1. 获取游戏内日期字符串 (如 "1494-2-12")
         const dateStr = `${currentDate.year}-${currentDate.month}-${currentDate.day}`;
         
         // 2. 组合种子：日期 + 玩家ID + 物品名
         // 这样每个人、每天、每件物品的折扣都是独立的，且全天固定
-        const seedString = `${dateStr}-${viewingUserId}-${itemName}`;
+        const seedString = `${dateStr}-${viewingUserId}-${itemName}-${shopId}`;
 
         // 3. 简单的哈希算法 (将字符串转为数字)
         let hash = 0;
@@ -10240,10 +10421,10 @@ async function loadLoginLogs() {
         }
 
         // 4. 归一化到 0 ~ 1 之间
-        const random = Math.abs(hash) / 2147483647;
+        const random = Math.min(1, Math.abs(hash) / 2147483647);
 
-        // 5. 映射到 0.6 ~ 0.9 之间
-        return 0.6 + (random * 0.3);
+        // 满月杂货铺10%-80%；莱蒙尼亚商社40%-70%，同日同账号固定。
+        return shopId === 'moon' ? 0.1 + random * 0.7 : 0.4 + random * 0.3;
     }
 
     const WANTED_STATUSES = ['DEAD OR ALIVE', 'CAPTURED', 'REVOKED'];
@@ -10496,6 +10677,7 @@ async function loadLoginLogs() {
     async function loadSellShop() {
         const request = ++shopLoadGeneration;
         const accountId = viewingUserId;
+        const merchantId = ShopMerchants.current().id;
         ShopShelf.mount(refreshShopFilters);
         ShopShelf.setMode(true);
         const grid = document.getElementById('shop-grid');
@@ -10515,6 +10697,7 @@ async function loadLoginLogs() {
 
         if (!inventory || inventory.length === 0) {
             shopShelfAccountId = accountId;
+            shopShelfMerchantId = merchantId;
             shopShelfSellRows = [];
             renderSellShopItems([]);
             return;
@@ -10531,15 +10714,16 @@ async function loadLoginLogs() {
         }
         if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
         shopShelfAccountId = accountId;
+        shopShelfMerchantId = merchantId;
         shopShelfSellRows = inventory.map(item => {
             const baseInfo = priceMap.get(CompendiumIdentity.key(item));
-            const ratio = getDailySellRatio(item.item_name);
+            const ratio = getDailySellRatio(item.item_name, merchantId);
             return { ...baseInfo, ...item, name:item.item_name, source_book:baseInfo?.source_book,
                 rarity:baseInfo?.rarity || item.rarity, category:baseInfo?.category || item.category,
                 shop_shelf_category:ShopShelf.classify(baseInfo || item),
                 shop_search_terms:baseInfo?.source_metadata?.english_name || '',
                 shop_shelf_price:baseInfo?.price ? Math.round(baseInfo.price * ratio * 100) / 100 : null,
-                shop_sell_discount:Math.round(ratio * 100), shop_base_price:baseInfo?.price };
+                shop_sell_discount:(ratio * 100).toFixed(2), shop_base_price:baseInfo?.price };
         });
         renderSellShopItems(shopShelfSellRows);
     }
@@ -10549,8 +10733,11 @@ async function loadLoginLogs() {
         const items = ShopShelf.filter(rows);
         if (!items.length) {
             grid.innerHTML = '<div class="shop-empty">暂无符合条件的背包物品</div>';
+            const query = document.getElementById('shop-search-input').value.trim();
+            ShopMerchants.signal(query ? 'search_empty' : 'search_results', { query });
             return;
         }
+        ShopMerchants.signal('search_results');
         grid.innerHTML = items.map(item => {
             const sellable = item.shop_shelf_price !== null;
             return `<div class="card shop-card${sellable ? '' : ' shop-card-out'}" style="--shop-rarity:${rarityColors[item.rarity] || '#bac7c0'}">
@@ -10570,7 +10757,8 @@ async function loadLoginLogs() {
 
     // --- 执行出售 ---
     async function sellItem(invId, itemName, unitPrice, maxQty) {
-        if (itemSaleInProgress) return;
+        if (itemSaleInProgress || ShopMerchants.isBusy()) return;
+        const merchant = ShopMerchants.current();
         const qtyStr = prompt(`出售 [${itemName}] (单价: ${formatCurrency(unitPrice)})\n当前拥有: ${maxQty}\n\n请输入出售数量:`, "1");
         if (qtyStr === null) return;
         const qty = Number(qtyStr);
@@ -10581,28 +10769,30 @@ async function loadLoginLogs() {
         const accountId = viewingUserId;
         const saleKey = `${accountId}:${invId}`;
         const pending = pendingItemSales.get(saleKey);
-        if (pending && (pending.p_quantity !== qty || pending.p_expected_unit_price !== unitPrice)) {
-            return alert('上一笔出售尚未确认，请先用原数量和报价重试，避免重复出售。');
+        if (pending && (pending.p_quantity !== qty || pending.p_expected_unit_price !== unitPrice || pending.p_shop_id !== merchant.id)) {
+            return alert('上一笔出售尚未确认，请回到原商铺，用原数量和报价重试，避免重复出售。');
         }
         const request = pending || {
             p_account_id: accountId, p_inventory_id: invId, p_quantity: qty,
-            p_expected_unit_price: unitPrice, p_request_key: crypto.randomUUID()
+            p_expected_unit_price: unitPrice, p_request_key: crypto.randomUUID(), p_shop_id: merchant.id
         };
         pendingItemSales.set(saleKey, request);
         itemSaleInProgress = true;
+        ShopMerchants.setBusy(true);
         showLoading();
         try {
-            const { data: receipt, error } = await supabaseClient.rpc('sell_inventory_item', request);
+            const { data: receipt, error } = await supabaseClient.rpc('sell_inventory_item_at_shop', request);
             if (error) {
                 // A database rejection has rolled back; a transport failure may have committed.
                 if (/^[0-9A-Z]{5}$/.test(error.code || '')) pendingItemSales.delete(saleKey);
-                if (isMissingFinanceLedgerRpcError(error, 'sell_inventory_item')) {
+                if (isMissingFinanceLedgerRpcError(error, 'sell_inventory_item_at_shop')) {
                     pendingItemSales.delete(saleKey);
-                    throw new Error('数据库尚未安装新版出售函数，请执行完整的 player_finance_ledger.sql；尚未扣除物品或变更资金。');
+                    throw new Error('请运行 shop_merchants.sql 安装分店回收函数；尚未扣除物品或变更资金。');
                 }
                 throw error;
             }
             pendingItemSales.delete(saleKey);
+            if (accountId === viewingUserId) document.dispatchEvent(new CustomEvent('shop:sale-completed', { detail: { shopId: merchant.id, accountId, itemName, quantity: qty } }));
             alert(`出售成功！获得 ${formatCurrency(receipt.amount)}`);
             try {
                 await logAction('出售物品', `以 ${formatCurrency(unitPrice)} 的单价出售了 [${receipt.item_name}] x${qty}，获利 ${formatCurrency(receipt.amount)}；账本编号 ${receipt.entry_id}`);
@@ -10621,6 +10811,7 @@ async function loadLoginLogs() {
             alert(e.message || '未收到出售结果，请用相同数量重试确认，勿重复提交其他数量。');
         } finally {
             itemSaleInProgress = false;
+            ShopMerchants.setBusy(false);
             hideLoading();
         }
     }

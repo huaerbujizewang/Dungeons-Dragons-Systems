@@ -259,6 +259,8 @@
         render(item);
         const status = dialog.querySelector('.shop-item-dialog-status');
         status.textContent = '\u6b63\u5728\u8bfb\u53d6\u56fe\u9274\u8d44\u6599...';
+        dialog.classList.toggle('shop-scene-dialog', document.getElementById('shop-section')?.classList.contains('active') === true);
+        dialog.dataset.merchant = document.getElementById('shop-section')?.dataset.merchant || 'moon';
         if (!dialog.open) dialog.showModal();
         try {
             const [master, names] = await Promise.all([lookup ? lookup(item.name, item) : null, bookNames()]);

@@ -59,6 +59,7 @@
             const master = masters.get(root.CompendiumIdentity.key(item));
             if (!allowed(master, context) || (!allBooks && selected && (master?.source_book || 'HOMEBREW') !== selected)) return [];
             return [{ ...item, source_book: master?.source_book || 'HOMEBREW',
+                is_nonmagical: typeof master?.is_nonmagical === 'boolean' ? master.is_nonmagical : master?.source_metadata?.is_nonmagical === true,
                 shop_shelf_category: root.ShopShelf?.classify(master || item),
                 shop_search_terms: [master?.source_metadata?.canonical_name, master?.source_metadata?.english_name,
                     master?.source_metadata?.spell_name].filter(Boolean).join(' '),

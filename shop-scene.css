@@ -1,0 +1,306 @@
+/* The illustrated shop is isolated from the account, DM and other tab layouts. */
+#shop-section {
+    --moon-ink: #343242;
+    --moon-muted: #7c706e;
+    --moon-wine: #703e4b;
+    --moon-line: #b7a28a66;
+    --shop-pan-x: 0px;
+    --shop-pan-y: 0px;
+    position: relative;
+    isolation: isolate;
+    max-width: 1760px;
+    color: var(--moon-ink);
+    background: #211e28;
+    border: 1px solid #433642;
+    border-radius: 6px;
+    overflow: clip;
+    box-shadow: 0 12px 40px #22172624;
+}
+#shop-section *, #shop-section *::before, #shop-section *::after { box-sizing: border-box; }
+#shop-section .shop-merchant-tabs { position: relative; z-index: 3; display: flex; gap: 10px; margin: 18px 22px 0; width: min(590px, calc(100% - 44px)); }
+#shop-section .shop-merchant-tabs button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 57px; padding: 9px 15px; border: 1px solid #e3cda270; border-bottom: 3px solid transparent; border-radius: 3px; background: #251e2add; color: #e5d7cb; font: inherit; text-align: left; cursor: pointer; }
+#shop-section .shop-merchant-tabs strong { font: 700 15px/1.5 'Songti SC', SimSun, serif; }
+#shop-section .shop-merchant-tabs span { font: 9px/1.4 Georgia, serif; color: #c0adb0; }
+#shop-section .shop-merchant-tabs button[aria-pressed='true'] { background: #f9f1e6; border-color: #c8aa7a; border-bottom-color: #854b5e; color: #674054; }
+#shop-section .shop-merchant-tabs button[aria-pressed='true'] span { color: #8d737c; }
+#shop-section .shop-merchant-tabs button:disabled { cursor: wait; opacity: .7; }
+#shop-section .shop-transaction-status { flex: none; min-height: 0; color: #855262; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+#shop-section .shop-transaction-status:not(:empty) { margin: 0 0 8px; padding: 7px 9px; background: #f3e5e4; border-left: 2px solid #a16c78; }
+#shop-section .shop-scene-backdrop {
+    position: absolute;
+    z-index: -2;
+    inset: -25px;
+    background: url('商城系统素材/满月杂货铺背景.png') center center / cover no-repeat;
+    transform: translate3d(var(--shop-pan-x), var(--shop-pan-y), 0) scale(1.025);
+    transition: transform 350ms ease-out;
+    pointer-events: none;
+}
+#shop-section::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: linear-gradient(90deg, #15131b55, #17141a00 40%, #17141a10);
+    pointer-events: none;
+}
+#shop-section .shop-stage { display: grid; grid-template-columns: minmax(280px, 29%) minmax(0, 1fr); gap: 8px; padding: 22px; }
+#shop-section .shop-keeper { position: relative; min-width: 0; min-height: 736px; }
+#shop-section .shop-brand { position: relative; z-index: 3; display: flex; align-items: center; gap: 15px; padding: 10px 3px; color: #f6e9cb; text-shadow: 0 2px 8px #100b15; }
+#shop-section .shop-brand h2 { margin: 0; font: 700 30px/1.5 'Songti SC', SimSun, serif; letter-spacing: 0; white-space: nowrap; }
+#shop-section .shop-brand p { margin: 1px 0 0; font: 10px/1.5 Georgia, serif; letter-spacing: 0; }
+#shop-section .shop-brand-moon { position: relative; display: block; flex: 0 0 46px; width: 46px; height: 46px; border: 1px solid #cbb17b99; border-radius: 50%; }
+#shop-section .shop-brand-moon::before { content: ''; position: absolute; width: 27px; height: 31px; left: 7px; top: 5px; border-radius: 50%; box-shadow: -7px 4px 0 #e4ce9f; transform: rotate(-25deg); }
+#shop-section .shop-brand-moon::after { content: '+'; position: absolute; right: 1px; top: 2px; font: 20px Georgia, serif; color: #efdcab; }
+#shop-section .shop-keeper-message { position: relative; z-index: 3; width: min(100%, 275px); padding: 14px 18px; margin: 12px 0 0 6px; border: 1px solid #b59b6e7a; border-left: 2px solid #c8ab77; background: #201b27d9; color: #f0e6d7; box-shadow: 0 4px 16px #120d1630; }
+#shop-section .shop-keeper-message-label { font: 10px/1.5 'Microsoft YaHei', sans-serif; color: #cfb68c; }
+#shop-section .shop-keeper-message p { margin: 5px 0 0; min-height: 44px; font: 14px/1.7 'Songti SC', SimSun, serif; }
+#shop-section .shop-keeper-portrait { position: absolute; inset: 165px -42px 33px -38px; display: block; width: calc(100% + 80px); padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transform: translate3d(calc(var(--shop-pan-x) * -0.28), calc(var(--shop-pan-y) * -0.2), 0); transition: transform 400ms ease-out; }
+#shop-section .shop-keeper-portrait:focus-visible { outline: 1px solid #ead2a4; outline-offset: -15px; }
+#shop-section .shop-keeper-breath { position: relative; display: block; width: 100%; height: 100%; transform-origin: 50% 95%; }
+#shop-section .shop-keeper-breath img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; user-select: none; filter: drop-shadow(0 8px 12px #100b1740); }
+#shop-section:not(.scene-ready) #shop-keeper-image { opacity: 0; }
+#shop-section[data-scene-running='true'] .shop-keeper-breath { animation: moon-shop-breathe 6s ease-in-out infinite; }
+@keyframes moon-shop-breathe { 0%, 100% { transform: translateY(0) rotate(-0.12deg) scaleY(1); } 50% { transform: translateY(-3px) rotate(0.12deg) scaleY(1.006); } }
+#shop-section .shop-scene-controls { position: absolute; z-index: 3; bottom: 0; left: 6px; right: 16px; display: flex; align-items: center; gap: 16px; min-height: 32px; color: #e7d9c5; font-size: 11px; background: #1b1721a6; padding: 6px 10px; border-top: 1px solid #bba77c4d; }
+#shop-section .shop-motion-control { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer; }
+#shop-section .shop-motion-control input { width: 13px; height: 13px; margin: 0; accent-color: #b88b60; }
+#shop-section .shop-view-control { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
+#shop-section .shop-view-control > span { flex: none; white-space: nowrap; }
+#shop-section #shop-scene-view { width: 100%; min-width: 30px; height: 15px; margin: 0; padding: 0; accent-color: #cfb48b; cursor: ew-resize; }
+#shop-section .shop-paper-panel { position: relative; z-index: 2; min-width: 0; height: 736px; display: flex; flex-direction: column; padding: 8px 10px; border: 30px solid transparent; border-image: url('商城系统素材/透明底边框角饰.png') 270 / 30px / 0 stretch; background: linear-gradient(#fffdf5d9, #fffdf5d9), url('商城系统素材/低对比度纸张纹理.jpg') center / 620px repeat; box-shadow: 0 5px 30px #160d2260; }
+#shop-section .shop-header { flex: none; margin: 0 0 12px; gap: 12px; }
+#shop-section .shop-catalog-title > span { display: block; color: #8f7c6a; font: 9px/1.5 Georgia, serif; }
+#shop-section .shop-header h2 { margin: 2px 0 0; color: #413544; font: 700 23px/1.5 'Songti SC', SimSun, serif; }
+#shop-section .shop-mode-tabs { flex: none; border: 1px solid #a99a8d; border-radius: 3px; background: #fffcf7; }
+#shop-section .shop-mode-tabs button { padding: 7px 13px; min-height: 36px; color: #756574; background: none; font-size: 12px; }
+#shop-section .shop-mode-tabs button[aria-pressed='true'] { background: #443b50; color: #fff5e6; box-shadow: inset 0 0 0 1px #ffffff12; }
+#shop-section .shop-toolbar { flex: none; display: grid; grid-template-columns: minmax(140px, 1fr) 140px 114px; gap: 7px; padding: 10px 0; border-color: var(--moon-line); }
+#shop-section .shop-toolbar input, #shop-section .shop-toolbar select, #shop-section #shop-category-mobile, #shop-section #shop-price-search-input { min-height: 35px; padding: 7px 9px; width: 100%; color: #5c5059; border: 1px solid #b9a894aa; background: #fffcf7c9; border-radius: 3px; font-size: 12px; }
+#shop-section #shop-search-input { grid-column: 1 / 3; background-color: #fffefa; }
+#shop-section #shop-source-filter { width: 100%; grid-column: 1; }
+#shop-section #shop-rarity-filter, #shop-section #shop-sort-filter { width: 100%; }
+#shop-section #shop-price-table-btn { grid-row: 1; grid-column: 3; min-width: 0; min-height: 42px; padding: 6px 9px; gap: 5px; border-color: #754452; background: #703e4b; color: #fff8eb; font-size: 12px; box-shadow: 0 1px 2px #291a2530; }
+#shop-section #shop-price-table-btn:hover { background: #5b303c; border-color: #5b303c; }
+#shop-section #shop-price-table-btn[aria-expanded='true'] { background: #482b38; border-color: #482b38; }
+#shop-section #shop-price-tools { flex: 0 1 auto; min-height: 0; max-height: 44%; overflow: auto; padding: 10px 0; background: #f8f1e6; border-color: var(--moon-line); }
+#shop-section #shop-price-table-panel { max-height: 180px !important; }
+#shop-section .shop-scope-tabs { flex: none; margin: 0 0 12px; gap: 22px; border-color: var(--moon-line); }
+#shop-section .shop-scope-tabs button { min-height: 40px; padding: 10px 0 8px; font-size: 11px; color: #857278; }
+#shop-section .shop-scope-tabs button[aria-pressed='true'] { color: #703e4b; border-bottom-color: #8e5361; }
+#shop-section .shop-shell { flex: 1; min-height: 140px; grid-template-columns: 139px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); align-items: stretch; gap: 14px; overflow: hidden; }
+#shop-section .shop-category-rail { position: static; min-height: 0; overflow: auto; border-color: var(--moon-line); padding: 0 10px 0 0; scrollbar-width: thin; scrollbar-color: #bcaba0 transparent; }
+#shop-section .shop-category-rail h3 { margin: 2px 0 9px 8px; color: #958176; font-size: 10px; }
+#shop-section #shop-category-nav { gap: 3px; }
+#shop-section .shop-category-button { padding: 7px 7px; min-height: 35px; gap: 7px; color: #776672; font-size: 11px; border: 1px solid transparent; border-radius: 3px; }
+#shop-section .shop-category-button > span { min-width: 0; }
+#shop-section .shop-category-button:hover { background: #e8ddd48c; }
+#shop-section .shop-category-button[aria-pressed='true'] { color: #753b4b; background: #eaddd5c9; border-color: #c4a59188; }
+#shop-section .shop-category-count { color: #9d848a; font-size: 10px; }
+#shop-section .shop-shelf-icon { flex-basis: 15px; width: 15px; height: 15px; }
+#shop-section .shop-shelf-main { display: flex; flex-direction: column; min-height: 0; }
+#shop-section .shop-shelf-topline { flex: none; min-height: 24px; gap: 8px; margin-bottom: 9px; }
+#shop-section .shop-shelf-topline h3 { color: #67515e; font-size: 12px; }
+#shop-section #shop-shelf-count { font-size: 10px; color: #95828b; }
+#shop-section .shop-grid { flex: 1; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 10px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #baa39c transparent; padding: 1px 4px 8px 1px; }
+#shop-section .shop-card { min-height: 174px; padding: 10px; border: 1px solid #c8bba7b3; border-top: 2px solid var(--shop-rarity); border-radius: 3px; background: #fffefaeb; box-shadow: 0 2px 3px #39233008; }
+#shop-section .shop-card > * { flex-shrink: 0; }
+#shop-section .shop-card:hover { border-color: #b5a090; border-top-color: var(--shop-rarity); box-shadow: 0 3px 9px #39233014; }
+#shop-section .shop-card-topline { height: 18px; margin: 0 0 6px; }
+#shop-section .shop-card-supply { color: #91817d; font-size: 10px; }
+#shop-section .shop-card-supply.is-special { color: #886088; }
+#shop-section .shop-card-heading { min-height: 39px; }
+#shop-section .shop-item-name { font: 700 14px/1.45 'Songti SC', SimSun, serif; color: #423747; }
+#shop-section .shop-card-category { margin: 3px 0 10px; color: #9b8d84; font-size: 10px; }
+#shop-section .shop-card-pricing { gap: 5px; margin-bottom: 9px; }
+#shop-section .shop-card-price { color: #93434b; font-size: 15px; line-height: 1.5; }
+#shop-section .shop-card-stock { color: #7f8977; font-size: 10px; }
+#shop-section .shop-card-out { background: #eae5dfb0; }
+#shop-section .shop-card-out .shop-card-stock { color: #9d6c70; }
+#shop-section .shop-card-actions { gap: 5px; }
+#shop-section .shop-card .btn-buy, #shop-section .shop-card .shop-detail-trigger { min-height: 33px; padding: 6px 4px; font-size: 11px; border-radius: 2px; }
+#shop-section .shop-card .shop-detail-trigger { color: #765764; border-color: #c4b1b3; background: #fffdfa; }
+#shop-section .shop-card .shop-detail-trigger:hover { background: #f2e7e8; }
+#shop-section .shop-card .btn-buy { color: #fff7ef; border-color: #4c4058; background: #4c4058; }
+#shop-section .shop-card .btn-buy:hover:not(:disabled):not([aria-disabled='true']) { background: #6e465d; border-color: #6e465d; }
+#shop-section .shop-card .btn-buy:is(:disabled,[aria-disabled='true']) { color: #a19a9a; border-color: #d1c8c2; background: #e7e1dd; cursor:not-allowed; }
+#shop-section .shop-sell-quote { color: #938388; }
+#shop-section .shop-item-admin-menu summary { color: #a08b91; }
+#shop-section .shop-item-admin-menu > div { border-color: #cdbbb7; box-shadow: 0 5px 15px #3e273526; }
+#shop-section .shop-empty { color: #99828a; padding: 45px 12px; }
+#shop-section button:focus-visible, #shop-section input:focus-visible, #shop-section select:focus-visible, #shop-section summary:focus-visible { outline: 2px solid #9c647a; outline-offset: 3px; }
+#shop-section[data-mode='sell'] .shop-toolbar { grid-template-columns: minmax(100px, 1fr) 118px 118px; }
+#shop-section[data-mode='sell'] #shop-search-input { grid-column: 1 / 3; }
+#shop-section[data-mode='sell'] #shop-rarity-filter { grid-column: 1 / 3; }
+#shop-section[data-mode='sell'] .shop-catalog-title h2 { color: #5c4d6b; }
+.shop-item-dialog.shop-scene-dialog { color: #443a48; border: 1px solid #b69f8d; background: linear-gradient(#fffdf7e8, #fffdf7e8), url('商城系统素材/低对比度纸张纹理.jpg') center / 620px repeat; box-shadow: 0 18px 80px #170c2d77; }
+.shop-scene-dialog::backdrop { background: #1e1725a6; }
+.shop-scene-dialog .shop-item-dialog-header h2, .shop-scene-dialog .shop-item-dialog-body h2, .shop-scene-dialog .shop-item-dialog-body h3, .shop-scene-dialog .shop-item-dialog-body h4 { color: #694357; }
+.shop-scene-dialog .shop-item-dialog-meta { color: #88727e; border-color: #ccbdb0; }
+.shop-scene-dialog .shop-item-dialog-meta .shop-item-source-link, .shop-scene-dialog .shop-item-dialog-close { color: #6e465d; background: #fff9f3; border-color: #c2a9ac; }
+.shop-scene-dialog .shop-item-dialog-meta .shop-item-source-link:hover, .shop-scene-dialog .shop-item-dialog-close:hover { background: #f0e0e4; }
+.shop-scene-dialog .shop-item-table-scroll th { color: #63485b; background: #e9dfd9; }
+.shop-scene-dialog .shop-item-table-scroll td, .shop-scene-dialog .shop-item-table-scroll th { border-color: #d4c5bb; }
+.shop-scene-dialog .shop-item-table-scroll tbody tr:nth-child(even) { background: #f1eae2; }
+#shop-section[data-merchant='lemonia'] { --moon-ink: #303f58; --moon-line: #9eacc26b; background: #dee5ed; border-color: #b1bdcd; }
+#shop-section[data-merchant='lemonia'] .shop-scene-backdrop { background-image: url('商城系统素材/莱蒙尼亚商社背景.png'); }
+#shop-section[data-merchant='lemonia']::before { background: #eff4ff12; }
+#shop-section[data-merchant='lemonia'] .shop-merchant-tabs button { background: #f7faffeb; color: #5e6e86; border-color: #a3b1c78c; }
+#shop-section[data-merchant='lemonia'] .shop-merchant-tabs button[aria-pressed='true'] { background: #36578a; color: #fff9e7; border-bottom-color: #cbb477; }
+#shop-section[data-merchant='lemonia'] .shop-merchant-tabs span { color: #8390a5; }
+#shop-section[data-merchant='lemonia'] .shop-merchant-tabs button[aria-pressed='true'] span { color: #e0e5f0; }
+#shop-section[data-merchant='lemonia'] .shop-brand { color: #294b7c; text-shadow: 0 1px 4px #ffffffdb; }
+#shop-section[data-merchant='lemonia'] .shop-brand-moon { border-color: #b49b69; background: #fbfcffdb; }
+#shop-section[data-merchant='lemonia'] .shop-brand-moon::before { content: '✦'; inset: 0; width: 100%; height: 100%; box-shadow: none; transform: none; color: #536f9d; text-align: center; font: 35px/44px Georgia, serif; }
+#shop-section[data-merchant='lemonia'] .shop-brand-moon::after { content: ''; }
+#shop-section[data-merchant='lemonia'] .shop-keeper-message { background: #f7faffeb; border-color: #b9a477; color: #3f5573; box-shadow: 0 3px 15px #35435a14; }
+#shop-section[data-merchant='lemonia'] .shop-keeper-message-label { color: #8f7a53; }
+#shop-section[data-merchant='lemonia'] .shop-scene-controls { background: #f5f8f0e6; color: #526582; border-color: #ae996d; }
+#shop-section[data-merchant='lemonia'] .shop-motion-control input { accent-color: #4f6d9b; }
+#shop-section[data-merchant='lemonia'] .shop-paper-panel { border-image-source: url('商城系统素材/莱蒙尼亚商社透明装饰边框.png'); background: linear-gradient(#ffffffaf, #ffffffaf), url('商城系统素材/莱蒙尼亚商社底纹.jpg') center / 620px repeat; box-shadow: 0 5px 25px #28394b33; }
+#shop-section[data-merchant='lemonia'] .shop-header h2, #shop-section[data-merchant='lemonia'] .shop-shelf-topline h3 { color: #395780; }
+#shop-section[data-merchant='lemonia'] .shop-catalog-title > span { color: #8c7b58; }
+#shop-section[data-merchant='lemonia'] .shop-mode-tabs { border-color: #9cabc2; }
+#shop-section[data-merchant='lemonia'] .shop-mode-tabs button { color: #5d7293; }
+#shop-section[data-merchant='lemonia'] .shop-mode-tabs button[aria-pressed='true'] { color: #fff; background: #3c5e91; }
+#shop-section[data-merchant='lemonia'] .shop-toolbar input, #shop-section[data-merchant='lemonia'] .shop-toolbar select, #shop-section[data-merchant='lemonia'] #shop-category-mobile { color: #4f6584; border-color: #b5c0d1; background: #fff; }
+#shop-section[data-merchant='lemonia'] #shop-price-table-btn { color: #fffaf0; background: #385c92; border-color: #385c92; }
+#shop-section[data-merchant='lemonia'] #shop-price-table-btn:hover { background: #2f4f80; }
+#shop-section[data-merchant='lemonia'] #shop-price-tools { background: #f0f4fa; }
+#shop-section[data-merchant='lemonia'] .shop-scope-tabs button { color: #8290a6; }
+#shop-section[data-merchant='lemonia'] .shop-scope-tabs button[aria-pressed='true'] { color: #3f6297; border-color: #a98b4d; }
+#shop-section[data-merchant='lemonia'] .shop-category-button { color: #647795; }
+#shop-section[data-merchant='lemonia'] .shop-category-button[aria-pressed='true'] { color: #385986; background: #e7eef8; border-color: #becce1; }
+#shop-section[data-merchant='lemonia'] .shop-category-count, #shop-section[data-merchant='lemonia'] #shop-shelf-count { color: #8794ab; }
+#shop-section[data-merchant='lemonia'] .shop-category-rail h3 { color: #91815d; }
+#shop-section[data-merchant='lemonia'] .shop-grid { scrollbar-color: #a5b6ce transparent; }
+#shop-section[data-merchant='lemonia'] .shop-card { background: #ffffffee; border-color: #c1cbd9; border-top-color: var(--shop-rarity); }
+#shop-section[data-merchant='lemonia'] .shop-item-name { color: #334d74; }
+#shop-section[data-merchant='lemonia'] .shop-card-category { color: #8b97a9; }
+#shop-section[data-merchant='lemonia'] .shop-card .btn-buy { background: #3d5d8b; border-color: #3d5d8b; }
+#shop-section[data-merchant='lemonia'] .shop-card .btn-buy:hover:not(:disabled):not([aria-disabled='true']) { background: #2d4972; }
+#shop-section[data-merchant='lemonia'] .shop-card .shop-detail-trigger { color: #526f9a; border-color: #abbcd5; background: #f9fbff; }
+#shop-section[data-merchant='lemonia'] .shop-card-out { background: #e8edf3; }
+#shop-section[data-merchant='lemonia'] .shop-card .btn-buy:is(:disabled,[aria-disabled='true']) { background: #e2e7ee; border-color: #c9d1dc; color: #8e9aaa; }
+#shop-section[data-merchant='lemonia'] .shop-transaction-status:not(:empty) { color: #42628e; background: #e8eff8; border-color: #7c9ac4; }
+.shop-scene-dialog[data-merchant='lemonia'] { color: #384c68; background: linear-gradient(#ffffffca, #ffffffca), url('商城系统素材/莱蒙尼亚商社底纹.jpg') center / 620px repeat; border-color: #a2b2c9; }
+.shop-scene-dialog[data-merchant='lemonia'] .shop-item-dialog-header h2 { color: #395d91; }
+.shop-scene-dialog[data-merchant='lemonia'] .shop-item-dialog-meta .shop-item-source-link { color: #3b5f91; background: #edf3fc; border-color: #b3c3dc; }
+.shop-scene-dialog[data-merchant='lemonia'] .shop-item-table-scroll th { background: #e6edf7; color: #3b5680; }
+.shop-scene-dialog[data-merchant='lemonia'] .shop-item-table-scroll tbody tr:nth-child(even) { background: #f1f5fb; }
+@media (min-width: 1600px) {
+    #shop-section .shop-stage { padding: 30px; gap: 14px; }
+    #shop-section .shop-paper-panel, #shop-section .shop-keeper { height: 800px; min-height: 800px; }
+    #shop-section .shop-grid { grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); }
+    #shop-section .shop-brand h2 { font-size: 34px; }
+}
+@media (max-width: 1150px) {
+    #shop-section .shop-stage { grid-template-columns: 240px minmax(0, 1fr); gap: 0; padding: 15px; }
+    #shop-section .shop-brand { gap: 10px; }
+    #shop-section .shop-brand h2 { font-size: 25px; }
+    #shop-section .shop-brand p { font-size: 8px; }
+    #shop-section .shop-brand-moon { flex-basis: 38px; width: 38px; height: 38px; }
+    #shop-section .shop-keeper-message { width: calc(100% - 18px); }
+    #shop-section .shop-keeper-portrait { inset: 185px -45px 33px -40px; width: calc(100% + 85px); }
+    #shop-section .shop-paper-panel { border-width: 24px; border-image-width: 24px; padding: 5px; }
+    #shop-section .shop-shell { grid-template-columns: 122px minmax(0, 1fr); gap: 9px; }
+    #shop-section .shop-category-button { font-size: 10px; gap: 4px; padding: 7px 4px; }
+    #shop-section .shop-mode-tabs button { padding: 7px 9px; font-size: 11px; }
+    #shop-section .shop-toolbar { grid-template-columns: minmax(80px, 1fr) 118px 107px; }
+    #shop-section .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+}
+@media (max-width: 850px) {
+    #shop-section .shop-stage { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+    #shop-section .shop-keeper { min-height: 208px; height: 208px; overflow: hidden; }
+    #shop-section .shop-brand { width: 65%; padding: 3px 0; }
+    #shop-section .shop-brand h2 { font-size: 28px; }
+    #shop-section .shop-brand p { font-size: 9px; }
+    #shop-section .shop-keeper-message { width: min(52%, 300px); margin: 8px 0 0; padding: 9px 13px; }
+    #shop-section .shop-keeper-message p { min-height: 36px; font-size: 12px; }
+    #shop-section .shop-keeper-portrait { inset: auto -2px -127px auto; width: 230px; height: 345px; }
+    #shop-section .shop-scene-controls { left: 0; right: auto; width: min(52%, 300px); bottom: 8px; gap: 10px; }
+    #shop-section .shop-paper-panel { height: 760px; min-height: 0; }
+    #shop-section .shop-shell { grid-template-columns: 135px minmax(0, 1fr); }
+    #shop-section .shop-category-button { font-size: 11px; }
+    #shop-section .shop-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+@media (max-width: 640px) {
+    #shop-section .shop-merchant-tabs { width: calc(100% - 16px); margin: 9px 8px 0; gap: 6px; }
+    #shop-section .shop-merchant-tabs button { min-height: 51px; padding: 7px 9px; }
+    #shop-section .shop-merchant-tabs strong { font-size: 13px; }
+    #shop-section .shop-merchant-tabs span { font-size: 7px; }
+    #shop-section[data-merchant='lemonia'] .shop-brand-moon::before { font-size: 26px; line-height: 30px; }
+    #shop-section { border-radius: 4px; }
+    #shop-section .shop-stage { padding: 8px; }
+    #shop-section .shop-keeper { min-height: 184px; height: 184px; }
+    #shop-section .shop-brand { gap: 9px; width: 74%; }
+    #shop-section .shop-brand h2 { font-size: 24px; }
+    #shop-section .shop-brand p { font-size: 8px; }
+    #shop-section .shop-brand-moon { flex-basis: 31px; width: 31px; height: 31px; }
+    #shop-section .shop-brand-moon::before { width: 20px; height: 23px; left: 6px; top: 2px; box-shadow: -5px 3px 0 #e4ce9f; }
+    #shop-section .shop-keeper-portrait { right: -8px; bottom: -105px; width: 175px; height: 263px; }
+    #shop-section .shop-keeper-message { width: 55%; padding: 7px 10px; margin-top: 7px; }
+    #shop-section .shop-keeper-message-label { font-size: 9px; }
+    #shop-section .shop-keeper-message p { min-height: 37px; margin-top: 3px; font-size: 11px; }
+    #shop-section .shop-scene-controls { width: 55%; padding: 5px 6px; font-size: 10px; gap: 5px; bottom: 7px; }
+    #shop-section .shop-view-control { gap: 4px; }
+    #shop-section .shop-paper-panel { height: 820px; max-height: none; border-width: 17px; border-image-width: 17px; padding: 5px 3px 2px; }
+    #shop-section .shop-header { gap: 6px; margin: 0 0 9px; align-items: center; }
+    #shop-section .shop-header h2 { font-size: 20px; }
+    #shop-section .shop-catalog-title > span { font-size: 7px; }
+    #shop-section .shop-mode-tabs button { font-size: 10px; min-height: 34px; padding: 6px 8px; }
+    #shop-section .shop-toolbar { grid-template-columns: minmax(0, 1fr) 108px; gap: 6px; padding: 8px 0; }
+    #shop-section #shop-search-input { grid-column: 1 / -1; }
+    #shop-section #shop-price-table-btn { grid-column: 2; grid-row: 2; min-height: 42px; font-size: 11px; }
+    #shop-section #shop-source-filter { grid-row: 2; grid-column: 1; }
+    #shop-section #shop-rarity-filter { grid-row: 3; grid-column: 1; }
+    #shop-section #shop-sort-filter { grid-row: 3; grid-column: 2; }
+    #shop-section .shop-toolbar select, #shop-section .shop-toolbar input { font-size: 11px; min-height: 34px; }
+    #shop-section .shop-scope-tabs { gap: 18px; margin-bottom: 8px; }
+    #shop-section .shop-scope-tabs button { min-height: 38px; font-size: 10px; }
+    #shop-section .shop-shell { display: flex; min-height: 140px; }
+    #shop-section .shop-category-rail { display: none; }
+    #shop-section .shop-shelf-main { width: 100%; }
+    #shop-section #shop-category-mobile { display: block; width: 65%; max-width: 72%; min-height: 32px; font-size: 11px; }
+    #shop-section .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding-right: 2px; }
+    #shop-section .shop-card { min-height: 222px; padding: 9px 7px; }
+    #shop-section .shop-item-name { font-size: 13px; }
+    #shop-section .shop-card-heading { min-height: 39px; }
+    #shop-section .shop-card-price { font-size: 14px; }
+    #shop-section .shop-card-stock { font-size: 9px; }
+    #shop-section .shop-card-actions { grid-template-columns: 1fr; gap: 5px; }
+    #shop-section .shop-card .btn-buy, #shop-section .shop-card .shop-detail-trigger { min-height: 34px; font-size: 11px; }
+    #shop-section[data-mode='sell'] .shop-toolbar { grid-template-columns: minmax(0, 1fr) 108px; }
+    #shop-section[data-mode='sell'] #shop-rarity-filter { grid-column: 1; grid-row: 2; }
+    #shop-section[data-mode='sell'] #shop-sort-filter { grid-column: 1; grid-row: 3; }
+}
+@media (max-width: 360px) {
+    #shop-section .shop-stage { padding: 5px; }
+    #shop-section .shop-brand h2 { font-size: 21px; }
+    #shop-section .shop-brand p { font-size: 7px; }
+    #shop-section .shop-paper-panel { border-width: 13px; border-image-width: 13px; }
+    #shop-section .shop-header { flex-wrap: wrap; gap: 5px; }
+    #shop-section .shop-catalog-title { width: 100%; }
+    #shop-section .shop-mode-tabs { width: 100%; display: flex; }
+    #shop-section .shop-mode-tabs button { flex: 1; }
+    #shop-section .shop-keeper-portrait { right: -27px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #shop-section .shop-keeper-breath { animation: none !important; }
+    #shop-section .shop-scene-backdrop, #shop-section .shop-keeper-portrait { transition: none; }
+}
+#shop-section .shop-card-discount { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 8px; font-size:11px; line-height:1.5; color:#526c58; }
+#shop-section .shop-card-discount span { font-weight:700; }
+#shop-section .shop-card-discount del { color:#7b7775; font-size:10px; }
+#shop-section .shop-purchase-dialog { width:min(420px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); overflow:auto; padding:24px; border:1px solid #bda5a7; border-radius:5px; background:#fffaf4; color:#483847; box-shadow:0 15px 60px #19142055; }
+#shop-section .shop-purchase-dialog::backdrop { background:#17121c88; }
+#shop-section .shop-purchase-dialog h2 { font-size:20px; margin:0 0 16px; }
+#shop-section .shop-purchase-dialog .shop-confirm-merchant { font-size:12px; color:#8a727c; }
+#shop-section .shop-purchase-dialog .shop-confirm-item { display:block; font-size:17px; line-height:1.7; overflow-wrap:anywhere; }
+#shop-section .shop-purchase-dialog .shop-confirm-price { font-size:20px; font-weight:700; color:#93434b; }
+#shop-section .shop-purchase-dialog > div { display:flex; justify-content:flex-end; gap:10px; }
+#shop-section .shop-purchase-dialog button { min-height:40px; padding:8px 18px; border:1px solid #baa3aa; border-radius:3px; background:white; color:#704956; cursor:pointer; font-size:14px; }
+#shop-section .shop-purchase-dialog [data-confirm] { background:#703e4b; color:white; border-color:#703e4b; }
+#shop-section .shop-purchase-dialog[data-merchant='lemonia'] { background:#fafdff; border-color:#9eb2cb; color:#38577e; }
+#shop-section .shop-purchase-dialog[data-merchant='lemonia'] [data-confirm] { background:#3d5d8b; border-color:#3d5d8b; }
+#shop-departure-notice { position:fixed; z-index:3100; bottom:24px; left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100vw - 32px); box-sizing:border-box; padding:12px 18px; border:1px solid #b8b9b7; border-radius:4px; background:#fffef8f5; color:#53444f; box-shadow:0 4px 22px #20172626; font:14px/1.7 'Microsoft YaHei',sans-serif; overflow-wrap:anywhere; pointer-events:none; }
+#shop-departure-notice[hidden] { display:none; }

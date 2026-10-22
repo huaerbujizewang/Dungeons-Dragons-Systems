@@ -1,0 +1,65 @@
+#admin-panel.admin-modern { top:3vh; left:3vw; width:94vw; height:94vh; padding:0; overflow:hidden; border:1px solid #b7c2bd; border-radius:6px; background:#fff; color:#293c35; }
+#admin-panel .admin-shell-header { display:flex; justify-content:space-between; align-items:center; gap:12px; height:65px; padding:0 24px; border-bottom:1px solid #dce4df; box-sizing:border-box; }
+#admin-panel .admin-shell-header h2 { font-size:20px; }
+#admin-panel .admin-shell-layout { height:calc(100% - 65px); display:grid; grid-template-columns:190px minmax(0,1fr); }
+#admin-panel .admin-navigation { background:#f2f6f3; padding:18px 10px; overflow-y:auto; border-right:1px solid #dce4df; }
+#admin-panel #admin-navigation { display:flex; flex-direction:column; gap:5px; }
+#admin-panel .admin-navigation button { display:flex; align-items:center; gap:10px; width:100%; min-height:42px; text-align:left; border:0; border-radius:4px; background:transparent; color:#55675c; padding:9px 12px; cursor:pointer; font-size:14px; }
+#admin-panel .admin-navigation button:hover { background:#e5ede7; }
+#admin-panel .admin-navigation button[aria-current='page'] { color:#194e3d; background:#dcebe2; font-weight:700; box-shadow:inset 3px 0 #397459; }
+#admin-panel .shop-shelf-icon { width:17px; height:17px; flex-shrink:0; }
+#admin-panel .admin-shell-main { display:flex; flex-direction:column; min-width:0; min-height:0; }
+#admin-panel .admin-target-bar { display:flex; align-items:center; gap:14px; min-height:67px; padding:10px 26px; box-sizing:border-box; border-bottom:1px solid #e4e9e5; flex-shrink:0; background:#fafcfb; }
+#admin-panel .admin-target-bar label { font-size:13px; color:#617169; flex-shrink:0; }
+#admin-panel #admin-target-slot { min-width:0; flex:1; max-width:560px; }
+#admin-panel #adm-user-list { width:100%; padding:8px 10px!important; margin:0!important; border:1px solid #b8c8be!important; border-radius:4px; min-height:38px; color:#294e3d; background:white; font-size:14px; }
+#admin-panel #admin-page-mobile { display:none; }
+#admin-panel #admin-page-host { min-height:0; flex:1; overflow:hidden; }
+#admin-panel .admin-module { height:100%; box-sizing:border-box; padding:24px 28px 40px; overflow:auto; scrollbar-gutter:stable; }
+#admin-panel .admin-module[hidden],#admin-panel #admin-legacy-layout[hidden] { display:none!important; }
+#admin-panel .admin-module-title { font-size:22px; margin:0 0 24px; color:#274e3a; letter-spacing:0; }
+#admin-panel .admin-module .admin-box { min-width:0; border:0!important; border-radius:0!important; background:transparent!important; padding:0 0 24px!important; margin:0 0 24px!important; border-bottom:1px solid #e6ebe7!important; }
+#admin-panel .admin-module .admin-box h3 { font-size:16px; margin:0 0 16px!important; }
+#admin-panel .admin-module input,#admin-panel .admin-module select,#admin-panel .admin-module textarea { box-sizing:border-box; max-width:100%; min-width:0; }
+#admin-panel .admin-module input[type='text'],#admin-panel .admin-module input[type='number'],#admin-panel .admin-module select,#admin-panel .admin-module textarea { padding:8px; border:1px solid #c6d0ca; border-radius:4px; font-family:inherit; }
+#admin-panel .admin-module input[type='checkbox'] { width:16px; height:16px; accent-color:#347554; flex-shrink:0; }
+#admin-panel .admin-module button { cursor:pointer; }
+#admin-panel .admin-shop-fold { padding:12px 0; border-bottom:1px solid #dce5df; }
+#admin-panel .admin-shop-fold summary { color:#3f5c4b; cursor:pointer; font-size:14px; font-weight:700; }
+#admin-panel .admin-shop-fold[open] summary { margin-bottom:16px; }
+#admin-panel .admin-supply-panel { padding-top:18px; }
+#admin-panel .admin-supply-panel > div:first-child { color:#326b4f!important; }
+#admin-panel .restock-grid { max-width:560px; }
+#admin-panel .admin-module [style*='display:flex'],#admin-panel .admin-module [style*='display: flex'] { min-width:0; }
+#admin-panel #supply-fields { border:0; margin:0; padding:0; min-width:0; }
+#admin-panel .admin-supply-toolbar,#admin-panel .admin-supply-category-heading { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:12px 0; }
+#admin-panel .admin-supply-toolbar button,#admin-panel .admin-supply-category-heading button { background:white; color:#496052; border:1px solid #bacbc0; border-radius:4px; padding:6px 9px; font-size:12px; }
+#admin-panel #supply-status { color:#617b6b; font-size:12px; overflow-wrap:anywhere; }
+#admin-panel .admin-supply-filters { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+#admin-panel .admin-supply-filters label { display:flex; flex-direction:column; gap:6px; font-size:13px; }
+#admin-panel .admin-supply-categories { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px 12px; padding:8px 0 14px; }
+#admin-panel .admin-supply-categories label { display:flex; align-items:center; gap:6px; font-size:13px; }
+#admin-panel .admin-supply-category-heading strong { margin-right:auto; font-size:13px; }
+#admin-panel .admin-supply-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+#admin-panel .admin-supply-actions button { padding:9px 14px; border:1px solid #8ca799; border-radius:4px; color:#345b48; background:#fff; }
+#admin-panel .admin-supply-actions button:last-child { background:#326b4f; color:#fff; border-color:#326b4f; }
+#admin-panel #supply-preview-result { margin-top:12px; color:#4c6255; font-size:13px; line-height:1.8; white-space:pre-line; }
+#admin-panel button:focus-visible,#admin-panel select:focus-visible,#admin-panel input:focus-visible { outline:2px solid #40856b; outline-offset:2px; }
+@media(max-width:760px){
+    #admin-panel.admin-modern { top:1vh; left:2vw; width:96vw; height:98vh; }
+    #admin-panel .admin-shell-header { padding:0 12px; height:58px; }
+    #admin-panel .admin-shell-header h2 { font-size:17px; }
+    #admin-panel .admin-shell-header button { padding:7px 12px!important; }
+    #admin-panel .admin-shell-layout { height:calc(100% - 58px); grid-template-columns:minmax(0,1fr); }
+    #admin-panel .admin-navigation { display:none; }
+    #admin-panel .admin-target-bar { padding:10px 12px; gap:7px; display:grid; grid-template-columns:60px minmax(0,1fr); }
+    #admin-panel #admin-page-mobile { display:block; grid-column:1/-1; width:100%; padding:8px; border:1px solid #bacbc0; border-radius:4px; color:#315d46; background:#edf4ef; }
+    #admin-panel .admin-module { padding:18px 12px 30px; }
+    #admin-panel .admin-module-title { font-size:20px; margin-bottom:20px; }
+    #admin-panel .admin-module [style*='grid-template-columns'] { grid-template-columns:minmax(0,1fr)!important; }
+    #admin-panel .admin-module [style*='grid-column'] { grid-column:auto!important; }
+    #admin-panel .admin-module [style*='display:flex'],#admin-panel .admin-module [style*='display: flex'] { flex-wrap:wrap; }
+    #admin-panel .admin-supply-filters { grid-template-columns:minmax(0,1fr); }
+    #admin-panel .admin-supply-categories { grid-template-columns:1fr 1fr; }
+    #admin-panel .restock-grid { grid-template-columns:minmax(0,1fr) 60px 60px; }
+}
