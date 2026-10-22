@@ -8372,6 +8372,7 @@ async function loadGold() {
     }
 
     function applyShopClearScope(query, scope, targetUserId) {
+        query = query.eq('unlimited_stock', false).eq('protected_from_bulk_clear', false);
         if (scope === 'public') return query.is('user_id', null);
         if (scope === 'selected') return query.eq('user_id', targetUserId);
         if (scope === 'selected_with_public') return query.or(`user_id.is.null,user_id.eq.${targetUserId}`);
@@ -8425,14 +8426,14 @@ async function loadGold() {
 
             const itemCount = count || 0;
             if (itemCount <= 0) {
-                alert(`${scopeLabels[scope]}没有可清空的商品。`);
+                alert(`${scopeLabels[scope]}没有可清空的普通商品。不限量商品与预置货物会保留。`);
                 return;
             }
 
             const confirmText = scope === 'all'
                 ? `确定要清空【${scopeLabels[scope]}】吗？\n\n将删除 ${itemCount} 件商品，所有玩家都会受影响。此操作不可撤销。`
                 : `确定要清空【${scopeLabels[scope]}】吗？\n\n将删除 ${itemCount} 件商品，此操作不可撤销。`;
-            if (!confirm(confirmText)) return;
+            if (!confirm(confirmText + '\n\n不限量商品及预置货物（包括限量套组、通用宝石施法材料）不会被下架。')) return;
 
             const deleteQuery = applyShopClearScope(
                 supabaseClient.from('shop_items').delete().eq('shop_id', merchantId),
@@ -8447,7 +8448,8 @@ async function loadGold() {
             alert(`已清空 ${scopeLabels[scope]}，删除 ${itemCount} 件商品。`);
         } catch (e) {
             console.error('清空商城失败:', e);
-            alert('清空失败：' + (e.message || e));
+            alert('清空失败：' + (/protected_from_bulk_clear/.test(e.message || '')
+                ? '请先运行 shop_spell_gems.sql 安装预置货物保护。未执行下架。' : (e.message || e)));
         } finally {
             hideLoading();
         }
