@@ -161,6 +161,14 @@
         const result = matches.filter(item => state.category === 'all' || (item.shop_shelf_category || classify(item)) === state.category);
         const sort = value('shop-sort-filter') || 'rarity';
         result.sort((a,b) => {
+            if (state.mode === 'buy') {
+                const unavailableA = !a.unlimited_stock && Number(a.stock) <= 0;
+                const unavailableB = !b.unlimited_stock && Number(b.stock) <= 0;
+                if (unavailableA !== unavailableB) return unavailableA ? 1 : -1;
+                const promotionA = Number(a.discount_percent ?? 100);
+                const promotionB = Number(b.discount_percent ?? 100);
+                if (promotionA !== promotionB) return promotionA-promotionB;
+            }
             const priceA = Number(a.shop_shelf_price ?? a.price) || 0;
             const priceB = Number(b.shop_shelf_price ?? b.price) || 0;
             if (sort === 'price-asc' && priceA !== priceB) return priceA-priceB;

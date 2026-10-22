@@ -44,6 +44,25 @@
 #admin-panel .admin-supply-actions button { padding:9px 14px; border:1px solid #8ca799; border-radius:4px; color:#345b48; background:#fff; }
 #admin-panel .admin-supply-actions button:last-child { background:#326b4f; color:#fff; border-color:#326b4f; }
 #admin-panel #supply-preview-result { margin-top:12px; color:#4c6255; font-size:13px; line-height:1.8; white-space:pre-line; }
+#admin-panel #discount-fields { min-width:0; border:0; padding:0; margin:0; }
+#admin-panel .admin-discount-toolbar,#admin-panel .admin-discount-options,#admin-panel .admin-discount-selection,#admin-panel .admin-discount-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0; font-size:13px; }
+#admin-panel .admin-discount-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+#admin-panel .admin-discount-filters label { display:flex; flex-direction:column; gap:5px; font-size:13px; }
+#admin-panel .admin-discount-options label,#admin-panel .admin-discount-selection label { display:inline-flex; align-items:center; gap:5px; }
+#admin-panel .admin-discount-options [hidden] { display:none; }
+#admin-panel .admin-discount-options input[type='number'] { width:75px; }
+#admin-panel #discount-status,#admin-panel #discount-counts { color:#617b6b; font-size:12px; overflow-wrap:anywhere; }
+#admin-panel .admin-discount-table-wrap { overflow:auto; max-height:360px; border:1px solid #dce4df; }
+#admin-panel .admin-discount-table { width:100%; min-width:620px; border-collapse:collapse; font-size:12px; }
+#admin-panel .admin-discount-table th { position:sticky; top:0; background:#edf4ef; z-index:1; }
+#admin-panel .admin-discount-table th,#admin-panel .admin-discount-table td { padding:8px; border-bottom:1px solid #e6ebe7; text-align:left; }
+#admin-panel .admin-discount-table td:not(:nth-child(2)) { white-space:nowrap; }
+#admin-panel .admin-discount-table strong { display:block; min-width:150px; max-width:310px; overflow-wrap:anywhere; }
+#admin-panel .admin-discount-table small { display:block; margin-top:4px; color:#748277; }
+#admin-panel .admin-discount-toolbar button,#admin-panel .admin-discount-actions button,#admin-panel #discount-more { padding:8px 12px; color:#345b48; background:white; border:1px solid #8ca799; border-radius:4px; }
+#admin-panel #discount-apply { color:white; background:#326b4f; }
+#admin-panel #discount-result { font-size:12px; line-height:1.8; color:#496052; overflow-wrap:anywhere; max-height:110px; overflow:auto; }
+#admin-panel #shop-discount-panel button:disabled { opacity:.5; cursor:not-allowed; }
 #admin-panel button:focus-visible,#admin-panel select:focus-visible,#admin-panel input:focus-visible { outline:2px solid #40856b; outline-offset:2px; }
 @media(max-width:760px){
     #admin-panel.admin-modern { top:1vh; left:2vw; width:96vw; height:98vh; }
@@ -60,6 +79,7 @@
     #admin-panel .admin-module [style*='grid-column'] { grid-column:auto!important; }
     #admin-panel .admin-module [style*='display:flex'],#admin-panel .admin-module [style*='display: flex'] { flex-wrap:wrap; }
     #admin-panel .admin-supply-filters { grid-template-columns:minmax(0,1fr); }
+    #admin-panel .admin-discount-filters { grid-template-columns:minmax(0,1fr); }
     #admin-panel .admin-supply-categories { grid-template-columns:1fr 1fr; }
     #admin-panel .restock-grid { grid-template-columns:minmax(0,1fr) 60px 60px; }
 }

@@ -10,10 +10,15 @@
     let selected='moon', busy=false, dialogues, dialoguePromise;
     try { const saved=localStorage.getItem('helios-shop-merchant'); if(merchants.some(shop=>shop.id===saved))selected=saved; } catch { /* Optional local preference. */ }
     function current(){return merchants.find(shop=>shop.id===selected);}
-    function purchasePrice(item,profile){
+    function purchaseOffer(item,profile){
         const cents=Math.round(Number(item.price)*100);
-        return (profile?.has_crafter===true && item.is_nonmagical===true ? Math.round(cents*80/100) : cents)/100;
+        const promotionPercent=Number(item.discount_percent??100);
+        const crafterApplied=profile?.has_crafter===true && item.is_nonmagical===true && promotionPercent>80;
+        const effectivePercent=crafterApplied?80:promotionPercent;
+        const price=Number((BigInt(cents)*BigInt(Math.round(effectivePercent*100))+5000n)/10000n)/100;
+        return {price,promotionPercent,effectivePercent,crafterApplied};
     }
+    function purchasePrice(item,profile){return purchaseOffer(item,profile).price;}
     function refreshControls(){
         const section=document.getElementById('shop-section');
         if(section)section.dataset.merchant=selected;
@@ -73,6 +78,6 @@
         document.querySelectorAll('[data-shop-merchant]').forEach(button=>button.addEventListener('click',()=>select(button.dataset.shopMerchant)));
         refreshControls();dialoguesReady();
     }
-    root.ShopMerchants={merchants,current,select,setBusy,isBusy:()=>busy,status,line,dialoguesReady,refreshControls,purchasePrice,signal,confirmPurchase};
+    root.ShopMerchants={merchants,current,select,setBusy,isBusy:()=>busy,status,line,dialoguesReady,refreshControls,purchaseOffer,purchasePrice,signal,confirmPurchase};
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })(globalThis);
