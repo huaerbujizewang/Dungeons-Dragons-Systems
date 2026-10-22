@@ -19,7 +19,8 @@
     <script src="finance-ledger.js?v=20261020"></script>
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
-    <script src="shop-item-details.js?v=20261022-merchants1"></script>
+    <script src="shop-loading.js?v=20261022-loading1"></script>
+    <script src="shop-item-details.js?v=20261022-loading1"></script>
     <script src="shop-merchants.js?v=20261022-dialogue1"></script>
     <script src="shop-dialogue.js?v=20261022-dialogue1"></script>
     <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
@@ -27,11 +28,11 @@
     <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf2">
     <script src="shop-source-books.js?v=20261022-basics1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
-    <link rel="stylesheet" href="shop-scene.css?v=20261022-dialogue1">
+    <link rel="stylesheet" href="shop-scene.css?v=20261022-loading1">
     <link rel="stylesheet" href="admin-console.css?v=20261022-console1">
     <script src="admin-console.js?v=20261022-console1"></script>
     <script src="shop-supply.js?v=20261022-console1"></script>
-    <script src="shop-scene.js?v=20261022-dialogue1" defer></script>
+    <script src="shop-scene.js?v=20261022-loading1" defer></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root { --border: #e0e0e0; --bg: #f8f9fa; --active: #333; }
@@ -6029,13 +6030,27 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             })
             // 2. 监听集市变动 (Shop 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_items' }, (payload) => {
-                console.log('集市货架有更新');
-                loadShop();
+                const row = payload.new?.shop_id ? payload.new : payload.old;
+                if (row?.user_id && row.user_id !== viewingUserId) return;
+                ShopLoading.invalidate(supabaseClient, 'stock:');
+                if (!row?.shop_id || row.shop_id === ShopMerchants.current().id) {
+                    ShopLoading.schedule(refreshShopView);
+                }
             })
             // 3. 监听背包变动 (Inventory 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'user_inventory', filter: `user_id=eq.${targetId}` }, (payload) => {
                 console.log('背包物品有更新');
+                ShopLoading.invalidate(supabaseClient, 'inventory:' + targetId);
+                ShopLoading.schedule(refreshShopView);
                 loadInventory();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'compendium_items' }, () => {
+                CompendiumIdentity.invalidate(supabaseClient);
+                ShopLoading.schedule(refreshShopView);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_source_settings' }, () => {
+                ShopSources.invalidate();
+                ShopLoading.schedule(refreshShopView);
             })
             // 4. 监听雇员/小队变动 (Employees 表)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employees', filter: `user_id=eq.${targetId}` }, (payload) => {
@@ -7997,6 +8012,7 @@ async function loadGold() {
         if (activeBtn) activeBtn.classList.add('active');
         
         document.getElementById(`${tab}-section`).classList.add('active');
+        if (tab === 'shop') refreshShopView();
         
         // 如果切到安全模块，自动加载日志
         if (tab === 'security') {
@@ -8210,9 +8226,13 @@ async function loadGold() {
         return { itemKey: String(item?.compendium_item_id || 'listing:' + id), itemName: name || item?.name || '' };
     }
 
-    async function loadShop() {
+    async function loadShop(force = false) {
         window.ShopDialogue?.sync();
-        if (isSellMode) return loadSellShop();
+        if (force) {
+            ShopLoading.invalidate(supabaseClient, 'stock:');
+            ShopLoading.invalidate(supabaseClient, 'inventory:');
+        }
+        if (isSellMode) return loadSellShop(force);
         const request = ++shopLoadGeneration;
         const accountId = viewingUserId;
         const merchantId = ShopMerchants.current().id;
@@ -8220,25 +8240,32 @@ async function loadGold() {
         ShopShelf.mount(refreshShopFilters);
         ShopShelf.setMode(false);
         
-        grid.innerHTML = '正在连接位面集市...';
-
-        // 1. 数据库查询 (隔离逻辑)
-        // 查询条件：(user_id 为空) OR (user_id 等于当前视角)
-        const data = [];
+        const key = `stock:${accountId}:${merchantId}`;
+        if (force) ShopLoading.invalidate(supabaseClient, key);
+        const loading = ShopLoading.begin(key);
+        let data;
         let error;
-        for (let start = 0; ; start += 1000) {
-            const page = await supabaseClient.from('shop_items').select('*').eq('shop_id', merchantId)
-                .or(`user_id.is.null,user_id.eq.${accountId}`).order('id').range(start, start + 999);
-            if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
-            if (page.error) { error = page.error; break; }
-            data.push(...(page.data || []));
-            if (!page.data || page.data.length < 1000) break;
+        try {
+            data = await ShopLoading.get(supabaseClient, key, async () => {
+                const rows = [];
+                for (let start = 0; ; start += 1000) {
+                    const page = await supabaseClient.from('shop_items').select('*').eq('shop_id', merchantId)
+                        .or(`user_id.is.null,user_id.eq.${accountId}`).order('id').range(start, start + 999);
+                    if (page.error) throw page.error;
+                    rows.push(...(page.data || []));
+                    if (!page.data || page.data.length < 1000) break;
+                }
+                return rows;
+            });
+        } catch (failure) {
+            error = failure;
         }
 
         if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
 
         if (error) {
             console.error('集市加载失败:', error);
+            ShopLoading.end(loading);
             grid.textContent = /shop_id/.test(error.message || '') ? '请先运行 shop_merchants.sql，安装双商铺功能。' : '集市连接中断，请稍后重试。';
             return;
         }
@@ -8251,6 +8278,7 @@ async function loadGold() {
         } catch (error) {
             if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
             grid.textContent = '商城书籍设置加载失败，请执行 compendium_update.sql 后重试：' + error.message;
+            ShopLoading.end(loading);
             return;
         }
         ShopItemDetails.setItems(available);
@@ -8258,6 +8286,7 @@ async function loadGold() {
         shopShelfMerchantId = merchantId;
         shopShelfBuyRows = available;
         renderShopItems(available);
+        ShopLoading.end(loading);
     }
 
     function renderShopItems(rows) {
@@ -8337,7 +8366,7 @@ async function loadGold() {
             alert('下架失败：' + error.message);
         } else {
             await logAction('DM操作', `下架了集市商品 [${name}]`);
-            loadShop();
+            loadShop(true);
         }
         hideLoading();
     }
@@ -8414,7 +8443,7 @@ async function loadGold() {
             if (error) throw error;
 
             await logAction('DM操作', `清空商城：${scopeLabels[scope]}，删除 ${itemCount} 件商品`);
-            await loadShop();
+            await loadShop(true);
             alert(`已清空 ${scopeLabels[scope]}，删除 ${itemCount} 件商品。`);
         } catch (e) {
             console.error('清空商城失败:', e);
@@ -8908,6 +8937,8 @@ async function buy(id, p, n, c) {
         }
 
         if (data && data.startsWith('success')) {
+            ShopLoading.invalidate(supabaseClient, 'stock:');
+            ShopLoading.invalidate(supabaseClient, 'inventory:' + accountId);
             if (accountId === viewingUserId) {
                 ShopMerchants.status(`已从${merchant.name}购入 ${n}。`);
                 document.dispatchEvent(new CustomEvent('shop:purchase-completed', { detail: { ...interaction, shopId: merchant.id, accountId } }));
@@ -8917,7 +8948,7 @@ async function buy(id, p, n, c) {
         } else {
             reportShopPurchaseFailure(data || '', interaction, merchant.id, accountId);
             alert(data ? data.replace('error:', '') : '未知错误');
-            loadShop(); 
+            loadShop(true);
         }
     } catch (e) {
         console.error("Full Error Info:", e);
@@ -9942,7 +9973,7 @@ async function calculateCityNetIncome(targetUserId) {
             document.getElementById('adm-shop-desc').value = '';
             selectedShopCompendiumItem = null;
             document.getElementById('adm-shop-description-override').checked = false;
-            loadShop();
+            loadShop(true);
         } catch (e) {
             console.error(e);
             alert('失败：' + e.message);
@@ -10354,7 +10385,7 @@ async function loadLoginLogs() {
 
             const warning = shortageNotes.length ? `\n\n库存池不足：${shortageNotes.join('；')}` : '';
             alert(`进货完成！新增 ${result.created} 种，补充库存 ${result.restocked} 种，共 ${result.units} 件。${warning}`);
-            try { await loadShop(); } catch (error) { console.warn('进货已完成，但商城刷新失败:', error); }
+            try { await loadShop(true); } catch (error) { console.warn('进货已完成，但商城刷新失败:', error); }
         } catch (e) {
             console.error(e);
             alert('进货失败: ' + e.message);
@@ -10674,23 +10705,28 @@ async function loadLoginLogs() {
     }
 
     // --- 加载出售界面 ---
-    async function loadSellShop() {
+    async function loadSellShop(force = false) {
         const request = ++shopLoadGeneration;
         const accountId = viewingUserId;
         const merchantId = ShopMerchants.current().id;
         ShopShelf.mount(refreshShopFilters);
         ShopShelf.setMode(true);
         const grid = document.getElementById('shop-grid');
-        grid.innerHTML = '正在估价中...';
-
-        // 1. 获取玩家背包
-        const { data: inventory, error: inventoryError } = await supabaseClient
-            .from('user_inventory')
-            .select('*')
-            .eq('user_id', accountId);
+        const key = 'inventory:' + accountId;
+        if (force) ShopLoading.invalidate(supabaseClient, key);
+        const loading = ShopLoading.begin(`${key}:${merchantId}`);
+        let inventory, inventoryError;
+        try {
+            inventory = await ShopLoading.get(supabaseClient, key, async () => {
+                const result = await supabaseClient.from('user_inventory').select('*').eq('user_id', accountId);
+                if (result.error) throw result.error;
+                return result.data;
+            });
+        } catch (error) { inventoryError = error; }
 
         if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
         if (inventoryError) {
+            ShopLoading.end(loading);
             grid.textContent = '背包加载失败：' + inventoryError.message;
             return;
         }
@@ -10700,6 +10736,7 @@ async function loadLoginLogs() {
             shopShelfMerchantId = merchantId;
             shopShelfSellRows = [];
             renderSellShopItems([]);
+            ShopLoading.end(loading);
             return;
         }
 
@@ -10709,6 +10746,7 @@ async function loadLoginLogs() {
         } catch (error) {
             if (request !== shopLoadGeneration || accountId !== viewingUserId) return;
             console.error('Inventory identity lookup failed:', error);
+            ShopLoading.end(loading);
             grid.innerHTML = '<div style="color:red; padding:20px;">物品估价失败，请确认 compendium_upgrade.sql 已执行后重试。</div>';
             return;
         }
@@ -10726,6 +10764,7 @@ async function loadLoginLogs() {
                 shop_sell_discount:(ratio * 100).toFixed(2), shop_base_price:baseInfo?.price };
         });
         renderSellShopItems(shopShelfSellRows);
+        ShopLoading.end(loading);
     }
 
     function renderSellShopItems(rows) {
@@ -10792,6 +10831,7 @@ async function loadLoginLogs() {
                 throw error;
             }
             pendingItemSales.delete(saleKey);
+            ShopLoading.invalidate(supabaseClient, 'inventory:' + accountId);
             if (accountId === viewingUserId) document.dispatchEvent(new CustomEvent('shop:sale-completed', { detail: { shopId: merchant.id, accountId, itemName, quantity: qty } }));
             alert(`出售成功！获得 ${formatCurrency(receipt.amount)}`);
             try {

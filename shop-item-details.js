@@ -6,23 +6,61 @@
     let generation = 0;
     let booksPromise;
     const items = new Map();
+    const identityCaches = new WeakMap();
+    function identityCache(client) {
+        if (!identityCaches.has(client)) identityCaches.set(client, new Map());
+        return identityCaches.get(client);
+    }
+    function remember(client, key, loader) {
+        const cache = identityCache(client), found = cache.get(key);
+        if (found && found.until > Date.now()) return found.promise;
+        const entry = { until:Infinity };
+        entry.promise = Promise.resolve().then(loader).then(value => {
+            entry.until = Date.now() + 300000;
+            return value;
+        }).catch(error => {
+            if (cache.get(key) === entry) cache.delete(key);
+            throw error;
+        });
+        cache.set(key, entry);
+        return entry.promise;
+    }
+    async function mastersFor(client, ids) {
+        const cache = identityCache(client);
+        const missing = ids.filter(id => !(cache.get('id:' + id)?.until > Date.now()));
+        for (let start = 0; start < missing.length; start += 100) {
+            const batch = missing.slice(start, start + 100);
+            const request = Promise.resolve().then(async () => {
+                const { data, error } = await client.from('compendium_items').select('*').in('id', batch);
+                if (error) throw error;
+                return new Map((data || []).map(item => [String(item.id), item]));
+            });
+            for (const id of batch) remember(client, 'id:' + id, async () => (await request).get(id) || null);
+        }
+        return new Map(await Promise.all(ids.map(async id => [id, await cache.get('id:' + id).promise])));
+    }
 
     root.CompendiumIdentity = {
+        invalidate(client) { identityCaches.delete(client); },
         key(item) {
             return item.compendium_item_id != null ? `id:${item.compendium_item_id}` : `name:${item.item_name ?? item.name}`;
         },
         async resolveName(client, name) {
-            const { data, error } = await client.rpc('resolve_compendium_item_id', { p_name: name });
-            if (error) throw error;
-            return data;
+            return remember(client, 'name:' + name, async () => {
+                const { data, error } = await client.rpc('resolve_compendium_item_id', { p_name: name });
+                if (error) throw error;
+                return data;
+            });
         },
         async lookup(client, item) {
             const id = item.compendium_item_id != null ? item.compendium_item_id :
                 await this.resolveName(client, item.item_name ?? item.name);
             if (id == null) return null;
-            const { data, error } = await client.from('compendium_items').select('*').eq('id', id).maybeSingle();
-            if (error) throw error;
-            return data;
+            return remember(client, 'id:' + id, async () => {
+                const { data, error } = await client.from('compendium_items').select('*').eq('id', id).maybeSingle();
+                if (error) throw error;
+                return data;
+            });
         },
         async lookupMany(client, rows) {
             const aliases = new Map();
@@ -34,12 +72,7 @@
             }
             const idFor = row => row.compendium_item_id ?? aliases.get(row.item_name ?? row.name);
             const ids = [...new Set(rows.map(idFor).filter(id => id != null).map(String))];
-            const masters = new Map();
-            for (let start = 0; start < ids.length; start += 100) {
-                const { data, error } = await client.from('compendium_items').select('*').in('id', ids.slice(start, start + 100));
-                if (error) throw error;
-                for (const item of data || []) masters.set(String(item.id), item);
-            }
+            const masters = await mastersFor(client, ids);
             return new Map(rows.map(row => [this.key(row), masters.get(String(idFor(row))) || null]));
         },
         description(item, master) {

@@ -11,6 +11,10 @@
         const view=section.querySelector('#shop-scene-view');
         const reduced=matchMedia('(prefers-reduced-motion: reduce)');
         const cache=new Map();
+        const sceneStatus=document.createElement('div');
+        sceneStatus.className='shop-scene-loading';sceneStatus.setAttribute('role','status');
+        sceneStatus.textContent='正在加载店主…';sceneStatus.hidden=true;
+        section.querySelector('.shop-keeper').append(sceneStatus);
         let activeId,mode=section.dataset.mode,inView=false,running=false,blinking=false,smiling=false;
         let blinkTimer,reopenTimer,expressionTimer,pointerFrame,manualView=0;
         try{motion.checked=localStorage.getItem('helios-shop-motion')!=='off';}catch{/* Optional local preference. */}
@@ -57,21 +61,25 @@
         async function preload(state){
             if(state.preloading||!visible()||!motion.checked||reduced.matches||activeId!==state.merchant.id)return;
             state.preloading=true;
-            await Promise.all(['blink','smile','smileBlink'].filter(key=>state.merchant[key]).map(async key=>{
+            for(const key of ['blink','smile','smileBlink'].filter(key=>state.merchant[key]&&!state.ready.has(key))){
+                if(!visible()||!motion.checked||reduced.matches||activeId!==state.merchant.id)break;
                 const image=newFrame(key,state.merchant.id);image.src=state.merchant[key];
                 try{await image.decode();state.frames.set(key,image);state.ready.add(key);}catch{image.remove();}
-            }));
+            }
+            state.preloading=false;
             if(activeId===state.merchant.id){showExpression();if(running)scheduleBlink();}
         }
         function load(state){
             if(state.loaded)return;state.loaded=true;
+            sceneStatus.textContent='正在加载店主…';sceneStatus.hidden=false;
             const image=state.frames.get('normal');image.src=state.merchant.normal;
             image.decode().then(()=>{
                 state.ready.add('normal');if(activeId!==state.merchant.id)return;
+                sceneStatus.hidden=true;
                 section.classList.add('scene-ready');portrait.hidden=false;showExpression();
                 const idle=window.requestIdleCallback||(callback=>setTimeout(callback,800));
                 idle(()=>preload(state),{timeout:2500});
-            }).catch(()=>{if(activeId===state.merchant.id)portrait.hidden=true;});
+            }).catch(()=>{state.loaded=false;if(activeId===state.merchant.id){portrait.hidden=true;sceneStatus.textContent='店主立绘暂未加载，请重新进入商店重试。';}});
         }
         function updateMerchant(){
             const merchant=ShopMerchants.current();if(activeId===merchant.id)return;
@@ -85,6 +93,7 @@
             section.querySelector('.shop-keeper-message-label').textContent=merchant.keeper;
             section.querySelector('.shop-catalog-title h2').textContent=section.dataset.mode==='sell'?merchant.sellCatalog:merchant.catalog;
             section.classList.toggle('scene-ready',entry().ready.has('normal'));caption();showExpression();
+            sceneStatus.hidden=entry().ready.has('normal');
         }
         function refresh(){
             updateMerchant();if(visible())load(entry());
