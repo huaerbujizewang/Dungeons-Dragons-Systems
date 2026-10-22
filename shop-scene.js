@@ -22,7 +22,7 @@
             const merchant=ShopMerchants.current();
             if(!cache.has(merchant.id)){
                 const normal=merchant.id==='moon'?firstImage:newFrame('normal',merchant.id);
-                cache.set(merchant.id,{merchant,frames:new Map([['normal',normal]]),ready:new Set(),loaded:false,preloading:false});
+                cache.set(merchant.id,{merchant,frames:new Map([['normal',normal]]),ready:new Set(),pending:new Map(),loaded:false,preloading:false});
             }
             return cache.get(merchant.id);
         }
@@ -36,8 +36,13 @@
         function caption(){window.ShopDialogue?.sync();}
         function showExpression(){
             const state=entry();
-            const wanted=smiling?(blinking?'smileBlink':'smile'):(blinking?'blink':'normal');
-            const selected=state.ready.has(wanted)?wanted:'normal';
+            const dialogueSmile=activeId==='moon'&&state.merchant.id===activeId&&visible()&&section.dataset.dialogueKey==='click_7';
+            const smile=smiling||dialogueSmile;
+            const wanted=smile?(blinking?'smileBlink':'smile'):(blinking?'blink':'normal');
+            const selected=state.ready.has(wanted)?wanted:smile&&state.ready.has('smile')?'smile':'normal';
+            if(dialogueSmile&&!state.ready.has('smile'))loadFrame(state,'smile').then(loaded=>{
+                if(loaded&&activeId===state.merchant.id)showExpression();
+            });
             for(const [shopId,store]of cache)for(const [name,image]of store.frames)image.hidden=shopId!==activeId||name!==selected;
             section.dataset.sceneExpression=selected;section.dataset.sceneFrames=String(state.ready.size);
         }
@@ -58,13 +63,22 @@
                 reopenTimer=setTimeout(()=>{blinking=false;showExpression();scheduleBlink();},130);
             },3200+Math.random()*4000);
         }
+        function loadFrame(state,key){
+            if(!state.merchant[key])return Promise.resolve(false);
+            if(state.ready.has(key))return Promise.resolve(true);
+            if(state.pending.has(key))return state.pending.get(key);
+            const image=newFrame(key,state.merchant.id);image.src=state.merchant[key];
+            const pending=image.decode().then(()=>{
+                state.frames.set(key,image);state.ready.add(key);return true;
+            }).catch(()=>{image.remove();return false;}).finally(()=>state.pending.delete(key));
+            state.pending.set(key,pending);return pending;
+        }
         async function preload(state){
             if(state.preloading||!visible()||!motion.checked||reduced.matches||activeId!==state.merchant.id)return;
             state.preloading=true;
             for(const key of ['blink','smile','smileBlink'].filter(key=>state.merchant[key]&&!state.ready.has(key))){
                 if(!visible()||!motion.checked||reduced.matches||activeId!==state.merchant.id)break;
-                const image=newFrame(key,state.merchant.id);image.src=state.merchant[key];
-                try{await image.decode();state.frames.set(key,image);state.ready.add(key);}catch{image.remove();}
+                await loadFrame(state,key);
             }
             state.preloading=false;
             if(activeId===state.merchant.id){showExpression();if(running)scheduleBlink();}
@@ -99,7 +113,7 @@
             updateMerchant();if(visible())load(entry());
             const next=visible()&&motion.checked&&!reduced.matches;
             view.disabled=!motion.checked||reduced.matches;
-            if(next===running)return;
+            if(next===running){showExpression();return;}
             if(!next)return stop();
             running=true;section.dataset.sceneRunning='true';setPan(manualView);scheduleBlink();
             if(entry().ready.has('normal'))preload(entry());
@@ -119,20 +133,21 @@
         section.addEventListener('pointerleave',()=>{cancelAnimationFrame(pointerFrame);if(running)setPan(manualView);});
         document.addEventListener('shop:purchase-completed',event=>{
             if(event.detail.shopId!==activeId||!visible())return;
-            // Only a confirmed purchase starts the witch's smile, never hover/details/sales.
+            // Purchases add a timed smile; the click_7 dialogue owns its own expression.
             if(activeId!=='moon'||!running)return;
             clearTimeout(expressionTimer);smiling=true;showExpression();
             expressionTimer=setTimeout(()=>{smiling=false;showExpression();},5000);
         });
         document.addEventListener('shop:merchant-changed',refresh);
-        new MutationObserver(()=>{
+        new MutationObserver(changes=>{
             if(mode!==section.dataset.mode){
                 mode=section.dataset.mode;
                 const merchant=ShopMerchants.current();
                 section.querySelector('.shop-catalog-title h2').textContent=mode==='sell'?merchant.sellCatalog:merchant.catalog;
             }
             refresh();
-        }).observe(section,{attributes:true,attributeFilter:['class','data-mode']});
+            if(changes.some(change=>change.attributeName==='data-dialogue-key'))showExpression();
+        }).observe(section,{attributes:true,attributeFilter:['class','data-mode','data-dialogue-key']});
         if('IntersectionObserver'in window)new IntersectionObserver(entries=>{inView=entries[0].isIntersecting;refresh();},{threshold:0}).observe(section);
         else inView=true;
         document.addEventListener('visibilitychange',refresh);reduced.addEventListener('change',refresh);
