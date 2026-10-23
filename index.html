@@ -22,13 +22,15 @@
     <script src="shop-loading.js?v=20261022-loading1"></script>
     <script src="shop-item-details.js?v=20261023-custom1"></script>
     <script src="shop-merchants.js?v=20261022-exclusive2"></script>
-    <script src="shop-custom-equipment.js?v=20261023-custom1"></script>
+    <script src="shop-custom-equipment.js?v=20261023-cart1"></script>
+    <script src="shop-cart.js?v=20261023-cart1"></script>
+    <link rel="stylesheet" href="shop-cart.css?v=20261023-cart1">
     <link rel="stylesheet" href="shop-custom-equipment.css?v=20261023-custom1">
     <script src="shop-dialogue.js?v=20261022-dialogue1"></script>
     <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
     <script src="shop-shelf.js?v=20261022-exclusive2"></script>
     <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf2">
-    <script src="shop-source-books.js?v=20261023-custom1"></script>
+    <script src="shop-source-books.js?v=20261023-cart1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <link rel="stylesheet" href="shop-scene.css?v=20261022-exclusive2">
     <link rel="stylesheet" href="admin-console.css?v=20261022-discounts1">
@@ -2097,6 +2099,7 @@
             <div class="shop-mode-tabs" aria-label="交易模式">
                 <button id="shop-buy-mode-btn" type="button" onclick="setShopMode(false)" aria-pressed="true">购买商品</button>
                 <button id="shop-mode-btn" type="button" onclick="setShopMode(true)" aria-pressed="false">出售物品</button>
+                <button id="shop-cart-button" type="button" onclick="ShopCart.open()" aria-label="购物车">购物车 <span data-cart-count>0</span></button>
             </div>
         </div>
         <div id="shop-transaction-status" class="shop-transaction-status" role="status" aria-live="polite"></div>
@@ -4342,6 +4345,7 @@ function renderFinanceLedger(entries, preserveNewEntries = false) {
             : '';
         const participants = FinanceLedger.participantLabels(entry);
         const noteParts = [entry.note, entry.review_note ? `审批备注：${entry.review_note}` : ''].filter(Boolean);
+        const cartLines=Array.isArray(entry.metadata?.details?.lines)?entry.metadata.details.lines:[];
         const metaParts = [type, worldDate, createdAt, ...participants].filter(Boolean);
 
         return `
@@ -4353,6 +4357,7 @@ function renderFinanceLedger(entries, preserveNewEntries = false) {
                     </div>
                     <div class="finance-entry-meta">${metaParts.map(escapeHTML).join(' · ')}</div>
                     ${noteParts.length ? `<div class="finance-entry-note">${noteParts.map(escapeHTML).join('<br>')}</div>` : ''}
+                    ${cartLines.length ? `<details class="finance-cart-detail"><summary>购物明细（${cartLines.length}项）</summary><div><table><thead><tr><th>商品</th><th>数量</th><th>单价</th><th>小计</th></tr></thead><tbody>${cartLines.map(line=>`<tr><td>${escapeHTML(line.item_name||'物品')}${line.custom_equipment?`<small>附魔 ${escapeHTML(formatCurrencyNumber(line.custom_equipment.enchantment_price))} + 基础 ${escapeHTML(formatCurrencyNumber(line.custom_equipment.base_price))} ${escapeHTML(unit)}</small>`:''}</td><td>${escapeHTML(String(line.quantity))}${Number(line.pack_size)===20?`份（${Number(line.quantity)*20}发）`:''}</td><td>${escapeHTML(formatCurrencyNumber(line.unit_price))} ${escapeHTML(unit)}</td><td>${escapeHTML(formatCurrencyNumber(line.line_total))} ${escapeHTML(unit)}</td></tr>`).join('')}</tbody></table></div></details>`:''}
                 </div>
                 <div>
                     ${financeEntryAmountHTML(entry)}
@@ -8319,6 +8324,7 @@ async function loadGold() {
     }
 
     function renderShopItems(rows) {
+        ShopCart.refresh();
         const grid = document.getElementById('shop-grid');
         const profile = typeof userProfile !== 'undefined' && userProfile?.id === viewingUserId ? userProfile : null;
         const filteredData = ShopShelf.filter(rows.map(item => ({ ...item, shop_shelf_price: ShopMerchants.purchasePrice(item, profile) })));
@@ -8362,7 +8368,7 @@ async function loadGold() {
                     <div class="shop-card-heading">
                         <b class="shop-item-name">${safeName}</b>
                     </div>
-                    <div class="shop-card-category" title="${escapeHTML(ShopSources.label(i.source_book))}">${safeCategory}</div>
+                    <div class="shop-card-category" title="${escapeHTML(ShopSources.label(i.source_book))}">${safeCategory}${Number(i.ammunition_pack_size)===20?' · 20发/份':''}</div>
                     <div class="shop-card-footer">
                         ${discountLabel ? `<div class="shop-card-discount"><span>${escapeHTML(discountLabel)}</span><del>${formatCurrency(i.price)}</del></div>` : ''}
                         ${offerNote ? `<div class="shop-card-offer-note">${offerNote}</div>` : ''}
@@ -8938,69 +8944,66 @@ async function buy(id, p, n, c) {
     if (ShopMerchants.isBusy()) return;
     const item = shopShelfBuyRows.find(row => Number(row.id) === Number(id));
     const interaction = shopInteractionDetail(id, n);
-    if (item && !item.unlimited_stock && item.stock <= 0) {
+    if (!item) return;
+    if (!item.unlimited_stock && item.stock <= 0) {
         ShopMerchants.signal('sold_out', interaction);
         return;
     }
     if (!ShopMerchants.setBusy(true)) return;
     const merchant = ShopMerchants.current();
     const accountId = viewingUserId;
+    let selection;
     try {
         const customTemplate = ShopCustomEquipment.template(item);
-        const customQuote = customTemplate ? await ShopCustomEquipment.choose(supabaseClient, accountId, item, merchant, userProfile) : null;
-        const confirmed = customTemplate ? !!customQuote : await ShopMerchants.confirmPurchase(n, formatCurrency(p), merchant);
-        if (!confirmed || accountId !== viewingUserId) {
+        selection = customTemplate ? await ShopCustomEquipment.choose(supabaseClient, accountId, item, merchant, userProfile)
+            : await ShopCart.choose(item, p, merchant);
+        if (!selection || accountId !== viewingUserId) {
             ShopMerchants.signal('cancelled', { ...interaction, shopId: merchant.id, accountId });
             return;
         }
-        showLoading();
-        if (customQuote) { n = customQuote.item_name; p = Number(customQuote.total); }
-        const financeClient = await FinanceLedger.withContext(supabaseClient, {
-            source: 'shop_purchase', title: `购买物品：${n}`,
-            note: `在${merchant.name}购买 ${n} ×1，单价 ${formatCurrency(p)}。`,
-            details: { shop_id: merchant.id, shop_name: merchant.name, item_id: id, item_name: n, quantity: 1, unit_price: roundCurrency(p), category: c || '杂项' }
-        });
-        const { data, error } = await financeClient.rpc(customQuote ? 'buy_custom_equipment' : 'buy_shop_item', {
-            p_user_id: accountId,
-            p_shop_id: merchant.id,
-            p_item_id: parseInt(id),  // 确保是数字
-            p_price: roundCurrency(p),   // 确保支持两位小数数字
-            p_item_name: n,
-            ...(customQuote ? { p_base_item_id: customQuote.base_item_id, p_request_key: crypto.randomUUID() } : { p_category: c || '杂项' })
-        });
-
-        if (error) {
-            console.error("RPC Error:", error);
-            throw error;
-        }
-
-        if (data && data.startsWith('success')) {
-            ShopLoading.invalidate(supabaseClient, 'stock:');
-            ShopLoading.invalidate(supabaseClient, 'inventory:' + accountId);
-            ShopLoading.invalidate(supabaseClient, 'equipment:' + accountId);
-            if (customQuote) CompendiumIdentity.invalidate(supabaseClient);
-            if (accountId === viewingUserId) {
-                ShopMerchants.status(`已从${merchant.name}购入 ${n}。`);
-                document.dispatchEvent(new CustomEvent('shop:purchase-completed', { detail: { ...interaction, shopId: merchant.id, accountId } }));
-                const refreshed = await Promise.allSettled([loadGold(), loadInventory(), loadShop()]);
-                if (refreshed.some(result => result.status === 'rejected')) ShopMerchants.status(`购买已完成并入账，界面刷新失败，请刷新查看。`);
-            }
-        } else {
-            reportShopPurchaseFailure(data || '', interaction, merchant.id, accountId);
-            alert(data ? data.replace('error:', '') : '未知错误');
-            loadShop(true);
-        }
     } catch (e) {
-        console.error("Full Error Info:", e);
+        alert(e.message || '读取商品失败');
+        return;
+    } finally { ShopMerchants.setBusy(false); }
+    const line = { item_id: Number(id), base_item_id: selection.base_item_id ?? null,
+        item_name: selection.item_name || n, unit_price: Number(selection.total ?? p), quantity: selection.quantity,
+        pack_size: Number(selection.pack_size || item.ammunition_pack_size || 1) };
+    try {
+        if (selection.action === 'cart') {
+            ShopCart.add(accountId, merchant.id, line);
+            ShopMerchants.status(`已加入${merchant.name}购物车：${line.item_name} ×${line.quantity}。`);
+            return;
+        }
+        if (!ShopMerchants.setBusy(true)) return;
+        showLoading();
+        const receipt = await ShopCart.pay(supabaseClient, accountId, merchant.id, [line]);
+        await completeShopPurchase(receipt, merchant, accountId);
+    } catch (e) {
         reportShopPurchaseFailure(e.message || '', interaction, merchant.id, accountId);
-        alert('交易失败：' + (['PGRST202', '42883'].includes(e.code) ? '请运行最新商城更新 SQL，安装交易函数。' : (e.message || '请检查网络')));
+        alert('交易失败：' + (['PGRST202', '42883'].includes(e.code) ? '请运行 shop_cart_update.sql 安装购物车交易函数。' : (e.message || '请检查网络')));
         ShopLoading.invalidate(supabaseClient, 'equipment:' + accountId);
         if (accountId === viewingUserId && /商品已变化|商品库存不足|商品不存在/.test(e.message || '')) await loadShop(true);
     } finally {
         ShopMerchants.setBusy(false);
+        ShopCart.refresh();
         hideLoading();
     }
 }
+
+async function completeShopPurchase(receipt, merchant, accountId) {
+    ShopLoading.invalidate(supabaseClient, 'stock:');
+    ShopLoading.invalidate(supabaseClient, 'inventory:' + accountId);
+    ShopLoading.invalidate(supabaseClient, 'equipment:' + accountId);
+    CompendiumIdentity.invalidate(supabaseClient);
+    if (accountId !== viewingUserId) return;
+    ShopMerchants.status(`已从${merchant.name}购入 ${receipt.lines.map(row => row.item_name + ' ×' + row.quantity).join('、')}。`);
+    const first=receipt.lines[0];
+    document.dispatchEvent(new CustomEvent('shop:purchase-completed', { detail: { ...shopInteractionDetail(first.item_id, first.item_name), shopId: merchant.id, accountId } }));
+    const refreshed=await Promise.allSettled([loadGold(), loadInventory(), loadShop()]);
+    if (refreshed.some(result => result.status === 'rejected')) ShopMerchants.status('购买已完成并入账，界面刷新失败，请刷新查看。');
+}
+ShopCart.configure({account:()=>viewingUserId,client:()=>supabaseClient,completed:completeShopPurchase,
+    failed:(error,merchant,account,lines)=>reportShopPurchaseFailure(error.message||'',shopInteractionDetail(lines[0]?.item_id,lines[0]?.item_name),merchant.id,account)});
 
 function reportShopPurchaseFailure(message, interaction, shopId, accountId) {
     if (accountId !== viewingUserId) return;
