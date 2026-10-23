@@ -23,16 +23,17 @@
     <script src="shop-item-details.js?v=20261023-custom1"></script>
     <script src="shop-merchants.js?v=20261022-exclusive2"></script>
     <script src="shop-custom-equipment.js?v=20261023-cart1"></script>
-    <script src="shop-cart.js?v=20261023-cart1"></script>
-    <link rel="stylesheet" href="shop-cart.css?v=20261023-cart1">
+    <script src="shop-cart.js?v=20261023-unitcounts1"></script>
+    <script src="shop-sale.js?v=20261023-bulksale1"></script>
+    <link rel="stylesheet" href="shop-cart.css?v=20261023-bulksale1">
     <link rel="stylesheet" href="shop-custom-equipment.css?v=20261023-custom1">
     <script src="shop-dialogue.js?v=20261022-dialogue1"></script>
     <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
-    <script src="shop-shelf.js?v=20261022-exclusive2"></script>
+    <script src="shop-shelf.js?v=20261023-stockgroups1"></script>
     <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf2">
-    <script src="shop-source-books.js?v=20261023-cart1"></script>
+    <script src="shop-source-books.js?v=20261023-unitcounts1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
-    <link rel="stylesheet" href="shop-scene.css?v=20261022-exclusive2">
+    <link rel="stylesheet" href="shop-scene.css?v=20261023-stockgroups1">
     <link rel="stylesheet" href="admin-console.css?v=20261022-discounts1">
     <script src="admin-console.js?v=20261022-console1"></script>
     <script src="shop-supply.js?v=20261022-console1"></script>
@@ -4357,7 +4358,7 @@ function renderFinanceLedger(entries, preserveNewEntries = false) {
                     </div>
                     <div class="finance-entry-meta">${metaParts.map(escapeHTML).join(' · ')}</div>
                     ${noteParts.length ? `<div class="finance-entry-note">${noteParts.map(escapeHTML).join('<br>')}</div>` : ''}
-                    ${cartLines.length ? `<details class="finance-cart-detail"><summary>购物明细（${cartLines.length}项）</summary><div><table><thead><tr><th>商品</th><th>数量</th><th>单价</th><th>小计</th></tr></thead><tbody>${cartLines.map(line=>`<tr><td>${escapeHTML(line.item_name||'物品')}${line.custom_equipment?`<small>附魔 ${escapeHTML(formatCurrencyNumber(line.custom_equipment.enchantment_price))} + 基础 ${escapeHTML(formatCurrencyNumber(line.custom_equipment.base_price))} ${escapeHTML(unit)}</small>`:''}</td><td>${escapeHTML(String(line.quantity))}${Number(line.pack_size)===20?`份（${Number(line.quantity)*20}发）`:''}</td><td>${escapeHTML(formatCurrencyNumber(line.unit_price))} ${escapeHTML(unit)}</td><td>${escapeHTML(formatCurrencyNumber(line.line_total))} ${escapeHTML(unit)}</td></tr>`).join('')}</tbody></table></div></details>`:''}
+                    ${cartLines.length ? `<details class="finance-cart-detail"><summary>购物明细（${cartLines.length}项）</summary><div><table><thead><tr><th>商品</th><th>数量</th><th>单价</th><th>小计</th></tr></thead><tbody>${cartLines.map(line=>`<tr><td>${escapeHTML(line.item_name||'物品')}${line.custom_equipment?`<small>附魔 ${escapeHTML(formatCurrencyNumber(line.custom_equipment.enchantment_price))} + 基础 ${escapeHTML(formatCurrencyNumber(line.custom_equipment.base_price))} ${escapeHTML(unit)}</small>`:''}</td><td>${escapeHTML(String(line.quantity))}${Number(line.pack_size)>1?`份（${Number(line.inventory_quantity)||Number(line.quantity)*Number(line.pack_size)}${escapeHTML(line.inventory_unit_label||'发')}）`:''}</td><td>${escapeHTML(formatCurrencyNumber(line.unit_price))} ${escapeHTML(unit)}</td><td>${escapeHTML(formatCurrencyNumber(line.line_total))} ${escapeHTML(unit)}</td></tr>`).join('')}</tbody></table></div></details>`:''}
                 </div>
                 <div>
                     ${financeEntryAmountHTML(entry)}
@@ -8146,7 +8147,7 @@ async function loadGold() {
                 <td style="padding:7px; border-bottom:1px solid #edf3f8; font-weight:bold;">${escapeHTML(item.name)}</td>
                 <td style="padding:7px; border-bottom:1px solid #edf3f8;">${escapeHTML(item.category || '杂项')}</td>
                 <td style="padding:7px; border-bottom:1px solid #edf3f8;">${escapeHTML(item.rarity || '普通')}</td>
-                <td style="padding:7px; border-bottom:1px solid #edf3f8; color:#d35400; white-space:nowrap;">${formatCurrency(item.price ?? 0)}</td>
+                <td style="padding:7px; border-bottom:1px solid #edf3f8; color:#d35400; white-space:nowrap;">${formatCurrency(item.price ?? 0)}${Number(item.source_metadata?.inventory_units_per_sale)>1?' / '+Number(item.source_metadata.inventory_units_per_sale)+escapeHTML(item.source_metadata.inventory_unit_label||'件'):''}</td>
             </tr>
         `).join('');
         const caption = compact ? '' : `<div style="font-size:0.85em; color:#666; margin-bottom:6px;">共 ${items.length} 项。此表来自图鉴价格库，包含当前未上架物品。</div>`;
@@ -8175,7 +8176,7 @@ async function loadGold() {
             for (let start = 0; ; start += pageSize) {
                 const { data, error } = await supabaseClient
                     .from('compendium_items')
-                    .select('name, category, rarity, price, description')
+                    .select('name, category, rarity, price, description, source_metadata')
                     .order('name')
                     .range(start, start + pageSize - 1);
                 if (error) throw error;
@@ -8340,7 +8341,9 @@ async function loadGold() {
         const rarityInk = { '普通': '#657679', '非普通': '#1d7f43', '珍稀': '#2672ac',
             '极珍稀': '#8253a3', '传说': '#947008', '神器': '#b94036' };
         
-        grid.innerHTML = filteredData.map(i => {
+        grid.innerHTML = filteredData.map((i, index) => {
+            const divider = index > 0 && i.unlimited_stock && !filteredData[index - 1].unlimited_stock
+                ? '<hr class="shop-stock-divider" aria-label="限量与不限量商品分界">' : '';
             const color = rarityColors[i.rarity] || '#ccc';
             const isOut = !i.unlimited_stock && i.stock <= 0;
             const offer = ShopMerchants.purchaseOffer(i, profile);
@@ -8359,6 +8362,7 @@ async function loadGold() {
             const cardStyle = `--shop-rarity:${color}; --shop-rarity-ink:${rarityInk[i.rarity] || '#657679'};`;
 
             return `
+                ${divider}
                 <div class="card shop-card${isOut ? ' shop-card-out' : ''}" style="${cardStyle}">
                     <div class="shop-card-topline">
                         <span class="shop-card-supply${i.user_id ? ' is-special' : ''}">${i.user_id ? '特供' : '公共'}</span>
@@ -8368,7 +8372,7 @@ async function loadGold() {
                     <div class="shop-card-heading">
                         <b class="shop-item-name">${safeName}</b>
                     </div>
-                    <div class="shop-card-category" title="${escapeHTML(ShopSources.label(i.source_book))}">${safeCategory}${Number(i.ammunition_pack_size)===20?' · 20发/份':''}</div>
+                    <div class="shop-card-category" title="${escapeHTML(ShopSources.label(i.source_book))}">${safeCategory}${Number(i.inventory_units_per_sale||i.ammunition_pack_size)>1?' · '+Number(i.inventory_units_per_sale||i.ammunition_pack_size)+escapeHTML(i.inventory_unit_label||'发')+'/份':''}</div>
                     <div class="shop-card-footer">
                         ${discountLabel ? `<div class="shop-card-discount"><span>${escapeHTML(discountLabel)}</span><del>${formatCurrency(i.price)}</del></div>` : ''}
                         ${offerNote ? `<div class="shop-card-offer-note">${offerNote}</div>` : ''}
@@ -8967,7 +8971,8 @@ async function buy(id, p, n, c) {
     } finally { ShopMerchants.setBusy(false); }
     const line = { item_id: Number(id), base_item_id: selection.base_item_id ?? null,
         item_name: selection.item_name || n, unit_price: Number(selection.total ?? p), quantity: selection.quantity,
-        pack_size: Number(selection.pack_size || item.ammunition_pack_size || 1) };
+        pack_size: Number(selection.pack_size || item.inventory_units_per_sale || item.ammunition_pack_size || 1),
+        inventory_unit_label: selection.inventory_unit_label || item.inventory_unit_label || (selection.pack_size===20?'发':'件') };
     try {
         if (selection.action === 'cart') {
             ShopCart.add(accountId, merchant.id, line);
@@ -10801,15 +10806,22 @@ async function loadLoginLogs() {
         shopShelfSellRows = inventory.map(item => {
             const baseInfo = priceMap.get(CompendiumIdentity.key(item));
             const ratio = getDailySellRatio(item.item_name, merchantId);
+            const units = Number(baseInfo?.source_metadata?.inventory_units_per_sale)||1;
+            const unitBase = Number(baseInfo?.price)/units;
+            const precision = units>1?1000000:100;
             return { ...baseInfo, ...item, name:item.item_name, source_book:baseInfo?.source_book,
                 rarity:baseInfo?.rarity || item.rarity, category:baseInfo?.category || item.category,
                 shop_shelf_category:ShopShelf.classify(baseInfo || item),
                 shop_search_terms:baseInfo?.source_metadata?.english_name || '',
-                shop_shelf_price:baseInfo?.price ? Math.round(baseInfo.price * ratio * 100) / 100 : null,
-                shop_sell_discount:(ratio * 100).toFixed(2), shop_base_price:baseInfo?.price };
+                shop_shelf_price:unitBase>0 ? Math.round(unitBase * ratio * precision) / precision : null,
+                shop_sell_discount:(ratio * 100).toFixed(2), shop_base_price:unitBase };
         });
         renderSellShopItems(shopShelfSellRows);
         ShopLoading.end(loading);
+    }
+
+    function formatShopUnitPrice(value) {
+        return Number(value).toLocaleString(undefined,{maximumFractionDigits:6})+' '+getCurrencyUnit();
     }
 
     function renderSellShopItems(rows) {
@@ -10829,9 +10841,9 @@ async function loadLoginLogs() {
                 <div class="shop-card-heading"><b class="shop-item-name">${escapeHTML(item.item_name)}</b></div>
                 <div class="shop-card-category">${escapeHTML(ShopShelf.label(item.shop_shelf_category))}</div>
                 <div class="shop-card-footer">
-                    <div class="shop-card-pricing"><span class="shop-card-price">${sellable ? formatCurrency(item.shop_shelf_price) : '无法估价'}</span><span class="shop-card-stock">持有 ${item.quantity}</span></div>
-                    <div class="shop-sell-quote">${sellable ? `原价 ${formatCurrency(item.shop_base_price)} · 今日 ${item.shop_sell_discount}%` : '图鉴中未收录此物品'}</div>
-                    <button class="btn-buy" type="button" ${sellable ? `onclick="sellItem(${item.id}, ${jsStringAttr(item.item_name)}, ${item.shop_shelf_price}, ${item.quantity})"` : 'disabled'}>${sellable ? '出售物品' : '不可出售'}</button>
+                    <div class="shop-card-pricing"><span class="shop-card-price">${sellable ? formatShopUnitPrice(item.shop_shelf_price) : '无法估价'}</span><span class="shop-card-stock">持有 ${item.quantity}</span></div>
+                    <div class="shop-sell-quote">${sellable ? `单件原价 ${formatShopUnitPrice(item.shop_base_price)} · 今日 ${item.shop_sell_discount}%` : '图鉴中未收录此物品'}</div>
+                    <button class="btn-buy" type="button" ${sellable ? `onclick="sellItem(${item.id}, ${jsStringAttr(item.item_name)}, ${item.shop_shelf_price}, ${item.quantity})"` : 'disabled'}>${sellable ? '批量出售' : '不可出售'}</button>
                 </div></div>`;
         }).join('');
     }
@@ -10843,14 +10855,17 @@ async function loadLoginLogs() {
     async function sellItem(invId, itemName, unitPrice, maxQty) {
         if (itemSaleInProgress || ShopMerchants.isBusy()) return;
         const merchant = ShopMerchants.current();
-        const qtyStr = prompt(`出售 [${itemName}] (单价: ${formatCurrency(unitPrice)})\n当前拥有: ${maxQty}\n\n请输入出售数量:`, "1");
-        if (qtyStr === null) return;
-        const qty = Number(qtyStr);
+        const accountId = viewingUserId;
+        const row = shopShelfSellRows.find(item=>item.id===invId);
+        const qty = await ShopSale.choose({name:itemName,unitPrice,quantity:maxQty,
+            unitLabel:row?.source_metadata?.inventory_unit_label||'件',currency:getCurrencyUnit(),merchant});
+        if (qty === null || accountId !== viewingUserId || merchant.id !== ShopMerchants.current().id) return;
+        if (itemSaleInProgress || ShopMerchants.isBusy()) return;
 
         if (!Number.isSafeInteger(qty) || qty <= 0) return alert("数量无效");
         if (qty > maxQty) return alert("库存不足");
+        if (roundCurrency(unitPrice*qty)<=0) return alert('出售数量太少，合计不足最小货币单位，请增加数量。');
 
-        const accountId = viewingUserId;
         const saleKey = `${accountId}:${invId}`;
         const pending = pendingItemSales.get(saleKey);
         if (pending && (pending.p_quantity !== qty || pending.p_expected_unit_price !== unitPrice || pending.p_shop_id !== merchant.id)) {
@@ -10880,7 +10895,7 @@ async function loadLoginLogs() {
             if (accountId === viewingUserId) document.dispatchEvent(new CustomEvent('shop:sale-completed', { detail: { shopId: merchant.id, accountId, itemName, quantity: qty } }));
             alert(`出售成功！获得 ${formatCurrency(receipt.amount)}`);
             try {
-                await logAction('出售物品', `以 ${formatCurrency(unitPrice)} 的单价出售了 [${receipt.item_name}] x${qty}，获利 ${formatCurrency(receipt.amount)}；账本编号 ${receipt.entry_id}`);
+                await logAction('出售物品', `以 ${formatShopUnitPrice(unitPrice)} 的单价出售了 [${receipt.item_name}] x${qty}，获利 ${formatCurrency(receipt.amount)}；账本编号 ${receipt.entry_id}`);
             } catch (logError) {
                 console.warn('辅助操作日志写入失败，出售明细已保存于资金账本。', logError);
             }

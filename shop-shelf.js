@@ -162,6 +162,7 @@
         const sort = value('shop-sort-filter') || 'rarity';
         result.sort((a,b) => {
             if (state.mode === 'buy') {
+                if (!!a.unlimited_stock !== !!b.unlimited_stock) return a.unlimited_stock ? 1 : -1;
                 const unavailableA = !a.unlimited_stock && Number(a.stock) <= 0;
                 const unavailableB = !b.unlimited_stock && Number(b.stock) <= 0;
                 if (unavailableA !== unavailableB) return unavailableA ? 1 : -1;

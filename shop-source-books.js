@@ -61,6 +61,8 @@
             return [{ ...item, source_book: master?.source_book || 'HOMEBREW',
                 is_nonmagical: typeof master?.is_nonmagical === 'boolean' ? master.is_nonmagical : master?.source_metadata?.is_nonmagical === true,
                 ammunition_pack_size: master?.source_metadata?.ammunition_pack_size || 1,
+                inventory_units_per_sale: master?.source_metadata?.inventory_units_per_sale || 1,
+                inventory_unit_label: master?.source_metadata?.inventory_unit_label || '件',
                 shop_shelf_category: root.ShopShelf?.classify(master || item),
                 shop_search_terms: [master?.source_metadata?.canonical_name, master?.source_metadata?.english_name,
                     master?.source_metadata?.spell_name].filter(Boolean).join(' '),

@@ -17,6 +17,18 @@
 #shop-section #shop-cart-button { display:inline-flex;align-items:center;gap:6px;white-space:nowrap; }
 #shop-section .shop-mode-tabs { flex-wrap:wrap; }
 #shop-section .shop-card-price small { font-size:10px; }
+#shop-section .shop-purchase-dialog.shop-sale-dialog { width:min(520px,calc(100vw - 32px)); }
+#shop-section .shop-sale-dialog header,#shop-section .shop-sale-dialog footer { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+#shop-section .shop-sale-dialog h3 { overflow-wrap:anywhere; }
+#shop-section .shop-sale-quantity { display:grid;grid-template-columns:minmax(0,1fr) 150px;align-items:center;gap:12px;margin:24px 0 18px; }
+#shop-section .shop-sale-quantity input { box-sizing:border-box;width:100%;min-width:0;padding:10px;border:1px solid #baa3aa;border-radius:4px;font:inherit;text-align:right;background:#fff; }
+#shop-section .shop-sale-dialog input[type=range] { display:block;box-sizing:border-box;width:100%;margin:0;accent-color:#744654;cursor:pointer; }
+#shop-section .shop-sale-dialog[data-merchant=lemonia] input[type=range] { accent-color:#456b88; }
+#shop-section .shop-sale-range-labels { display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;margin:10px 0 20px; }
+#shop-section .shop-sale-range-labels button { padding:4px 10px; }
+#shop-section .shop-sale-total { margin:20px 0;font-size:20px;font-weight:700;text-align:right; }
+#shop-section .shop-sale-dialog [data-error] { color:#9b3838;min-height:20px;font-size:13px; }
+#shop-section .shop-sale-dialog footer { justify-content:flex-end;flex-wrap:wrap; }
 .finance-ledger-entry .finance-cart-detail { margin-top:10px;font-size:13px; }
 .finance-ledger-entry .finance-cart-detail summary { cursor:pointer;color:#287464;font-weight:600; }
 .finance-ledger-entry .finance-cart-detail > div { max-width:100%;overflow-x:auto; }

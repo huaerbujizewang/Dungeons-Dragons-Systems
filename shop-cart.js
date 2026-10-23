@@ -43,17 +43,17 @@
             const dialog=document.createElement('dialog');dialog.className='shop-purchase-dialog shop-cart-quantity-dialog';dialog.dataset.merchant=merchant.id;
             dialog.setAttribute('aria-label','确认购买');
             dialog.innerHTML='<header><h2>确认购买</h2><button type="button" data-close aria-label="关闭">×</button></header><p class="shop-confirm-merchant"></p><h3></h3><p data-unit></p><label class="shop-cart-quantity-label">数量</label><p data-amount></p><p class="shop-cart-grand-total"></p><footer><button type="button" data-cancel>取消</button><button type="button" data-add>加入购物车</button><button type="button" data-confirm>立即购买</button></footer>';
-            const pack=Number(item.ammunition_pack_size)||1;let selection=null;
+            const pack=Number(item.inventory_units_per_sale||item.ammunition_pack_size)||1,label=item.inventory_unit_label||'件';let selection=null;
             dialog.querySelector('.shop-confirm-merchant').textContent=merchant.name;
-            dialog.querySelector('h3').textContent=item.name;dialog.querySelector('[data-unit]').textContent=money(price)+(pack===20?' / 20发':' / 件');
+            dialog.querySelector('h3').textContent=item.name;dialog.querySelector('[data-unit]').textContent=money(price)+' / '+(pack>1?pack+label:'件');
             const picker=quantityPicker(1,qty=>{
                 dialog.querySelectorAll('[data-add],[data-confirm]').forEach(button=>button.disabled=!qty);
-                dialog.querySelector('[data-amount]').textContent=qty&&pack===20?'共 '+qty*20+' 发':'';
+                dialog.querySelector('[data-amount]').textContent=qty&&pack>1?'入包 '+qty*pack+' '+label:'';
                 dialog.querySelector('.shop-cart-grand-total').textContent=qty?money(Math.round(price*100)*qty/100):'—';
             },item.unlimited_stock?1000000:Math.min(1000000,Number(item.stock)));
             dialog.querySelector('.shop-cart-quantity-label').append(picker.node);
-            dialog.querySelector('.shop-cart-grand-total').textContent=money(price);dialog.querySelector('[data-amount]').textContent=pack===20?'共 20 发':'';
-            function accept(action){const qty=picker.value();if(!qty)return;selection={action,quantity:qty};dialog.close();}
+            dialog.querySelector('.shop-cart-grand-total').textContent=money(price);dialog.querySelector('[data-amount]').textContent=pack>1?'入包 '+pack+' '+label:'';
+            function accept(action){const qty=picker.value();if(!qty)return;selection={action,quantity:qty,pack_size:pack,inventory_unit_label:label};dialog.close();}
             dialog.querySelector('[data-add]').onclick=()=>accept('cart');dialog.querySelector('[data-confirm]').onclick=()=>accept('buy');
             dialog.querySelector('[data-close]').onclick=dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
             dialog.addEventListener('close',()=>{dialog.remove();resolve(selection);},{once:true});
@@ -106,9 +106,10 @@
             rows.forEach((line,index)=>{
                 const row=document.createElement('div');row.className='shop-cart-line';
                 const info=document.createElement('div'),title=document.createElement('strong'),detail=document.createElement('small'),price=document.createElement('b'),remove=document.createElement('button');
-                title.textContent=line.item_name;detail.textContent=Number(line.pack_size)===20?'每份20发，共 '+line.quantity*20+' 发':money(line.unit_price)+' / 件';
+                const description=qty=>Number(line.pack_size)>1?'每份'+line.pack_size+(line.inventory_unit_label||'发')+'，入包 '+qty*line.pack_size+' '+(line.inventory_unit_label||'发'):money(line.unit_price)+' / 件';
+                title.textContent=line.item_name;detail.textContent=description(line.quantity);
                 info.append(title,detail);price.dataset.linePrice='';price.textContent=money(Number(line.unit_price)*line.quantity);
-                const picker=quantityPicker(line.quantity,qty=>{confirm.disabled=!qty;if(!qty)return;line.quantity=qty;save(account,merchant.id);detail.textContent=Number(line.pack_size)===20?'每份20发，共 '+qty*20+' 发':money(line.unit_price)+' / 件';updateQuote().catch(error=>status.textContent=error.message);});
+                const picker=quantityPicker(line.quantity,qty=>{confirm.disabled=!qty;if(!qty)return;line.quantity=qty;save(account,merchant.id);detail.textContent=description(qty);updateQuote().catch(error=>status.textContent=error.message);});
                 remove.type='button';remove.className='shop-cart-remove';remove.title=remove.ariaLabel='移除商品';remove.textContent='×';
                 remove.onclick=()=>{draft.lines.splice(index,1);save(account,merchant.id);render();updateQuote().catch(error=>status.textContent=error.message);};
                 if(draft.pending){picker.node.querySelectorAll('button,input').forEach(node=>node.disabled=true);remove.disabled=true;}
