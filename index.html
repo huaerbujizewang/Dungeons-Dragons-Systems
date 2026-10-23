@@ -24,7 +24,7 @@
     <script src="shop-merchants.js?v=20261022-exclusive2"></script>
     <script src="shop-custom-equipment.js?v=20261023-cart1"></script>
     <script src="shop-cart.js?v=20261023-unitcounts1"></script>
-    <script src="shop-sale.js?v=20261023-bulksale1"></script>
+    <script src="shop-sale.js?v=20261023-round2"></script>
     <link rel="stylesheet" href="shop-cart.css?v=20261023-bulksale1">
     <link rel="stylesheet" href="shop-custom-equipment.css?v=20261023-custom1">
     <script src="shop-dialogue.js?v=20261022-dialogue1"></script>
@@ -10808,12 +10808,11 @@ async function loadLoginLogs() {
             const ratio = getDailySellRatio(item.item_name, merchantId);
             const units = Number(baseInfo?.source_metadata?.inventory_units_per_sale)||1;
             const unitBase = Number(baseInfo?.price)/units;
-            const precision = units>1?1000000:100;
             return { ...baseInfo, ...item, name:item.item_name, source_book:baseInfo?.source_book,
                 rarity:baseInfo?.rarity || item.rarity, category:baseInfo?.category || item.category,
                 shop_shelf_category:ShopShelf.classify(baseInfo || item),
                 shop_search_terms:baseInfo?.source_metadata?.english_name || '',
-                shop_shelf_price:unitBase>0 ? Math.round(unitBase * ratio * precision) / precision : null,
+                shop_shelf_price:unitBase>0 ? Math.round(unitBase * ratio * 100) / 100 : null,
                 shop_sell_discount:(ratio * 100).toFixed(2), shop_base_price:unitBase };
         });
         renderSellShopItems(shopShelfSellRows);
@@ -10821,7 +10820,7 @@ async function loadLoginLogs() {
     }
 
     function formatShopUnitPrice(value) {
-        return Number(value).toLocaleString(undefined,{maximumFractionDigits:6})+' '+getCurrencyUnit();
+        return Number(value).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' '+getCurrencyUnit();
     }
 
     function renderSellShopItems(rows) {
@@ -10835,14 +10834,15 @@ async function loadLoginLogs() {
         }
         ShopMerchants.signal('search_results');
         grid.innerHTML = items.map(item => {
-            const sellable = item.shop_shelf_price !== null;
+            const priced = item.shop_shelf_price !== null;
+            const sellable = priced && item.shop_shelf_price > 0;
             return `<div class="card shop-card${sellable ? '' : ' shop-card-out'}" style="--shop-rarity:${rarityColors[item.rarity] || '#bac7c0'}">
                 <div class="shop-card-topline"><span class="shop-card-supply">我的背包</span><span class="shop-card-rarity">${escapeHTML(item.rarity || '')}</span></div>
                 <div class="shop-card-heading"><b class="shop-item-name">${escapeHTML(item.item_name)}</b></div>
                 <div class="shop-card-category">${escapeHTML(ShopShelf.label(item.shop_shelf_category))}</div>
                 <div class="shop-card-footer">
-                    <div class="shop-card-pricing"><span class="shop-card-price">${sellable ? formatShopUnitPrice(item.shop_shelf_price) : '无法估价'}</span><span class="shop-card-stock">持有 ${item.quantity}</span></div>
-                    <div class="shop-sell-quote">${sellable ? `单件原价 ${formatShopUnitPrice(item.shop_base_price)} · 今日 ${item.shop_sell_discount}%` : '图鉴中未收录此物品'}</div>
+                    <div class="shop-card-pricing"><span class="shop-card-price">${priced ? formatShopUnitPrice(item.shop_shelf_price) : '无法估价'}</span><span class="shop-card-stock">持有 ${item.quantity}</span></div>
+                    <div class="shop-sell-quote">${priced ? `单件原价 ${formatShopUnitPrice(item.shop_base_price)} · 今日 ${item.shop_sell_discount}%${sellable?'':' · 单件报价为零，暂不可回收'}` : '图鉴中未收录此物品'}</div>
                     <button class="btn-buy" type="button" ${sellable ? `onclick="sellItem(${item.id}, ${jsStringAttr(item.item_name)}, ${item.shop_shelf_price}, ${item.quantity})"` : 'disabled'}>${sellable ? '批量出售' : '不可出售'}</button>
                 </div></div>`;
         }).join('');
