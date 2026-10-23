@@ -1,4 +1,4 @@
-.shop-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+#shop-section .shop-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; }
 .shop-card.card {
     display: flex;
     flex-direction: column;
@@ -169,3 +169,7 @@
     .shop-item-dialog-body { padding: 4px 16px 20px; }
     .shop-item-dialog-status { padding: 8px 16px; }
 }
+.shop-item-dialog .shop-item-purchase-actions { display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 20px;border-top:1px solid #c9c1b8; }
+.shop-item-dialog .shop-item-purchase-actions button { min-height:44px;padding:9px 18px;border:1px solid #4c4058;border-radius:4px;background:#4c4058;color:#fff;font:inherit;cursor:pointer; }
+.shop-item-dialog .shop-item-purchase-actions button:disabled { opacity:.5;cursor:not-allowed; }
+.shop-item-dialog .shop-item-purchase-actions button:focus-visible { outline:3px solid #8e496d;outline-offset:3px; }

@@ -20,20 +20,22 @@
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-loading.js?v=20261022-loading1"></script>
-    <script src="shop-item-details.js?v=20261023-custom1"></script>
+    <script src="shop-item-details.js?v=20261023-polish1"></script>
     <script src="shop-merchants.js?v=20261022-exclusive2"></script>
-    <script src="shop-custom-equipment.js?v=20261023-cart1"></script>
-    <script src="shop-cart.js?v=20261023-unitcounts1"></script>
+    <script src="shop-custom-equipment.js?v=20261023-polish1"></script>
+    <script src="shop-cart.js?v=20261023-polish1"></script>
+    <script src="shop-orders.js?v=20261023-polish1"></script>
+    <link rel="stylesheet" href="shop-orders.css?v=20261023-polish1">
     <script src="shop-sale.js?v=20261023-round2"></script>
-    <link rel="stylesheet" href="shop-cart.css?v=20261023-bulksale1">
+    <link rel="stylesheet" href="shop-cart.css?v=20261023-polish1">
     <link rel="stylesheet" href="shop-custom-equipment.css?v=20261023-custom1">
     <script src="shop-dialogue.js?v=20261022-dialogue1"></script>
-    <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
-    <script src="shop-shelf.js?v=20261023-stockgroups1"></script>
+    <link rel="stylesheet" href="shop-item-details.css?v=20261023-polish1">
+    <script src="shop-shelf.js?v=20261023-polish1"></script>
     <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf2">
-    <script src="shop-source-books.js?v=20261023-unitcounts1"></script>
+    <script src="shop-source-books.js?v=20261023-polish1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
-    <link rel="stylesheet" href="shop-scene.css?v=20261023-stockgroups1">
+    <link rel="stylesheet" href="shop-scene.css?v=20261023-polish1">
     <link rel="stylesheet" href="admin-console.css?v=20261022-discounts1">
     <script src="admin-console.js?v=20261022-console1"></script>
     <script src="shop-supply.js?v=20261022-console1"></script>
@@ -2101,6 +2103,7 @@
                 <button id="shop-buy-mode-btn" type="button" onclick="setShopMode(false)" aria-pressed="true">购买商品</button>
                 <button id="shop-mode-btn" type="button" onclick="setShopMode(true)" aria-pressed="false">出售物品</button>
                 <button id="shop-cart-button" type="button" onclick="ShopCart.open()" aria-label="购物车">购物车 <span data-cart-count>0</span></button>
+                <button type="button" onclick="openShopOrders()">交易记录</button>
             </div>
         </div>
         <div id="shop-transaction-status" class="shop-transaction-status" role="status" aria-live="polite"></div>
@@ -2116,6 +2119,16 @@
             <div id="shop-price-lookup-results" style="display:none; margin-top:8px;"></div>
             <div id="shop-price-table-panel" style="display:none; margin-top:10px; max-height:420px; overflow:auto; border-top:1px solid #edf3f8; padding-top:8px;"></div>
         </div>
+        <div class="shop-filter-row"><details class="shop-extra-filters"><summary>筛选条件</summary><div>
+            <label>最低价 GP<input id="shop-price-min" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>最高价 GP<input id="shop-price-max" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>法术环阶<select id="shop-spell-level"><option value="">全部</option><option value="0">戏法</option><option value="1">1环</option><option value="2">2环</option><option value="3">3环</option><option value="4">4环</option><option value="5">5环</option><option value="6">6环</option><option value="7">7环</option><option value="8">8环</option><option value="9">9环</option></select></label>
+            <label>同调<select id="shop-attunement-filter"><option value="">全部</option><option value="yes">需要同调</option><option value="no">不需同调</option></select></label>
+            <label class="shop-buy-filter"><input id="shop-instock-filter" type="checkbox">只看有货</label>
+            <label class="shop-buy-filter" title="定制商品按附魔费筛选，基础装备另计"><input id="shop-affordable-filter" type="checkbox">标价不超过余额</label>
+            <label class="shop-buy-filter"><input id="shop-deals-filter" type="checkbox">只看特惠</label>
+        </div></details><button class="shop-refresh-shelf" type="button" onclick="loadShop(true)" title="重新读取当前商店库存">刷新货架</button></div>
+        <div class="shop-filter-actions" hidden><div id="shop-applied-filters" aria-label="已选筛选条件"></div><button id="shop-clear-filters" type="button" hidden>清除筛选</button></div>
         <div class="shop-scope-tabs" aria-label="供货范围">
             <button type="button" data-shop-scope="all" aria-pressed="true">全部供货</button>
             <button type="button" data-shop-scope="public" aria-pressed="false">全服公共</button>
@@ -2130,6 +2143,7 @@
                     <span id="shop-shelf-count" role="status"></span>
                 </div>
                 <div id="shop-grid" class="shop-grid" aria-live="polite" tabindex="0" role="region" aria-label="商品货架"></div>
+                <button id="shop-load-more" type="button" hidden>加载更多</button>
             </div>
         </div>
         </div>
@@ -8341,7 +8355,7 @@ async function loadGold() {
         const rarityInk = { '普通': '#657679', '非普通': '#1d7f43', '珍稀': '#2672ac',
             '极珍稀': '#8253a3', '传说': '#947008', '神器': '#b94036' };
         
-        grid.innerHTML = filteredData.map((i, index) => {
+        grid.innerHTML = ShopShelf.visible(filteredData).map((i, index) => {
             const divider = index > 0 && i.unlimited_stock && !filteredData[index - 1].unlimited_stock
                 ? '<hr class="shop-stock-divider" aria-label="限量与不限量商品分界">' : '';
             const color = rarityColors[i.rarity] || '#ccc';
@@ -8392,8 +8406,20 @@ async function loadGold() {
     }
 
     async function openShopItemDetails(id) {
+        const account=viewingUserId,merchantId=ShopMerchants.current().id;
         ShopMerchants.signal('details', shopInteractionDetail(id));
-        await ShopItemDetails.open(id, (_name, item) => CompendiumIdentity.lookup(supabaseClient, item));
+        await ShopItemDetails.open(id, (_name, item) => CompendiumIdentity.lookup(supabaseClient, item), {
+            price:ShopMerchants.purchasePrice(shopShelfBuyRows.find(row=>Number(row.id)===Number(id)),userProfile),
+            onBuy:()=>{if(account!==viewingUserId||merchantId!==ShopMerchants.current().id)return;const item=shopShelfBuyRows.find(row=>Number(row.id)===Number(id));if(item)return buy(item.id,ShopMerchants.purchasePrice(item,userProfile),item.name,item.category);}
+        });
+    }
+
+    function openShopOrders(){
+        const account=viewingUserId;
+        return ShopOrders.open({client:supabaseClient,account,shop:ShopMerchants.current().id,onRefund:async()=>{
+            ShopLoading.invalidate(supabaseClient,'stock:');ShopLoading.invalidate(supabaseClient,'inventory:'+account);
+            if(account===viewingUserId)await Promise.all([loadGold(),loadInventory(),loadShop()]);
+        }});
     }
 
     // 3. ：下架商品逻辑
@@ -9007,7 +9033,7 @@ async function completeShopPurchase(receipt, merchant, accountId) {
     const refreshed=await Promise.allSettled([loadGold(), loadInventory(), loadShop()]);
     if (refreshed.some(result => result.status === 'rejected')) ShopMerchants.status('购买已完成并入账，界面刷新失败，请刷新查看。');
 }
-ShopCart.configure({account:()=>viewingUserId,client:()=>supabaseClient,completed:completeShopPurchase,
+ShopCart.configure({account:()=>viewingUserId,client:()=>supabaseClient,balance:()=>userProfile?.id===viewingUserId?userProfile.gold_gp:null,completed:completeShopPurchase,
     failed:(error,merchant,account,lines)=>reportShopPurchaseFailure(error.message||'',shopInteractionDetail(lines[0]?.item_id,lines[0]?.item_name),merchant.id,account)});
 
 function reportShopPurchaseFailure(message, interaction, shopId, accountId) {
@@ -10833,7 +10859,7 @@ async function loadLoginLogs() {
             return;
         }
         ShopMerchants.signal('search_results');
-        grid.innerHTML = items.map(item => {
+        grid.innerHTML = ShopShelf.visible(items).map(item => {
             const priced = item.shop_shelf_price !== null;
             const sellable = priced && item.shop_shelf_price > 0;
             return `<div class="card shop-card${sellable ? '' : ' shop-card-out'}" style="--shop-rarity:${rarityColors[item.rarity] || '#bac7c0'}">

@@ -26,20 +26,22 @@
             const quantityLabel=document.createElement('label');quantityLabel.className='shop-cart-quantity-label';quantityLabel.textContent=info.kind==='ammunition'?'份数（每份20发）':'数量';
             const picker=ShopCart.quantityPicker(1,qty=>{confirm.disabled=add.disabled=!qty||!selected;if(selected&&qty)paintQuote();},item.unlimited_stock?1000000:Math.min(1000000,Number(item.stock)));
             quantityLabel.append(picker.node);dialog.querySelector('footer').before(quantityLabel);
+            const summary=ShopCart.balancePanel();dialog.querySelector('footer').before(summary.node);
             function paintQuote(){
                 const qty=picker.value()||1;
                 dialog.querySelector('[data-fee]').textContent=money(Math.round(selected.enchantment_price*100)*qty/100);
                 dialog.querySelector('[data-base]').textContent=money(Math.round(selected.base_price*100)*qty/100);
                 dialog.querySelector('[data-total]').textContent=money(Math.round(selected.total*100)*qty/100)+(info.kind==='ammunition'?' · '+qty*20+'发':'');
+                confirm.disabled=!picker.value()||!summary.update(Math.round(selected.total*100)*qty/100,ShopCart.balance());
             }
             function select(row){
                 selected=row;
-                options.querySelectorAll('button').forEach(node=>node.setAttribute('aria-checked',String(Number(node.dataset.baseId)===Number(row.base_item_id))));
+                options.querySelectorAll('button').forEach(node=>{const checked=Number(node.dataset.baseId)===Number(row.base_item_id);node.setAttribute('aria-checked',String(checked));node.tabIndex=checked?0:-1;});
                 dialog.querySelector('.shop-custom-quote').hidden=false;
                 dialog.querySelector('h3').textContent=row.item_name;
                 paintQuote();
                 dialog.querySelector('[data-offer]').textContent=row.crafter_discount?'巧匠八折：仅基础装备补价，不叠加特惠':row.promotion_discount_applied?'特惠：仅附魔费，不叠加巧匠':'';
-                confirm.disabled=add.disabled=!picker.value();
+                add.disabled=!picker.value();
             }
             function render(){
                 const filtered=rows.filter(row=>row.base_name.toLocaleLowerCase().includes(input.value.trim().toLocaleLowerCase()));
@@ -47,6 +49,7 @@
                 for(const row of filtered){
                     const button=document.createElement('button');button.type='button';button.dataset.baseId=row.base_item_id;
                     button.setAttribute('role','radio');button.setAttribute('aria-checked',String(selected===row));
+                    button.tabIndex=selected===row||(!filtered.includes(selected)&&filtered[0]===row)?0:-1;
                     const name=document.createElement('span'),price=document.createElement('small');
                     name.textContent=row.base_name;price.textContent=money(row.base_list_price);
                     button.append(name,price);button.onclick=()=>select(row);options.append(button);
@@ -54,6 +57,13 @@
                 message.textContent=filtered.length?'':rows.length?'没有符合条件的装备。':'没有已启用来源的可定制装备。';
             }
             input.oninput=render;
+            options.onkeydown=event=>{
+                if(!['ArrowDown','ArrowRight','ArrowUp','ArrowLeft','Home','End'].includes(event.key))return;
+                const buttons=[...options.querySelectorAll('button')];if(!buttons.length)return;event.preventDefault();
+                const current=buttons.indexOf(document.activeElement),next=event.key==='Home'?0:event.key==='End'?buttons.length-1:
+                    (Math.max(0,current)+(event.key==='ArrowDown'||event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+                buttons[next].focus();buttons[next].click();
+            };
             dialog.querySelector('[data-close]').onclick=dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
             confirm.onclick=()=>{if(selected&&picker.value()){accepted=true;dialog.close();}};
             add.onclick=()=>{if(selected&&picker.value()){action='cart';accepted=true;dialog.close();}};

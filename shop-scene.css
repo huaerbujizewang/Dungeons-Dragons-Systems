@@ -318,3 +318,26 @@
 #shop-departure-notice[hidden] { display:none; }
 #shop-section .shop-grid > .shop-stock-divider { grid-column:1/-1; width:100%; height:0; border:0; border-top:3px solid #856570; margin:16px 0 8px; opacity:1; }
 #shop-section[data-merchant='lemonia'] .shop-grid > .shop-stock-divider { border-top-color:#597b9d; }
+#shop-section .shop-extra-filters { margin:8px 0;color:#544953;font-size:12px; }
+#shop-section .shop-filter-row { position:relative; }
+#shop-section .shop-filter-row summary { padding-right:110px; }
+#shop-section .shop-refresh-shelf { position:absolute;right:0;top:2px;min-height:32px;padding:5px 10px;border:1px solid #b5a8ae;border-radius:3px;background:#fffdfb;color:#5e4e59;cursor:pointer;font:inherit;font-size:12px; }
+#shop-section .shop-extra-filters summary { cursor:pointer;padding:8px 0;min-height:24px; }
+#shop-section .shop-extra-filters > div { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:8px 0 12px; }
+#shop-section .shop-extra-filters label { display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0; }
+#shop-section .shop-extra-filters label:not(.shop-buy-filter) { display:grid;gap:4px; }
+#shop-section .shop-extra-filters input[type=number],#shop-section .shop-extra-filters select { box-sizing:border-box;width:100%;min-width:0;padding:8px;border:1px solid #b5a8ae;border-radius:3px;background:white;font:inherit;color:inherit; }
+#shop-section .shop-filter-actions { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px; }
+#shop-section .shop-filter-actions[hidden] { display:none; }
+#shop-section #shop-applied-filters { display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0; }
+#shop-section .shop-filter-actions button { padding:6px 9px;min-height:32px;border:1px solid #b5a8ae;border-radius:3px;background:#fffdfb;color:#5e4e59;font:inherit;font-size:12px;cursor:pointer;max-width:100%;overflow-wrap:anywhere; }
+#shop-section[data-mode=sell] .shop-buy-filter { display:none; }
+#shop-section #shop-load-more { padding:8px;margin-top:8px;min-height:36px;border:1px solid #b5a8ae;background:#fffdfb;color:#5e4e59;cursor:pointer; }
+#shop-section .shop-card-category,#shop-section .shop-card-supply,#shop-section .shop-card-stock,#shop-section .shop-sell-quote { color:#65565e;font-size:12px; }
+#shop-section .shop-card-out .shop-card-stock { color:#76464a; }
+#shop-section[data-merchant=lemonia] .shop-card-category,#shop-section[data-merchant=lemonia] .shop-card-supply,#shop-section[data-merchant=lemonia] .shop-card-stock,#shop-section[data-merchant=lemonia] .shop-sell-quote { color:#4f6076; }
+@media(max-width:600px){
+    #shop-section .shop-extra-filters > div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #shop-section .shop-card .btn-buy,#shop-section .shop-card .shop-detail-trigger,#shop-section .shop-mode-tabs button,#shop-section .shop-filter-actions button,#shop-section #shop-load-more,#shop-section .shop-refresh-shelf { min-height:44px; }
+    #shop-section .shop-filter-row summary { min-height:48px; }
+}

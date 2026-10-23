@@ -1,0 +1,15 @@
+.shop-orders-dialog { box-sizing:border-box;width:min(760px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:24px;border:1px solid #aebdb7;border-radius:6px;background:#fbfdfc;color:#253e36;font:14px/1.6 'Microsoft YaHei',sans-serif;overflow:auto; }
+.shop-orders-dialog::backdrop { background:#18231e99; }
+.shop-orders-dialog header,.shop-orders-controls { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+.shop-orders-dialog h2 { margin:0;font-size:21px;color:#253e36; }
+.shop-orders-dialog button,.shop-orders-dialog select { min-height:40px;padding:8px 14px;border:1px solid #aebdb7;border-radius:4px;background:#fff;color:#315b4d;font:inherit;cursor:pointer; }
+.shop-orders-dialog button:disabled,.shop-orders-dialog select:disabled { opacity:.55;cursor:wait; }
+.shop-orders-dialog button:focus-visible,.shop-orders-dialog select:focus-visible { outline:3px solid #277e64;outline-offset:3px; }
+.shop-orders-controls { margin-top:18px; }
+.shop-orders-policy { color:#52625a; }
+.shop-order-row { position:relative;border-top:1px solid #cbd7d0;padding:18px 0;overflow-wrap:anywhere; }
+.shop-order-row h3 { margin:0;font-size:16px; }
+.shop-order-row p { margin:5px 0;color:#52625a; }
+.shop-order-row .shop-order-amount { font-size:18px;font-weight:700;color:#315b4d; }
+.shop-order-row button { margin-top:8px; }
+@media(max-width:600px){.shop-orders-dialog { padding:18px; }.shop-orders-dialog button,.shop-orders-dialog select { min-height:44px; }}

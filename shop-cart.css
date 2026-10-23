@@ -17,6 +17,11 @@
 #shop-section #shop-cart-button { display:inline-flex;align-items:center;gap:6px;white-space:nowrap; }
 #shop-section .shop-mode-tabs { flex-wrap:wrap; }
 #shop-section .shop-card-price small { font-size:10px; }
+#shop-section .shop-balance-summary { display:grid;gap:8px;padding:14px 0;border-top:1px solid #c6b9bd;margin:16px 0; }
+#shop-section .shop-balance-summary:empty { display:none; }
+#shop-section .shop-balance-summary > div { display:flex;justify-content:space-between;gap:14px; }
+#shop-section .shop-balance-summary b { text-align:right;overflow-wrap:anywhere; }
+#shop-section .shop-balance-summary p { color:#9b3030;margin:5px 0; }
 #shop-section .shop-purchase-dialog.shop-sale-dialog { width:min(520px,calc(100vw - 32px)); }
 #shop-section .shop-sale-dialog header,#shop-section .shop-sale-dialog footer { display:flex;align-items:center;justify-content:space-between;gap:12px; }
 #shop-section .shop-sale-dialog h3 { overflow-wrap:anywhere; }

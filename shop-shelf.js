@@ -17,7 +17,32 @@
     ];
     const labels = new Map(categories.map(category => [category.id,category.label]));
     const rarityWeight = { '神器':6, '传说':5, '极珍稀':4, '珍稀':3, '非普通':2, '普通':1 };
-    const state = { category:'all', scope:'all', mode:'buy', onChange:null, mounted:false };
+    const state = { category:'all', scope:'all', mode:'buy', onChange:null, mounted:false, limit:60 };
+    function changed(){state.limit=60;const grid=document.getElementById('shop-grid');if(grid)grid.scrollTop=0;state.onChange?.();}
+    function reset(){
+        for(const id of ['shop-search-input','shop-source-filter','shop-rarity-filter','shop-price-min','shop-price-max','shop-spell-level','shop-attunement-filter']){const input=document.getElementById(id);if(input)input.value='';}
+        for(const id of ['shop-instock-filter','shop-affordable-filter','shop-deals-filter']){const input=document.getElementById(id);if(input)input.checked=false;}
+        state.category='all';state.scope='all';changed();
+    }
+    function visible(rows){
+        const button=document.getElementById('shop-load-more');
+        if(button){button.hidden=rows.length<=state.limit;button.textContent='加载更多（剩余 '+Math.max(0,rows.length-state.limit)+' 件）';}
+        return rows.slice(0,state.limit);
+    }
+    function applied(){
+        const container=document.getElementById('shop-applied-filters');if(!container)return;container.replaceChildren();
+        function chip(label,clear){const button=document.createElement('button');button.type='button';button.textContent=label+' ×';button.ariaLabel='移除筛选：'+label;button.onclick=()=>{clear();changed();};container.append(button);}
+        if(state.category!=='all')chip(labels.get(state.category),()=>state.category='all');
+        if(state.mode==='buy'&&state.scope!=='all')chip(state.scope==='private'?'当前特供':'全服公共',()=>state.scope='all');
+        for(const [id,label] of [['shop-search-input','搜索'],['shop-source-filter','书籍'],['shop-rarity-filter','稀有度'],['shop-price-min','最低价'],['shop-price-max','最高价'],['shop-spell-level','法术环阶'],['shop-attunement-filter','同调']]){
+            const input=document.getElementById(id);if(!input?.value||(state.mode==='sell'&&id==='shop-source-filter'))continue;
+            const value=input.tagName==='SELECT'?input.selectedOptions[0]?.textContent:input.value;
+            chip(label+'：'+value,()=>input.value='');
+        }
+        if(state.mode==='buy')for(const [id,label] of [['shop-instock-filter','有货'],['shop-affordable-filter','标价不超过余额'],['shop-deals-filter','特惠']]){const input=document.getElementById(id);if(input?.checked)chip(label,()=>input.checked=false);}
+        const clear=document.getElementById('shop-clear-filters');if(clear)clear.hidden=!container.children.length;
+        const actions=container.closest('.shop-filter-actions');if(actions)actions.hidden=!container.children.length;
+    }
 
     function metadata(item) {
         if (typeof item?.source_metadata === 'string') {
@@ -85,7 +110,7 @@
                 count.className = 'shop-category-count';
                 button.append(name,count);
                 if (category.id === 'implements') button.title = '普通法杖、魔杖和权杖；魔咒法杖单独分类';
-                button.onclick = () => { state.category = category.id; state.onChange?.(); };
+                button.onclick = () => { state.category = category.id; changed(); };
                 nav.append(button);
             }
             if (mobile) {
@@ -95,14 +120,18 @@
                 mobile.append(option);
             }
         }
-        if (mobile) mobile.onchange = () => { state.category = mobile.value; state.onChange?.(); };
+        if (mobile) mobile.onchange = () => { state.category = mobile.value; changed(); };
         section.querySelectorAll('[data-shop-scope]').forEach(button => {
-            button.onclick = () => { state.scope = button.dataset.shopScope; state.onChange?.(); };
+            button.onclick = () => { state.scope = button.dataset.shopScope; changed(); };
         });
-        ['shop-search-input','shop-source-filter','shop-rarity-filter','shop-sort-filter'].forEach(id => {
+        let searchTimer;
+        ['shop-search-input','shop-source-filter','shop-rarity-filter','shop-sort-filter','shop-price-min','shop-price-max','shop-spell-level','shop-attunement-filter','shop-instock-filter','shop-affordable-filter','shop-deals-filter'].forEach(id => {
             const input = section.querySelector('#'+id);
-            input?.addEventListener(id === 'shop-search-input' ? 'input' : 'change',() => state.onChange?.());
+            input?.addEventListener(['shop-search-input','shop-price-min','shop-price-max'].includes(id)?'input':'change',()=>{clearTimeout(searchTimer);if(id==='shop-search-input')searchTimer=setTimeout(changed,120);else changed();});
         });
+        const clear=section.querySelector('#shop-clear-filters');if(clear)clear.onclick=reset;
+        const more=section.querySelector('#shop-load-more');if(more)more.onclick=()=>{state.limit+=60;state.onChange?.();};
+        document.addEventListener('shop:merchant-changed',()=>{state.limit=60;});
         section.addEventListener('click',event => {
             section.querySelectorAll('.shop-item-admin-menu[open]').forEach(menu => {
                 if (!menu.contains(event.target)) menu.open = false;
@@ -114,6 +143,7 @@
     }
 
     function setMode(sell) {
+        if(state.mode!==(sell?'sell':'buy'))state.limit=60;
         state.mode = sell ? 'sell' : 'buy';
         const section = document.getElementById('shop-section');
         if (!section) return;
@@ -131,12 +161,24 @@
         const query = value('shop-search-input').trim().toLocaleLowerCase();
         const source = state.mode === 'buy' ? value('shop-source-filter') : '';
         const rarity = value('shop-rarity-filter');
+        const low=value('shop-price-min'),high=value('shop-price-max'),level=value('shop-spell-level'),attunement=value('shop-attunement-filter');
+        const checked=id=>document.getElementById(id)?.checked===true;
+        const balance=root.ShopCart?.balance?.();
         const matches = rows.filter(item => {
             const group = item.shop_shelf_category || classify(item);
             const terms = [item.name,item.item_name,item.category,item.rarity,item.source_book,
                 labels.get(group),item.shop_search_terms].join(' ').toLocaleLowerCase();
+            const price=Number(item.shop_shelf_price??item.price),meta=metadata(item);
+            const spellLevel=item.shop_spell_level??meta.spell_level;
+            const requires=item.shop_requires_attunement??meta.requires_attunement??(/(?:需|需要)[^\n。]{0,30}同调/.test(String(item.description||'').slice(0,500))&&!/无需同调|不需要同调/.test(String(item.description||'').slice(0,500)));
             return (!query || terms.includes(query)) && (!source || item.source_book === source)
                 && (!rarity || item.rarity === rarity)
+                && (low===''||price>=Number(low)) && (high===''||price<=Number(high))
+                && (level===''||(spellLevel!=null&&Number(spellLevel)===Number(level)))
+                && (attunement===''||Boolean(requires)===(attunement==='yes'))
+                && (state.mode==='sell'||(!checked('shop-instock-filter')||item.unlimited_stock||Number(item.stock)>0))
+                && (state.mode==='sell'||(!checked('shop-affordable-filter')||(balance!=null&&price<=Number(balance))))
+                && (state.mode==='sell'||(!checked('shop-deals-filter')||Number(item.discount_percent??100)<100))
                 && (state.mode === 'sell' || state.scope === 'all' || (state.scope === 'private' ? !!item.user_id : !item.user_id));
         });
         const counts = new Map(categories.map(category => [category.id,0]));
@@ -186,10 +228,12 @@
         if (heading) heading.textContent = state.mode === 'sell' && state.category === 'all' ? '可出售物品' : labels.get(state.category);
         const counter = section?.querySelector('#shop-shelf-count');
         if (counter) counter.textContent = `${result.length} 件商品`;
+        applied();
+        visible(result);
         return result;
     }
 
-    const api = { categories, classify, icon, mount, filter, setMode, label:id => labels.get(id) || '其他' };
+    const api = { categories, classify, icon, mount, filter, visible, reset, setMode, label:id => labels.get(id) || '其他' };
     root.ShopShelf = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);

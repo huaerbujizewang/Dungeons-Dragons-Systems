@@ -283,13 +283,22 @@
         return booksPromise;
     }
 
-    async function open(id, lookup) {
+    async function open(id, lookup, action = null) {
         const item = items.get(String(id));
         if (!item) return;
         ensureDialog();
         const request = ++generation;
         previousFocus = document.activeElement;
         render(item);
+        dialog.querySelector('.shop-item-purchase-actions')?.remove();
+        if(action?.onBuy){
+            const footer=element('footer',undefined,'shop-item-purchase-actions');
+            const price=element('span',Number(action.price).toLocaleString('zh-CN',{maximumFractionDigits:2})+' GP'+(item.unlimited_stock?' · 不限量':' · 库存 '+Number(item.stock||0)));
+            const button=element('button',root.ShopCustomEquipment?.template(item)?'定制购买':'购买商品');button.type='button';
+            button.disabled=!item.unlimited_stock&&Number(item.stock)<=0;
+            button.onclick=()=>{dialog.addEventListener('close',()=>action.onBuy(),{once:true});dialog.close();};
+            footer.append(price,button);dialog.append(footer);
+        }
         const status = dialog.querySelector('.shop-item-dialog-status');
         status.textContent = '\u6b63\u5728\u8bfb\u53d6\u56fe\u9274\u8d44\u6599...';
         dialog.classList.toggle('shop-scene-dialog', document.getElementById('shop-section')?.classList.contains('active') === true);
