@@ -71,7 +71,7 @@
         const context = await settings(client, accountId);
         if (selectId) fillSelect(selectId, context);
         const selected = selectId ? document.getElementById(selectId)?.value : '';
-        return rows.filter(item => allowed(item, context) && (!selected || item.source_book === selected));
+        return rows.filter(item => item.source_metadata?.custom_equipment_variant !== true && allowed(item, context) && (!selected || item.source_book === selected));
     }
 
     async function catalog(client, { query = '', rarity = '', source = '' } = {}) {

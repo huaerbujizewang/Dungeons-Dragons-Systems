@@ -20,13 +20,15 @@
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-loading.js?v=20261022-loading1"></script>
-    <script src="shop-item-details.js?v=20261022-loading1"></script>
+    <script src="shop-item-details.js?v=20261023-custom1"></script>
     <script src="shop-merchants.js?v=20261022-exclusive2"></script>
+    <script src="shop-custom-equipment.js?v=20261023-custom1"></script>
+    <link rel="stylesheet" href="shop-custom-equipment.css?v=20261023-custom1">
     <script src="shop-dialogue.js?v=20261022-dialogue1"></script>
     <link rel="stylesheet" href="shop-item-details.css?v=20261021-shelf1">
     <script src="shop-shelf.js?v=20261022-exclusive2"></script>
     <link rel="stylesheet" href="shop-shelf.css?v=20261021-shelf2">
-    <script src="shop-source-books.js?v=20261022-basics1"></script>
+    <script src="shop-source-books.js?v=20261023-custom1"></script>
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <link rel="stylesheet" href="shop-scene.css?v=20261022-exclusive2">
     <link rel="stylesheet" href="admin-console.css?v=20261022-discounts1">
@@ -8336,6 +8338,7 @@ async function loadGold() {
             const color = rarityColors[i.rarity] || '#ccc';
             const isOut = !i.unlimited_stock && i.stock <= 0;
             const offer = ShopMerchants.purchaseOffer(i, profile);
+            const customTemplate = ShopCustomEquipment.template(i);
             const discountLabel = offer.promotionPercent < 100 ? `特惠${offer.promotionPercent / 10}折` : offer.crafterApplied ? '巧匠八折' : '';
             const offerNote = offer.crafterApplied && offer.promotionPercent < 100 ? '按巧匠八折，不叠加' : '';
             const safeName = escapeHTML(i.name);
@@ -8364,14 +8367,14 @@ async function loadGold() {
                         ${discountLabel ? `<div class="shop-card-discount"><span>${escapeHTML(discountLabel)}</span><del>${formatCurrency(i.price)}</del></div>` : ''}
                         ${offerNote ? `<div class="shop-card-offer-note">${offerNote}</div>` : ''}
                         <div class="shop-card-pricing">
-                            <span class="shop-card-price">${formatCurrency(i.shop_shelf_price)}</span>
+                            <span class="shop-card-price">${customTemplate ? '<small>附魔费 </small>' : ''}${formatCurrency(i.shop_shelf_price)}</span>
                             <span class="shop-card-stock">${i.unlimited_stock ? '不限量' : isOut ? '售罄' : `库存 ${i.stock}`}</span>
                         </div>
                         <div class="shop-card-actions">
                             <button class="shop-detail-trigger" type="button" onclick="openShopItemDetails(${i.id})" title="查看完整物品描述">查看描述</button>
                             <button class="btn-buy" type="button"
                                 onclick="buy(${i.id}, ${i.shop_shelf_price}, ${nameArg}, ${categoryArg})"
-                                ${isOut ? 'aria-disabled="true"' : ''}>${isOut ? '缺货' : '购买'}</button>
+                                ${isOut ? 'aria-disabled="true"' : ''}>${isOut ? '缺货' : customTemplate ? '定制' : '购买'}</button>
                         </div>
                     </div>
                 </div>`;
@@ -8943,24 +8946,27 @@ async function buy(id, p, n, c) {
     const merchant = ShopMerchants.current();
     const accountId = viewingUserId;
     try {
-        const confirmed = await ShopMerchants.confirmPurchase(n, formatCurrency(p), merchant);
+        const customTemplate = ShopCustomEquipment.template(item);
+        const customQuote = customTemplate ? await ShopCustomEquipment.choose(supabaseClient, accountId, item, merchant, userProfile) : null;
+        const confirmed = customTemplate ? !!customQuote : await ShopMerchants.confirmPurchase(n, formatCurrency(p), merchant);
         if (!confirmed || accountId !== viewingUserId) {
             ShopMerchants.signal('cancelled', { ...interaction, shopId: merchant.id, accountId });
             return;
         }
         showLoading();
+        if (customQuote) { n = customQuote.item_name; p = Number(customQuote.total); }
         const financeClient = await FinanceLedger.withContext(supabaseClient, {
             source: 'shop_purchase', title: `购买物品：${n}`,
             note: `在${merchant.name}购买 ${n} ×1，单价 ${formatCurrency(p)}。`,
             details: { shop_id: merchant.id, shop_name: merchant.name, item_id: id, item_name: n, quantity: 1, unit_price: roundCurrency(p), category: c || '杂项' }
         });
-        const { data, error } = await financeClient.rpc('buy_shop_item', {
+        const { data, error } = await financeClient.rpc(customQuote ? 'buy_custom_equipment' : 'buy_shop_item', {
             p_user_id: accountId,
             p_shop_id: merchant.id,
             p_item_id: parseInt(id),  // 确保是数字
             p_price: roundCurrency(p),   // 确保支持两位小数数字
             p_item_name: n,
-            p_category: c || '杂项'    // 确保不为 null
+            ...(customQuote ? { p_base_item_id: customQuote.base_item_id, p_request_key: crypto.randomUUID() } : { p_category: c || '杂项' })
         });
 
         if (error) {
@@ -8971,6 +8977,8 @@ async function buy(id, p, n, c) {
         if (data && data.startsWith('success')) {
             ShopLoading.invalidate(supabaseClient, 'stock:');
             ShopLoading.invalidate(supabaseClient, 'inventory:' + accountId);
+            ShopLoading.invalidate(supabaseClient, 'equipment:' + accountId);
+            if (customQuote) CompendiumIdentity.invalidate(supabaseClient);
             if (accountId === viewingUserId) {
                 ShopMerchants.status(`已从${merchant.name}购入 ${n}。`);
                 document.dispatchEvent(new CustomEvent('shop:purchase-completed', { detail: { ...interaction, shopId: merchant.id, accountId } }));
@@ -8985,7 +8993,8 @@ async function buy(id, p, n, c) {
     } catch (e) {
         console.error("Full Error Info:", e);
         reportShopPurchaseFailure(e.message || '', interaction, merchant.id, accountId);
-        alert('交易失败：' + (['PGRST202', '42883'].includes(e.code) ? '请运行 shop_merchants.sql 安装双商铺交易函数。' : (e.message || '请检查网络')));
+        alert('交易失败：' + (['PGRST202', '42883'].includes(e.code) ? '请运行最新商城更新 SQL，安装交易函数。' : (e.message || '请检查网络')));
+        ShopLoading.invalidate(supabaseClient, 'equipment:' + accountId);
         if (accountId === viewingUserId && /商品已变化|商品库存不足|商品不存在/.test(e.message || '')) await loadShop(true);
     } finally {
         ShopMerchants.setBusy(false);

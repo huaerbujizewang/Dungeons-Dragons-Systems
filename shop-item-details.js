@@ -276,7 +276,7 @@
     }
 
     async function bookNames() {
-        if (!booksPromise) booksPromise = fetch('data/compendium/source-books.json').then(response => {
+        if (!booksPromise) booksPromise = fetch('data/compendium/source-books.json?v=20261023-custom1').then(response => {
             if (!response.ok) throw new Error('Book catalog unavailable');
             return response.json();
         }).then(rows => Object.fromEntries(rows.map(row => [row.code, row.name]))).catch(() => ({}));
