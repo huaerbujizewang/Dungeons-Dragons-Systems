@@ -9,6 +9,7 @@
     function setBusy(value){
         busy=value;byId('supply-fields').disabled=value||!ready;
         byId('adm-shop-merchant').disabled=value;byId('supply-reload').disabled=value;
+        byId('supply-presets').disabled=value;
     }
     function snapshot(){
         return {categories:[...document.querySelectorAll('#supply-categories input:checked')].map(input=>input.value),
@@ -76,6 +77,19 @@
             }).join('\n');status('候选池统计完成');
         }catch(error){status('预览失败：'+error.message);}finally{setBusy(false);}
     }
+    async function replenish(){
+        if(busy||!client)return;
+        const id=shopId(),name=root.ShopMerchants.merchants.find(shop=>shop.id===id).name;
+        if(!confirm('将'+name+'的公共预制货物补齐至预设库存？不会降低现有库存，也不会修改价格、折扣或玩家特供。'))return;
+        setBusy(true);status('正在补齐预制货物...');
+        try{
+            const {data,error}=await client.rpc('replenish_shop_presets',{p_shop_id:id});if(error)throw error;
+            root.ShopLoading?.invalidate(client,'stock:');
+            document.dispatchEvent(new CustomEvent('shop:presets-replenished',{detail:{shopId:id}}));
+            status('已恢复 '+data.created+' 种货物，补货 '+data.restocked+' 种，共补入 '+data.units+' 份。');
+        }catch(error){status('补货失败：'+(['PGRST202','42883'].includes(error.code)?'请运行 shop_addiction_update.sql':error.message));}
+        finally{setBusy(false);}
+    }
     function mount(){
         if(!byId('supply-categories'))return;
         for(const category of root.ShopShelf.categories.filter(item=>item.id!=='all')){
@@ -91,6 +105,7 @@
         byId('adm-shop-merchant').addEventListener('change',()=>load());
         byId('supply-reload').onclick=()=>{if(!cache.get(key(shopId()))?.dirty||confirm('重新读取会放弃本店未保存的配方，继续吗？'))load(true);};
         byId('supply-save').onclick=save;byId('supply-preview').onclick=preview;
+        byId('supply-presets').onclick=replenish;
     }
     root.ShopSupply={read,filterPool,describe,setBusy,open(api,id,target){
         if(!defaults.length)defaults=root.getRestockPlan();

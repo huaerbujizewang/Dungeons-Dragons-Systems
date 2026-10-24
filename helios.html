@@ -1219,6 +1219,50 @@
             display: none;
         }
 
+        .workspace.expansion-layout {
+            min-width: 0;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workspace.expansion-layout .main-panel {
+            min-width: 0;
+        }
+
+        .workspace.expansion-layout .intro-copy {
+            overflow-wrap: anywhere;
+        }
+
+        .workspace.expansion-layout .content-table {
+            min-width: 0;
+            table-layout: fixed;
+        }
+
+        .workspace.expansion-layout .content-table th:first-child {
+            width: 28%;
+        }
+
+        .workspace.expansion-layout {
+            min-width: 0;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workspace.expansion-layout .main-panel {
+            min-width: 0;
+        }
+
+        .workspace.expansion-layout .intro-copy {
+            overflow-wrap: anywhere;
+        }
+
+        .workspace.expansion-layout .content-table {
+            min-width: 0;
+            table-layout: fixed;
+        }
+
+        .workspace.expansion-layout .content-table th:first-child {
+            width: 28%;
+        }
+
         .main-panel,
         .asset-panel {
             border: 1px solid var(--line);
@@ -2764,7 +2808,7 @@
             "528": "home",
             "1112": "intro"
         };
-        const HELIOS_DATA_VERSION = "2026-10-01-helios-refresh";
+        const HELIOS_DATA_VERSION = "2026-10-24-expansion-rules";
         const HELIOS_DATA_URL = `helios-data.json?v=${HELIOS_DATA_VERSION}`;
         const HELIOS_1112_DATA_URL = `helios-1112-data.json?v=${HELIOS_DATA_VERSION}`;
         const HELIOS_RELIGION_DATA_URL = `helios-religions.json?v=${HELIOS_DATA_VERSION}`;
@@ -3734,6 +3778,8 @@
             workspace.classList.toggle("home-layout", state.current.nodeId === "home" || Boolean(eraKindContent));
             workspace.classList.toggle("person-layout", state.current.asset === "person" && Boolean(state.current.image));
             workspace.classList.toggle("no-asset-layout", state.current.asset === "none");
+            workspace.classList.toggle("expansion-layout", state.current.nodeId.split(":")[0] === "expansion-rules");
+            workspace.classList.toggle("expansion-layout", state.current.nodeId.split(":")[0] === "expansion-rules");
 
             const contentHasPolicies = state.current.content && state.current.content.some(item => item && typeof item === "object" && item.type === "policies");
             const contentHasRelations = state.current.content && state.current.content.some(item => item && typeof item === "object" && (item.type === "relations" || item.type === "diplomacy"));
