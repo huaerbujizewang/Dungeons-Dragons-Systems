@@ -17,6 +17,7 @@
     <title>D&D 小队管理系统</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="finance-ledger.js?v=20261020"></script>
+    <script src="territory-finance.js?v=20261102-shares1"></script>
     <script src="inventory-requests.js?v=20261102-approval1"></script>
     <script src="character-equipment.js?v=20261102-equipment2"></script>
     <link rel="stylesheet" href="character-equipment.css?v=20261102-equipment2">
@@ -9738,7 +9739,7 @@ async function settleCityFunds(netIncome, settlementDate, reason) {
     if (error) throw error;
     const financeClient = await FinanceLedger.withContext(supabaseClient, {
         source: 'city_settlement', title: '城市月度财务结算',
-        note: `${reason}：${formatWorldDate(settlementDate)}，包含税收、贸易、基建与人员薪资。`,
+        note: `${reason}：${formatWorldDate(settlementDate)}，包含税收、贸易、基建与人员薪资，按各领地的净收益分成比例结算（亏损同样按比例分担）。`,
         details: { settlement_date: settlementDate, reason, net_income: netIncome }
     });
     const { error: updateError } = await financeClient.from('profiles')
@@ -9843,7 +9844,8 @@ if (typeof loadAdminResearch === 'function') {
 async function calculateCityNetIncome(targetUserId) {
     const {data:workspace,error:territoryError}=await supabaseClient.rpc('get_player_territories',{p_account_id:targetUserId});
     if(territoryError)throw territoryError;
-    const assignedLocations=new Set((workspace.territories||[]).filter(t=>t.active).map(t=>t.location_key));
+    if(workspace.finance_share_version!==1)throw Error('领地分成接口尚未更新，请DM完整运行最新版 player_territories.sql。');
+    const assignedTerritories=new Map((workspace.territories||[]).filter(t=>t.active).map(t=>[t.location_key,t]));
     console.log(`[财务结算] 开始为用户 ${targetUserId} 进行全领地小数核算...`);
     
     // 1. 获取该玩家名下的所有城市
@@ -9852,7 +9854,8 @@ async function calculateCityNetIncome(targetUserId) {
         .select('*')
         .eq('user_id', targetUserId);
 
-    if (statsErr || !cities || cities.length === 0) {
+    if(statsErr)throw statsErr;
+    if (!cities || cities.length === 0) {
         console.error("未能找到任何领地统计数据:", statsErr);
         return 0;
     }
@@ -9860,7 +9863,7 @@ async function calculateCityNetIncome(targetUserId) {
     let totalEmpireNetIncome = 0; // 用来累计全领地的总利润
 
     // 2. 遍历每一个城市独立核算
-    for (const city of cities.filter(city=>assignedLocations.has(city.location))) {
+    for (const city of cities.filter(city=>assignedTerritories.has(city.location))) {
         const loc = city.location;
         console.log(` -> 正在核算地点: ${loc}`);
 
@@ -9871,33 +9874,13 @@ async function calculateCityNetIncome(targetUserId) {
             supabaseClient.from('employees').select('salary').eq('user_id', targetUserId).eq('location', loc).in('status', EMPLOYEE_SALARY_STATUSES)
         ]);
 
+        if(expensesRes.error||incomeRes.error||empRes.error)throw expensesRes.error||incomeRes.error||empRes.error;
         const expenses = expensesRes.data || [];
         const incomes = incomeRes.data || [];
         const employees = empRes.data || [];
 
-        // --- 收入计算 (支持小数) ---
-        // 使用 ?? 处理 0 税率，防止 fallback 到 1.2。并且去掉了 Math.ceil，保留真实税收
-        const taxIncome = city.population * (city.tax_rate ?? 1.2);
-        
-        const tradeIncome = incomes.reduce((sum, item) => {
-            const count = Number(item.count ?? 1);
-            const price = parseFloat(item.unit_price ?? item.amount ?? 0); // 确保读取为小数，并保留 0/负数
-            return sum + (count * price);
-        }, 0);
-        
-        const cityTotalIncome = taxIncome + parseFloat(city.subsidy || 0) + tradeIncome;
-
-        // --- 支出计算 (支持小数) ---
-        let cityTotalExpense = 0;
-        expenses.forEach(e => cityTotalExpense += ((Number(e.count) || 0) * parseFloat(e.unit_cost || 0)));
-        cityTotalExpense += employees.reduce((sum, e) => {
-            if (e.salary === -1) return sum;
-            return sum + (parseFloat(e.salary) || 0);
-        }, 0);
-
-        // 计算净利并处理 JS 浮点数 Bug (四舍五入保留两位小数)
-        const cityNet = Math.round((cityTotalIncome - cityTotalExpense) * 100) / 100;
-        totalEmpireNetIncome += cityNet;
+        const result=TerritoryFinance.calculate(city,incomes,expenses,employees,assignedTerritories.get(loc).profit_share_percent);
+        totalEmpireNetIncome += result.player_net_income;
 
         // --- 自动写入历史记录表 (增加 location 字段) ---
         const recordYear = currentDate.year;
@@ -9908,21 +9891,20 @@ async function calculateCityNetIncome(targetUserId) {
             location: loc, // 【关键】记录这笔钱是哪个城市的
             year: recordYear,
             month: recordMonth,
-            total_income: Math.round(cityTotalIncome * 100) / 100, // 存入前也兜底保留两位
-            total_expense: Math.round(cityTotalExpense * 100) / 100,
-            net_income: cityNet
+            ...result
         });
 
         if (insertErr) {
             console.error(`❌ ${loc} 历史快照写入失败:`, insertErr.message);
+            throw insertErr;
         } else {
-            console.log(`✅ ${loc} 核算完成：收入 ${cityTotalIncome}, 支出 ${cityTotalExpense}, 净利 ${cityNet}`);
+            console.log(`✅ ${loc} 核算完成：领地净额 ${result.net_income}，玩家分成 ${result.profit_share_percent}%：${result.player_net_income}`);
         }
     }
 
     console.log(`[结算完毕] 领地总计月利润: ${formatCurrency(totalEmpireNetIncome)}`);
     // 最终返回给外层时，再次确保是完美的两份小数
-    return Math.round(totalEmpireNetIncome * 100) / 100;
+    return TerritoryFinance.round(totalEmpireNetIncome);
 }
 
 

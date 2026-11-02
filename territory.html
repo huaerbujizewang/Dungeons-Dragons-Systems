@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <script src="territory-manager.js?v=20261102-presets1"></script>
+    <script src="territory-finance.js?v=20261102-shares1"></script>
+    <script src="territory-manager.js?v=20261102-shares1"></script>
     <title>领地行政终端</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -204,7 +205,7 @@
                     <div style="font-size:0.8em; color:green;">▲ 稳定</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-label">月度净收入</div>
+                    <div class="kpi-label">玩家每月分成</div>
                     <div class="kpi-value" id="kpi-income">Calculating...</div>
                     <div class="kpi-sub" id="kpi-income-sub">...</div>
                 </div>
@@ -400,7 +401,7 @@
         territoryData={overview:{name:'领地总览',subtitle:'当前账号已分派的领地'}};
         const select=document.getElementById('location-select');select.replaceChildren();
         select.append(new Option('领地总览','overview'));
-        for(const row of rows){territoryData[row.location_key]={...row.definition,name:row.name,subtitle:row.subtitle};select.append(new Option(row.name,row.location_key));}
+        for(const row of rows){territoryData[row.location_key]={...row.definition,name:row.name,subtitle:row.subtitle,profit_share_percent:row.profit_share_percent??100};select.append(new Option(row.name,row.location_key));}
         const empty=!rows.length;document.querySelector('.layout').hidden=empty;
         const status=document.getElementById('territory-status');status.hidden=!empty;
         if(empty){status.textContent='该账号尚未分派领地。'+(workspace.can_manage?'请使用“DM领地分派与编辑”新建领地。':'请联系负责DM分派领地。');currentLocation='';return;}
@@ -615,16 +616,19 @@
         const empCost = employees.reduce((sum, e) => sum + (e.salary === -1 ? 0 : toFiniteNumber(e.salary)), 0);
         const totalIncome = totalTaxIncome + totalSubsidy + tradeRevenue;
         const totalExpense = staffCost + buildingCost + tradeCost + empCost;
-        const netIncome = totalIncome - totalExpense;
+        const settlements=statsList.map(s=>TerritoryFinance.calculate(s,incomes.filter(i=>i.location===s.location),expenses.filter(e=>e.location===s.location),employees.filter(e=>e.location===s.location),territoryData[s.location].profit_share_percent));
+        const netIncome=TerritoryFinance.round(settlements.reduce((sum,s)=>sum+s.net_income,0));
+        const playerIncome=TerritoryFinance.round(settlements.reduce((sum,s)=>sum+s.player_net_income,0));
+        const shareLabel=currentLocation==='overview'?'按各领地比例':TerritoryFinance.sharePercent(territoryData[currentLocation].profit_share_percent)+'%';
 
         document.getElementById('kpi-pop').innerText = totalPop.toLocaleString();
         const kpiIncome = document.getElementById('kpi-income');
-        kpiIncome.innerText = `${formatSignedGp(netIncome)} GP`;
-        kpiIncome.style.color = netIncome >= 0 ? '#27ae60' : '#c0392b';
+        kpiIncome.innerText = `${formatSignedGp(playerIncome)} GP`;
+        kpiIncome.style.color = playerIncome >= 0 ? '#27ae60' : '#c0392b';
 
         // 盈亏判断逻辑 (写死在代码中)
         const incomeSub = document.getElementById('kpi-income-sub');
-        incomeSub.innerText = netIncome >= 0 ? "✅ 财政健康" : "⚠️ 赤字预警";
+        incomeSub.innerText = `玩家分成 ${shareLabel} · 领地净额 ${formatSignedGp(netIncome)} GP`;
 
         if (currentLocation !== 'overview') {
             document.getElementById('tax-table-body').innerHTML = taxHtml; 
@@ -646,6 +650,7 @@
                 <tr style="background:#fff0f0;font-weight:bold;"><td colspan="2">支出小计</td><td class="amount-col ${moneyClass(-totalExpense)}">${formatSignedGp(-totalExpense)}</td></tr>
                 
                 <tr class="total-row"><td colspan="2">月度净利润</td><td class="amount-col" style="color:${netIncome>=0?'#27ae60':'#c0392b'}">${formatSignedGp(netIncome)} GP</td></tr>
+                <tr class="total-row"><td>玩家分成净额</td><td>${shareLabel}（盈利与亏损同比例）</td><td class="amount-col ${moneyClass(playerIncome)}">${formatSignedGp(playerIncome)} GP</td></tr>
             `;
         }
 
@@ -847,10 +852,11 @@
         const grouped = {};
         data.forEach(d => {
             const key = `${d.year}-${d.month}`;
-            if (!grouped[key]) grouped[key] = { year: d.year, month: d.month, inc: 0, exp: 0, net: 0 };
+            if (!grouped[key]) grouped[key] = { year: d.year, month: d.month, inc: 0, exp: 0, net: 0, player: 0 };
             grouped[key].inc += Number(d.total_income);
             grouped[key].exp += Number(d.total_expense);
             grouped[key].net += Number(d.net_income);
+            grouped[key].player += Number(d.player_net_income??d.net_income);
         });
         const sortedArr = Object.values(grouped).slice(-12);
         const labels = sortedArr.map(d => `FR${d.year}-${d.month}月`);
@@ -862,7 +868,8 @@
                 datasets: [
                     { label: '总收入', data: sortedArr.map(d => d.inc), borderColor: '#27ae60', tension: 0.3, fill: false },
                     { label: '总支出', data: sortedArr.map(d => d.exp), borderColor: '#e74c3c', tension: 0.3, fill: false },
-                    { label: '净利润', data: sortedArr.map(d => d.net), borderColor: '#f1c40f', borderWidth: 3, tension: 0.3, fill: false }
+                    { label: '领地净利润', data: sortedArr.map(d => d.net), borderColor: '#f1c40f', borderWidth: 3, tension: 0.3, fill: false },
+                    { label: '玩家分成净额', data: sortedArr.map(d => d.player), borderColor: '#4585b4', borderWidth: 2, tension: 0.3, fill: false }
                 ]
             },
             options: { responsive: true, maintainAspectRatio: false }
