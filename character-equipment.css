@@ -1,0 +1,10 @@
+.team-equipment-summary{margin:12px 0;font-size:12px;color:#41584f;line-height:1.6;min-height:50px}
+.team-equipment-summary ul{padding-left:18px;margin:6px 0;overflow-wrap:anywhere}.team-equipment-summary li span{font-size:11px;color:#246d53}.team-equipment-summary p{color:#77857f;margin:6px 0}
+#character-bag-modal .modal-box{width:780px!important;max-width:95%;min-width:0}
+#cb-slots.ce-editor{display:block;background:#f8faf9;min-width:0;box-sizing:border-box}
+.ce-counts{display:flex;gap:20px;color:#245748;padding-bottom:14px;border-bottom:1px solid #d4e0d9}
+.ce-editor h4{font-size:14px;margin:18px 0 10px}.ce-limit{display:flex;align-items:end;gap:12px;margin:14px 0}.ce-limit label{display:grid;gap:4px;font-size:12px}.ce-limit input{width:90px}
+.ce-editor input[type=number],.ce-editor input[type=search]{box-sizing:border-box;padding:9px;border:1px solid #b6c7be;border-radius:4px;background:#fff;font:inherit}.ce-editor input[type=search]{width:100%}
+.ce-equipped-row,.ce-stock-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #dce5df;overflow-wrap:anywhere}.ce-equipped-row>div:first-child{min-width:0;flex:1}.ce-equipped-row strong{font-size:14px}.ce-equipped-row small{display:block;color:#63766b;line-height:1.6;margin-top:5px}.ce-slot-number{color:#82938a;margin-right:9px}
+.ce-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}.ce-editor button{padding:9px 12px;min-height:38px;border:1px solid #adbbb3;border-radius:4px;background:#fff;color:#235440;cursor:pointer}.ce-editor button:disabled{opacity:.5;cursor:not-allowed}.ce-editor label{font-size:12px}.ce-warning{color:#aa422a}.ce-stock-row{font-size:13px}.ce-stock-row>span{flex:1;min-width:0}#ce-inventory{max-height:300px;overflow-y:auto}#ce-status{font-size:12px;margin-top:10px}
+@media(max-width:600px){.ce-equipped-row,.ce-stock-row{flex-wrap:wrap}.ce-equipped-row>div:first-child,.ce-stock-row>span{flex-basis:100%}.ce-actions{justify-content:flex-end;width:100%}.ce-editor button{min-height:44px}.ce-editor{padding:14px!important}.ce-limit{flex-wrap:wrap}}

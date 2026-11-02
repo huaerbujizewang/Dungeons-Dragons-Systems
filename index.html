@@ -18,6 +18,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="finance-ledger.js?v=20261020"></script>
     <script src="inventory-requests.js?v=20261102-approval1"></script>
+    <script src="character-equipment.js?v=20261102-equipment1"></script>
+    <link rel="stylesheet" href="character-equipment.css?v=20261102-equipment1">
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-loading.js?v=20261022-loading1"></script>
@@ -6203,6 +6205,11 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         const visibleMembers = isCurrentAdmin()
             ? (members || [])
             : (members || []).filter(m => m.is_visible_to_player !== false);
+        let teamEquipment=[];
+        if(visibleMembers.length){
+            const result=await supabaseClient.from('equipped_items').select('*').in('employee_id',visibleMembers.map(m=>m.id)).order('slot_index');
+            if(result.error)console.warn('队伍装备读取失败',result.error);else teamEquipment=result.data||[];
+        }
 
         // 清空容器，准备重新渲染
         container.innerHTML = '';
@@ -6217,11 +6224,12 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                         <div class="team-header">
                             <img src="${m.avatar_url || 'https://via.placeholder.com/60'}" class="team-avatar">
                             <div class="team-info">
-                                <h3>${m.name}</h3>
+                                <h3>${escapeHTML(m.name)}</h3>
                                 <p>${m.role || '雇员'}${isCoreMemberRole(m.role) || isPlayerCharacterRole(m.role) || isSocialConnectionRole(m.role) || m.salary === -1 ? '' : ' | ' + formatCurrency(m.salary)}</p>
                             </div>
                         </div>
-                        <button class="edit-bag-btn" onclick="openCharacterBag(${m.id}, '${m.name}')">编辑装备</button>
+                        ${CharacterEquipment.summary(teamEquipment.filter(item=>item.employee_id===m.id),m.attunement_limit||3)}
+                        <button class="edit-bag-btn" onclick="openCharacterBag(${m.id}, ${jsStringAttr(m.name)})">编辑装备</button>
                     </div>`;
             });
         }
@@ -6242,44 +6250,12 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     let currentBagEmpId = null;
 
     async function openCharacterBag(empId, empName) {
-        currentBagEmpId = empId;
-        document.getElementById('cb-emp-name').innerText = empName;
-        document.getElementById('character-bag-modal').style.display = 'flex';
-        
-        // 锁死背景网页，防止滚动穿透
-        document.body.style.overflow = 'hidden'; 
-        
-        await renderCharacterBagSlots();
+        currentBagEmpId=empId;
+        await CharacterEquipment.open(empId,empName,{client:supabaseClient,accountId:viewingUserId,
+            admin:isCurrentAdmin(),refresh:async()=>{ShopLoading.invalidate(supabaseClient,'inventory:');await Promise.all([loadTeam(),loadInventory()]);}});
     }
+    async function renderCharacterBagSlots(){await CharacterEquipment.refresh();}
 
-    async function renderCharacterBagSlots() {
-        if (!currentBagEmpId) return;
-        const container = document.getElementById('cb-slots');
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px;">同步位面数据...</div>';
-
-        // 获取该角色已穿戴的装备
-        const { data: equipped, error } = await supabaseClient
-            .from('equipped_items')
-            .select('*')
-            .eq('employee_id', currentBagEmpId);
-
-        if (error) return container.innerHTML = '读取失败';
-
-        let html = '';
-        for (let i = 0; i < 99; i++) {
-            const item = equipped ? equipped.find(e => e.slot_index === i) : null;
-            if (item) {
-                // 有装备：显示名字，点击卸下
-                html += `<div class="slot filled" onclick="unequipItem(${item.id})" title="点击卸下">
-                            <div class="slot-name">${item.item_name}</div>
-                         </div>`;
-            } else {
-                // 空位：显示加号，点击弹出选择框
-                html += `<div class="slot" onclick="openEquipModal(${currentBagEmpId}, ${i})" title="点击装备">+</div>`;
-            }
-        }
-        container.innerHTML = html;
-    }
 
     // --- 3. 修正刷新逻辑 (重要！) ---
     // 确保在执行 equipItem 和 unequipItem 成功后，检查背包弹窗是否开启，如果是则刷新
@@ -6712,107 +6688,10 @@ function preloadImages(urls) {
     });
 }
 
-async function equipItem(invId, itemName) {
-        showLoading();
-        try {
-            // 1. 调用极速 RPC 接口：一次性完成 [查库存+扣库存+穿装备]
-            const { data, error } = await supabaseClient.rpc('atomic_equip_item', {
-                p_user_id: viewingUserId,
-                p_inv_id: parseInt(invId),
-                p_emp_id: currentEquipTarget.empId,
-                p_slot_idx: currentEquipTarget.slotIdx,
-                p_item_name: itemName
-            });
+async function equipItem(){return CharacterEquipment.refresh();}
+    async function unequipItem(){return CharacterEquipment.refresh();}
+    async function openEquipModal(){return CharacterEquipment.refresh();}
 
-            if (error || (data && data.startsWith('error'))) {
-                alert(data ? data.replace('error:', '') : '操作失败');
-                return;
-            }
-
-            // 2. 后台异步发送日志！
-            // 这里去掉了 await！不等日志写完，让它自己在后台慢慢发
-            logAction('装备物品', `将 [${itemName}] 装备给队员 (ID:${currentEquipTarget.empId})`)
-                .catch(e => console.error("日志写入失败", e));
-
-            // 3. 关闭选择框并瞬间刷新界面
-            closeModal('equip-modal');
-            await refreshActiveUIs();
-
-        } catch (e) {
-            console.error("装备出错:", e);
-            alert('操作异常，请检查网络');
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async function unequipItem(equipId) {
-        if (!confirm('确定卸下该装备？')) return;
-        showLoading();
-        try {
-            // 1. 先简单拿一下名字用于日志记录（这步很快）
-            const { data: eqItem } = await supabaseClient.from('equipped_items').select('item_name, employee_id').eq('id', equipId).single();
-            if (!eqItem) throw new Error("装备不存在");
-
-            // 2. 调用极速 RPC 接口
-            const { data, error } = await supabaseClient.rpc('atomic_unequip_item', {
-                p_user_id: viewingUserId,
-                p_equip_id: parseInt(equipId)
-            });
-
-            if (error || (data && data.startsWith('error'))) {
-                alert(data ? data.replace('error:', '') : '操作失败');
-                return;
-            }
-
-            // 3. 后台异步发送日志，不让玩家等日志写完
-            logAction('卸下装备', `卸下了 [${eqItem.item_name}] (队员ID:${eqItem.employee_id})`)
-                .catch(e => console.error("日志写入失败", e));
-
-            // 4. 瞬间刷新界面
-            await refreshActiveUIs();
-            
-        } catch(e) { 
-            console.error(e); 
-            alert('卸载失败');
-        } finally {
-            hideLoading();
-        }
-    }
-
-async function openEquipModal(empId, slotIdx) {
-        currentEquipTarget = { empId, slotIdx };
-        const list = document.getElementById('equip-list');
-        list.innerHTML = '正在开启位面背包...';
-        document.getElementById('equip-modal').style.display = 'flex';
-        
-        const { data: inv, error } = await supabaseClient
-            .from('user_inventory')
-            .select('*')
-            .eq('user_id', viewingUserId) 
-            .in('category', ['装备', '魔法物品'])
-            .gt('quantity', 0);
-
-        if (error) {
-            console.error(error);
-            list.innerHTML = '<div style="color:red">背包开启失败</div>';
-            return;
-        }
-
-        list.innerHTML = '';
-        if (!inv || inv.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">背包中没有可用的装备或魔法物品</div>';
-            return;
-        }
-
-        inv.forEach(item => {
-            list.innerHTML += `
-                <div onclick="equipItem(${item.id}, '${item.item_name}')">
-                    <span>${item.item_name}</span>
-                    <span style="color:#999; font-size:0.8em;">x${item.quantity}</span>
-                </div>`;
-        });
-    }
 
     async function addToParty(id) {
         showLoading();
