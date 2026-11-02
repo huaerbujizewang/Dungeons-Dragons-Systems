@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <script src="territory-manager.js?v=20261102-territories2"></script>
+    <script src="territory-manager.js?v=20261102-presets1"></script>
     <title>领地行政终端</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -184,7 +184,7 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-    <link rel="stylesheet" href="territory-manager.css?v=20261102-territories2">
+    <link rel="stylesheet" href="territory-manager.css?v=20261102-presets1">
 </head>
 <body>
 
@@ -362,15 +362,7 @@
         return toFiniteNumber(value) < 0 ? negativeClass : positiveClass;
     }
 
-    const TRAINING_SCORE = {
-        '乌合之众': 25,
-        '动员民兵': 40,
-        '杂牌军': 50,
-        '整训中': 60,
-        '常备军': 75,
-        '老兵': 88,
-        '精锐': 100
-    };
+    const TRAINING_SCORE = TerritoryManager.presets.trainingScores;
 
     function getTrainingStatus(unit) {
         return unit.training_status || unit.training_level || '常备军';
