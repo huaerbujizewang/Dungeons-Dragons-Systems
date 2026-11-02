@@ -18,8 +18,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="finance-ledger.js?v=20261020"></script>
     <script src="inventory-requests.js?v=20261102-approval1"></script>
-    <script src="character-equipment.js?v=20261102-equipment1"></script>
-    <link rel="stylesheet" href="character-equipment.css?v=20261102-equipment1">
+    <script src="character-equipment.js?v=20261102-equipment2"></script>
+    <link rel="stylesheet" href="character-equipment.css?v=20261102-equipment2">
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-loading.js?v=20261022-loading1"></script>
@@ -6189,7 +6189,9 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
     }
 
     // --- 队伍管理 ---
+    let teamLoadGeneration=0;
     async function loadTeam() {
+        const request=++teamLoadGeneration,accountId=viewingUserId;
         const container = document.getElementById('team-container');
         if (!container) return; 
         
@@ -6200,16 +6202,22 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
             .from('employees')
             .select('*')
             .eq('is_in_party', true)
-            .eq('user_id', viewingUserId)
+            .eq('user_id', accountId)
             .order('id');
         const visibleMembers = isCurrentAdmin()
             ? (members || [])
             : (members || []).filter(m => m.is_visible_to_player !== false);
-        let teamEquipment=[];
+        let teamEquipment=[],equipmentError=false;
         if(visibleMembers.length){
             const result=await supabaseClient.from('equipped_items').select('*').in('employee_id',visibleMembers.map(m=>m.id)).order('slot_index');
-            if(result.error)console.warn('队伍装备读取失败',result.error);else teamEquipment=result.data||[];
+            if(result.error){console.warn('队伍装备读取失败',result.error);equipmentError=true;}
+            else{
+                teamEquipment=result.data||[];
+                try{teamEquipment=await CharacterEquipment.enrich(supabaseClient,teamEquipment);}
+                catch(error){console.warn('队伍同调要求读取失败',error);}
+            }
         }
+        if(request!==teamLoadGeneration||accountId!==viewingUserId)return;
 
         // 清空容器，准备重新渲染
         container.innerHTML = '';
@@ -6228,7 +6236,7 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
                                 <p>${m.role || '雇员'}${isCoreMemberRole(m.role) || isPlayerCharacterRole(m.role) || isSocialConnectionRole(m.role) || m.salary === -1 ? '' : ' | ' + formatCurrency(m.salary)}</p>
                             </div>
                         </div>
-                        ${CharacterEquipment.summary(teamEquipment.filter(item=>item.employee_id===m.id),m.attunement_limit||3)}
+                        ${equipmentError?'<p class="ce-warning">装备读取失败，暂时无法确认。</p>':CharacterEquipment.summary(teamEquipment.filter(item=>item.employee_id===m.id),m.attunement_limit||3)}
                         <button class="edit-bag-btn" onclick="openCharacterBag(${m.id}, ${jsStringAttr(m.name)})">编辑装备</button>
                     </div>`;
             });

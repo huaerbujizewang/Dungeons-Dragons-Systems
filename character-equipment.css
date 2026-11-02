@@ -1,5 +1,9 @@
 .team-equipment-summary{margin:12px 0;font-size:12px;color:#41584f;line-height:1.6;min-height:50px}
 .team-equipment-summary ul{padding-left:18px;margin:6px 0;overflow-wrap:anywhere}.team-equipment-summary li span{font-size:11px;color:#246d53}.team-equipment-summary p{color:#77857f;margin:6px 0}
+.team-equipment-summary .ce-state-pending,.ce-editor .ce-state-pending{color:#a24522}
+.team-equipment-summary .ce-state-normal,.ce-editor .ce-state-normal{color:#68776f}
+.team-equipment-summary .ce-state-unknown,.ce-editor .ce-state-unknown{color:#946400}
+.team-equipment-summary .ce-state-active,.ce-editor .ce-state-active{color:#246d53}
 #character-bag-modal .modal-box{width:780px!important;max-width:95%;min-width:0}
 #cb-slots.ce-editor{display:block;background:#f8faf9;min-width:0;box-sizing:border-box}
 .ce-counts{display:flex;gap:20px;color:#245748;padding-bottom:14px;border-bottom:1px solid #d4e0d9}
