@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <link rel="stylesheet" href="shop-scene.css?v=20261023-polish1">
     <link rel="stylesheet" href="admin-console.css?v=20261022-discounts1">
-    <script src="admin-console.js?v=20261022-console1"></script>
+    <script src="admin-console.js?v=20261102-territories1"></script>
     <script src="shop-supply.js?v=20261024-addiction1"></script>
     <script src="shop-discounts.js?v=20261022-discounts1"></script>
     <script src="shop-scene.js?v=20261022-dialogue-smile1" defer></script>
@@ -2972,6 +2972,11 @@
             </div>
             
 
+            <div class="admin-box" data-admin-page="territories">
+                <h3>领地分派与编辑</h3>
+                <button type="button" onclick="openAdminTerritories()">管理当前玩家领地</button>
+                <p>使用上方玩家选择器确定领地主人。</p>
+            </div>
             <div class="admin-box" data-admin-page="wanted" style="border:1px solid #c0392b; padding:15px; border-radius:8px; background:#fff;">
                 <h3 style="margin-top:0; color:#c0392b;">☠️ 签发通缉令</h3>
     
@@ -9836,6 +9841,9 @@ if (typeof loadAdminResearch === 'function') {
 
     // --- 计算城市月度净收支 ---
 async function calculateCityNetIncome(targetUserId) {
+    const {data:workspace,error:territoryError}=await supabaseClient.rpc('get_player_territories',{p_account_id:targetUserId});
+    if(territoryError)throw territoryError;
+    const assignedLocations=new Set((workspace.territories||[]).filter(t=>t.active).map(t=>t.location_key));
     console.log(`[财务结算] 开始为用户 ${targetUserId} 进行全领地小数核算...`);
     
     // 1. 获取该玩家名下的所有城市
@@ -9852,7 +9860,7 @@ async function calculateCityNetIncome(targetUserId) {
     let totalEmpireNetIncome = 0; // 用来累计全领地的总利润
 
     // 2. 遍历每一个城市独立核算
-    for (const city of cities) {
+    for (const city of cities.filter(city=>assignedLocations.has(city.location))) {
         const loc = city.location;
         console.log(` -> 正在核算地点: ${loc}`);
 
@@ -9872,7 +9880,7 @@ async function calculateCityNetIncome(targetUserId) {
         const taxIncome = city.population * (city.tax_rate ?? 1.2);
         
         const tradeIncome = incomes.reduce((sum, item) => {
-            const count = Number(item.count ?? 1) || 1;
+            const count = Number(item.count ?? 1);
             const price = parseFloat(item.unit_price ?? item.amount ?? 0); // 确保读取为小数，并保留 0/负数
             return sum + (count * price);
         }, 0);
@@ -14451,16 +14459,19 @@ window.endWarTurn = async function() {
 
 
 
-function goToTerritory() {
+async function openAdminTerritories() {
+    if(!await requireAdminRole())return;
+    if(!selectedUserId)return alert('请先选择玩家。');
+    window.location.href='territory.html?uid='+encodeURIComponent(selectedUserId)+'&manage=1';
+}
+async function goToTerritory() {
     if (isCocCampaign()) {
         alert('当前账号标记为 COC，领地治理入口已隐藏。');
         return;
     }
-    // 使用全局判定函数
-    if (isPhandalinPlayer(currentUserEmail)) {
-        alert(`啊哦~当前身份[${currentUserEmail}]没有领地。\n镇长哈宾·威斯特可不会轻易把控制权交给你！`);
-        return; 
-    }
+    try{const {data,error}=await supabaseClient.rpc('get_player_territories',{p_account_id:viewingUserId});if(error)throw error;
+        if(!(data.territories||[]).some(t=>t.active))return alert('当前账号尚未分派领地，请联系负责DM。');
+    }catch(error){return alert('领地读取失败：'+error.message);}
     window.location.href = 'territory.html?uid=' + viewingUserId;
 }
 

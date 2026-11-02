@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <script src="territory-manager.js?v=20261102-territories1"></script>
     <title>领地行政终端</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -182,10 +184,12 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+    <link rel="stylesheet" href="territory-manager.css?v=20261102-territories1">
 </head>
 <body>
 
-<div class="layout">
+<p id="territory-status" role="status">正在验证账号并读取已分派领地…</p>
+<div class="layout" hidden>
     <div class="main-content">
         <div class="city-header">
             <div class="city-name" id="header-city-name">-- <span style="font-size:0.5em; font-weight:normal; color:#666;">--</span></div>
@@ -309,13 +313,7 @@
 
     <div class="sidebar">
         <div class="location-selector">
-            <select id="location-select" onchange="changeLocation()">
-                <option value="overview">🌍 领地大盘总览</option>
-                <option value="almorel" selected>🏰 艾尔莫瑞尔</option>
-                <option value="dragon_mine">⛰️ 巨龙之心矿区</option>
-                <option value="herakmar">🛡️ 赫拉克玛尔城</option>
-                <option value="khilku">🌊 希尔库港</option>
-            </select>
+            <select id="location-select" onchange="changeLocation()" aria-label="当前领地"></select>
         </div>
 
         <button id="overview-btn" class="menu-btn active" onclick="toggleOverview(true)" style="margin-top: 10px;">
@@ -337,7 +335,7 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let globalUserId = null;
-    let currentLocation = 'almorel';
+    let currentLocation = '';
     let territoryData = null;
     let chartInstances = {};
     let militaryUnitsCache = [];
@@ -357,7 +355,7 @@
     function formatSignedGp(value) {
         const amount = toFiniteNumber(value);
         const sign = amount > 0 ? '+' : amount < 0 ? '-' : '';
-        return `${sign}${Math.abs(amount).toLocaleString()}`;
+        return `${sign}${Math.abs(amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
     }
 
     function moneyClass(value, positiveClass = 'income-text', negativeClass = 'expense-text') {
@@ -403,27 +401,29 @@
         return Math.round((equipmentFill + trainingScore) / 2);
     }
 
+    let assignedLocations=[];
+    async function applyTerritoryWorkspace(workspace,preferred) {
+        const rows=workspace.territories.filter(t=>t.active);
+        assignedLocations=rows.map(t=>t.location_key);
+        territoryData={overview:{name:'领地总览',subtitle:'当前账号已分派的领地'}};
+        const select=document.getElementById('location-select');select.replaceChildren();
+        select.append(new Option('领地总览','overview'));
+        for(const row of rows){territoryData[row.location_key]={...row.definition,name:row.name,subtitle:row.subtitle};select.append(new Option(row.name,row.location_key));}
+        const empty=!rows.length;document.querySelector('.layout').hidden=empty;
+        const status=document.getElementById('territory-status');status.hidden=!empty;
+        if(empty){status.textContent='该账号尚未分派领地。'+(workspace.can_manage?'请使用“DM领地分派与编辑”新建领地。':'请联系负责DM分派领地。');currentLocation='';return;}
+        select.value=assignedLocations.includes(preferred)?preferred:assignedLocations[0];
+        await changeLocation();
+    }
     async function init() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) { alert('请先登录'); window.location.href = 'index.html'; return; }
-        const urlParams = new URLSearchParams(window.location.search);
-        globalUserId = urlParams.get('uid') || user.id;
-
-        // --- 核心修复：确保 JSON 加载成功后再进行下一步 ---
-        try {
-            console.log("正在尝试加载 JSON 数据...");
-            const res = await fetch('territory_data.json');
-            if(!res.ok) throw new Error(`HTTP 错误! 状态码: ${res.status}`);
-            
-            territoryData = await res.json();
-            console.log("JSON 加载成功:", territoryData);
-
-            // 只有数据加载成功，才允许初始化页面
-            await changeLocation(); 
-        } catch (e) {
-            console.error("CRITICAL: JSON 加载失败！请检查文件名是否准确，或是否使用了服务器运行环境。", e);
-            alert("系统数据加载失败，请检查控制台 (F12)");
-        }
+        try{
+            const {data,error}=await supabaseClient.auth.getUser();if(error)throw error;
+            if(!data?.user)throw Error('请先返回主控台登录。');
+            globalUserId=new URLSearchParams(location.search).get('uid')||data.user.id;
+            const workspace=await TerritoryManager.start({client:supabaseClient,accountId:globalUserId,current:()=>currentLocation,onSaved:applyTerritoryWorkspace});
+            await applyTerritoryWorkspace(workspace);
+            if(new URLSearchParams(location.search).get('manage')==='1'&&workspace.can_manage)await TerritoryManager.open();
+        }catch(error){document.querySelector('.layout').hidden=true;const status=document.getElementById('territory-status');status.hidden=false;status.textContent='领地读取失败：'+error.message;}
     }
 
     async function changeLocation() {
@@ -433,9 +433,16 @@
         currentLocation = selectEl.value;
         const locInfo = territoryData[currentLocation];
         if (!locInfo) return;
+        selectEl.disabled=true;
+        for(const chart of Object.values(chartInstances))chart.destroy();chartInstances={};
+        document.getElementById('territory-status').hidden=true;
+        for(const id of ['kpi-pop','kpi-income','kpi-income-sub'])document.getElementById(id).textContent='--';
+        for(const id of ['tax-table-body','staff-table-body','building-table-body','trade-table-body','finance-table-body'])document.getElementById(id).innerHTML='<tr><td colspan="4">正在读取…</td></tr>';
+        document.getElementById('military-panel').textContent='正在读取…';
+        try {
         
         // 1. 更新标题
-        document.getElementById('header-city-name').innerHTML = `${locInfo.name} <span style="font-size:0.5em; font-weight:normal; color:#666;">${locInfo.subtitle}</span>`;
+        document.getElementById('header-city-name').innerHTML = `${escapeHTML(locInfo.name)} <span style="font-size:0.5em; font-weight:normal; color:#666;">${escapeHTML(locInfo.subtitle)}</span>`;
         
         // 2. 渲染治安指数 (从 JSON 读取设定)
         if (locInfo.order) {
@@ -453,7 +460,7 @@
         subMenus.innerHTML = '';
         if (locInfo.menus) {
             locInfo.menus.forEach(m => {
-                subMenus.innerHTML += `<button class="menu-btn sub-btn" onclick="showCategory('${m.id}')"><div class="menu-left"><span class="menu-icon">${m.icon}</span> ${m.label}</div></button>`;
+                const button=document.createElement('button');button.className='menu-btn sub-btn';button.dataset.category=m.id;button.textContent=m.label;button.onclick=()=>showCategory(m.id);subMenus.append(button);
             });
         }
 
@@ -472,6 +479,8 @@
         await loadAndRenderMilitary(globalUserId);
         await loadHistoricalTrends(globalUserId); 
         toggleOverview(true); 
+        } catch(error){const status=document.getElementById('territory-status');status.hidden=false;status.textContent='领地数据读取失败：'+error.message;
+        } finally { selectEl.disabled=false; }
     }
 
     function toggleOverview(forceOpen = false) {
@@ -494,7 +503,7 @@
     function showCategory(key) {
         document.getElementById('overview-btn').classList.remove('active');
         document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
-        const activeSubBtn = document.querySelector(`button[onclick="showCategory('${key}')"]`);
+        const activeSubBtn = [...document.querySelectorAll('.sub-btn')].find(button=>button.dataset.category===key);
         if(activeSubBtn) activeSubBtn.classList.add('active');
         document.getElementById('overview-panel').style.display = 'none';
         document.getElementById('detail-panel').style.display = 'block';
@@ -508,7 +517,7 @@
         data.items.forEach(item => {
             const div = document.createElement('div');
             div.className = 'suz-item';
-            div.innerHTML = `<div class="suz-item-title">${item.title}</div>`;
+            div.innerHTML = `<div class="suz-item-title">${escapeHTML(item.title)}</div>`;
             div.onclick = function() {
                 document.querySelectorAll('.suz-item').forEach(i => i.classList.remove('active'));
                 div.classList.add('active');
@@ -541,10 +550,12 @@
     }
 
     async function loadAndRenderFinance(userId) {
+        const locationAtStart=currentLocation;
         let statsQ = supabaseClient.from('city_stats').select('*').eq('user_id', userId);
         let expQ = supabaseClient.from('city_expenses').select('*').eq('user_id', userId);
         let incQ = supabaseClient.from('city_incomes').select('*').eq('user_id', userId);
         let empQ = supabaseClient.from('employees').select('*').eq('user_id', userId).in('status', ['在职', '科研中', '出差']);
+        statsQ=statsQ.in('location',assignedLocations);expQ=expQ.in('location',assignedLocations);incQ=incQ.in('location',assignedLocations);empQ=empQ.in('location',assignedLocations);
 
         if (currentLocation !== 'overview') {
             statsQ = statsQ.eq('location', currentLocation);
@@ -554,6 +565,8 @@
         }
 
         const [statsRes, expRes, incRes, empRes] = await Promise.all([statsQ, expQ, incQ, empQ]);
+        if(locationAtStart!==currentLocation)return;
+        if(statsRes.error||expRes.error||incRes.error||empRes.error)throw statsRes.error||expRes.error||incRes.error||empRes.error;
         const statsList = statsRes.data || [];
         const expenses = expRes.data || [];
         const incomes = incRes.data || [];
@@ -564,7 +577,7 @@
             const population = toFiniteNumber(s.population);
             totalPop += population;
             totalSubsidy += toFiniteNumber(s.subsidy);
-            baseTaxRaw += Math.ceil(population * (s.tax_rate ?? 1.2));
+            baseTaxRaw += population * (s.tax_rate ?? 1.2);
         });
 
         let specializedTaxTotal = 0, tradeRevenue = 0;        
@@ -572,16 +585,16 @@
         let tradeHtml = '';
 
         incomes.forEach(i => {
-            const count = toFiniteNumber(i.count ?? 1) || 1;
+            const count = toFiniteNumber(i.count ?? 1);
             const price = toFiniteNumber(i.unit_price ?? i.amount);
             const total = count * price;
             if (i.category === 'tax') {
                 specializedTaxTotal += total;
-                taxHtml += `<tr><td>${i.name}</td><td><span class="tag-box tag-special">专项税</span></td><td class="amount-col ${moneyClass(total)}">${formatSignedGp(total)}</td></tr>`;
+                taxHtml += `<tr><td>${escapeHTML(i.name)}</td><td><span class="tag-box tag-special">专项税</span></td><td class="amount-col ${moneyClass(total)}">${formatSignedGp(total)}</td></tr>`;
             } else {
                 tradeRevenue += total;
                 let tagHtml = i.category === 'state' ? `<span class="tag-box tag-state">国营</span>` : `<span class="tag-box tag-trade">贸易</span>`;
-                tradeHtml += `<tr><td>${i.name}</td><td>${tagHtml}</td><td style="font-family:monospace; color:#555;">${count} x ${price} GP</td><td class="amount-col ${moneyClass(total)}">${formatSignedGp(total)}</td></tr>`;
+                tradeHtml += `<tr><td>${escapeHTML(i.name)}</td><td>${tagHtml}</td><td style="font-family:monospace; color:#555;">${count} x ${price} GP</td><td class="amount-col ${moneyClass(total)}">${formatSignedGp(total)}</td></tr>`;
             }
         });
         const totalTaxIncome = baseTaxRaw + specializedTaxTotal;
@@ -595,13 +608,13 @@
             const displayedCost = -cost;
             if (e.category === 'staff') {
                 staffCost += cost;
-                staffHtml += `<tr><td>${e.name}</td><td>${count}</td><td>${unitCost} GP</td><td class="amount-col ${moneyClass(displayedCost)}">${formatSignedGp(displayedCost)}</td></tr>`;
+                staffHtml += `<tr><td>${escapeHTML(e.name)}</td><td>${count}</td><td>${unitCost} GP</td><td class="amount-col ${moneyClass(displayedCost)}">${formatSignedGp(displayedCost)}</td></tr>`;
             } else if (e.category === 'building') {
                 buildingCost += cost;
-                buildingHtml += `<tr><td>${e.name}</td><td>${count}</td><td>${unitCost} GP</td><td class="amount-col ${moneyClass(displayedCost)}">${formatSignedGp(displayedCost)}</td></tr>`;
+                buildingHtml += `<tr><td>${escapeHTML(e.name)}</td><td>${count}</td><td>${unitCost} GP</td><td class="amount-col ${moneyClass(displayedCost)}">${formatSignedGp(displayedCost)}</td></tr>`;
             } else if (e.category === 'trade_cost') {
                 tradeCost += cost;
-                tradeHtml += `<tr><td>${e.name}</td><td><span class="tag-box tag-cost">成本</span></td><td style="font-family:monospace; color:#555;">${count} x ${unitCost} GP</td><td class="amount-col ${moneyClass(displayedCost)}">${formatSignedGp(displayedCost)}</td></tr>`;
+                tradeHtml += `<tr><td>${escapeHTML(e.name)}</td><td><span class="tag-box tag-cost">成本</span></td><td style="font-family:monospace; color:#555;">${count} x ${unitCost} GP</td><td class="amount-col ${moneyClass(displayedCost)}">${formatSignedGp(displayedCost)}</td></tr>`;
             }
         });
 
@@ -670,6 +683,7 @@
     }
 
     async function loadAndRenderMilitary(userId) {
+        const locationAtStart=currentLocation;
         const panel = document.getElementById('military-panel');
         const summary = document.getElementById('force-summary');
         if (!panel || !summary) return;
@@ -681,12 +695,14 @@
             .from('city_military_units')
             .select('*')
             .eq('user_id', userId)
+            .in('location',assignedLocations)
             .order('sort_order', { ascending: true })
             .order('created_at', { ascending: true });
 
         if (currentLocation !== 'overview') unitQ = unitQ.eq('location', currentLocation);
 
         const { data: units, error: unitError } = await unitQ;
+        if(locationAtStart!==currentLocation)return;
         if (unitError) {
             panel.innerHTML = '<div class="force-empty">尚未部署军备数据库。请先运行本次提供的 SQL。</div>';
             summary.innerText = '未接入';
@@ -713,7 +729,7 @@
             }
         }
 
-        renderMilitaryPanel();
+        if(locationAtStart===currentLocation)renderMilitaryPanel();
     }
 
     function renderMilitaryPanel(activeUnitId = null) {
@@ -828,9 +844,11 @@
     }
 
     async function loadHistoricalTrends(userId) {
-        let query = supabaseClient.from('monthly_finances').select('*').eq('user_id', userId).order('year', { ascending: true }).order('month', { ascending: true });
+        const locationAtStart=currentLocation;
+        let query = supabaseClient.from('monthly_finances').select('*').eq('user_id', userId).in('location',assignedLocations).order('year', { ascending: true }).order('month', { ascending: true });
         if (currentLocation !== 'overview') query = query.eq('location', currentLocation);
         const { data, error } = await query;
+        if(locationAtStart!==currentLocation)return;
         if (error || !data || data.length === 0) return;
         const grouped = {};
         data.forEach(d => {

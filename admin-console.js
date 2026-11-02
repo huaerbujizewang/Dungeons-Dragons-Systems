@@ -2,7 +2,7 @@
     'use strict';
     const pages=[
         ['players','玩家与资金','backpack'],['approvals','待办审批','scroll-text'],
-        ['shop','商城供货','layout-grid'],['economy','时间与经济','gem'],
+        ['shop','商城供货','layout-grid'],['economy','时间与经济','gem'],['territories','领地分派','box'],
         ['checkins','打卡与赛事','circle'],['personnel','人员档案','box'],
         ['monsters','怪物图鉴','swords'],['wanted','通缉令','shield'],
         ['research','科研工程','wand'],['images','图像素材','layout-grid']
