@@ -17,6 +17,7 @@
     <title>D&D 小队管理系统</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="finance-ledger.js?v=20261020"></script>
+    <script src="inventory-requests.js?v=20261102-approval1"></script>
     <script src="stocks.js?v=20261020-ledger"></script>
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-loading.js?v=20261022-loading1"></script>
@@ -1678,7 +1679,7 @@
     .finance-request-kinds {
         grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
         gap: 0;
         border: 1px solid #b9c8c3;
         border-radius: 4px;
@@ -1698,6 +1699,13 @@
         background: #287f6c;
         color: #fff;
     }
+    #inventory-request-fields { grid-column: 1 / -1; min-width: 0; }
+    .finance-request-panel label[hidden] { display: none; }
+    #inventory-request-fields[hidden] { display: none; }
+    #inventory-request-results { display: grid; gap: 5px; max-height: 230px; overflow-y: auto; margin: 8px 0; }
+    .inventory-request-result { text-align: left; padding: 10px; border: 1px solid #bcc9c5; border-radius: 4px; background: #fff; color: #263934; overflow-wrap: anywhere; }
+    .inventory-request-result[aria-pressed="true"] { border-color: #287f6c; background: #e8f4ee; }
+    #inventory-request-selected { margin: 8px 0; color: #226d5d; }
     .finance-request-submit {
         border: 1px solid #226d5d;
         border-radius: 4px;
@@ -2762,13 +2770,21 @@
         </header>
 
         <form id="finance-request-panel" class="finance-request-panel" onsubmit="event.preventDefault(); submitFundLedgerRequest();">
-            <div class="finance-request-heading">提交资金变更申请</div>
+            <div class="finance-request-heading">提交资金／魔法物品变更申请</div>
             <div id="finance-request-preview-note" class="finance-request-preview-note">这是该玩家看到的申请区域。DM 当前为只读预览；请在 DM 面板使用“发放”“扣除”或“设定并记账”直接管理资金。</div>
             <input id="finance-request-type" type="hidden" value="expense">
             <div class="finance-request-kinds" aria-label="资金申请类型">
                 <button class="finance-request-kind active" type="button" data-finance-request-type="expense" onclick="setFinanceRequestType('expense')">申请减少资金</button>
                 <button class="finance-request-kind" type="button" data-finance-request-type="income" onclick="setFinanceRequestType('income')">申请增加资金</button>
                 <button class="finance-request-kind" type="button" data-finance-request-type="memo" onclick="setFinanceRequestType('memo')">仅记账</button>
+                <button class="finance-request-kind" type="button" data-finance-request-type="item_add" onclick="setFinanceRequestType('item_add')">申请增加魔法物品</button>
+                <button class="finance-request-kind" type="button" data-finance-request-type="item_remove" onclick="setFinanceRequestType('item_remove')">申请删除魔法物品</button>
+            </div>
+            <div id="inventory-request-fields" hidden>
+                <label>查询魔法物品<input id="inventory-request-search" type="search" placeholder="搜索名称、分类、稀有度或描述" autocomplete="off"></label>
+                <div id="inventory-request-results" aria-label="物品查询结果"></div>
+                <div id="inventory-request-selected" role="status">尚未选择物品</div>
+                <label>物品数量（按背包单件计数）<input id="inventory-request-quantity" type="number" value="1" min="1" max="1000000" step="1"></label>
             </div>
             <label>
                 金额
@@ -4227,8 +4243,13 @@ function getFinanceLedgerAccountLabel(accountId) {
     return accountId === myId ? (currentUserEmail || accountId) : accountId || '';
 }
 
+function inventoryRequestContext() {
+    return {client:supabaseClient,accountId:currentFinanceLedgerAccountId,ownerId:myId,
+        catalog:loadShopPriceTable,search:getShopPriceSearchBlob,reload:loadFinanceLedger};
+}
+
 function setFinanceRequestType(type) {
-    const allowedTypes = ['expense', 'income', 'memo'];
+    const allowedTypes = ['expense', 'income', 'memo', 'item_add', 'item_remove'];
     const nextType = allowedTypes.includes(type) ? type : 'expense';
     const typeInput = document.getElementById('finance-request-type');
     if (typeInput) typeInput.value = nextType;
@@ -4242,7 +4263,12 @@ function syncFinanceRequestForm() {
     const type = document.getElementById('finance-request-type')?.value || 'expense';
     const amount = document.getElementById('finance-request-amount');
     if (!amount) return;
-    const isMemo = type === 'memo';
+    const isItem = ['item_add','item_remove'].includes(type);
+    InventoryRequests.sync(type,inventoryRequestContext());
+    amount.closest('label').hidden = isItem;
+    document.getElementById('inventory-request-quantity').required = isItem;
+    document.getElementById('inventory-request-quantity').disabled = !isItem || currentFinanceLedgerAccountId !== myId;
+    const isMemo = type === 'memo' || isItem;
     amount.disabled = isMemo;
     amount.required = !isMemo;
     amount.value = isMemo ? '' : amount.value;
@@ -4265,12 +4291,13 @@ async function openFinanceLedger(accountIdOverride = null) {
     if (requestPanel) {
         requestPanel.style.display = isOwner || isAdminPreview ? 'grid' : 'none';
         requestPanel.classList.toggle('is-admin-preview', isAdminPreview);
-        requestPanel.querySelectorAll('button, input, textarea').forEach(control => {
+        requestPanel.querySelectorAll('button, input, textarea, select').forEach(control => {
             control.disabled = false;
         });
     }
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('inventory-request-fields').dataset.loaded = '';
     syncFinanceRequestForm();
     if (requestPanel && isAdminPreview) {
         requestPanel.querySelectorAll('button, input, textarea').forEach(control => {
@@ -4345,7 +4372,7 @@ function renderFinanceLedger(entries, preserveNewEntries = false) {
 
     list.innerHTML = entries.map(entry => {
         const status = FINANCE_STATUS_LABELS[entry.status] || entry.status || '未知';
-        const type = FinanceLedger.sourceLabels[entry.metadata?.source] || FINANCE_ENTRY_LABELS[entry.entry_type] || entry.entry_type || '资金记录';
+        const type = entry.metadata?.source === 'inventory_request' ? '魔法物品申请' : FinanceLedger.sourceLabels[entry.metadata?.source] || FINANCE_ENTRY_LABELS[entry.entry_type] || entry.entry_type || '资金记录';
         const createdAt = entry.created_at
             ? new Date(entry.created_at).toLocaleString('zh-CN', { hour12: false })
             : '';
@@ -4588,6 +4615,7 @@ async function submitFundLedgerRequest() {
     if (!myId || currentFinanceLedgerAccountId !== myId) return alert('只能为自己的账号提交资金申请。');
     if (financeRequestSubmitting) return;
     const type = document.getElementById('finance-request-type')?.value || 'expense';
+    if (['item_add','item_remove'].includes(type)) return InventoryRequests.submit(inventoryRequestContext());
     const amount = type === 'memo'
         ? 0
         : parseCurrencyInput(document.getElementById('finance-request-amount')?.value);
@@ -8191,7 +8219,7 @@ async function loadGold() {
             for (let start = 0; ; start += pageSize) {
                 const { data, error } = await supabaseClient
                     .from('compendium_items')
-                    .select('name, category, rarity, price, description, source_metadata')
+                    .select('id, name, category, rarity, price, description, source_metadata, is_nonmagical, source_book')
                     .order('name')
                     .range(start, start + pageSize - 1);
                 if (error) throw error;
@@ -8630,17 +8658,18 @@ async function loadGold() {
                 ? '不影响余额'
                 : `${amount > 0 ? '+' : ''}${formatCurrencyNumber(amount)} ${unit}`;
             const amountColor = amount > 0 ? '#18825f' : amount < 0 ? '#c34232' : '#657a74';
-            const typeLabel = FINANCE_ENTRY_LABELS[req.entry_type] || req.entry_type || '资金申请';
+            const isItemRequest = req.metadata?.source === 'inventory_request';
+            const typeLabel = isItemRequest ? '魔法物品申请' : FINANCE_ENTRY_LABELS[req.entry_type] || req.entry_type || '资金申请';
             html += `
                 <div style="background:#fff; padding:10px; border:1px solid #dfe8e5; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
                     <div style="min-width:0;">
-                        <div style="font-weight:bold;">资金申请：${escapeHTML(req.title || typeLabel)}</div>
+                        <div style="font-weight:bold;">${isItemRequest?'物品申请':'资金申请'}：${escapeHTML(req.title || typeLabel)}</div>
                         <div style="font-size:0.78em; color:${amountColor}; font-weight:bold; margin-top:3px;">${escapeHTML(typeLabel)} · ${escapeHTML(amountText)}</div>
                         <div style="font-size:0.75em; color:#888;">所属玩家：${escapeHTML(playerEmail)} · ${escapeHTML(new Date(req.created_at).toLocaleString('zh-CN', { hour12:false }))}</div>
                         ${req.note ? `<div style="font-size:0.8em; color:#52645e; margin-top:5px; line-height:1.45;">${escapeHTML(req.note)}</div>` : ''}
                     </div>
                     <div style="display:flex; gap:5px; flex:none;">
-                        <button onclick="reviewFundLedgerRequest(${req.id}, true)" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">批准入账</button>
+                        <button onclick="reviewFundLedgerRequest(${req.id}, true)" style="background:#2ecc71; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">${isItemRequest?'批准执行':'批准入账'}</button>
                         <button onclick="reviewFundLedgerRequest(${req.id}, false)" style="background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8em;">驳回</button>
                     </div>
                 </div>
@@ -8736,7 +8765,8 @@ async function loadGold() {
             });
             if (error) throw error;
 
-            await logAction('资金审批', `${approved ? '批准' : '驳回'}了资金账本申请(ID:${entryId})`);
+            await logAction('申请审批', `${approved ? '批准' : '驳回'}了资金／物品账本申请(ID:${entryId})`);
+            ShopLoading.invalidate(supabaseClient,'inventory:');
             await Promise.all([loadPendingRequests(), loadGold()]);
             if (isFinanceLedgerOpen() && currentFinanceLedgerAccountId) {
                 await loadFinanceLedger(currentFinanceLedgerAccountId);
@@ -8744,7 +8774,7 @@ async function loadGold() {
             const balanceText = approved && data && Number.isFinite(Number(data.balance))
                 ? `，当前余额 ${formatCurrency(data.balance)}`
                 : '';
-            alert(`${approved ? '已批准入账' : '已驳回'}${balanceText}。`);
+            alert(`${approved ? '已批准并执行' : '已驳回'}${balanceText}。`);
         } catch (error) {
             console.error('资金审批失败:', error);
             alert('资金审批失败：' + (error.message || '请确认 player_finance_ledger.sql 已执行'));
