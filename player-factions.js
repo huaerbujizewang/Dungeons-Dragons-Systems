@@ -3,8 +3,14 @@
  let config,current=null,result=null,catalogPromise,error='',dirty=false,editing=null,busy=false;
  const pending=new Map(),byId=id=>document.getElementById(id),node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
  const keys=['ascension','thieves','adventurers','watchers'];
+ const rulesUrl=new URL('data/player-factions.json',document.currentScript?.src||document.baseURI);rulesUrl.search='v=20261119-factions2';
  function configure(value){config=value;}
- function definitions(){return catalogPromise??=fetch('data/player-factions.json?v=20261118-factions1').then(r=>{if(!r.ok)throw Error('势力规则读取失败');return r.json();}).catch(e=>{catalogPromise=null;throw e;});}
+ function definitions(){return catalogPromise??=fetch(rulesUrl,{cache:'no-cache'}).then(async r=>{
+  if(!r.ok)throw Error('规则文件加载失败（HTTP '+r.status+'）：'+rulesUrl.pathname);
+  let data;try{data=await r.json();}catch{throw Error('规则文件不是有效JSON：'+rulesUrl.pathname);}
+  if(!Array.isArray(data?.factions)||!keys.every(k=>data.factions.some(f=>f.id===k&&Array.isArray(f.tiers)))||data.genesis?.limit!==300||!Array.isArray(data.genesis.daily)||!Array.isArray(data.genesis.events))throw Error('规则文件格式不正确：'+rulesUrl.pathname);
+  return data;
+ }).catch(e=>{catalogPromise=null;throw e;});}
  function shopPercent(account){return account&&current===account&&result?.state.enabled&&result.state.ascension>=45?80:100;}
  function blocked(){return !!(result?.state.enabled&&result.state.ascension<=-35);}
  function paintShop(){
@@ -19,15 +25,23 @@
  async function load(account,force=false){
   if(!account)return;
   if(current!==account){current=account;result=null;error='';dirty=false;editing=null;byId('player-factions-panel')?.replaceChildren();byId('admin-factions-panel')?.replaceChildren();paintShop();}
-  if(result&&!force){await render();return result;}
+  if(result&&!force&&!error){await render();return result;}
   let request=pending.get(account);
   if(!request){request=rpc('get_player_factions',{p_account_id:account});pending.set(account,request);request.finally(()=>{if(pending.get(account)===request)pending.delete(account);}).catch(()=>{});}
   try{const value=await request;if(current!==account||config.account()!==account)return value;const previous=result,before=shopPercent(account);result=value;error='';await render();paintShop();if(before!==shopPercent(account)||blocked())config.onChange?.();announceAttack(previous,value);return result;}
   catch(e){if(current!==account)return;error=['PGRST202','42883','42P01'].includes(e.code)?'请DM先运行 player_factions.sql':e.message||String(e);const panel=byId('admin-factions-panel');if(panel){panel.replaceChildren(node('p',error));}paintShop();}
  }
  function progress(host,value,max,label){const p=node('progress');p.max=max;p.value=value;p.setAttribute('aria-label',label);host.append(p);}
+ function showRulesError(message){
+  function notice(host){host.replaceChildren(node('h3','势力规则暂不可用'),node('p',message));const link=node('a','查看规则文件');link.href=rulesUrl.href;link.target='_blank';link.rel='noopener';host.append(link);button(host,'重新读取规则',async()=>{await render();paintShop();});}
+  const host=byId('player-factions-panel');if(host){host.hidden=!result.state.enabled;if(result.state.enabled)notice(host);}
+  const admin=byId('admin-factions-panel');if(admin&&result.can_manage&&config.target()===current)notice(admin);
+ }
  async function render(){
-  const data=await definitions();if(!result||current!==config.account())return;
+  try{await renderContent();}catch(e){if(result&&current===config.account())showRulesError('势力面板显示失败：'+(e.message||String(e)));}
+ }
+ async function renderContent(){
+  let data;try{data=await definitions();}catch(e){if(result&&current===config.account())showRulesError(e.message||'请检查 '+rulesUrl.pathname);return;}if(!result||current!==config.account())return;
   const host=byId('player-factions-panel');if(!host)return;host.replaceChildren();host.hidden=!result.state.enabled;
   const state=result.state;
   if(state.enabled){host.append(node('h2','势力关系'));const list=node('div');list.className='pf-list';host.append(list);
@@ -55,7 +69,7 @@
   button(calculator,'应用条件计算',()=>{if(!count.checkValidity())return count.reportValidity();daily.value=Number(count.value)*3+(relic.checked?2:0)+(service.checked?2:0);dirty=true;});controls.append(calculator);
   const actions=node('div');actions.className='pf-actions';const save=node('button','保存势力设置');save.type='submit';actions.append(save);button(actions,'重新读取',()=>{if(dirty&&!confirm('放弃当前势力草稿并重新读取？'))return;dirty=false;load(current,true);});controls.append(actions);
   const status=node('p');status.id='pf-status';status.setAttribute('role','status');form.append(status);form.oninput=()=>dirty=true;
-  async function write(name,args){if(busy)return;const account=current;busy=true;controls.disabled=true;status.textContent='正在保存…';try{const saved=await rpc(name,args);if(account!==current)return;const previous=result;result=saved;dirty=false;await render();paintShop();config.onChange?.();byId('pf-status').textContent='已保存。';announceAttack(previous,saved);}catch(e){if(account===current)status.textContent=e.message||String(e);}finally{busy=false;controls.disabled=false;}}
+  async function write(name,args){if(busy)return;const account=current;busy=true;controls.disabled=true;status.textContent='正在保存…';try{const saved=await rpc(name,args);if(account!==current)return;const previous=result;result=saved;dirty=false;await render();paintShop();config.onChange?.();const savedStatus=byId('pf-status');if(savedStatus)savedStatus.textContent='已保存。';announceAttack(previous,saved);}catch(e){if(account===current)status.textContent=e.message||String(e);}finally{busy=false;controls.disabled=false;}}
   form.onsubmit=e=>{e.preventDefault();if(!form.reportValidity())return;const document={enabled:enabled.checked,genesis_progress:Number(value.value),daily_gain:Number(daily.value)};for(const k of keys)document[k]=Number(scores[k].value);write('save_player_factions',{p_account_id:current,p_revision:editing.revision,p_document:document});};
   const events=node('div');events.className='pf-actions';controls.append(node('h3','创世纪事件'),events);
   function event(id,delta=0){if(dirty){status.textContent='请先保存草稿，再处理事件。';return;}const pendingKey=events.dataset.requestKey||crypto.randomUUID();events.dataset.requestKey=pendingKey;write('apply_player_faction_event',{p_account_id:current,p_event:id,p_delta:delta,p_request_key:pendingKey});}
