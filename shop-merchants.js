@@ -14,9 +14,11 @@
         const cents=Math.round(Number(item.price)*100);
         const promotionPercent=Number(item.discount_percent??100);
         const crafterApplied=profile?.has_crafter===true && item.is_nonmagical===true && promotionPercent>80;
-        const effectivePercent=crafterApplied?80:promotionPercent;
+        const factionPercent=root.PlayerFactions?.shopPercent(profile?.id)??100;
+        const factionApplied=factionPercent<(crafterApplied?80:promotionPercent);
+        const effectivePercent=Math.min(crafterApplied?80:promotionPercent,factionPercent);
         const price=Number((BigInt(cents)*BigInt(Math.round(effectivePercent*100))+5000n)/10000n)/100;
-        return {price,promotionPercent,effectivePercent,crafterApplied};
+        return {price,promotionPercent,effectivePercent,crafterApplied:crafterApplied&&!factionApplied,factionApplied};
     }
     function purchasePrice(item,profile){return purchaseOffer(item,profile).price;}
     function refreshControls(){

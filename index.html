@@ -18,6 +18,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="finance-ledger.js?v=20261020"></script>
     <script src="territory-finance.js?v=20261102-shares1"></script>
+    <script src="player-factions.js?v=20261118-factions1"></script>
+    <link rel="stylesheet" href="player-factions.css?v=20261118-factions1">
     <script src="inventory-requests.js?v=20261102-approval1"></script>
     <script src="character-equipment.js?v=20261102-equipment2"></script>
     <link rel="stylesheet" href="character-equipment.css?v=20261102-equipment2">
@@ -25,8 +27,8 @@
     <script src="assets/vendor/marked/marked.umd.js?v=17.0.5"></script>
     <script src="shop-loading.js?v=20261022-loading1"></script>
     <script src="shop-item-details.js?v=20261023-polish1"></script>
-    <script src="shop-merchants.js?v=20261022-exclusive2"></script>
-    <script src="shop-custom-equipment.js?v=20261023-polish1"></script>
+    <script src="shop-merchants.js?v=20261118-factions1"></script>
+    <script src="shop-custom-equipment.js?v=20261118-factions1"></script>
     <script src="shop-cart.js?v=20261023-polish1"></script>
     <script src="shop-orders.js?v=20261023-polish1"></script>
     <link rel="stylesheet" href="shop-orders.css?v=20261023-polish1">
@@ -41,7 +43,7 @@
     <link rel="stylesheet" href="shop-source-books.css?v=20261021-books">
     <link rel="stylesheet" href="shop-scene.css?v=20261023-polish1">
     <link rel="stylesheet" href="admin-console.css?v=20261022-discounts1">
-    <script src="admin-console.js?v=20261102-territories1"></script>
+    <script src="admin-console.js?v=20261118-factions1"></script>
     <script src="shop-supply.js?v=20261024-addiction1"></script>
     <script src="shop-discounts.js?v=20261022-discounts1"></script>
     <script src="shop-scene.js?v=20261022-dialogue-smile1" defer></script>
@@ -2164,6 +2166,7 @@
     <!-- 队伍面板 -->
     <div id="team-section" class="section">
         <div id="team-container"></div>
+        <section id="player-factions-panel" hidden aria-label="团队势力关系"></section>
     </div>
 
     <!-- 背包 -->
@@ -2973,6 +2976,7 @@
             </div>
             
 
+            <div class="admin-box" data-admin-page="factions"><div id="admin-factions-panel">请先选择玩家。</div></div>
             <div class="admin-box" data-admin-page="territories">
                 <h3>领地分派与编辑</h3>
                 <button type="button" onclick="openAdminTerritories()">管理当前玩家领地</button>
@@ -6098,6 +6102,9 @@ const COC7TH_SPELLCASTER_TEMPLATE = {
         mainRealtimeChannel = supabaseClient.channel('main_sync_channel');
 
         mainRealtimeChannel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'player_factions', filter: `account_id=eq.${targetId}` }, () => {
+                PlayerFactions.reload(targetId);
+            })
             // 1. 监听金币和时间变动 (Profiles表)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${targetId}` }, (payload) => {
                 console.log('检测到资产/时间变动');
@@ -8288,8 +8295,8 @@ async function loadGold() {
             const isOut = !i.unlimited_stock && i.stock <= 0;
             const offer = ShopMerchants.purchaseOffer(i, profile);
             const customTemplate = ShopCustomEquipment.template(i);
-            const discountLabel = offer.promotionPercent < 100 ? `特惠${offer.promotionPercent / 10}折` : offer.crafterApplied ? '巧匠八折' : '';
-            const offerNote = offer.crafterApplied && offer.promotionPercent < 100 ? '按巧匠八折，不叠加' : '';
+            const discountLabel = offer.factionApplied ? '登神会八折' : offer.promotionPercent < 100 ? `特惠${offer.promotionPercent / 10}折` : offer.crafterApplied ? '巧匠八折' : '';
+            const offerNote = offer.factionApplied ? '不叠加其他折扣' : offer.crafterApplied && offer.promotionPercent < 100 ? '按巧匠八折，不叠加' : '';
             const safeName = escapeHTML(i.name);
             const safeCategory = escapeHTML(ShopShelf.label(i.shop_shelf_category || ShopShelf.classify(i)));
             const safeRarity = escapeHTML(i.rarity || '普通');
@@ -9278,6 +9285,10 @@ function reportShopPurchaseFailure(message, interaction, shopId, accountId) {
 
     // --- 并行数据加载与进度条控制 ---
     async function refreshAllData() {
+        PlayerFactions.configure({client:supabaseClient,account:()=>viewingUserId,target:()=>selectedUserId,
+            onAttack:()=>alert('创世纪袭击进度已达300/300，触发清洗袭击。请DM安排本次袭击，待应对结束后确认清零。'),
+            onChange:()=>{if(shopShelfAccountId===viewingUserId)refreshShopFilters();}});
+        await PlayerFactions.load(viewingUserId);
         const bar = document.getElementById('loading-progress-bar');
         const txt = document.getElementById('loading-progress-text');
         
@@ -9317,6 +9328,7 @@ function reportShopPurchaseFailure(message, interaction, shopId, accountId) {
 
     async function refreshAfterTimeChange() {
         await Promise.all([
+            PlayerFactions.reload(viewingUserId),
             loadUserDate(),
             loadGold()
         ]);

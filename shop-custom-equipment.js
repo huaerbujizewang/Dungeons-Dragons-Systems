@@ -40,7 +40,7 @@
                 dialog.querySelector('.shop-custom-quote').hidden=false;
                 dialog.querySelector('h3').textContent=row.item_name;
                 paintQuote();
-                dialog.querySelector('[data-offer]').textContent=row.crafter_discount?'巧匠八折：仅基础装备补价，不叠加特惠':row.promotion_discount_applied?'特惠：仅附魔费，不叠加巧匠':'';
+                dialog.querySelector('[data-offer]').textContent=row.faction_discount?'登神会八折：整件装备享八折，不叠加其他折扣':row.crafter_discount?'巧匠八折：仅基础装备补价，不叠加特惠':row.promotion_discount_applied?'特惠：仅附魔费，不叠加巧匠':'';
                 add.disabled=!picker.value();
             }
             function render(){
@@ -69,7 +69,7 @@
             add.onclick=()=>{if(selected&&picker.value()){action='cart';accepted=true;dialog.close();}};
             dialog.addEventListener('close',()=>{closed=true;dialog.remove();resolve(accepted?{...selected,quantity:picker.value(),action}:null);},{once:true});
             document.getElementById('shop-section').append(dialog);dialog.showModal();
-            const key=['equipment',accountId,merchant.id,item.id,item.price,item.discount_percent,profile?.has_crafter,item.stock].join(':');
+            const key=['equipment',accountId,merchant.id,item.id,item.price,item.discount_percent,profile?.has_crafter,root.PlayerFactions?.shopPercent(accountId),item.stock].join(':');
             ShopLoading.get(client,key,async()=>{
                 const {data,error}=await client.rpc('get_custom_equipment_options',{p_user_id:accountId,p_item_id:Number(item.id),p_shop_id:merchant.id});
                 if(error)throw error;return data;
