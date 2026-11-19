@@ -3,6 +3,7 @@
  let config,current=null,result=null,catalogPromise,error='',dirty=false,editing=null,busy=false;
  const pending=new Map(),byId=id=>document.getElementById(id),node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
  const keys=['ascension','thieves','adventurers','watchers'];
+ let selection={account:null,faction:'ascension',stage:'current'};
  const rulesUrl=new URL('data/player-factions.json',document.currentScript?.src||document.baseURI);rulesUrl.search='v=20261119-factions2';
  function configure(value){config=value;}
  function definitions(){return catalogPromise??=fetch(rulesUrl,{cache:'no-cache'}).then(async r=>{
@@ -31,7 +32,53 @@
   try{const value=await request;if(current!==account||config.account()!==account)return value;const previous=result,before=shopPercent(account);result=value;error='';await render();paintShop();if(before!==shopPercent(account)||blocked())config.onChange?.();announceAttack(previous,value);return result;}
   catch(e){if(current!==account)return;error=['PGRST202','42883','42P01'].includes(e.code)?'请DM先运行 player_factions.sql':e.message||String(e);const panel=byId('admin-factions-panel');if(panel){panel.replaceChildren(node('p',error));}paintShop();}
  }
- function progress(host,value,max,label){const p=node('progress');p.max=max;p.value=value;p.setAttribute('aria-label',label);host.append(p);}
+ function renderGauges(host,data,state){
+  if(selection.account!==current)selection={account:current,faction:'ascension',stage:'current'};
+  const board=node('div');board.className='pf-board';board.setAttribute('aria-label','势力进度总览');host.append(node('h2','势力关系'),board);
+  const inspector=node('section');inspector.className='pf-inspector';inspector.setAttribute('aria-label','势力阶段详情');host.append(inspector);
+  const gauges=[],colors={ascension:'#6d557c',thieves:'#78613d',adventurers:'#377260',watchers:'#9c7c32'};
+  const entries=data.factions;
+  const active=(f,t)=>t.at>0?state[f.id]>=t.at:state[f.id]<=t.at;
+  const position=(value,min,max)=>(max-value)/(max-min)*100;
+  for(const f of entries){
+   const score=state[f.id],min=-100,max=100;
+   const reached=f.tiers.filter(t=>active(f,t)),tier=score<0?reached.at(-1):reached[0];
+   const column=node('article');column.className='pf-gauge pf-faction';column.dataset.faction=f.id;column.dataset.sign=score<0?'negative':score>0?'positive':'neutral';column.style.setProperty('--pf-ink',colors[f.id]);board.append(column);
+   const title=button(column,f.name,()=>inspect(f.id,'current'));title.className='pf-gauge-title';title.setAttribute('aria-label',f.name+'当前状态');
+   const output=node('output',(score>0?'+':'')+score+'/'+max);output.className='pf-gauge-value';column.append(output);
+   const plot=node('div');plot.className='pf-plot';column.append(plot);const track=node('div');track.className='pf-track';plot.append(track);
+   const meter=node('meter');meter.className='pf-visually-hidden';meter.min=min;meter.max=max;meter.value=score;meter.setAttribute('aria-label',f.name+'好感度');column.append(meter);
+   const axis=node('div');axis.className='pf-axis';axis.setAttribute('aria-hidden','true');track.append(axis);
+   for(let value=min;value<=max;value+=10){const major=value%50===0,tick=node('i');tick.className='pf-tick'+(major?' pf-major':'');tick.style.top=position(value,min,max)+'%';tick.setAttribute('aria-hidden','true');track.append(tick);if(major){const label=node('span',value>0?'+'+value:String(value));label.className='pf-scale-label';label.style.top=position(value,min,max)+'%';label.setAttribute('aria-hidden','true');track.append(label);}}
+   const zero=position(0,min,max),now=position(score,min,max),fill=node('div');fill.className='pf-fill';fill.style.top=Math.min(zero,now)+'%';fill.style.height=Math.abs(now-zero)+'%';fill.setAttribute('aria-hidden','true');track.append(fill);
+   const needle=node('div');needle.className='pf-needle';needle.style.top=now+'%';needle.setAttribute('aria-hidden','true');track.append(needle);
+   // A 12% gap keeps 24px targets separate on the smallest 200px track.
+   const lanes=[],markers=[];
+   for(const t of [...f.tiers].sort((a,b)=>b.at-a.at)){const top=position(t.at,min,max);let lane=lanes.findIndex(last=>top-last>=12);if(lane<0)lane=lanes.length;lanes[lane]=top;
+    const label=f.name+' · '+t.name+' '+t.at+'/'+max+' · '+(active(f,t)?'已生效':'未生效');
+    const marker=button(track,'',()=>inspect(f.id,String(t.at)));marker.className='pf-marker';marker.style.top=top+'%';marker.style.setProperty('--pf-lane',lane);marker.dataset.active=String(active(f,t));marker.dataset.negative=String(t.at<0);marker.dataset.threshold=t.at;marker.title=label;marker.setAttribute('aria-label',label);marker.onpointerenter=marker.onfocus=()=>inspect(f.id,String(t.at));markers.push({marker,at:String(t.at)});
+   }
+   const status=node('strong',tier?.name||'中立');status.className='pf-gauge-status';column.append(status,node('small',reached.length?'已生效 '+reached.length+' 项':'暂无阶段效果'));gauges.push({id:f.id,column,title,markers});
+  }
+  function inspect(id,stage){
+   const f=entries.find(f=>f.id===id)||entries[0];if(!['current','all',...f.tiers.map(t=>String(t.at))].includes(stage))stage='current';selection={account:current,faction:f.id,stage};
+   for(const g of gauges){g.column.dataset.selected=String(g.id===f.id);g.title.setAttribute('aria-pressed',String(g.id===f.id));for(const m of g.markers)m.marker.setAttribute('aria-pressed',String(g.id===f.id&&m.at===stage));}
+   inspector.replaceChildren();const heading=node('div');heading.className='pf-inspector-heading';heading.append(node('h3',f.name));
+   const label=node('label','阶段'),select=node('select');select.setAttribute('aria-label','阶段详情');select.append(new Option('当前状态','current'),new Option('全部阶段','all'));for(const t of f.tiers)select.append(new Option(t.name+' '+t.at+'/100',String(t.at)));select.value=stage;select.onchange=()=>inspect(f.id,select.value);label.append(select);heading.append(label);inspector.append(heading);
+   const tiers=stage==='current'?f.tiers.filter(t=>active(f,t)):stage==='all'?f.tiers:f.tiers.filter(t=>String(t.at)===stage);
+   if(!tiers.length)inspector.append(node('p','当前没有已生效的阶段效果。'));
+   for(const t of tiers){const tier=node('article');tier.className='pf-tier';tier.dataset.active=String(active(f,t));tier.dataset.negative=String(t.at<0);const title=node('h4',t.name+' '+t.at+'/100');title.append(node('small',active(f,t)?'已生效':'未生效'));tier.append(title,node('p',t.effect),node('blockquote','“'+t.quote+'”'));inspector.append(tier);}
+  }
+  inspect(selection.faction,selection.stage);
+  const g=data.genesis,attack=node('section');attack.className='pf-genesis';attack.setAttribute('aria-label','创世纪袭击进度');
+  const heading=node('div');heading.className='pf-attack-heading';const amount=node('output',state.genesis_progress+'/'+g.limit);amount.className='pf-attack-state';amount.dataset.pending=String(state.genesis_progress>=g.limit);heading.append(node('h3',g.name+' · 袭击进度'),amount,node('span','每日 +'+state.daily_gain));attack.append(heading);
+  const ruler=node('div');ruler.className='pf-attack-ruler';const rail=node('div');rail.className='pf-attack-rail';ruler.append(rail);const fill=node('div');fill.className='pf-attack-fill';fill.style.width=state.genesis_progress/g.limit*100+'%';rail.append(fill);
+  for(let value=0;value<=g.limit;value+=25){const major=value%100===0,tick=node('i');tick.className='pf-attack-tick'+(major?' pf-major':'');tick.style.left=value/g.limit*100+'%';tick.setAttribute('aria-hidden','true');ruler.append(tick);if(major){const label=node('span',String(value));label.className='pf-attack-label';label.style.left=value/g.limit*100+'%';label.dataset.edge=value===0?'start':value===g.limit?'end':'middle';label.setAttribute('aria-hidden','true');ruler.append(label);}}
+  const needle=node('i');needle.className='pf-attack-needle';needle.style.left=state.genesis_progress/g.limit*100+'%';needle.setAttribute('aria-hidden','true');ruler.append(needle);attack.append(ruler);
+  const meter=node('meter');meter.className='pf-visually-hidden';meter.min=0;meter.max=g.limit;meter.value=state.genesis_progress;meter.setAttribute('aria-label','创世纪袭击进度');attack.append(meter);
+  if(state.genesis_progress>=g.limit)attack.append(node('strong','待处理清洗袭击'));
+  attack.append(node('p',g.intro),node('p',g.trigger));const rules=node('details');rules.append(node('summary','进度累积规则'),node('h4','每日累加'));for(const r of g.daily)rules.append(node('p',r.name+'：'+r.text));rules.append(node('h4','事件即时增加'));for(const e of g.events)rules.append(node('p',e.name+'：'+e.text));attack.append(rules);host.insertBefore(attack,inspector);
+ }
  function showRulesError(message){
   function notice(host){host.replaceChildren(node('h3','势力规则暂不可用'),node('p',message));const link=node('a','查看规则文件');link.href=rulesUrl.href;link.target='_blank';link.rel='noopener';host.append(link);button(host,'重新读取规则',async()=>{await render();paintShop();});}
   const host=byId('player-factions-panel');if(host){host.hidden=!result.state.enabled;if(result.state.enabled)notice(host);}
@@ -44,16 +91,7 @@
   let data;try{data=await definitions();}catch(e){if(result&&current===config.account())showRulesError(e.message||'请检查 '+rulesUrl.pathname);return;}if(!result||current!==config.account())return;
   const host=byId('player-factions-panel');if(!host)return;host.replaceChildren();host.hidden=!result.state.enabled;
   const state=result.state;
-  if(state.enabled){host.append(node('h2','势力关系'));const list=node('div');list.className='pf-list';host.append(list);
-   for(const f of data.factions){const score=state[f.id],active=t=>t.at>0?score>=t.at:score<=t.at,tiers=f.tiers.filter(active),row=node('details');row.className='pf-faction';
-    const heading=node('summary');heading.title='展开或收起阶段详情';heading.append(node('strong',f.name),node('b',score+'/100'),node('span',tiers.length?tiers.map(t=>t.name).join(' · '):'暂无阶段效果'));row.append(heading);
-    const meter=node('meter');meter.min=-100;meter.max=100;meter.low=0;meter.high=45;meter.optimum=100;meter.value=score;meter.setAttribute('aria-label',f.name+'好感度');row.append(meter);
-    for(const t of f.tiers){const tier=node('article');tier.className='pf-tier';tier.dataset.active=String(active(t));tier.dataset.negative=String(t.at<0);const title=node('h3',t.name+' '+t.at+'/100');title.append(node('small',active(t)?'已生效':'未生效'));tier.append(title,node('p',t.effect),node('blockquote','“'+t.quote+'”'));row.append(tier);}list.append(row);
-   }
-   const g=data.genesis,attack=node('section');attack.className='pf-genesis';attack.append(node('h3',g.name+' · 袭击进度'),node('p',g.intro));
-   const amount=node('strong',state.genesis_progress+'/'+g.limit+(state.genesis_progress>=g.limit?' · 待处理清洗袭击':''));amount.className='pf-attack-state';amount.dataset.pending=String(state.genesis_progress>=g.limit);attack.append(amount);progress(attack,state.genesis_progress,g.limit,'创世纪袭击进度');attack.append(node('p','每日增长 +'+state.daily_gain),node('p',g.trigger));
-   const rules=node('details');rules.append(node('summary','进度累积规则'),node('h4','每日累加'));for(const r of g.daily)rules.append(node('p',r.name+'：'+r.text));rules.append(node('h4','事件即时增加'));for(const e of g.events)rules.append(node('p',e.name+'：'+e.text));attack.append(rules);host.append(attack);
-  }
+  if(state.enabled)renderGauges(host,data,state);
   if(result.can_manage&&config.target()===current){if(!dirty||editing?.account!==current)renderAdmin(data);else byId('pf-status').textContent='资料已更新。当前草稿保留，保存前请重新读取。';}
   else {const admin=byId('admin-factions-panel');if(admin)admin.replaceChildren(node('p','请选择由你负责的玩家。'));}
  }
